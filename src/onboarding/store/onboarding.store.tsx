@@ -1,0 +1,297 @@
+import {
+    createContext,
+    useContext,
+    useState,
+    useCallback,
+    useRef,
+    type ReactNode,
+} from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '@/services/auth.service';
+import { onboardingService } from '@/services/onboarding.service';
+import { ApiError } from '@/types/api';
+import type {
+    AuthMeAgencyResponse,
+    AgencyOnboardingStep,
+    LogisticsPayload,
+    PayoutPayload,
+    BrandingPayload,
+    PoliciesPayload,
+    OnboardingStepResponse,
+} from '@/types/api';
+import type {
+    LogisticsFormValues,
+    PayoutFormValues,
+    BrandingFormValues,
+    PoliciesFormValues,
+} from '@/onboarding/schemas/onboarding.schemas';
+
+// ─── Draft cache ───────────────────────────────────────────────────────────────
+// Raw form values for each step, saved synchronously BEFORE the API call.
+// This is the reliable source of truth for pre-populating forms on back-navigation,
+// since the backend's profile response uses camelCase while role_entity is snake_case.
+
+interface StepDrafts {
+    logistics: LogisticsFormValues | null;
+    payout: PayoutFormValues | null;
+    branding: BrandingFormValues | null;
+    policies: PoliciesFormValues | null;
+}
+
+// ─── State shape ──────────────────────────────────────────────────────────────
+
+export interface OnboardingState {
+    session: AuthMeAgencyResponse | null;
+    isInitializing: boolean;
+    isSubmitting: boolean;
+    error: ApiError | null;
+    /**
+     * The highest step the backend reports as "next required".
+     * 0 = complete, 1–3 = the next step to complete.
+     * Used as the canonical "max allowed step" for the router guard.
+     */
+    currentStep: AgencyOnboardingStep | null;
+    /**
+     * The step the user is currently *viewing* (may be a previous completed step
+     * when they navigate backwards using the Back button).
+     */
+    viewingStep: AgencyOnboardingStep | null;
+
+    /**
+     * Draft form values for each step.
+     * Saved synchronously before each API call so forms can be pre-populated
+     * when the user navigates back, regardless of the backend response shape.
+     */
+    drafts: StepDrafts;
+    /**
+     * Save raw form values for a given step BEFORE the API call.
+     * Priority for pre-population: draft → session role_entity → empty defaults.
+     */
+    saveDraft(step: 1, values: LogisticsFormValues): void;
+    saveDraft(step: 2, values: PayoutFormValues): void;
+    saveDraft(step: 3, values: BrandingFormValues): void;
+    saveDraft(step: 4, values: PoliciesFormValues): void;
+
+    initialize: () => Promise<void>;
+    submitLogistics: (payload: LogisticsPayload) => Promise<void>;
+    submitPayout: (payload: PayoutPayload) => Promise<void>;
+    submitBranding: (payload: BrandingPayload) => Promise<void>;
+    submitPolicies: (payload: PoliciesPayload) => Promise<void>;
+    /** Navigate to the previous step (if already on step > 1). */
+    goBack: () => void;
+    logout: () => Promise<void>;
+    clearError: () => void;
+}
+
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+const OnboardingContext = createContext<OnboardingState | null>(null);
+
+// ─── Step → route mapping ─────────────────────────────────────────────────────
+
+export function stepToRoute(step: AgencyOnboardingStep | number): string {
+    switch (step) {
+        case 1: return '/onboarding/logistics';
+        case 2: return '/onboarding/payout';
+        case 3: return '/onboarding/branding';
+        case 4: return '/onboarding/policies';
+        case 0: return '/dashboard';
+        default: return '/onboarding/unknown';
+    }
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export function OnboardingProvider({ children }: { children: ReactNode }) {
+    const navigate = useNavigate();
+    const [session, setSession] = useState<AuthMeAgencyResponse | null>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<ApiError | null>(null);
+    const [viewingStep, setViewingStep] = useState<AgencyOnboardingStep | null>(null);
+    const [drafts, setDrafts] = useState<StepDrafts>({
+        logistics: null,
+        payout: null,
+        branding: null,
+        policies: null,
+    });
+
+    const initCalled = useRef(false);
+
+    const currentStep = session?.role_entity.onboarding_step ?? null;
+
+    const initialize = useCallback(async () => {
+        if (initCalled.current) return;
+        initCalled.current = true;
+        setIsInitializing(true);
+        try {
+            const data = await authService.getAuthMeAgency();
+            setSession(data);
+            setViewingStep(data.role_entity.onboarding_step);
+        } catch (err) {
+            if (err instanceof ApiError && err.isUnauthorized) {
+                setSession(null);
+            } else {
+                setError(
+                    err instanceof ApiError
+                        ? err
+                        : new ApiError(500, 'INIT_FAILED', 'Failed to initialize session'),
+                );
+            }
+        } finally {
+            setIsInitializing(false);
+        }
+    }, []);
+
+    /**
+     * Save raw form values for a given step before the API call.
+     * These are used to pre-populate the form when the user navigates back.
+     */
+    const saveDraft = useCallback((step: 1 | 2 | 3 | 4, values: LogisticsFormValues | PayoutFormValues | BrandingFormValues | PoliciesFormValues) => {
+        setDrafts(prev => {
+            if (step === 1) return { ...prev, logistics: values as LogisticsFormValues };
+            if (step === 2) return { ...prev, payout: values as PayoutFormValues };
+            if (step === 3) return { ...prev, branding: values as BrandingFormValues };
+            return { ...prev, policies: values as PoliciesFormValues };
+        });
+    }, []);
+
+    const handleStepResponse = useCallback(
+        (response: OnboardingStepResponse, submittedFromStep: number) => {
+            const { completionStatus, profile } = response.data;
+            const backendStep = completionStatus.onboardingStep;
+
+            setSession((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    role_entity: {
+                        ...prev.role_entity,
+                        ...profile,
+                        onboarding_step: backendStep,
+                        // Carry forward the incremented version from the profile response
+                        // so the next step sends the fresh value for OCC.
+                        version: profile.version ?? prev.role_entity.version,
+                    },
+                };
+            });
+
+            // Always navigate to the *next sequential step* after the one just submitted.
+            // We never jump to the backend's max step — that would skip intermediate steps
+            // when the user goes back and resubmits an earlier step.
+            // Exception: if backend says 0 (complete), go to dashboard immediately.
+            if (backendStep === 0) {
+                setViewingStep(0 as AgencyOnboardingStep);
+                navigate('/dashboard', { replace: true });
+            } else {
+                const nextViewStep = (submittedFromStep + 1) as AgencyOnboardingStep;
+                setViewingStep(nextViewStep);
+                navigate(stepToRoute(nextViewStep), { replace: true });
+            }
+        },
+        [navigate],
+    );
+
+    const wrapStep = useCallback(
+        async (fn: () => Promise<OnboardingStepResponse>, submittedFromStep: number) => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const response = await fn();
+                handleStepResponse(response, submittedFromStep);
+            } catch (err) {
+                const apiErr =
+                    err instanceof ApiError
+                        ? err
+                        : new ApiError(500, 'SUBMIT_FAILED', 'Step submission failed');
+                setError(apiErr);
+                throw apiErr;
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [handleStepResponse],
+    );
+
+    const submitLogistics = useCallback(
+        (payload: LogisticsPayload) =>
+            wrapStep(() => onboardingService.submitLogistics(payload), 1),
+        [wrapStep],
+    );
+
+    const submitPayout = useCallback(
+        (payload: PayoutPayload) =>
+            wrapStep(() => onboardingService.submitPayout(payload), 2),
+        [wrapStep],
+    );
+
+    const submitBranding = useCallback(
+        (payload: BrandingPayload) =>
+            wrapStep(() => onboardingService.submitBranding(payload), 3),
+        [wrapStep],
+    );
+
+    const submitPolicies = useCallback(
+        (payload: PoliciesPayload) =>
+            wrapStep(() => onboardingService.submitPolicies(payload), 4),
+        [wrapStep],
+    );
+
+    const goBack = useCallback(() => {
+        const v = viewingStep;
+        if (!v || v <= 1) return;
+        const prevStep = (v - 1) as AgencyOnboardingStep;
+        setViewingStep(prevStep);
+        navigate(stepToRoute(prevStep), { replace: true });
+    }, [viewingStep, navigate]);
+
+    const logout = useCallback(async () => {
+        try {
+            await authService.logout();
+        } catch {
+            // best-effort
+        } finally {
+            setSession(null);
+            setDrafts({ logistics: null, payout: null, branding: null, policies: null });
+            initCalled.current = false;
+            navigate('/login', { replace: true });
+        }
+    }, [navigate]);
+
+    const clearError = useCallback(() => setError(null), []);
+
+    return (
+        <OnboardingContext.Provider
+            value={{
+                session,
+                isInitializing,
+                isSubmitting,
+                error,
+                currentStep,
+                viewingStep,
+                drafts,
+                saveDraft,
+                initialize,
+                submitLogistics,
+                submitPayout,
+                submitBranding,
+                submitPolicies,
+                goBack,
+                logout,
+                clearError,
+            }}
+        >
+            {children}
+        </OnboardingContext.Provider>
+    );
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useOnboarding(): OnboardingState {
+    const ctx = useContext(OnboardingContext);
+    if (!ctx) {
+        throw new Error('useOnboarding must be used within <OnboardingProvider>');
+    }
+    return ctx;
+}

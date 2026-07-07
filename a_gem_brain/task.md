@@ -1,0 +1,29 @@
+# Task Plan: Policy Setup (Step 4) Integration
+
+- [ ] Update Type Definitions
+  - [ ] Add `AgencyPolicies` and related interfaces to `api.ts`.
+  - [ ] Update `AgencyRoleEntity` to include `policies`.
+  - [ ] Update `AgencyOnboardingStep` to include `4`.
+  - [ ] Add `PoliciesPayload` to `api.ts`.
+- [ ] Create Validation Schemas
+  - [ ] Add schemas for pricing, returns, and damage in `onboarding.schemas.ts`.
+  - [ ] Export `PoliciesFormValues`.
+- [ ] Update Services and Stores
+  - [ ] Add `submitPolicies` to `onboarding.service.ts`.
+  - [ ] Update `stepToRoute` mapping in `onboarding.store.tsx`.
+  - [ ] Add `policies` draft handling in `onboarding.store.tsx`.
+  - [ ] Add `submitPolicies` to `onboarding.store.tsx`.
+- [ ] Update Routing and Layout
+  - [ ] Add Step 4 to `STEPS` array in `OnboardingLayout.tsx`.
+  - [ ] Add `/onboarding/policies` route in `OnboardingRouter.tsx`.
+  - [ ] Update `StepGuard` and `stepPath`.
+- [ ] Build Step4Policies UI Component
+  - [ ] Create `Step4Policies.tsx`.
+  - [ ] Implement Pricing fields section.
+  - [ ] Implement Returns fields section.
+  - [ ] Implement Damage fields section.
+  - [ ] Connect form state, validation, and draft saving.
+  - [ ] Handle submission and back navigation.
+- [ ] Verification
+  - [ ] Ensure `tsc` passes.
+  - [ ] UI manual testing.

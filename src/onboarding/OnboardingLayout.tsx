@@ -1,0 +1,191 @@
+import { type ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { Truck, LogOut, CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
+import type { AgencyOnboardingStep } from '@/types/api';
+
+// ─── Step metadata ────────────────────────────────────────────────────────────
+
+const STEPS: { step: Exclude<AgencyOnboardingStep, 0>; label: string }[] = [
+    { step: 1, label: 'Logistics' },
+    { step: 2, label: 'Payout' },
+    { step: 3, label: 'Branding' },
+    { step: 4, label: 'Policies' },
+];
+
+// ─── Shared select class helper (exported for use in step components) ─────────
+
+export const selectTriggerClass = (hasError?: boolean) =>
+    cn(
+        'h-11 w-full rounded-lg border text-sm bg-slate-50 dark:bg-zinc-800',
+        'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white',
+        'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
+        'placeholder:text-slate-400 transition-colors duration-150',
+        hasError && 'border-red-400 focus:ring-red-200 focus:border-red-400',
+    );
+
+// ─── Clickable horizontal stepper ─────────────────────────────────────────────
+
+function StepProgress({
+    current,
+    maxReached,
+}: {
+    current: number;
+    maxReached: number;
+}) {
+    const navigate = useNavigate();
+
+    const handleStepClick = (step: number) => {
+        if (step <= maxReached) {
+            // Navigate to this step (it's already unlocked)
+            navigate(stepToRoute(step as AgencyOnboardingStep), { replace: true });
+        } else {
+            // Clicked a locked future step — redirect to current max
+            navigate(stepToRoute(maxReached as AgencyOnboardingStep), { replace: true });
+        }
+    };
+
+    return (
+        <div className="w-full flex items-center justify-center px-6 pt-5 pb-4">
+            <div className="flex items-center gap-0 w-full max-w-sm">
+                {STEPS.map(({ step, label }, i) => {
+                    const isCompleted = step < current || (step < maxReached && step < current);
+                    const isActive = step === current;
+                    const isUnlocked = step <= maxReached;
+                    const isLast = i === STEPS.length - 1;
+                    const isClickable = isUnlocked;
+
+                    return (
+                        <div key={step} className="flex items-center flex-1 last:flex-none">
+                            {/* Node */}
+                            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                                <motion.button
+                                    type="button"
+                                    initial={false}
+                                    animate={{ scale: isActive ? 1.1 : 1 }}
+                                    transition={{ duration: 0.2 }}
+                                    onClick={() => handleStepClick(step)}
+                                    disabled={!isClickable && !isUnlocked}
+                                    title={isClickable ? `Go to ${label}` : `Complete earlier steps first`}
+                                    className={cn(
+                                        'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all duration-200',
+                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                                        isCompleted && 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600 cursor-pointer',
+                                        isActive && 'bg-primary border-primary text-primary-foreground shadow-md shadow-primary/30 cursor-default ring-4 ring-primary/15',
+                                        !isActive && !isCompleted && isUnlocked && 'bg-white dark:bg-zinc-800 border-primary text-primary hover:bg-primary/5 cursor-pointer',
+                                        !isUnlocked && 'bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed',
+                                    )}
+                                    aria-label={isClickable ? `Go to step ${step}: ${label}` : `Step ${step} (${label}) is locked`}
+                                    aria-current={isActive ? 'step' : undefined}
+                                >
+                                    {isCompleted
+                                        ? <CheckCircle2 className="w-4 h-4" />
+                                        : step
+                                    }
+                                </motion.button>
+                                <span className={cn(
+                                    'text-[10px] font-semibold whitespace-nowrap select-none',
+                                    isActive ? 'text-primary' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-slate-500' : 'text-muted-foreground',
+                                )}>
+                                    {label}
+                                </span>
+                            </div>
+
+                            {/* Connector line */}
+                            {!isLast && (
+                                <div className="flex-1 mx-2 mb-4">
+                                    <div className="relative h-0.5 bg-muted-foreground/20 rounded-full overflow-hidden">
+                                        <motion.div
+                                            className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full"
+                                            initial={false}
+                                            animate={{ width: isCompleted ? '100%' : '0%' }}
+                                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+interface OnboardingLayoutProps {
+    children: ReactNode;
+    ctaSlot?: ReactNode;
+    stepKey: AgencyOnboardingStep;
+    viewingStepOverride?: number;
+}
+
+export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverride }: OnboardingLayoutProps) {
+    const { session, logout, currentStep, viewingStep } = useOnboarding();
+    const agencyName = session?.role_entity.agency_name ?? 'Your Agency';
+    const displayStep = viewingStepOverride ?? viewingStep ?? currentStep;
+    const maxReached = currentStep ?? 1;
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col">
+            {/* ── Header ── */}
+            <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                        <Truck className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white leading-none">Jovi Mall</span>
+                        <span className="text-[10px] text-slate-400 leading-none truncate max-w-[140px] mt-0.5">{agencyName}</span>
+                    </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm">Sign out</span>
+                </Button>
+            </header>
+
+            {/* ── Clickable Step progress ── */}
+            {displayStep !== null && displayStep !== 0 && (
+                <nav aria-label="Onboarding progress" className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <StepProgress current={displayStep as number} maxReached={maxReached as number} />
+                </nav>
+            )}
+
+            {/* ── Scrollable content ── */}
+            <main className="flex-1 overflow-y-auto">
+                <div className="w-full max-w-xl mx-auto px-4 py-6 md:py-10">
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={stepKey}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.22, ease: 'easeOut' }}
+                        >
+                            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                                {children}
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+                {ctaSlot && (
+                    <div className="hidden md:block w-full max-w-xl mx-auto px-4 pb-10">
+                        {ctaSlot}
+                    </div>
+                )}
+            </main>
+
+            {/* ── Sticky mobile CTA ── */}
+            {ctaSlot && (
+                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 flex-shrink-0">
+                    {ctaSlot}
+                </div>
+            )}
+        </div>
+    );
+}
