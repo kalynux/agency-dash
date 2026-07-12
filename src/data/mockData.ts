@@ -1,260 +1,36 @@
-import type { 
-  User, Store, Product, Order, Vendor, 
-  AnalyticsMetrics, SalesDataPoint, CategoryBreakdown, 
-  Notification, Customer, MediaFile, MediaFolder 
+import type {
+  User, Order,
+  AnalyticsMetrics, SalesDataPoint, CategoryBreakdown,
+  Notification, Customer, Transaction, Ticket,
+  Agent, AgentRequest, StorageItem,
 } from '@/types';
 
 // Mock Users
 export const mockUsers: User[] = [
   {
     id: '1',
-    email: 'admin@marketplace.com',
+    email: 'admin@jovimall.com',
     name: 'Admin User',
     avatar: 'https://i.pravatar.cc/150?u=admin',
     role: 'admin',
-    storeIds: ['1', '2', '3'],
     permissions: [
       { resource: '*', actions: ['create', 'read', 'update', 'delete'] }
     ]
   },
   {
     id: '2',
-    email: 'vendor@example.com',
-    name: 'John Vendor',
-    avatar: 'https://i.pravatar.cc/150?u=vendor',
-    role: 'store_owner',
-    storeIds: ['1'],
+    email: 'agency@example.com',
+    name: 'Littoral Express',
+    avatar: 'https://i.pravatar.cc/150?u=agency',
+    role: 'agency',
     permissions: [
-      { resource: 'products', actions: ['create', 'read', 'update', 'delete'] },
-      { resource: 'orders', actions: ['read', 'update'] },
+      { resource: 'deliveries', actions: ['read', 'update'] },
       { resource: 'analytics', actions: ['read'] }
     ]
   },
-  {
-    id: '3',
-    email: 'staff@example.com',
-    name: 'Sarah Staff',
-    avatar: 'https://i.pravatar.cc/150?u=staff',
-    role: 'staff',
-    storeIds: ['1'],
-    permissions: [
-      { resource: 'products', actions: ['read', 'update'] },
-      { resource: 'orders', actions: ['read'] }
-    ]
-  }
 ];
 
-// Mock Stores
-export const mockStores: Store[] = [
-  {
-    id: '1',
-    name: 'Tech Gadgets Pro',
-    domain: 'techgadgets.marketplace.com',
-    logo: 'https://placehold.co/100x100/6366f1/ffffff?text=TG',
-    status: 'active',
-    plan: 'professional',
-    vendorId: '2',
-    createdAt: '2024-01-15T00:00:00Z',
-    settings: {
-      currency: 'USD',
-      timezone: 'America/New_York',
-      language: 'en'
-    }
-  },
-  {
-    id: '2',
-    name: 'Fashion Hub',
-    domain: 'fashionhub.marketplace.com',
-    logo: 'https://placehold.co/100x100/ec4899/ffffff?text=FH',
-    status: 'active',
-    plan: 'basic',
-    vendorId: '3',
-    createdAt: '2024-02-20T00:00:00Z',
-    settings: {
-      currency: 'USD',
-      timezone: 'America/Los_Angeles',
-      language: 'en'
-    }
-  },
-  {
-    id: '3',
-    name: 'Home Essentials',
-    domain: 'homeessentials.marketplace.com',
-    logo: 'https://placehold.co/100x100/10b981/ffffff?text=HE',
-    status: 'pending',
-    plan: 'basic',
-    vendorId: '4',
-    createdAt: '2024-03-10T00:00:00Z',
-    settings: {
-      currency: 'USD',
-      timezone: 'America/Chicago',
-      language: 'en'
-    }
-  }
-];
-
-// Mock Products
-export const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Wireless Bluetooth Headphones',
-    description: 'Premium noise-cancelling wireless headphones with 30-hour battery life.',
-    sku: 'WBH-001',
-    price: 149.99,
-    compareAtPrice: 199.99,
-    costPerItem: 75.00,
-    images: [
-      'https://placehold.co/400x400/6366f1/ffffff?text=Headphones',
-      'https://placehold.co/400x400/8b5cf6/ffffff?text=Headphones+2'
-    ],
-    status: 'active',
-    inventory: {
-      quantity: 45,
-      tracked: true,
-      lowStockThreshold: 10
-    },
-    variants: [
-      { id: 'v1', title: 'Black', sku: 'WBH-001-BLK', price: 149.99, inventory: 20, options: [{ name: 'Color', value: 'Black' }] },
-      { id: 'v2', title: 'White', sku: 'WBH-001-WHT', price: 149.99, inventory: 15, options: [{ name: 'Color', value: 'White' }] },
-      { id: 'v3', title: 'Blue', sku: 'WBH-001-BLU', price: 159.99, inventory: 10, options: [{ name: 'Color', value: 'Blue' }] }
-    ],
-    vendor: 'Tech Gadgets Pro',
-    category: 'Electronics',
-    tags: ['wireless', 'audio', 'headphones', 'bluetooth'],
-    seo: {
-      title: 'Premium Wireless Bluetooth Headphones',
-      description: 'Experience crystal-clear audio with our premium wireless headphones.'
-    },
-    createdAt: '2024-01-20T00:00:00Z',
-    updatedAt: '2024-03-15T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Smart Watch Pro',
-    description: 'Advanced fitness tracking smartwatch with heart rate monitor and GPS.',
-    sku: 'SWP-002',
-    price: 299.99,
-    compareAtPrice: 349.99,
-    costPerItem: 150.00,
-    images: [
-      'https://placehold.co/400x400/10b981/ffffff?text=Smartwatch',
-      'https://placehold.co/400x400/059669/ffffff?text=Smartwatch+2'
-    ],
-    status: 'active',
-    inventory: {
-      quantity: 32,
-      tracked: true,
-      lowStockThreshold: 5
-    },
-    variants: [
-      { id: 'v4', title: 'Space Gray', sku: 'SWP-002-SG', price: 299.99, inventory: 15, options: [{ name: 'Color', value: 'Space Gray' }] },
-      { id: 'v5', title: 'Silver', sku: 'SWP-002-SLV', price: 299.99, inventory: 12, options: [{ name: 'Color', value: 'Silver' }] },
-      { id: 'v6', title: 'Gold', sku: 'SWP-002-GLD', price: 329.99, inventory: 5, options: [{ name: 'Color', value: 'Gold' }] }
-    ],
-    vendor: 'Tech Gadgets Pro',
-    category: 'Electronics',
-    tags: ['smartwatch', 'fitness', 'wearable', 'gps'],
-    seo: {
-      title: 'Smart Watch Pro - Advanced Fitness Tracker',
-      description: 'Track your fitness goals with our advanced smartwatch.'
-    },
-    createdAt: '2024-02-05T00:00:00Z',
-    updatedAt: '2024-03-10T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Leather Crossbody Bag',
-    description: 'Genuine leather crossbody bag with adjustable strap and multiple compartments.',
-    sku: 'LCB-003',
-    price: 89.99,
-    compareAtPrice: 119.99,
-    costPerItem: 45.00,
-    images: [
-      'https://placehold.co/400x400/92400e/ffffff?text=Bag',
-      'https://placehold.co/400x400/b45309/ffffff?text=Bag+2'
-    ],
-    status: 'active',
-    inventory: {
-      quantity: 18,
-      tracked: true,
-      lowStockThreshold: 8
-    },
-    variants: [
-      { id: 'v7', title: 'Brown', sku: 'LCB-003-BRN', price: 89.99, inventory: 10, options: [{ name: 'Color', value: 'Brown' }] },
-      { id: 'v8', title: 'Black', sku: 'LCB-003-BLK', price: 89.99, inventory: 8, options: [{ name: 'Color', value: 'Black' }] }
-    ],
-    vendor: 'Fashion Hub',
-    category: 'Fashion',
-    tags: ['leather', 'bag', 'accessories', 'fashion'],
-    seo: {
-      title: 'Genuine Leather Crossbody Bag',
-      description: 'Stylish and functional leather crossbody bag.'
-    },
-    createdAt: '2024-02-15T00:00:00Z',
-    updatedAt: '2024-03-05T00:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Ceramic Coffee Mug Set',
-    description: 'Set of 4 handcrafted ceramic coffee mugs, microwave and dishwasher safe.',
-    sku: 'CCM-004',
-    price: 34.99,
-    costPerItem: 15.00,
-    images: [
-      'https://placehold.co/400x400/f59e0b/ffffff?text=Mugs',
-      'https://placehold.co/400x400/d97706/ffffff?text=Mugs+2'
-    ],
-    status: 'active',
-    inventory: {
-      quantity: 60,
-      tracked: true,
-      lowStockThreshold: 15
-    },
-    variants: [],
-    vendor: 'Home Essentials',
-    category: 'Home',
-    tags: ['ceramic', 'mugs', 'kitchen', 'home'],
-    seo: {
-      title: 'Ceramic Coffee Mug Set of 4',
-      description: 'Beautiful handcrafted ceramic coffee mugs.'
-    },
-    createdAt: '2024-03-01T00:00:00Z',
-    updatedAt: '2024-03-12T00:00:00Z'
-  },
-  {
-    id: '5',
-    name: 'Portable Phone Charger',
-    description: '20000mAh power bank with fast charging and dual USB ports.',
-    sku: 'PPC-005',
-    price: 49.99,
-    compareAtPrice: 69.99,
-    costPerItem: 22.00,
-    images: [
-      'https://placehold.co/400x400/3b82f6/ffffff?text=Charger'
-    ],
-    status: 'draft',
-    inventory: {
-      quantity: 100,
-      tracked: true,
-      lowStockThreshold: 20
-    },
-    variants: [
-      { id: 'v9', title: 'Black', sku: 'PPC-005-BLK', price: 49.99, inventory: 60, options: [{ name: 'Color', value: 'Black' }] },
-      { id: 'v10', title: 'White', sku: 'PPC-005-WHT', price: 49.99, inventory: 40, options: [{ name: 'Color', value: 'White' }] }
-    ],
-    vendor: 'Tech Gadgets Pro',
-    category: 'Electronics',
-    tags: ['powerbank', 'charger', 'accessories'],
-    seo: {
-      title: 'Portable Phone Charger 20000mAh',
-      description: 'High-capacity power bank for all your devices.'
-    },
-    createdAt: '2024-03-08T00:00:00Z',
-    updatedAt: '2024-03-08T00:00:00Z'
-  }
-];
-
-// Mock Customers
+// Mock Customers (delivery recipients)
 export const mockCustomers: Customer[] = [
   {
     id: '1',
@@ -350,7 +126,7 @@ export const mockCustomers: Customer[] = [
   }
 ];
 
-// Mock Orders
+// Mock Orders (deliveries assigned to this agency)
 export const mockOrders: Order[] = [
   {
     id: '1',
@@ -555,99 +331,6 @@ export const mockOrders: Order[] = [
   }
 ];
 
-// Mock Vendors
-export const mockVendors: Vendor[] = [
-  {
-    id: '1',
-    name: 'Tech Gadgets Pro',
-    email: 'contact@techgadgets.com',
-    phone: '+1 (555) 111-2222',
-    logo: 'https://placehold.co/100x100/6366f1/ffffff?text=TG',
-    status: 'active',
-    commissionRate: 15,
-    stores: [mockStores[0]],
-    performance: {
-      totalSales: 45678.90,
-      totalOrders: 234,
-      averageRating: 4.7,
-      responseTime: 2.5,
-      fulfillmentRate: 98.5,
-      returnRate: 2.1
-    },
-    payoutInfo: {
-      method: 'bank_transfer',
-      accountDetails: '****1234',
-      lastPayout: '2024-03-01T00:00:00Z',
-      pendingAmount: 3245.67
-    },
-    createdAt: '2024-01-15T00:00:00Z',
-    documents: [
-      { id: 'd1', type: 'identity', status: 'approved', url: '#', uploadedAt: '2024-01-15T00:00:00Z' },
-      { id: 'd2', type: 'business_license', status: 'approved', url: '#', uploadedAt: '2024-01-15T00:00:00Z' }
-    ],
-    riskLevel: 'low'
-  },
-  {
-    id: '2',
-    name: 'Fashion Hub',
-    email: 'support@fashionhub.com',
-    phone: '+1 (555) 333-4444',
-    logo: 'https://placehold.co/100x100/ec4899/ffffff?text=FH',
-    status: 'active',
-    commissionRate: 12,
-    stores: [mockStores[1]],
-    performance: {
-      totalSales: 28934.56,
-      totalOrders: 156,
-      averageRating: 4.5,
-      responseTime: 4.2,
-      fulfillmentRate: 95.8,
-      returnRate: 4.5
-    },
-    payoutInfo: {
-      method: 'stripe',
-      accountDetails: 'acct_***xyz',
-      lastPayout: '2024-03-05T00:00:00Z',
-      pendingAmount: 1876.43
-    },
-    createdAt: '2024-02-20T00:00:00Z',
-    documents: [
-      { id: 'd3', type: 'identity', status: 'approved', url: '#', uploadedAt: '2024-02-20T00:00:00Z' },
-      { id: 'd4', type: 'tax_document', status: 'approved', url: '#', uploadedAt: '2024-02-21T00:00:00Z' }
-    ],
-    riskLevel: 'low'
-  },
-  {
-    id: '3',
-    name: 'Home Essentials',
-    email: 'info@homeessentials.com',
-    phone: '+1 (555) 555-6666',
-    logo: 'https://placehold.co/100x100/10b981/ffffff?text=HE',
-    status: 'pending_approval',
-    commissionRate: 10,
-    stores: [mockStores[2]],
-    performance: {
-      totalSales: 0,
-      totalOrders: 0,
-      averageRating: 0,
-      responseTime: 0,
-      fulfillmentRate: 0,
-      returnRate: 0
-    },
-    payoutInfo: {
-      method: 'paypal',
-      accountDetails: 'vendor@homeessentials.com',
-      pendingAmount: 0
-    },
-    createdAt: '2024-03-10T00:00:00Z',
-    documents: [
-      { id: 'd5', type: 'identity', status: 'pending', url: '#', uploadedAt: '2024-03-10T00:00:00Z' },
-      { id: 'd6', type: 'business_license', status: 'pending', url: '#', uploadedAt: '2024-03-10T00:00:00Z' }
-    ],
-    riskLevel: 'medium'
-  }
-];
-
 // Mock Analytics
 export const mockAnalytics: AnalyticsMetrics = {
   totalSales: {
@@ -683,264 +366,422 @@ export const mockSalesData: SalesDataPoint[] = [
   { date: '2024-03-14', sales: 5800, orders: 30 }
 ];
 
-// Mock Category Breakdown
+// Mock Coverage Breakdown (revenue by coverage region)
 export const mockCategoryBreakdown: CategoryBreakdown[] = [
-  { category: 'Electronics', sales: 42345.67, percentage: 56.8 },
-  { category: 'Fashion', sales: 18923.45, percentage: 25.4 },
-  { category: 'Home', sales: 9876.34, percentage: 13.2 },
-  { category: 'Other', sales: 3468.00, percentage: 4.6 }
+  { category: 'Littoral', sales: 42345.67, percentage: 56.8 },
+  { category: 'Centre', sales: 18923.45, percentage: 25.4 },
+  { category: 'West', sales: 9876.34, percentage: 13.2 },
+  { category: 'Northwest', sales: 3468.00, percentage: 4.6 }
 ];
 
 // Mock Notifications
 export const mockNotifications: Notification[] = [
   {
     id: '1',
-    type: 'order',
-    title: 'New Order Received',
-    message: 'Order #1004 for $371.39 is pending payment',
+    type: 'delivery',
+    title: 'New Delivery Assigned',
+    message: 'Order #1004 for $371.39 is awaiting pickup',
     read: false,
     createdAt: '2024-03-14T16:00:00Z',
-    actionUrl: '/orders/4'
+    actionUrl: '/dashboard/shipments'
   },
   {
     id: '2',
     type: 'alert',
-    title: 'Low Stock Alert',
-    message: 'Smart Watch Pro - Gold variant is running low (5 units left)',
+    title: 'Delivery Delayed',
+    message: 'Order #1003 has been in processing for over 24 hours',
     read: false,
     createdAt: '2024-03-14T12:30:00Z',
-    actionUrl: '/products/2'
+    actionUrl: '/dashboard/shipments'
   },
   {
     id: '3',
-    type: 'customer',
-    title: 'New Customer Registration',
-    message: 'Carol White has created an account',
+    type: 'ticket',
+    title: 'New Ticket Response',
+    message: 'Support replied to your ticket about a payout delay',
     read: true,
-    createdAt: '2024-03-13T08:00:00Z'
+    createdAt: '2024-03-13T08:00:00Z',
+    actionUrl: '/dashboard/tickets'
   },
   {
     id: '4',
-    type: 'system',
+    type: 'payout',
     title: 'Payout Processed',
     message: 'Your payout of $3,245.67 has been processed',
     read: true,
-    createdAt: '2024-03-01T00:00:00Z'
+    createdAt: '2024-03-01T00:00:00Z',
+    actionUrl: '/dashboard/transactions'
   },
   {
     id: '5',
-    type: 'order',
-    title: 'Order Shipped',
-    message: 'Order #1002 has been shipped via UPS',
+    type: 'delivery',
+    title: 'Delivery Completed',
+    message: 'Order #1002 has been delivered successfully',
     read: true,
     createdAt: '2024-03-13T11:30:00Z',
-    actionUrl: '/orders/2'
+    actionUrl: '/dashboard/shipments'
   }
 ];
 
-// Mock Media Files
-export const mockMediaFiles: MediaFile[] = [
+// Mock Transactions
+export const mockTransactions: Transaction[] = [
   {
-    id: 'm1',
-    name: 'headphones-main.jpg',
-    url: 'https://placehold.co/800x800/6366f1/ffffff?text=Headphones+Main',
-    thumbnailUrl: 'https://placehold.co/200x200/6366f1/ffffff?text=Headphones',
-    type: 'image',
-    mimeType: 'image/jpeg',
-    size: 245760,
-    width: 800,
-    height: 800,
-    metadata: {
-      alt: 'Wireless Bluetooth Headphones',
-      caption: 'Premium noise-cancelling headphones',
-      title: 'Wireless Bluetooth Headphones',
-      description: 'High-quality wireless headphones with 30-hour battery life'
-    },
-    tags: ['product', 'electronics', 'headphones'],
-    uploadedBy: '2',
-    uploadedAt: '2024-03-01T10:00:00Z',
-    updatedAt: '2024-03-01T10:00:00Z',
-    usageCount: 3,
-    usedIn: [{ type: 'product', id: '1', name: 'Wireless Bluetooth Headphones' }]
+    id: 'txn-1',
+    category: 'earning',
+    status: 'completed',
+    direction: 'in',
+    amount: 45.00,
+    currency: 'USD',
+    description: 'Delivery fee — Order #1001',
+    createdAt: '2024-03-14T16:45:00Z',
   },
   {
-    id: 'm2',
-    name: 'smartwatch-hero.jpg',
-    url: 'https://placehold.co/800x800/10b981/ffffff?text=Smartwatch+Hero',
-    thumbnailUrl: 'https://placehold.co/200x200/10b981/ffffff?text=Smartwatch',
-    type: 'image',
-    mimeType: 'image/jpeg',
-    size: 189200,
-    width: 800,
-    height: 800,
-    metadata: {
-      alt: 'Smart Watch Pro',
-      caption: 'Advanced fitness tracking smartwatch',
-      title: 'Smart Watch Pro',
-      description: 'Track your fitness goals with GPS and heart rate monitoring'
-    },
-    tags: ['product', 'electronics', 'smartwatch'],
-    uploadedBy: '2',
-    uploadedAt: '2024-03-02T14:30:00Z',
-    updatedAt: '2024-03-02T14:30:00Z',
-    usageCount: 2,
-    usedIn: [{ type: 'product', id: '2', name: 'Smart Watch Pro' }]
+    id: 'txn-2',
+    category: 'earning',
+    status: 'completed',
+    direction: 'in',
+    amount: 30.00,
+    currency: 'USD',
+    description: 'Delivery fee — Order #1002',
+    createdAt: '2024-03-13T11:30:00Z',
   },
   {
-    id: 'm3',
-    name: 'leather-bag.jpg',
-    url: 'https://placehold.co/800x800/92400e/ffffff?text=Leather+Bag',
-    thumbnailUrl: 'https://placehold.co/200x200/92400e/ffffff?text=Bag',
-    type: 'image',
-    mimeType: 'image/jpeg',
-    size: 312400,
-    width: 800,
-    height: 800,
-    metadata: {
-      alt: 'Leather Crossbody Bag',
-      caption: 'Genuine leather crossbody bag',
-      title: 'Leather Crossbody Bag',
-      description: 'Handcrafted leather bag with multiple compartments'
-    },
-    tags: ['product', 'fashion', 'bag'],
-    uploadedBy: '3',
-    uploadedAt: '2024-03-03T09:15:00Z',
-    updatedAt: '2024-03-03T09:15:00Z',
-    usageCount: 1,
-    usedIn: [{ type: 'product', id: '3', name: 'Leather Crossbody Bag' }]
+    id: 'txn-3',
+    category: 'payout',
+    status: 'paid',
+    direction: 'out',
+    amount: 3245.67,
+    currency: 'USD',
+    description: 'Payout to Mobile Money — MTN',
+    createdAt: '2024-03-01T00:00:00Z',
   },
   {
-    id: 'm4',
-    name: 'coffee-mugs.jpg',
-    url: 'https://placehold.co/800x800/f59e0b/ffffff?text=Coffee+Mugs',
-    thumbnailUrl: 'https://placehold.co/200x200/f59e0b/ffffff?text=Mugs',
-    type: 'image',
-    mimeType: 'image/jpeg',
-    size: 156800,
-    width: 800,
-    height: 800,
-    metadata: {
-      alt: 'Ceramic Coffee Mug Set',
-      caption: 'Set of 4 handcrafted ceramic mugs',
-      title: 'Ceramic Coffee Mug Set',
-      description: 'Microwave and dishwasher safe ceramic mugs'
-    },
-    tags: ['product', 'home', 'kitchen'],
-    uploadedBy: '3',
-    uploadedAt: '2024-03-04T11:00:00Z',
-    updatedAt: '2024-03-04T11:00:00Z',
-    usageCount: 1,
-    usedIn: [{ type: 'product', id: '4', name: 'Ceramic Coffee Mug Set' }]
+    id: 'txn-4',
+    category: 'credit',
+    status: 'completed',
+    direction: 'in',
+    amount: 20.00,
+    currency: 'USD',
+    description: 'Platform credit — referral bonus',
+    createdAt: '2024-02-20T09:00:00Z',
   },
   {
-    id: 'm5',
-    name: 'product-demo.mp4',
-    url: 'https://placehold.co/800x600/3b82f6/ffffff?text=Demo+Video',
-    thumbnailUrl: 'https://placehold.co/200x150/3b82f6/ffffff?text=Video',
-    type: 'video',
-    mimeType: 'video/mp4',
-    size: 5242880,
-    width: 1920,
-    height: 1080,
-    duration: 120,
-    metadata: {
-      alt: 'Product Demo Video',
-      caption: 'Watch our product in action',
-      title: 'Product Demo',
-      description: '2-minute product demonstration video'
-    },
-    tags: ['video', 'demo', 'marketing'],
-    uploadedBy: '2',
-    uploadedAt: '2024-03-05T16:45:00Z',
-    updatedAt: '2024-03-05T16:45:00Z',
-    usageCount: 0,
-    usedIn: []
+    id: 'txn-5',
+    category: 'plan',
+    status: 'pending',
+    direction: 'out',
+    amount: 15.00,
+    currency: 'USD',
+    description: 'Monthly dashboard plan fee',
+    createdAt: '2024-03-15T00:00:00Z',
   },
-  {
-    id: 'm6',
-    name: 'user-manual.pdf',
-    url: 'https://placehold.co/400x500/6b7280/ffffff?text=PDF',
-    type: 'document',
-    mimeType: 'application/pdf',
-    size: 1024000,
-    metadata: {
-      alt: 'User Manual',
-      caption: 'Product user manual',
-      title: 'User Manual',
-      description: 'Complete user guide and instructions'
-    },
-    tags: ['document', 'manual', 'support'],
-    uploadedBy: '2',
-    uploadedAt: '2024-03-06T08:30:00Z',
-    updatedAt: '2024-03-06T08:30:00Z',
-    usageCount: 0,
-    usedIn: []
-  },
-  {
-    id: 'm7',
-    name: 'store-logo.png',
-    url: 'https://placehold.co/400x400/6366f1/ffffff?text=Logo',
-    thumbnailUrl: 'https://placehold.co/200x200/6366f1/ffffff?text=Logo',
-    type: 'image',
-    mimeType: 'image/png',
-    size: 45600,
-    width: 400,
-    height: 400,
-    metadata: {
-      alt: 'Store Logo',
-      caption: 'Tech Gadgets Pro Logo',
-      title: 'Store Logo',
-      description: 'Official store logo'
-    },
-    tags: ['logo', 'branding'],
-    folderId: 'f1',
-    uploadedBy: '2',
-    uploadedAt: '2024-03-01T09:00:00Z',
-    updatedAt: '2024-03-01T09:00:00Z',
-    usageCount: 5,
-    usedIn: [{ type: 'vendor', id: '1', name: 'Tech Gadgets Pro' }]
-  },
-  {
-    id: 'm8',
-    name: 'banner-spring.jpg',
-    url: 'https://placehold.co/1200x400/ec4899/ffffff?text=Spring+Banner',
-    thumbnailUrl: 'https://placehold.co/300x100/ec4899/ffffff?text=Banner',
-    type: 'image',
-    mimeType: 'image/jpeg',
-    size: 512000,
-    width: 1200,
-    height: 400,
-    metadata: {
-      alt: 'Spring Sale Banner',
-      caption: 'Spring collection banner',
-      title: 'Spring Sale Banner',
-      description: 'Promotional banner for spring sale'
-    },
-    tags: ['banner', 'marketing', 'spring'],
-    folderId: 'f2',
-    uploadedBy: '3',
-    uploadedAt: '2024-03-07T13:00:00Z',
-    updatedAt: '2024-03-07T13:00:00Z',
-    usageCount: 2,
-    usedIn: []
-  }
 ];
 
-// Mock Media Folders
-export const mockMediaFolders: MediaFolder[] = [
+// Mock Tickets
+export const mockTickets: Ticket[] = [
   {
-    id: 'f1',
-    name: 'Branding',
-    createdAt: '2024-03-01T08:00:00Z'
+    id: 'tkt-1',
+    subject: 'Payout delayed by 3 days',
+    description: 'My last payout was expected on March 1st but I still haven\'t received it.',
+    status: 'waiting_on_admin',
+    priority: 'high',
+    type: 'PAYOUT_DELAY',
+    createdAt: '2024-03-05T10:00:00Z',
+    updatedAt: '2024-03-06T14:00:00Z',
+    notes: [
+      { id: 'n1', content: 'We are looking into this and will update you shortly.', author: 'Support', createdAt: '2024-03-06T14:00:00Z' },
+    ],
   },
   {
-    id: 'f2',
-    name: 'Marketing',
-    createdAt: '2024-03-02T10:00:00Z'
+    id: 'tkt-2',
+    subject: 'How do I add a new coverage region?',
+    description: 'I want to start delivering to the West region as well.',
+    status: 'resolved',
+    priority: 'low',
+    type: 'POLICY_QUESTION',
+    createdAt: '2024-02-20T09:00:00Z',
+    updatedAt: '2024-02-21T11:00:00Z',
+    notes: [
+      { id: 'n2', content: 'You can update your coverage areas from Account → Business.', author: 'Support', createdAt: '2024-02-21T11:00:00Z' },
+    ],
   },
   {
-    id: 'f3',
-    name: 'Product Photos',
-    createdAt: '2024-03-03T09:00:00Z'
-  }
+    id: 'tkt-3',
+    subject: 'Cannot update my logo',
+    description: 'The logo upload keeps failing on the branding page.',
+    status: 'open',
+    priority: 'medium',
+    type: 'TECHNICAL_ISSUE',
+    createdAt: '2024-03-14T08:00:00Z',
+    updatedAt: '2024-03-14T08:00:00Z',
+    notes: [],
+  },
+];
+
+// Mock Agents (independent delivery agents affiliated with this agency)
+export const mockAgents: Agent[] = [
+  {
+    id: 'agt-1',
+    name: 'Jean-Paul Mballa',
+    email: 'jp.mballa@example.com',
+    phone: '+237 677 12 34 56',
+    avatar: 'https://i.pravatar.cc/150?u=jpmballa',
+    zone: 'Littoral',
+    vehicle: 'motorbike',
+    status: 'active',
+    deliveriesCompleted: 342,
+    rating: 4.8,
+    joinedAt: '2023-11-02T09:00:00Z',
+  },
+  {
+    id: 'agt-2',
+    name: 'Amina Njoya',
+    email: 'amina.njoya@example.com',
+    phone: '+237 690 22 44 66',
+    avatar: 'https://i.pravatar.cc/150?u=aminanjoya',
+    zone: 'Centre',
+    vehicle: 'car',
+    status: 'active',
+    deliveriesCompleted: 198,
+    rating: 4.6,
+    joinedAt: '2024-01-15T09:00:00Z',
+  },
+  {
+    id: 'agt-3',
+    name: 'Serge Fotso',
+    email: 'serge.fotso@example.com',
+    phone: '+237 655 33 22 11',
+    avatar: 'https://i.pravatar.cc/150?u=sergefotso',
+    zone: 'Littoral',
+    vehicle: 'motorbike',
+    status: 'suspended',
+    deliveriesCompleted: 87,
+    rating: 3.9,
+    joinedAt: '2024-02-01T09:00:00Z',
+  },
+  {
+    id: 'agt-4',
+    name: 'Grace Tabi',
+    email: 'grace.tabi@example.com',
+    phone: '+237 699 88 77 66',
+    avatar: 'https://i.pravatar.cc/150?u=gracetabi',
+    zone: 'West',
+    vehicle: 'bicycle',
+    status: 'active',
+    deliveriesCompleted: 256,
+    rating: 4.9,
+    joinedAt: '2023-09-20T09:00:00Z',
+  },
+  {
+    id: 'agt-5',
+    name: 'Emmanuel Nkeng',
+    email: 'emmanuel.nkeng@example.com',
+    phone: '+237 674 45 67 89',
+    avatar: 'https://i.pravatar.cc/150?u=emmanuelnkeng',
+    zone: 'Northwest',
+    vehicle: 'van',
+    status: 'inactive',
+    deliveriesCompleted: 45,
+    rating: 4.2,
+    joinedAt: '2024-03-01T09:00:00Z',
+  },
+  {
+    id: 'agt-6',
+    name: 'Larissa Enow',
+    email: 'larissa.enow@example.com',
+    phone: '+237 651 98 76 54',
+    avatar: 'https://i.pravatar.cc/150?u=larissaenow',
+    zone: 'Centre',
+    vehicle: 'motorbike',
+    status: 'active',
+    deliveriesCompleted: 301,
+    rating: 4.7,
+    joinedAt: '2023-12-10T09:00:00Z',
+  },
+];
+
+// Mock Agent Requests (agents requesting to join this agency)
+export const mockAgentRequests: AgentRequest[] = [
+  {
+    id: 'req-1',
+    name: 'Patrick Ondoa',
+    email: 'patrick.ondoa@example.com',
+    phone: '+237 678 11 22 33',
+    avatar: 'https://i.pravatar.cc/150?u=patrickondoa',
+    zone: 'Littoral',
+    vehicle: 'motorbike',
+    experienceYears: 2,
+    message: 'I currently deliver part-time in Douala and I am available full-time from next month.',
+    status: 'pending',
+    requestedAt: '2024-03-14T10:00:00Z',
+  },
+  {
+    id: 'req-2',
+    name: 'Divine Ashu',
+    email: 'divine.ashu@example.com',
+    phone: '+237 691 44 55 66',
+    avatar: 'https://i.pravatar.cc/150?u=divineashu',
+    zone: 'West',
+    vehicle: 'car',
+    experienceYears: 5,
+    message: 'I own a delivery van and have 5 years of experience with a competing platform.',
+    status: 'pending',
+    requestedAt: '2024-03-13T15:30:00Z',
+  },
+  {
+    id: 'req-3',
+    name: 'Nadège Kwemo',
+    email: 'nadege.kwemo@example.com',
+    phone: '+237 696 77 88 99',
+    avatar: 'https://i.pravatar.cc/150?u=nadegekwemo',
+    zone: 'Centre',
+    vehicle: 'bicycle',
+    experienceYears: 1,
+    status: 'approved',
+    requestedAt: '2024-02-18T09:00:00Z',
+  },
+  {
+    id: 'req-4',
+    name: 'Boris Talla',
+    email: 'boris.talla@example.com',
+    phone: '+237 683 21 43 65',
+    avatar: 'https://i.pravatar.cc/150?u=boristalla',
+    zone: 'Northwest',
+    vehicle: 'on_foot',
+    experienceYears: 0,
+    status: 'declined',
+    requestedAt: '2024-02-05T09:00:00Z',
+  },
+];
+
+// Mock Storage Items (multi-vendor products held in this agency's warehouse)
+export const mockStorageItems: StorageItem[] = [
+  {
+    id: 'stg-1',
+    sku: 'TH-EAR-001',
+    productName: 'Wireless Earbuds Pro',
+    image: 'https://placehold.co/100x100/6366f1/ffffff?text=Earbuds',
+    vendor: 'TechHub Electronics',
+    category: 'Electronics',
+    quantity: 120,
+    reorderLevel: 30,
+    unit: 'pcs',
+    location: 'Aisle 1 · Bin 4',
+    unitValue: 45.00,
+    status: 'in_stock',
+    receivedAt: '2024-02-10T09:00:00Z',
+    updatedAt: '2024-03-12T09:00:00Z',
+  },
+  {
+    id: 'stg-2',
+    sku: 'TH-SPK-014',
+    productName: 'Bluetooth Speaker Mini',
+    image: 'https://placehold.co/100x100/3b82f6/ffffff?text=Speaker',
+    vendor: 'TechHub Electronics',
+    category: 'Electronics',
+    quantity: 18,
+    reorderLevel: 25,
+    unit: 'pcs',
+    location: 'Aisle 1 · Bin 7',
+    unitValue: 28.50,
+    status: 'low_stock',
+    receivedAt: '2024-01-22T09:00:00Z',
+    updatedAt: '2024-03-13T09:00:00Z',
+  },
+  {
+    id: 'stg-3',
+    sku: 'US-JKT-022',
+    productName: "Men's Denim Jacket",
+    image: 'https://placehold.co/100x100/475569/ffffff?text=Jacket',
+    vendor: 'UrbanStyle Fashion',
+    category: 'Apparel',
+    quantity: 0,
+    reorderLevel: 15,
+    unit: 'pcs',
+    location: 'Aisle 2 · Bin 2',
+    unitValue: 39.99,
+    status: 'out_of_stock',
+    receivedAt: '2024-01-05T09:00:00Z',
+    updatedAt: '2024-03-10T09:00:00Z',
+  },
+  {
+    id: 'stg-4',
+    sku: 'US-DRS-031',
+    productName: 'Women\'s Summer Dress',
+    image: 'https://placehold.co/100x100/ec4899/ffffff?text=Dress',
+    vendor: 'UrbanStyle Fashion',
+    category: 'Apparel',
+    quantity: 64,
+    reorderLevel: 20,
+    unit: 'pcs',
+    location: 'Aisle 2 · Bin 5',
+    unitValue: 32.00,
+    status: 'in_stock',
+    receivedAt: '2024-02-28T09:00:00Z',
+    updatedAt: '2024-03-11T09:00:00Z',
+  },
+  {
+    id: 'stg-5',
+    sku: 'GL-HNY-007',
+    productName: 'Organic Honey 500g',
+    image: 'https://placehold.co/100x100/f59e0b/ffffff?text=Honey',
+    vendor: 'GreenLeaf Grocers',
+    category: 'Grocery',
+    quantity: 40,
+    reorderLevel: 15,
+    unit: 'jars',
+    location: 'Aisle 3 · Bin 1',
+    unitValue: 8.50,
+    status: 'in_stock',
+    receivedAt: '2024-03-01T09:00:00Z',
+    updatedAt: '2024-03-14T09:00:00Z',
+  },
+  {
+    id: 'stg-6',
+    sku: 'GL-COF-012',
+    productName: 'Roasted Arabica Coffee 1kg',
+    image: 'https://placehold.co/100x100/92400e/ffffff?text=Coffee',
+    vendor: 'GreenLeaf Grocers',
+    category: 'Grocery',
+    quantity: 12,
+    reorderLevel: 20,
+    unit: 'bags',
+    location: 'Aisle 3 · Bin 3',
+    unitValue: 14.00,
+    status: 'low_stock',
+    receivedAt: '2024-02-14T09:00:00Z',
+    updatedAt: '2024-03-09T09:00:00Z',
+  },
+  {
+    id: 'stg-7',
+    sku: 'HC-DIN-018',
+    productName: 'Ceramic Dinner Set',
+    image: 'https://placehold.co/100x100/10b981/ffffff?text=Dinner+Set',
+    vendor: 'HomeCraft Living',
+    category: 'Home & Living',
+    quantity: 22,
+    reorderLevel: 10,
+    unit: 'sets',
+    location: 'Aisle 4 · Bin 6',
+    unitValue: 56.00,
+    status: 'reserved',
+    receivedAt: '2024-01-30T09:00:00Z',
+    updatedAt: '2024-03-08T09:00:00Z',
+  },
+  {
+    id: 'stg-8',
+    sku: 'HC-CUT-025',
+    productName: 'Bamboo Cutting Board',
+    image: 'https://placehold.co/100x100/78350f/ffffff?text=Cutting+Board',
+    vendor: 'HomeCraft Living',
+    category: 'Home & Living',
+    quantity: 75,
+    reorderLevel: 15,
+    unit: 'pcs',
+    location: 'Aisle 4 · Bin 8',
+    unitValue: 12.00,
+    status: 'in_stock',
+    receivedAt: '2024-02-20T09:00:00Z',
+    updatedAt: '2024-03-07T09:00:00Z',
+  },
 ];

@@ -319,7 +319,7 @@ Send `skip: true` to bypass this step without providing branding data. The flow 
 - **Auth**: Yes (Agency role)
 - **Prerequisite**: Step 2 completed (Step 3 may be skipped)
 
-This is the final required step. It captures the three policy pillars that govern how the agency operates with vendors and customers: **pricing**, **returns**, and **damage handling**.
+This is the final required step. It captures the policy pillars that govern how the agency operates with vendors and customers: **pricing**, **returns**, **damage handling**, and **cash-on-delivery participation**.
 
 #### Request Body
 
@@ -361,7 +361,14 @@ This is the final required step. It captures the three policy pillars that gover
       "claim_deadline_days": 7,
       "max_refund_per_item": 50000,
       "notes": "Damage claims without original packaging will be rejected."
-    }
+    },
+    "cod": {
+      "enabled": true,
+      "max_order_amount": 500000
+    },
+    "documents": [
+      "https://cdn.example.com/agency-docs/terms-addendum.pdf"
+    ]
   },
   "version": 2
 }
@@ -431,6 +438,63 @@ The `pricing` object covers two fulfilment models (`storage_based` and `pickup_b
 | `notes` | `string` | No | Max 700 chars | Additional conditions or rejection criteria (e.g. packaging requirements). |
 
 > **Admin-only fields:** `inspector` and `investigation_fee` are **not accepted from the frontend**. They are preset by the platform admin and will appear in the profile response (defaulting to `"agency"` and `1000` respectively). Do not send these fields — they will be silently ignored.
+
+---
+
+#### Field Reference — `policies.cod`
+
+Cash-on-delivery participation (opt-in). The per-collection fee lives in
+`pricing.additional_fees.cod_handling_fee`; this block only gates eligibility. See
+[cod-cash-management.md](./cod-cash-management.md) for the operational workflow (agent
+requirements, cash deposits, remittances).
+
+| Field | Type | Required? | Validation | Description |
+|-------|------|-----------|------------|-------------|
+| `enabled` | `boolean` | Yes (block optional) | — | Whether this agency handles COD orders. Omitting the whole `cod` block defaults to `{ "enabled": false, "max_order_amount": null }`. |
+| `max_order_amount` | `number \| null` | No | ≥ 0, default `null` | Cap on a single COD order's total (minor units). Checkout rejects COD orders above it. `null` = no cap. |
+
+---
+
+#### Field Reference — `policies.documents`
+
+| Field | Type | Required? | Validation | Description |
+|-------|------|-----------|------------|-------------|
+| `documents` | `string[]` | No | Max 2 URLs, each a valid URL | Supporting document(s) (e.g. a signed PDF addendum) covering additional terms that don't fit the structured fields above. Upload the file(s) via `POST /api/agency/profile/policy-documents` first, then submit the resulting URL(s) here. |
+
+> **Full-replace semantics:** Like the rest of `policies`, `documents` is replaced wholesale on every submit. Re-send the existing URLs alongside any new ones if you want to keep them — omitting the field (or sending `[]`) clears it.
+
+#### Uploading policy documents
+
+- **Endpoint**: `POST /api/agency/profile/policy-documents`
+- **Auth**: Yes (Agency role)
+- **Content-Type**: `multipart/form-data`, field name `documents` (1-2 files)
+
+This is a **standalone upload route, unrelated to the product/ticket media pipeline** (`POST /api/files/upload`). Files are **PDF only**, max **5MB each**, max **2 per request**. It does not touch `policies` itself — it only stores the file(s) and returns their public URLs, which you then include in the `documents` array on a `PUT /api/agency/onboarding/policies` or `PATCH /api/agency/profile` call.
+
+**Request** (multipart form): `documents` = 1 or 2 PDF files.
+
+**Success Response (`201 Created`)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "urls": [
+      "https://cdn.example.com/agency-policy-documents/terms-addendum.pdf"
+    ]
+  },
+  "message": "Uploaded 1 document(s)"
+}
+```
+
+**Error Responses**:
+
+| Status | Code | Cause |
+|--------|------|-------|
+| `400` | `DELIVERY_POLICY_DOCUMENT_MISSING` | No file sent under the `documents` field. |
+| `400` | `DELIVERY_POLICY_DOCUMENT_TYPE_INVALID` | A file's MIME type is not `application/pdf`. |
+| `400` | `VALIDATION_ERROR` | More than 2 files sent, or an unexpected field name. |
+| `413` | `CATALOG_FILE_TOO_LARGE` | A file exceeds 5MB. |
 
 ---
 
@@ -512,7 +576,10 @@ All `PUT` step submissions return the full updated profile and a `completionStat
           "inspector": "agency",
           "investigation_fee": 1000,
           "notes": null
-        }
+        },
+        "documents": [
+          "https://cdn.example.com/agency-docs/terms-addendum.pdf"
+        ]
       },
       "wa": null,
       "timezone": "Africa/Douala",

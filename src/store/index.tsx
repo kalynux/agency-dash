@@ -1,14 +1,16 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import type { 
-  User, Store, Product, Order, Vendor, 
-  Notification, AnalyticsMetrics, DateRange, 
-  MediaFile, MediaFolder, MediaSortField 
+import type {
+  User, Order,
+  Notification, AnalyticsMetrics, DateRange,
+  Transaction, TransactionCategory, Ticket, TicketStatus, TicketPriority,
+  Agent, AgentStatus, AgentRequest, StorageItem,
 } from '@/types';
-import { 
-  mockUsers, mockStores, mockProducts, 
-  mockOrders, mockVendors, mockNotifications,
+import {
+  mockUsers,
+  mockOrders, mockNotifications,
   mockAnalytics, mockSalesData, mockCategoryBreakdown,
-  mockMediaFiles, mockMediaFolders
+  mockTransactions, mockTickets,
+  mockAgents, mockAgentRequests, mockStorageItems,
 } from '@/data/mockData';
 
 // Auth Store Context
@@ -27,39 +29,11 @@ const AuthStoreContext = createContext<AuthState | null>(null);
 interface UIState {
   sidebarCollapsed: boolean;
   theme: 'light' | 'dark' | 'system';
-  settingsTab: string;
   toggleSidebar: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setSettingsTab: (tab: string) => void;
 }
 
 const UIStoreContext = createContext<UIState | null>(null);
-
-// Store Store Context
-interface StoreState {
-  stores: Store[];
-  currentStore: Store | null;
-  setCurrentStore: (store: Store | null) => void;
-  fetchStores: () => Promise<void>;
-}
-
-const StoreStoreContext = createContext<StoreState | null>(null);
-
-// Product Store Context
-interface ProductState {
-  products: Product[];
-  selectedProducts: string[];
-  isLoading: boolean;
-  fetchProducts: () => Promise<void>;
-  createProduct: (product: Partial<Product>) => Promise<void>;
-  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
-  toggleProductSelection: (id: string) => void;
-  selectAllProducts: (ids: string[]) => void;
-  clearSelection: () => void;
-}
-
-const ProductStoreContext = createContext<ProductState | null>(null);
 
 // Order Store Context
 interface OrderState {
@@ -80,18 +54,6 @@ interface OrderState {
 }
 
 const OrderStoreContext = createContext<OrderState | null>(null);
-
-// Vendor Store Context
-interface VendorState {
-  vendors: Vendor[];
-  isLoading: boolean;
-  fetchVendors: () => Promise<void>;
-  approveVendor: (id: string) => Promise<void>;
-  suspendVendor: (id: string) => Promise<void>;
-  updateCommission: (id: string, rate: number) => Promise<void>;
-}
-
-const VendorStoreContext = createContext<VendorState | null>(null);
 
 // Notification Store Context
 interface NotificationState {
@@ -117,38 +79,55 @@ interface AnalyticsState {
 
 const AnalyticsStoreContext = createContext<AnalyticsState | null>(null);
 
-// Media Store Context
-interface MediaState {
-  files: MediaFile[];
-  folders: MediaFolder[];
-  selectedFiles: string[];
+// Transaction Store Context
+interface TransactionState {
+  transactions: Transaction[];
   isLoading: boolean;
-  uploadProgress: Record<string, number>;
-  currentFolderId?: string;
-  viewMode: 'grid' | 'list';
-  sortBy: MediaSortField;
-  sortOrder: 'asc' | 'desc';
-  filterType?: 'image' | 'video' | 'document' | 'audio';
-  searchQuery: string;
-  fetchFiles: () => Promise<void>;
-  fetchFolders: () => Promise<void>;
-  uploadFile: (file: File, metadata?: Partial<MediaFile['metadata']>) => Promise<void>;
-  deleteFile: (id: string) => Promise<void>;
-  deleteMultipleFiles: (ids: string[]) => Promise<void>;
-  toggleFileSelection: (id: string) => void;
-  selectAllFiles: (ids: string[]) => void;
-  clearSelection: () => void;
-  setViewMode: (mode: 'grid' | 'list') => void;
-  setSortBy: (field: MediaSortField) => void;
-  setSortOrder: (order: 'asc' | 'desc') => void;
-  setFilterType: (type?: 'image' | 'video' | 'document' | 'audio') => void;
-  setSearchQuery: (query: string) => void;
-  setCurrentFolder: (folderId?: string) => void;
-  createFolder: (name: string, parentId?: string) => Promise<void>;
-  updateFileMetadata: (id: string, metadata: Partial<MediaFile['metadata']>) => Promise<void>;
+  fetchTransactions: (category?: TransactionCategory) => Promise<void>;
 }
 
-const MediaStoreContext = createContext<MediaState | null>(null);
+const TransactionStoreContext = createContext<TransactionState | null>(null);
+
+// Ticket Store Context
+interface TicketState {
+  tickets: Ticket[];
+  isLoading: boolean;
+  fetchTickets: () => Promise<void>;
+  createTicket: (input: Partial<Ticket>) => Promise<void>;
+  updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
+  updateTicketPriority: (id: string, priority: TicketPriority) => Promise<void>;
+  addNote: (id: string, content: string) => Promise<void>;
+  closeTicket: (id: string) => Promise<void>;
+}
+
+const TicketStoreContext = createContext<TicketState | null>(null);
+
+// Agent Store Context
+interface AgentState {
+  agents: Agent[];
+  agentRequests: AgentRequest[];
+  isLoading: boolean;
+  fetchAgents: () => Promise<void>;
+  updateAgentStatus: (id: string, status: AgentStatus) => Promise<void>;
+  approveAgentRequest: (id: string) => Promise<void>;
+  declineAgentRequest: (id: string) => Promise<void>;
+}
+
+const AgentStoreContext = createContext<AgentState | null>(null);
+
+// Storage Store Context
+interface StorageState {
+  items: StorageItem[];
+  selectedItems: string[];
+  isLoading: boolean;
+  fetchStorageItems: () => Promise<void>;
+  toggleItemSelection: (id: string) => void;
+  selectAllItems: (ids: string[]) => void;
+  clearSelection: () => void;
+  returnToVendor: (id: string) => Promise<void>;
+}
+
+const StorageStoreContext = createContext<StorageState | null>(null);
 
 // Provider Component
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -159,7 +138,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setAuthLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const user = mockUsers.find(u => u.email === email);
     if (user && password === 'password') {
       setAuthUser(user);
@@ -177,74 +156,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // UI State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
-  const [settingsTab, setSettingsTab] = useState('profile');
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
-  }, []);
-
-  // Store State
-  const [stores] = useState<Store[]>(mockStores);
-  const [currentStore, setCurrentStore] = useState<Store | null>(mockStores[0]);
-
-  const fetchStores = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }, []);
-
-  // Product State
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [productLoading, setProductLoading] = useState(false);
-
-  const fetchProducts = useCallback(async () => {
-    setProductLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setProductLoading(false);
-  }, []);
-
-  const createProduct = useCallback(async (product: Partial<Product>) => {
-    setProductLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const newProduct: Product = {
-      ...mockProducts[0],
-      ...(product as Product),
-      id: String(Date.now()),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setProducts(prev => [newProduct, ...prev]);
-    setProductLoading(false);
-  }, []);
-
-  const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
-    setProductLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
-    ));
-    setProductLoading(false);
-  }, []);
-
-  const deleteProduct = useCallback(async (id: string) => {
-    setProductLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setProducts(prev => prev.filter(p => p.id !== id));
-    setSelectedProducts(prev => prev.filter(pid => pid !== id));
-    setProductLoading(false);
-  }, []);
-
-  const toggleProductSelection = useCallback((id: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
-    );
-  }, []);
-
-  const selectAllProducts = useCallback((ids: string[]) => {
-    setSelectedProducts(ids);
-  }, []);
-
-  const clearProductSelection = useCallback(() => {
-    setSelectedProducts([]);
   }, []);
 
   // Order State
@@ -262,14 +176,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateOrderStatus = useCallback(async (id: string, status: string) => {
     setOrderLoading(true);
     await new Promise(resolve => setTimeout(resolve, 500));
-    setOrders(prev => prev.map(o => 
+    setOrders(prev => prev.map(o =>
       o.id === id ? { ...o, status: status as Order['status'] } : o
     ));
     setOrderLoading(false);
   }, []);
 
   const toggleOrderSelection = useCallback((id: string) => {
-    setSelectedOrders(prev => 
+    setSelectedOrders(prev =>
       prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
     );
   }, []);
@@ -286,43 +200,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setOrderFilters(prev => ({ ...prev, ...filters }));
   }, []);
 
-  // Vendor State
-  const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
-  const [vendorLoading, setVendorLoading] = useState(false);
-
-  const fetchVendors = useCallback(async () => {
-    setVendorLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setVendorLoading(false);
-  }, []);
-
-  const approveVendor = useCallback(async (id: string) => {
-    setVendorLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setVendors(prev => prev.map(v => 
-      v.id === id ? { ...v, status: 'active' as const } : v
-    ));
-    setVendorLoading(false);
-  }, []);
-
-  const suspendVendor = useCallback(async (id: string) => {
-    setVendorLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setVendors(prev => prev.map(v => 
-      v.id === id ? { ...v, status: 'suspended' as const } : v
-    ));
-    setVendorLoading(false);
-  }, []);
-
-  const updateCommission = useCallback(async (id: string, rate: number) => {
-    setVendorLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setVendors(prev => prev.map(v => 
-      v.id === id ? { ...v, commissionRate: rate } : v
-    ));
-    setVendorLoading(false);
-  }, []);
-
   // Notification State
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
 
@@ -332,7 +209,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const markAsRead = useCallback(async (id: string) => {
     await new Promise(resolve => setTimeout(resolve, 200));
-    setNotifications(prev => prev.map(n => 
+    setNotifications(prev => prev.map(n =>
       n.id === id ? { ...n, read: true } : n
     ));
   }, []);
@@ -361,226 +238,240 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setAnalyticsLoading(false);
   }, []);
 
-  // Media State
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(mockMediaFiles);
-  const [mediaFolders, setMediaFolders] = useState<MediaFolder[]>(mockMediaFolders);
-  const [selectedMediaFiles, setSelectedMediaFiles] = useState<string[]>([]);
-  const [mediaLoading, setMediaLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [currentMediaFolder, setCurrentMediaFolder] = useState<string | undefined>(undefined);
-  const [mediaViewMode, setMediaViewMode] = useState<'grid' | 'list'>('grid');
-  const [mediaSortBy, setMediaSortBy] = useState<MediaSortField>('date');
-  const [mediaSortOrder, setMediaSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [mediaFilterType, setMediaFilterType] = useState<'image' | 'video' | 'document' | 'audio' | undefined>(undefined);
-  const [mediaSearchQuery, setMediaSearchQuery] = useState('');
+  // Transaction State
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactionLoading, setTransactionLoading] = useState(false);
 
-  const fetchMediaFiles = useCallback(async () => {
-    setMediaLoading(true);
+  const fetchTransactions = useCallback(async (category?: TransactionCategory) => {
+    setTransactionLoading(true);
     await new Promise(resolve => setTimeout(resolve, 500));
-    setMediaLoading(false);
+    setTransactions(category ? mockTransactions.filter(t => t.category === category) : mockTransactions);
+    setTransactionLoading(false);
   }, []);
 
-  const fetchMediaFolders = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-  }, []);
+  // Ticket State
+  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  const [ticketLoading, setTicketLoading] = useState(false);
 
-  const uploadMediaFile = useCallback(async (file: File, metadata?: Partial<MediaFile['metadata']>) => {
-    const fileId = String(Date.now());
-    setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
-    
-    // Simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(prev => ({ ...prev, [fileId]: i }));
-    }
-    
-    const newFile: MediaFile = {
-      id: fileId,
-      name: file.name,
-      url: URL.createObjectURL(file),
-      thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-      type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document',
-      mimeType: file.type,
-      size: file.size,
-      metadata: {
-        alt: metadata?.alt || '',
-        caption: metadata?.caption || '',
-        title: metadata?.title || file.name,
-        description: metadata?.description || '',
-      },
-      tags: [],
-      folderId: currentMediaFolder,
-      uploadedBy: authUser?.id || 'unknown',
-      uploadedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      usageCount: 0,
-      usedIn: [],
-    };
-    
-    setMediaFiles(prev => [newFile, ...prev]);
-    setUploadProgress(prev => {
-      const newProgress = { ...prev };
-      delete newProgress[fileId];
-      return newProgress;
-    });
-  }, [currentMediaFolder, authUser]);
-
-  const deleteMediaFile = useCallback(async (id: string) => {
-    setMediaLoading(true);
+  const fetchTickets = useCallback(async () => {
+    setTicketLoading(true);
     await new Promise(resolve => setTimeout(resolve, 500));
-    setMediaFiles(prev => prev.filter(f => f.id !== id));
-    setSelectedMediaFiles(prev => prev.filter(fid => fid !== id));
-    setMediaLoading(false);
+    setTicketLoading(false);
   }, []);
 
-  const deleteMultipleMediaFiles = useCallback(async (ids: string[]) => {
-    setMediaLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setMediaFiles(prev => prev.filter(f => !ids.includes(f.id)));
-    setSelectedMediaFiles(prev => prev.filter(fid => !ids.includes(fid)));
-    setMediaLoading(false);
-  }, []);
-
-  const toggleMediaFileSelection = useCallback((id: string) => {
-    setSelectedMediaFiles(prev => 
-      prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
-    );
-  }, []);
-
-  const selectAllMediaFiles = useCallback((ids: string[]) => {
-    setSelectedMediaFiles(ids);
-  }, []);
-
-  const clearMediaSelection = useCallback(() => {
-    setSelectedMediaFiles([]);
-  }, []);
-
-  const createMediaFolder = useCallback(async (name: string, parentId?: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const newFolder: MediaFolder = {
-      id: String(Date.now()),
-      name,
-      parentId,
-      createdAt: new Date().toISOString(),
+  const createTicket = useCallback(async (input: Partial<Ticket>) => {
+    setTicketLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const now = new Date().toISOString();
+    const newTicket: Ticket = {
+      id: `tkt-${Date.now()}`,
+      subject: input.subject ?? '',
+      description: input.description ?? '',
+      status: 'open',
+      priority: input.priority ?? 'medium',
+      type: input.type ?? 'GENERAL_SUPPORT',
+      createdAt: now,
+      updatedAt: now,
+      notes: [],
     };
-    setMediaFolders(prev => [...prev, newFolder]);
+    setTickets(prev => [newTicket, ...prev]);
+    setTicketLoading(false);
   }, []);
 
-  const updateFileMetadata = useCallback(async (id: string, metadata: Partial<MediaFile['metadata']>) => {
+  const updateTicketStatus = useCallback(async (id: string, status: TicketStatus) => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    setMediaFiles(prev => prev.map(f => 
-      f.id === id ? { ...f, metadata: { ...f.metadata, ...metadata }, updatedAt: new Date().toISOString() } : f
+    setTickets(prev => prev.map(t =>
+      t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t
     ));
   }, []);
 
+  const updateTicketPriority = useCallback(async (id: string, priority: TicketPriority) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setTickets(prev => prev.map(t =>
+      t.id === id ? { ...t, priority, updatedAt: new Date().toISOString() } : t
+    ));
+  }, []);
+
+  const addNote = useCallback(async (id: string, content: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setTickets(prev => prev.map(t =>
+      t.id === id
+        ? {
+          ...t,
+          notes: [...t.notes, { id: `n-${Date.now()}`, content, author: 'You', createdAt: new Date().toISOString() }],
+          updatedAt: new Date().toISOString(),
+        }
+        : t
+    ));
+  }, []);
+
+  const closeTicket = useCallback(async (id: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setTickets(prev => prev.map(t =>
+      t.id === id ? { ...t, status: 'closed' as const, updatedAt: new Date().toISOString() } : t
+    ));
+  }, []);
+
+  // Agent State
+  const [agents, setAgents] = useState<Agent[]>(mockAgents);
+  const [agentRequests, setAgentRequests] = useState<AgentRequest[]>(mockAgentRequests);
+  const [agentLoading, setAgentLoading] = useState(false);
+
+  const fetchAgents = useCallback(async () => {
+    setAgentLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setAgentLoading(false);
+  }, []);
+
+  const updateAgentStatus = useCallback(async (id: string, status: AgentStatus) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setAgents(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+  }, []);
+
+  const approveAgentRequest = useCallback(async (id: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const request = agentRequests.find(r => r.id === id);
+    if (!request) return;
+    setAgentRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' as const } : r));
+    setAgents(prev => [
+      {
+        id: `agt-${Date.now()}`,
+        name: request.name,
+        email: request.email,
+        phone: request.phone,
+        avatar: request.avatar,
+        zone: request.zone,
+        vehicle: request.vehicle,
+        status: 'active',
+        deliveriesCompleted: 0,
+        rating: 0,
+        joinedAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  }, [agentRequests]);
+
+  const declineAgentRequest = useCallback(async (id: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setAgentRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'declined' as const } : r));
+  }, []);
+
+  // Storage State
+  const [storageItems, setStorageItems] = useState<StorageItem[]>(mockStorageItems);
+  const [selectedStorageItems, setSelectedStorageItems] = useState<string[]>([]);
+  const [storageLoading, setStorageLoading] = useState(false);
+
+  const fetchStorageItems = useCallback(async () => {
+    setStorageLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setStorageLoading(false);
+  }, []);
+
+  const toggleItemSelection = useCallback((id: string) => {
+    setSelectedStorageItems(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  }, []);
+
+  const selectAllItems = useCallback((ids: string[]) => {
+    setSelectedStorageItems(ids);
+  }, []);
+
+  const clearStorageSelection = useCallback(() => {
+    setSelectedStorageItems([]);
+  }, []);
+
+  const returnToVendor = useCallback(async (id: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setStorageItems(prev => prev.filter(item => item.id !== id));
+    setSelectedStorageItems(prev => prev.filter(sid => sid !== id));
+  }, []);
+
   return (
-    <AuthStoreContext.Provider value={{ 
-      user: authUser, 
-      isAuthenticated: !!authUser, 
-      isLoading: authLoading, 
-      login, 
-      logout, 
-      setUser: setAuthUser 
+    <AuthStoreContext.Provider value={{
+      user: authUser,
+      isAuthenticated: !!authUser,
+      isLoading: authLoading,
+      login,
+      logout,
+      setUser: setAuthUser
     }}>
-      <UIStoreContext.Provider value={{ 
-        sidebarCollapsed, 
-        theme, 
-        settingsTab,
-        toggleSidebar, 
+      <UIStoreContext.Provider value={{
+        sidebarCollapsed,
+        theme,
+        toggleSidebar,
         setTheme,
-        setSettingsTab
       }}>
-        <StoreStoreContext.Provider value={{ 
-          stores, 
-          currentStore, 
-          setCurrentStore, 
-          fetchStores 
+        <OrderStoreContext.Provider value={{
+          orders,
+          selectedOrders,
+          isLoading: orderLoading,
+          filters: orderFilters,
+          fetchOrders,
+          updateOrderStatus,
+          toggleOrderSelection,
+          selectAllOrders,
+          clearSelection: clearOrderSelection,
+          setFilters
         }}>
-          <ProductStoreContext.Provider value={{ 
-            products, 
-            selectedProducts, 
-            isLoading: productLoading, 
-            fetchProducts, 
-            createProduct, 
-            updateProduct, 
-            deleteProduct, 
-            toggleProductSelection, 
-            selectAllProducts, 
-            clearSelection: clearProductSelection 
+          <NotificationStoreContext.Provider value={{
+            notifications,
+            unreadCount,
+            fetchNotifications,
+            markAsRead,
+            markAllAsRead
           }}>
-            <OrderStoreContext.Provider value={{ 
-              orders, 
-              selectedOrders, 
-              isLoading: orderLoading, 
-              filters: orderFilters, 
-              fetchOrders, 
-              updateOrderStatus, 
-              toggleOrderSelection, 
-              selectAllOrders, 
-              clearSelection: clearOrderSelection, 
-              setFilters 
+            <AnalyticsStoreContext.Provider value={{
+              metrics: analyticsMetrics,
+              salesData,
+              categoryBreakdown,
+              dateRange: analyticsDateRange,
+              isLoading: analyticsLoading,
+              fetchAnalytics,
+              setDateRange: setAnalyticsDateRange
             }}>
-              <VendorStoreContext.Provider value={{ 
-                vendors, 
-                isLoading: vendorLoading, 
-                fetchVendors, 
-                approveVendor, 
-                suspendVendor, 
-                updateCommission 
+              <TransactionStoreContext.Provider value={{
+                transactions,
+                isLoading: transactionLoading,
+                fetchTransactions,
               }}>
-                <NotificationStoreContext.Provider value={{ 
-                  notifications, 
-                  unreadCount, 
-                  fetchNotifications, 
-                  markAsRead, 
-                  markAllAsRead 
+                <TicketStoreContext.Provider value={{
+                  tickets,
+                  isLoading: ticketLoading,
+                  fetchTickets,
+                  createTicket,
+                  updateTicketStatus,
+                  updateTicketPriority,
+                  addNote,
+                  closeTicket,
                 }}>
-                  <AnalyticsStoreContext.Provider value={{ 
-                    metrics: analyticsMetrics, 
-                    salesData, 
-                    categoryBreakdown, 
-                    dateRange: analyticsDateRange, 
-                    isLoading: analyticsLoading, 
-                    fetchAnalytics, 
-                    setDateRange: setAnalyticsDateRange 
+                  <AgentStoreContext.Provider value={{
+                    agents,
+                    agentRequests,
+                    isLoading: agentLoading,
+                    fetchAgents,
+                    updateAgentStatus,
+                    approveAgentRequest,
+                    declineAgentRequest,
                   }}>
-                    <MediaStoreContext.Provider value={{
-                      files: mediaFiles,
-                      folders: mediaFolders,
-                      selectedFiles: selectedMediaFiles,
-                      isLoading: mediaLoading,
-                      uploadProgress,
-                      currentFolderId: currentMediaFolder,
-                      viewMode: mediaViewMode,
-                      sortBy: mediaSortBy,
-                      sortOrder: mediaSortOrder,
-                      filterType: mediaFilterType,
-                      searchQuery: mediaSearchQuery,
-                      fetchFiles: fetchMediaFiles,
-                      fetchFolders: fetchMediaFolders,
-                      uploadFile: uploadMediaFile,
-                      deleteFile: deleteMediaFile,
-                      deleteMultipleFiles: deleteMultipleMediaFiles,
-                      toggleFileSelection: toggleMediaFileSelection,
-                      selectAllFiles: selectAllMediaFiles,
-                      clearSelection: clearMediaSelection,
-                      setViewMode: setMediaViewMode,
-                      setSortBy: setMediaSortBy,
-                      setSortOrder: setMediaSortOrder,
-                      setFilterType: setMediaFilterType,
-                      setSearchQuery: setMediaSearchQuery,
-                      setCurrentFolder: setCurrentMediaFolder,
-                      createFolder: createMediaFolder,
-                      updateFileMetadata,
+                    <StorageStoreContext.Provider value={{
+                      items: storageItems,
+                      selectedItems: selectedStorageItems,
+                      isLoading: storageLoading,
+                      fetchStorageItems,
+                      toggleItemSelection,
+                      selectAllItems,
+                      clearSelection: clearStorageSelection,
+                      returnToVendor,
                     }}>
                       {children}
-                    </MediaStoreContext.Provider>
-                  </AnalyticsStoreContext.Provider>
-                </NotificationStoreContext.Provider>
-              </VendorStoreContext.Provider>
-            </OrderStoreContext.Provider>
-          </ProductStoreContext.Provider>
-        </StoreStoreContext.Provider>
+                    </StorageStoreContext.Provider>
+                  </AgentStoreContext.Provider>
+                </TicketStoreContext.Provider>
+              </TransactionStoreContext.Provider>
+            </AnalyticsStoreContext.Provider>
+          </NotificationStoreContext.Provider>
+        </OrderStoreContext.Provider>
       </UIStoreContext.Provider>
     </AuthStoreContext.Provider>
   );
@@ -599,27 +490,9 @@ export function useUIStore() {
   return context;
 }
 
-export function useStoreStore() {
-  const context = useContext(StoreStoreContext);
-  if (!context) throw new Error('useStoreStore must be used within StoreProvider');
-  return context;
-}
-
-export function useProductStore() {
-  const context = useContext(ProductStoreContext);
-  if (!context) throw new Error('useProductStore must be used within StoreProvider');
-  return context;
-}
-
 export function useOrderStore() {
   const context = useContext(OrderStoreContext);
   if (!context) throw new Error('useOrderStore must be used within StoreProvider');
-  return context;
-}
-
-export function useVendorStore() {
-  const context = useContext(VendorStoreContext);
-  if (!context) throw new Error('useVendorStore must be used within StoreProvider');
   return context;
 }
 
@@ -635,8 +508,26 @@ export function useAnalyticsStore() {
   return context;
 }
 
-export function useMediaStore() {
-  const context = useContext(MediaStoreContext);
-  if (!context) throw new Error('useMediaStore must be used within StoreProvider');
+export function useTransactionStore() {
+  const context = useContext(TransactionStoreContext);
+  if (!context) throw new Error('useTransactionStore must be used within StoreProvider');
+  return context;
+}
+
+export function useTicketStore() {
+  const context = useContext(TicketStoreContext);
+  if (!context) throw new Error('useTicketStore must be used within StoreProvider');
+  return context;
+}
+
+export function useAgentStore() {
+  const context = useContext(AgentStoreContext);
+  if (!context) throw new Error('useAgentStore must be used within StoreProvider');
+  return context;
+}
+
+export function useStorageStore() {
+  const context = useContext(StorageStoreContext);
+  if (!context) throw new Error('useStorageStore must be used within StoreProvider');
   return context;
 }

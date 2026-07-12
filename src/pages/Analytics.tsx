@@ -4,7 +4,7 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  ShoppingCart,
+  Truck,
   Users,
   Target,
   BarChart3,
@@ -76,7 +76,7 @@ function MetricCard({ title, value, change, changeType, icon: Icon }: MetricCard
 }
 
 export function Analytics() {
-  const { metrics, dateRange, setDateRange, fetchAnalytics } = useAnalyticsStore();
+  const { metrics, dateRange, setDateRange, fetchAnalytics, categoryBreakdown } = useAnalyticsStore();
 
   useEffect(() => {
     fetchAnalytics();
@@ -98,7 +98,7 @@ export function Analytics() {
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
           <p className="text-muted-foreground">
-            Track your store performance and insights
+            Track your delivery performance and earnings
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -128,28 +128,28 @@ export function Analytics() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total Sales"
+          title="Total Revenue"
           value={formatCurrency(metrics.totalSales.value)}
           change={metrics.totalSales.change}
           changeType={metrics.totalSales.changeType}
           icon={DollarSign}
         />
         <MetricCard
-          title="Total Orders"
+          title="Total Deliveries"
           value={metrics.totalOrders.value.toString()}
           change={metrics.totalOrders.change}
           changeType={metrics.totalOrders.changeType}
-          icon={ShoppingCart}
+          icon={Truck}
         />
         <MetricCard
-          title="Conversion Rate"
+          title="On-Time Rate"
           value={`${metrics.conversionRate.value}%`}
           change={metrics.conversionRate.change}
           changeType={metrics.conversionRate.changeType}
           icon={Target}
         />
         <MetricCard
-          title="Average Order Value"
+          title="Average Delivery Value"
           value={formatCurrency(metrics.averageOrderValue.value)}
           change={metrics.averageOrderValue.change}
           changeType={metrics.averageOrderValue.changeType}
@@ -159,22 +159,18 @@ export function Analytics() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="sales" className="gap-2">
+          <TabsTrigger value="deliveries" className="gap-2">
             <LineChart className="w-4 h-4" />
-            Sales
+            Deliveries
           </TabsTrigger>
-          <TabsTrigger value="products" className="gap-2">
+          <TabsTrigger value="coverage" className="gap-2">
             <PieChart className="w-4 h-4" />
-            Products
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="gap-2">
-            <Users className="w-4 h-4" />
-            Customers
+            Coverage
           </TabsTrigger>
         </TabsList>
 
@@ -183,17 +179,17 @@ export function Analytics() {
             <Card className="lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Sales Performance</CardTitle>
-                  <CardDescription>Daily sales and order trends</CardDescription>
+                  <CardTitle>Delivery Performance</CardTitle>
+                  <CardDescription>Daily revenue and delivery volume trends</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="gap-1">
                     <div className="w-2 h-2 rounded-full bg-primary" />
-                    Sales
+                    Revenue
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    Orders
+                    Deliveries
                   </Badge>
                 </div>
               </CardHeader>
@@ -204,8 +200,8 @@ export function Analytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Sales by Category</CardTitle>
-                <CardDescription>Revenue breakdown by product category</CardDescription>
+                <CardTitle>Revenue by Region</CardTitle>
+                <CardDescription>Breakdown by coverage area</CardDescription>
               </CardHeader>
               <CardContent>
                 <CategoryChart />
@@ -213,13 +209,12 @@ export function Analytics() {
             </Card>
           </div>
 
-          {/* Top Products & Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Top Products</CardTitle>
-                  <CardDescription>Best performing products this period</CardDescription>
+                  <CardTitle>Top Coverage Regions</CardTitle>
+                  <CardDescription>Best performing regions this period</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" className="gap-1">
                   View all
@@ -228,12 +223,7 @@ export function Analytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Wireless Bluetooth Headphones', sales: 12450, orders: 83 },
-                    { name: 'Smart Watch Pro', sales: 9876, orders: 33 },
-                    { name: 'Leather Crossbody Bag', sales: 5432, orders: 60 },
-                    { name: 'Ceramic Coffee Mug Set', sales: 3210, orders: 92 },
-                  ].map((product, index) => (
+                  {categoryBreakdown.map((region, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
@@ -243,11 +233,11 @@ export function Analytics() {
                           {index + 1}
                         </span>
                         <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">{product.orders} orders</p>
+                          <p className="font-medium">{region.category}</p>
+                          <p className="text-sm text-muted-foreground">{region.percentage}% of revenue</p>
                         </div>
                       </div>
-                      <span className="font-semibold">{formatCurrency(product.sales)}</span>
+                      <span className="font-semibold">{formatCurrency(region.sales)}</span>
                     </div>
                   ))}
                 </div>
@@ -257,16 +247,16 @@ export function Analytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest actions in your store</CardDescription>
+                <CardDescription>Latest actions on your agency account</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {[
-                    { action: 'New order received', detail: 'Order #1004 - $371.39', time: '2 hours ago' },
-                    { action: 'Product stock updated', detail: 'Wireless Headphones - 45 units', time: '4 hours ago' },
-                    { action: 'Customer registered', detail: 'Carol White joined', time: '6 hours ago' },
-                    { action: 'Order shipped', detail: 'Order #1002 via UPS', time: '8 hours ago' },
-                    { action: 'Review received', detail: '5 stars on Smart Watch Pro', time: '12 hours ago' },
+                    { action: 'New delivery assigned', detail: 'Order #1004 - $371.39', time: '2 hours ago' },
+                    { action: 'Delivery status updated', detail: 'Order #1003 - Processing', time: '4 hours ago' },
+                    { action: 'Ticket resolved', detail: 'How to add a coverage region', time: '6 hours ago' },
+                    { action: 'Delivery completed', detail: 'Order #1002 via UPS', time: '8 hours ago' },
+                    { action: 'Payout processed', detail: '$3,245.67 to Mobile Money', time: '12 hours ago' },
                   ].map((activity, index) => (
                     <div
                       key={index}
@@ -285,11 +275,11 @@ export function Analytics() {
           </div>
         </TabsContent>
 
-        <TabsContent value="sales" className="space-y-6 mt-6">
+        <TabsContent value="deliveries" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Sales Analytics</CardTitle>
-              <CardDescription>Detailed sales breakdown by time period</CardDescription>
+              <CardTitle>Delivery Analytics</CardTitle>
+              <CardDescription>Detailed delivery breakdown by time period</CardDescription>
             </CardHeader>
             <CardContent>
               <SalesChart />
@@ -297,12 +287,12 @@ export function Analytics() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="products" className="space-y-6 mt-6">
+        <TabsContent value="coverage" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Category Performance</CardTitle>
-                <CardDescription>Sales breakdown by product category</CardDescription>
+                <CardTitle>Coverage Performance</CardTitle>
+                <CardDescription>Revenue breakdown by region</CardDescription>
               </CardHeader>
               <CardContent>
                 <CategoryChart />
@@ -311,109 +301,23 @@ export function Analytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Inventory Status</CardTitle>
-                <CardDescription>Current stock levels overview</CardDescription>
+                <CardTitle>Delivery Status Breakdown</CardTitle>
+                <CardDescription>Current delivery pipeline overview</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {[
-                    { status: 'In Stock', count: 45, color: 'bg-green-500' },
-                    { status: 'Low Stock', count: 8, color: 'bg-yellow-500' },
-                    { status: 'Out of Stock', count: 3, color: 'bg-red-500' },
-                    { status: 'On Order', count: 12, color: 'bg-blue-500' },
+                    { status: 'Delivered', count: 45, color: 'bg-green-500' },
+                    { status: 'Shipped', count: 8, color: 'bg-indigo-500' },
+                    { status: 'Processing', count: 12, color: 'bg-purple-500' },
+                    { status: 'Pending', count: 6, color: 'bg-yellow-500' },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${item.color}`} />
                         <span>{item.status}</span>
                       </div>
-                      <span className="font-semibold">{item.count} products</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="customers" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Customer Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Customers</span>
-                    <span className="text-2xl font-bold">1,234</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">New This Month</span>
-                    <span className="text-lg font-semibold text-green-600">+89</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Returning</span>
-                    <span className="text-lg font-semibold">67%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Top Customers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Alice Johnson', orders: 12, spent: 2345 },
-                    { name: 'Bob Smith', orders: 8, spent: 1890 },
-                    { name: 'Carol White', orders: 15, spent: 3456 },
-                  ].map((customer, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={`https://i.pravatar.cc/150?u=${index}`}
-                          alt={customer.name}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{customer.name}</p>
-                          <p className="text-xs text-muted-foreground">{customer.orders} orders</p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-medium">{formatCurrency(customer.spent)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Customer Acquisition</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { source: 'Direct', percentage: 35 },
-                    { source: 'Organic Search', percentage: 28 },
-                    { source: 'Social Media', percentage: 20 },
-                    { source: 'Referral', percentage: 12 },
-                    { source: 'Email', percentage: 5 },
-                  ].map((source, index) => (
-                    <div key={index} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>{source.source}</span>
-                        <span className="font-medium">{source.percentage}%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${source.percentage}%` }}
-                        />
-                      </div>
+                      <span className="font-semibold">{item.count} deliveries</span>
                     </div>
                   ))}
                 </div>

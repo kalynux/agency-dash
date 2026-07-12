@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import {
   Bell,
-  ShoppingCart,
-  Package,
-  Users,
+  Truck,
+  Ticket,
+  Wallet,
   AlertCircle,
   Check,
   Settings,
@@ -18,12 +18,12 @@ import { cn } from '@/lib/utils';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case 'order':
-      return ShoppingCart;
-    case 'product':
-      return Package;
-    case 'customer':
-      return Users;
+    case 'delivery':
+      return Truck;
+    case 'payout':
+      return Wallet;
+    case 'ticket':
+      return Ticket;
     case 'alert':
       return AlertCircle;
     default:
@@ -33,12 +33,12 @@ const getNotificationIcon = (type: string) => {
 
 const getNotificationColor = (type: string) => {
   switch (type) {
-    case 'order':
+    case 'delivery':
       return 'bg-blue-100 text-blue-600';
-    case 'product':
-      return 'bg-purple-100 text-purple-600';
-    case 'customer':
+    case 'payout':
       return 'bg-green-100 text-green-600';
+    case 'ticket':
+      return 'bg-purple-100 text-purple-600';
     case 'alert':
       return 'bg-red-100 text-red-600';
     default:
@@ -125,7 +125,7 @@ export function Notifications() {
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
           <p className="text-muted-foreground">
-            Stay updated with your store activity
+            Stay updated with your agency activity
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -177,7 +177,7 @@ export function Notifications() {
                 <p className="text-2xl font-bold">24</p>
               </div>
               <div className="p-3 bg-green-100 rounded-lg">
-                <ShoppingCart className="w-5 h-5 text-green-600" />
+                <Truck className="w-5 h-5 text-green-600" />
               </div>
             </div>
           </CardContent>

@@ -4,8 +4,7 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  role: 'admin' | 'store_owner' | 'staff';
-  storeIds: string[];
+  role: 'admin' | 'agency' | 'staff';
   permissions: Permission[];
   telegramConnected?: boolean;
   whatsappConnected?: boolean;
@@ -22,101 +21,7 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-// Store Types
-export interface Store {
-  id: string;
-  name: string;
-  domain: string;
-  logo?: string;
-  status: 'active' | 'inactive' | 'pending';
-  plan: 'basic' | 'professional' | 'enterprise';
-  vendorId: string;
-  createdAt: string;
-  settings: StoreSettings;
-}
-
-export interface StoreSettings {
-  currency: string;
-  timezone: string;
-  language: string;
-}
-
-// Product Types - Legacy (for backward compatibility)
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  sku: string;
-  price: number;
-  compareAtPrice?: number;
-  costPerItem?: number;
-  images: string[];
-  status: 'active' | 'draft' | 'archived';
-  inventory: Inventory;
-  variants: ProductVariant[];
-  vendor: string;
-  category: string;
-  tags: string[];
-  seo: SEO;
-  createdAt: string;
-  updatedAt: string;
-  productType?: ProductType;
-  weight?: number;
-  weightUnit?: 'kg' | 'g' | 'lb' | 'oz';
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-  dimensionUnit?: 'cm' | 'm' | 'in' | 'ft';
-  requiresShipping?: boolean;
-  digitalAssets?: DigitalAsset[];
-  downloadLimit?: number;
-  downloadExpiryDays?: number;
-  previewEnabled?: boolean;
-  duration?: number;
-  durationUnit?: 'minute' | 'hour' | 'day';
-  locationType?: 'virtual' | 'physical' | 'both';
-  bufferTimeBefore?: number;
-  bufferTimeAfter?: number;
-  variantStrategy?: 'single' | 'variant';
-  bookingSettings?: ServiceBookingSettings;
-  availability?: ServiceAvailability;
-  staffIds?: string[];
-}
-
-export interface ProductVariant {
-  id: string;
-  title: string;
-  sku: string;
-  price: number;
-  inventory: number;
-  options: { name: string; value: string }[];
-}
-
-export interface Inventory {
-  quantity: number;
-  tracked: boolean;
-  lowStockThreshold: number;
-}
-
-export interface SEO {
-  title: string;
-  description: string;
-}
-
-export type ProductType = 'physical' | 'digital' | 'service';
-
-export interface DigitalAsset {
-  id: string;
-  fileId: string;
-  name: string;
-  size: number;
-  mimeType: string;
-  downloadCount: number;
-}
-
-// Order Types
+// Order Types (an "order" here is a delivery assigned to this agency)
 export interface Order {
   id: string;
   orderNumber: string;
@@ -189,47 +94,6 @@ export interface OrderTimelineEvent {
   actor: string;
 }
 
-// Vendor Types
-export interface Vendor {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  logo?: string;
-  status: 'active' | 'inactive' | 'pending_approval' | 'suspended';
-  commissionRate: number;
-  stores: Store[];
-  performance: VendorPerformance;
-  payoutInfo: PayoutInfo;
-  createdAt: string;
-  documents: VendorDocument[];
-  riskLevel: 'low' | 'medium' | 'high';
-}
-
-export interface VendorPerformance {
-  totalSales: number;
-  totalOrders: number;
-  averageRating: number;
-  responseTime: number;
-  fulfillmentRate: number;
-  returnRate: number;
-}
-
-export interface PayoutInfo {
-  method: 'bank_transfer' | 'paypal' | 'stripe';
-  accountDetails: string;
-  lastPayout?: string;
-  pendingAmount: number;
-}
-
-export interface VendorDocument {
-  id: string;
-  type: 'identity' | 'business_license' | 'tax_document' | 'bank_statement';
-  status: 'pending' | 'approved' | 'rejected';
-  url: string;
-  uploadedAt: string;
-}
-
 // Analytics Types
 export interface AnalyticsMetrics {
   totalSales: MetricWithChange;
@@ -259,7 +123,7 @@ export interface CategoryBreakdown {
 // Notification Types
 export interface Notification {
   id: string;
-  type: 'order' | 'product' | 'customer' | 'system' | 'alert';
+  type: 'delivery' | 'payout' | 'ticket' | 'system' | 'alert';
   title: string;
   message: string;
   read: boolean;
@@ -282,113 +146,106 @@ export interface FilterState {
   sortOrder?: 'asc' | 'desc';
 }
 
-// Media File Types
-export interface MediaFile {
-  id: string;
-  name: string;
-  url: string;
-  thumbnailUrl?: string;
-  type: 'image' | 'video' | 'document' | 'audio';
-  mimeType: string;
-  size: number;
-  width?: number;
-  height?: number;
-  duration?: number;
-  metadata: MediaMetadata;
-  tags: string[];
-  folderId?: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  updatedAt: string;
-  usageCount: number;
-  usedIn: UsedInReference[];
-}
+// Transaction Types (payouts, earnings, platform credits)
+export type TransactionCategory = 'plan' | 'credit' | 'earning' | 'payout';
+export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'reversed' | 'completed';
 
-export interface MediaMetadata {
-  alt?: string;
-  caption?: string;
-  title?: string;
-  description?: string;
-}
-
-export interface UsedInReference {
-  type: 'product' | 'category' | 'vendor' | 'page' | 'blog';
+export interface Transaction {
   id: string;
-  name: string;
-}
-
-export interface MediaFolder {
-  id: string;
-  name: string;
-  parentId?: string;
+  category: TransactionCategory;
+  status: TransactionStatus;
+  direction: 'in' | 'out';
+  amount: number;
+  currency: string;
+  description: string;
   createdAt: string;
 }
 
-export type MediaSortField = 'name' | 'date' | 'size' | 'usage';
-export type MediaViewMode = 'grid' | 'list';
+// Ticket Types (support tickets)
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_on_admin' | 'waiting_on_agency' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TicketType =
+  | 'GENERAL_SUPPORT'
+  | 'ACCOUNT_ACCESS'
+  | 'PROFILE_UPDATE'
+  | 'PAYOUT_REQUEST'
+  | 'PAYOUT_DELAY'
+  | 'PAYOUT_DISPUTE'
+  | 'DELIVERY_DELAY'
+  | 'DELIVERY_CONFIRMATION'
+  | 'POLICY_QUESTION'
+  | 'TECHNICAL_ISSUE'
+  | 'OTHER';
 
-// Extended Product Types for Product Upload Flow
-export interface ServiceBookingSettings {
-  minAdvanceBooking: number;
-  maxAdvanceBooking: number;
-  minAdvanceUnit: 'minute' | 'hour' | 'day';
-  maxAdvanceUnit: 'minute' | 'hour' | 'day';
-  allowRescheduling: boolean;
-  cancellationPolicy: 'anytime' | '24h' | '48h' | '72h' | 'custom';
-  customCancellationHours?: number;
+export interface TicketNote {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
 }
 
-export interface ServiceAvailability {
-  timezone: string;
-  schedule: WeeklySchedule;
-  exceptions: DateException[];
+export interface Ticket {
+  id: string;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  type: TicketType;
+  createdAt: string;
+  updatedAt: string;
+  notes: TicketNote[];
 }
 
-export interface WeeklySchedule {
-  monday: DaySchedule;
-  tuesday: DaySchedule;
-  wednesday: DaySchedule;
-  thursday: DaySchedule;
-  friday: DaySchedule;
-  saturday: DaySchedule;
-  sunday: DaySchedule;
+// Agent Types (independent delivery agents affiliated with this agency)
+export type AgentStatus = 'active' | 'inactive' | 'suspended';
+export type AgentVehicle = 'motorbike' | 'car' | 'van' | 'bicycle' | 'on_foot';
+
+export interface Agent {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  zone: string;
+  vehicle: AgentVehicle;
+  status: AgentStatus;
+  deliveriesCompleted: number;
+  rating: number;
+  joinedAt: string;
 }
 
-export interface DaySchedule {
-  enabled: boolean;
-  slots: TimeSlot[];
+export type AgentRequestStatus = 'pending' | 'approved' | 'declined';
+
+export interface AgentRequest {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  zone: string;
+  vehicle: AgentVehicle;
+  experienceYears: number;
+  message?: string;
+  status: AgentRequestStatus;
+  requestedAt: string;
 }
 
-export interface TimeSlot {
-  start: string;
-  end: string;
-}
+// Storage Types (multi-vendor warehouse inventory held by this agency)
+export type StorageStatus = 'in_stock' | 'low_stock' | 'out_of_stock' | 'reserved';
 
-export interface DateException {
-  date: string;
-  type: 'unavailable' | 'special';
-  slots?: TimeSlot[];
-  reason?: string;
-}
-
-// Product Upload Flow Types
-export type ProductUploadStep =
-  | 'type-selection'
-  | 'basic-info'
-  | 'media'
-  | 'pricing'
-  | 'variants'
-  | 'digital-assets'
-  | 'service-config'
-  | 'shipping'
-  | 'seo'
-  | 'review';
-
-export interface ProductUploadState {
-  step: ProductUploadStep;
-  productType: ProductType | null;
-  data: Partial<Product>;
-  validationErrors: Record<string, string[]>;
-  isSubmitting: boolean;
-  isDirty: boolean;
+export interface StorageItem {
+  id: string;
+  sku: string;
+  productName: string;
+  image?: string;
+  vendor: string;
+  category: string;
+  quantity: number;
+  reorderLevel: number;
+  unit: string;
+  location: string;
+  unitValue: number;
+  status: StorageStatus;
+  receivedAt: string;
+  updatedAt: string;
 }

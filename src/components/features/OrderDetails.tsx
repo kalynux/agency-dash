@@ -116,7 +116,7 @@ export function OrderDetails({ order }: OrderDetailsProps) {
               <CardHeader>
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Customer
+                  Recipient
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -135,7 +135,7 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                   </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Customer Stats</p>
+                  <p className="text-sm text-muted-foreground mb-2">Recipient Stats</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-lg font-semibold">{order.customer.orderCount}</p>

@@ -1,71 +1,162 @@
 import { useState } from 'react';
-import { useAuth, useUI, useRouter } from '@/App';
-import { useNotificationStore, useUIStore } from '@/store';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useUI } from '@/App';
+import { useNotificationStore } from '@/store';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { useVendorConnections } from '@/store/vendorConnections.store';
+import { useShipments } from '@/store/shipments.store';
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Users,
-  BarChart3,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  Store,
-  Bell,
-  HelpCircle,
-  LogOut,
-  Shield,
+  Truck,
   ChevronDown,
-  User,
-  CreditCard,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlatformStatus } from '@/components/layout/PlatformStatus';
+import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 
-const navigation = [
-  { name: 'Overview', route: 'overview' as const, icon: LayoutDashboard },
-  { name: 'Orders', route: 'orders' as const, icon: ShoppingCart, badge: 'orders' },
-  { name: 'Products', route: 'products' as const, icon: Package },
-  { name: 'Media', route: 'media' as const, icon: ImageIcon },
-  { name: 'Customers', route: 'customers' as const, icon: Users },
-  { name: 'Analytics', route: 'analytics' as const, icon: BarChart3 },
-];
+/** Left accent bar marking the active row (solid) or a parent-of-active (faded). */
+function ActiveBar({ show, faded }: { show: boolean; faded?: boolean }) {
+  if (!show) return null;
+  return (
+    <span
+      className={cn(
+        'absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full',
+        faded ? 'bg-primary/40' : 'bg-primary',
+      )}
+    />
+  );
+}
 
-const adminNavigation = [
-  { name: 'Agencies', route: 'vendors' as const, icon: Store },
-  { name: 'Admin Settings', route: 'settings' as const, icon: Shield },
-];
+function isPathActive(itemPath: string, pathname: string): boolean {
+  if (itemPath === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/';
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
 
-const bottomNavigation = [
-  { name: 'Notifications', route: 'notifications' as const, icon: Bell, badge: 'notifications' },
-  { name: 'Help & Support', route: 'support' as const, icon: HelpCircle },
-];
+const rowBase =
+  'relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground';
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUI();
-  const { setSettingsTab, settingsTab } = useUIStore();
-  const { user, logout } = useAuth();
   const { unreadCount } = useNotificationStore();
-  const { route, navigate } = useRouter();
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const { activeCount: shipmentsActiveCount } = useShipments();
+  const { pendingActionCount } = useVendorConnections();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
+  const roleEntity = useOnboarding().session?.role_entity;
 
-  const isAdmin = user?.role === 'admin';
+  const agencyName = roleEntity?.agency_name || 'My Agency';
+  const agencyLogo = roleEntity?.logo_url || null;
 
-  const isActive = (itemRoute: string) => {
-    return route === itemRoute;
-  };
+  // Per-item manual expand overrides; otherwise a group auto-opens when a child
+  // is active. Works for any item with children.
+  const [manualExpanded, setManualExpanded] = useState<Record<string, boolean>>({});
 
-  const handleSettingsClick = (tab: string) => {
-    setSettingsTab(tab);
-    navigate('settings');
-  };
-
-  const getBadgeCount = (badgeType?: string) => {
-    if (badgeType === 'notifications') return unreadCount;
-    if (badgeType === 'orders') return 3;
+  const getBadgeCount = (badge?: NavBadge) => {
+    if (badge === 'notifications') return unreadCount;
+    if (badge === 'shipments') return shipmentsActiveCount;
+    if (badge === 'vendorConnections') return pendingActionCount;
     return 0;
+  };
+
+  const isChildActive = (child: NavChild) => isPathActive(child.path, pathname);
+  const isLeafActive = (child: NavChild, parent: NavItem) =>
+    child.path === parent.path ? pathname === child.path : isChildActive(child);
+
+  const hasActiveChild = (item: NavItem) =>
+    item.children?.some((c) => isLeafActive(c, item)) ?? false;
+  const isExpanded = (item: NavItem) =>
+    manualExpanded[item.name] ?? hasActiveChild(item);
+  const toggleExpanded = (item: NavItem) =>
+    setManualExpanded((m) => ({ ...m, [item.name]: !(m[item.name] ?? hasActiveChild(item)) }));
+
+  const selectChild = (child: NavChild) => {
+    if (child.disabled) return;
+    navigate(child.path);
+  };
+
+  const renderItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const badgeCount = getBadgeCount(item.badge);
+    const hasChildren = !!item.children?.length;
+    const parentActive = isPathActive(item.path, pathname);
+    const childActive = hasChildren && hasActiveChild(item);
+    const open = hasChildren && isExpanded(item) && !sidebarCollapsed;
+
+    const onClick = () => {
+      if (item.disabled) return;
+      if (hasChildren && !sidebarCollapsed) toggleExpanded(item);
+      else navigate(item.path);
+    };
+
+    const solid = parentActive && !childActive;
+    const showBar = parentActive || childActive;
+
+    return (
+      <div key={item.name} className="space-y-1">
+        <button
+          onClick={onClick}
+          disabled={item.disabled}
+          className={cn(
+            rowBase,
+            solid && 'bg-accent text-accent-foreground',
+            childActive && !solid && 'bg-accent/50 text-accent-foreground',
+            sidebarCollapsed && 'justify-center',
+            item.disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground',
+          )}
+        >
+          <ActiveBar show={showBar} faded={childActive && !solid} />
+          <div className="relative">
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            {badgeCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                {badgeCount > 9 ? '9+' : badgeCount}
+              </span>
+            )}
+          </div>
+          {!sidebarCollapsed && (
+            <span className="flex-1 text-left whitespace-nowrap overflow-hidden">
+              {item.name}
+            </span>
+          )}
+          {!sidebarCollapsed && hasChildren && (
+            <ChevronDown
+              className={cn('w-4 h-4 transition-transform', open && 'rotate-180')}
+            />
+          )}
+        </button>
+
+        {open && (
+          <div className="ml-5 border-l pl-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
+            {item.children!.map((child) => {
+              const ChildIcon = child.icon;
+              const cActive = isLeafActive(child, item);
+              return (
+                <button
+                  key={child.name}
+                  onClick={() => selectChild(child)}
+                  disabled={child.disabled}
+                  className={cn(
+                    rowBase,
+                    'py-2',
+                    cActive && 'bg-accent text-accent-foreground',
+                    child.disabled &&
+                    'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground',
+                  )}
+                >
+                  <ActiveBar show={cActive} />
+                  <ChildIcon className="w-4 h-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap overflow-hidden">{child.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -76,243 +167,73 @@ export function Sidebar() {
         sidebarCollapsed ? 'w-20' : 'w-64'
       )}
     >
-      {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b">
-        {!sidebarCollapsed ? (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Store className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg">Jovi Mall</span>
-          </div>
-        ) : (
-          <div className="mx-auto">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Store className="w-5 h-5 text-primary-foreground" />
-            </div>
-          </div>
+      {/* Top — agency name */}
+      <div className="h-16 flex items-center gap-2 px-4 border-b flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
+          {agencyLogo ? (
+            <img src={agencyLogo} alt={agencyName} className="w-full h-full object-cover" />
+          ) : (
+            <Truck className="w-5 h-5 text-primary-foreground" />
+          )}
+        </div>
+        {!sidebarCollapsed && (
+          <span className="font-bold text-base truncate">{agencyName}</span>
         )}
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className={cn('h-8 w-8', sidebarCollapsed && 'hidden')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
       </div>
 
-
-
-      {/* Navigation */}
-      <ScrollArea className="flex-1 py-4">
+      {/* Primary navigation — scrolls between top and the pinned footer group */}
+      <ScrollArea className="flex-1 min-h-0 py-4">
         <nav className="space-y-1 px-2">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const badgeCount = getBadgeCount(item.badge);
-            const active = isActive(item.route);
-
-            return (
-              <button
-                key={item.name}
-                onClick={() => navigate(item.route)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  active && 'bg-primary/10 text-primary',
-                  sidebarCollapsed && 'justify-center'
-                )}
-              >
-                <div className="relative">
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {badgeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {badgeCount > 9 ? '9+' : badgeCount}
-                    </span>
-                  )}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className="whitespace-nowrap overflow-hidden">
-                    {item.name}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {PRIMARY_NAV.map(renderItem)}
         </nav>
-
-        {/* Admin Section */}
-        {isAdmin && (
-          <div className="mt-6">
-            {!sidebarCollapsed && (
-              <div className="px-4 mb-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Admin
-                </span>
-              </div>
-            )}
-            <nav className="space-y-1 px-2">
-              {adminNavigation.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.route);
-
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => navigate(item.route)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      active && 'bg-primary/10 text-primary',
-                      sidebarCollapsed && 'justify-center'
-                    )}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <span className="whitespace-nowrap overflow-hidden">
-                        {item.name}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        )}
       </ScrollArea>
 
-      {/* Bottom Navigation */}
-      <div className="border-t py-2">
-        <nav className="space-y-1 px-2">
-          {bottomNavigation.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.route);
+      {/* Footer navigation — Account + Settings, pinned just above Platform Status */}
+      <nav className="space-y-1 px-2 py-3 border-t flex-shrink-0">
+        {FOOTER_NAV.map(renderItem)}
+      </nav>
 
-            return (
-              <button
-                key={item.name}
-                onClick={() => navigate(item.route)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  active && 'bg-primary/10 text-primary',
-                  sidebarCollapsed && 'justify-center'
-                )}
-              >
-                <div className="relative">
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {item.badge === 'notifications' && unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className="whitespace-nowrap overflow-hidden">
-                    {item.name}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-          {/* Settings Group */}
-          <div className="space-y-1">
-            <button
-              onClick={() => !sidebarCollapsed ? setSettingsExpanded(!settingsExpanded) : navigate('settings')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                'hover:bg-accent hover:text-accent-foreground',
-                isActive('settings') && 'bg-primary/10 text-primary',
-                sidebarCollapsed && 'justify-center'
-              )}
-            >
-              <Settings className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <>
-                  <span className="flex-1 text-left">Settings</span>
-                  <ChevronDown
-                    className={cn("w-4 h-4 transition-transform", settingsExpanded && "rotate-180")}
-                  />
-                </>
-              )}
-            </button>
-
-            {!sidebarCollapsed && settingsExpanded && (
-              <div className="pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                {[
-                  { name: 'Profile', id: 'profile', icon: User },
-                  { name: 'Store', id: 'store', icon: Store },
-                  { name: 'Notifications', id: 'notifications', icon: Bell },
-                  { name: 'Security', id: 'security', icon: Shield, disabled: true },
-                  { name: 'Billing', id: 'billing', icon: CreditCard, disabled: true },
-                ].map((subItem) => (
-                  <button
-                    key={subItem.id}
-                    onClick={() => !subItem.disabled && handleSettingsClick(subItem.id)}
-                    disabled={subItem.disabled}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
-                      settingsTab === subItem.id && isActive('settings')
-                        ? 'text-primary bg-primary/5'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                      subItem.disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground'
-                    )}
-                  >
-                    <subItem.icon className="w-3 h-3" />
-                    <span>{subItem.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* Footer — Jovi Mall platform + health, then the collapse toggle */}
+      <div className="border-t flex-shrink-0">
+        {sidebarCollapsed ? (
+          <div className="flex justify-center py-3">
+            <div className="relative w-8 h-8 rounded-md bg-primary flex items-center justify-center">
+              <Truck className="w-4 h-4 text-primary-foreground" />
+              <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-card p-0.5">
+                <PlatformStatus compact />
+              </span>
+            </div>
           </div>
-        </nav>
-
-        {/* User Profile */}
-        <div className="mt-2 px-2">
-          <div
-            className={cn(
-              'flex items-center gap-3 px-3 py-3 rounded-lg bg-muted/50',
-              sidebarCollapsed && 'justify-center'
-            )}
-          >
-            <img
-              src={user?.avatar || `https://i.pravatar.cc/150?u=${user?.id}`}
-              alt={user?.name}
-              className="w-8 h-8 rounded-full flex-shrink-0"
-            />
-            {!sidebarCollapsed && (
-              <>
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-sm font-medium truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={logout}
-                  className="h-8 w-8 flex-shrink-0"
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </>
-            )}
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-3">
+            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">Jovi Mall</p>
+              <PlatformStatus />
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Expand Button (when collapsed) */}
-      {sidebarCollapsed && (
         <Button
           variant="ghost"
-          size="icon"
           onClick={toggleSidebar}
-          className="absolute -right-3 top-20 h-6 w-6 rounded-full bg-primary text-primary-foreground shadow-md"
+          className={cn(
+            'w-full h-10 rounded-none border-t text-xs text-muted-foreground gap-2',
+            sidebarCollapsed && 'px-0'
+          )}
         >
-          <ChevronRight className="h-3 w-3" />
+          {sidebarCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <>
+              <ChevronLeft className="h-4 w-4" />
+              Collapse
+            </>
+          )}
         </Button>
-      )}
+      </div>
     </aside>
   );
 }

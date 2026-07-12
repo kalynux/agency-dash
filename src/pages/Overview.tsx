@@ -1,25 +1,28 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  ShoppingCart,
+  Truck,
   Users,
   Target,
   Calendar,
   ArrowRight,
-  Package,
-  RefreshCw,
+  Ticket as TicketIcon,
+  MapPin,
   AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAnalyticsStore, useOrderStore, useProductStore } from '@/store';
+import { useAnalyticsStore, useOrderStore, useTicketStore } from '@/store';
 import { SalesChart } from '@/components/features/SalesChart';
 import { CategoryChart } from '@/components/features/CategoryChart';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { cn } from '@/lib/utils';
+import type { Order } from '@/types';
 
 const dateRanges = [
   { label: 'Today', value: 'today' },
@@ -88,16 +91,17 @@ function MetricCard({ title, value, change, changeType, icon: Icon, isLoading }:
   );
 }
 
-export function Overview () {
+export function Overview() {
+  const navigate = useNavigate();
   const { metrics, dateRange, setDateRange, fetchAnalytics, isLoading } = useAnalyticsStore();
   const { orders, fetchOrders } = useOrderStore();
-  const { products, fetchProducts } = useProductStore();
+  const { tickets, fetchTickets } = useTicketStore();
 
   useEffect(() => {
     fetchAnalytics();
     fetchOrders();
-    fetchProducts();
-  }, [fetchAnalytics, fetchOrders, fetchProducts]);
+    fetchTickets();
+  }, [fetchAnalytics, fetchOrders, fetchTickets]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -109,9 +113,8 @@ export function Overview () {
   };
 
   const recentOrders = orders.slice(0, 5);
-  const lowStockProducts = products.filter(
-    (p: Product) => p.inventory.tracked && p.inventory.quantity <= p.inventory.lowStockThreshold
-  );
+  const attentionOrders = orders.filter((o: Order) => o.riskLevel === 'high' || (o.riskLevel === 'medium' && o.status === 'pending'));
+  const openTickets = tickets.filter((t) => t.status === 'open' || t.priority === 'urgent');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -120,7 +123,7 @@ export function Overview () {
         <div>
           <h1 className="text-2xl font-bold">Overview</h1>
           <p className="text-muted-foreground">
-            Welcome back! Here&apos;s what&apos;s happening with your store.
+            Welcome back! Here&apos;s what&apos;s happening with your agency.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -149,7 +152,7 @@ export function Overview () {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total Sales"
+          title="Total Revenue"
           value={formatCurrency(metrics.totalSales.value)}
           change={metrics.totalSales.change}
           changeType={metrics.totalSales.changeType}
@@ -157,15 +160,15 @@ export function Overview () {
           isLoading={isLoading}
         />
         <MetricCard
-          title="Total Orders"
+          title="Total Deliveries"
           value={metrics.totalOrders.value.toString()}
           change={metrics.totalOrders.change}
           changeType={metrics.totalOrders.changeType}
-          icon={ShoppingCart}
+          icon={Truck}
           isLoading={isLoading}
         />
         <MetricCard
-          title="Conversion Rate"
+          title="On-Time Rate"
           value={`${metrics.conversionRate.value}%`}
           change={metrics.conversionRate.change}
           changeType={metrics.conversionRate.changeType}
@@ -173,7 +176,7 @@ export function Overview () {
           isLoading={isLoading}
         />
         <MetricCard
-          title="Average Order Value"
+          title="Average Delivery Value"
           value={formatCurrency(metrics.averageOrderValue.value)}
           change={metrics.averageOrderValue.change}
           changeType={metrics.averageOrderValue.changeType}
@@ -187,17 +190,17 @@ export function Overview () {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Sales Performance</CardTitle>
-              <CardDescription>Daily sales and order trends</CardDescription>
+              <CardTitle>Delivery Performance</CardTitle>
+              <CardDescription>Daily revenue and delivery volume trends</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="gap-1">
                 <div className="w-2 h-2 rounded-full bg-primary" />
-                Sales
+                Revenue
               </Badge>
               <Badge variant="outline" className="gap-1">
                 <div className="w-2 h-2 rounded-full bg-blue-400" />
-                Orders
+                Deliveries
               </Badge>
             </div>
           </CardHeader>
@@ -208,8 +211,8 @@ export function Overview () {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sales by Category</CardTitle>
-            <CardDescription>Revenue breakdown by product category</CardDescription>
+            <CardTitle>Revenue by Region</CardTitle>
+            <CardDescription>Breakdown by coverage area</CardDescription>
           </CardHeader>
           <CardContent>
             <CategoryChart />
@@ -219,14 +222,14 @@ export function Overview () {
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
+        {/* Recent Deliveries */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Recent Orders</CardTitle>
-              <CardDescription>Latest orders from your customers</CardDescription>
+              <CardTitle>Recent Deliveries</CardTitle>
+              <CardDescription>Latest deliveries assigned to your agency</CardDescription>
             </div>
-            <Button variant="ghost" size="sm" className="gap-1">
+            <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate('/dashboard/shipments')}>
               View all
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -236,33 +239,21 @@ export function Overview () {
               {recentOrders.map((order: Order) => (
                 <div
                   key={order.id}
+                  onClick={() => navigate('/dashboard/shipments')}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <ShoppingCart className="w-5 h-5 text-primary" />
+                      <Truck className="w-5 h-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">{order.orderNumber}</p>
                       <p className="text-sm text-muted-foreground">{order.customer.name}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right space-y-1">
                     <p className="font-medium">{formatCurrency(order.total)}</p>
-                    <Badge
-                      variant={
-                        order.status === 'delivered'
-                          ? 'default'
-                          : order.status === 'pending'
-                          ? 'secondary'
-                          : order.status === 'cancelled'
-                          ? 'destructive'
-                          : 'outline'
-                      }
-                      className="text-xs"
-                    >
-                      {order.status}
-                    </Badge>
+                    <OrderStatusBadge status={order.status} />
                   </div>
                 </div>
               ))}
@@ -270,7 +261,7 @@ export function Overview () {
           </CardContent>
         </Card>
 
-        {/* Quick Actions & Alerts */}
+        {/* Quick Actions & Attention Needed */}
         <div className="space-y-6">
           {/* Quick Actions */}
           <Card>
@@ -280,28 +271,28 @@ export function Overview () {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3">
-                  <Package className="w-4 h-4" />
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/tickets', { state: { create: true } })}>
+                  <TicketIcon className="w-4 h-4" />
                   <div className="text-left">
-                    <p className="font-medium">Add Product</p>
-                    <p className="text-xs text-muted-foreground">Create new listing</p>
+                    <p className="font-medium">New Ticket</p>
+                    <p className="text-xs text-muted-foreground">Get help from support</p>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3">
-                  <RefreshCw className="w-4 h-4" />
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/account/business')}>
+                  <MapPin className="w-4 h-4" />
                   <div className="text-left">
-                    <p className="font-medium">Process Refund</p>
-                    <p className="text-xs text-muted-foreground">Handle returns</p>
+                    <p className="font-medium">Coverage Areas</p>
+                    <p className="text-xs text-muted-foreground">Update your regions</p>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3">
-                  <AlertCircle className="w-4 h-4" />
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/transactions')}>
+                  <DollarSign className="w-4 h-4" />
                   <div className="text-left">
-                    <p className="font-medium">Abandoned Carts</p>
-                    <p className="text-xs text-muted-foreground">12 need attention</p>
+                    <p className="font-medium">View Payouts</p>
+                    <p className="text-xs text-muted-foreground">Track earnings</p>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3">
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/analytics')}>
                   <TrendingUp className="w-4 h-4" />
                   <div className="text-left">
                     <p className="font-medium">View Reports</p>
@@ -312,32 +303,38 @@ export function Overview () {
             </CardContent>
           </Card>
 
-          {/* Low Stock Alert */}
-          {lowStockProducts.length > 0 && (
+          {/* Attention Needed */}
+          {(attentionOrders.length > 0 || openTickets.length > 0) && (
             <Card className="border-amber-200 bg-amber-50/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-amber-800">
                   <AlertCircle className="w-5 h-5" />
-                  Low Stock Alert
+                  Attention Needed
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {lowStockProducts.slice(0, 3).map((product: Product) => (
+                  {attentionOrders.slice(0, 2).map((order) => (
                     <div
-                      key={product.id}
-                      className="flex items-center justify-between p-2 rounded bg-white/50"
+                      key={order.id}
+                      onClick={() => navigate('/dashboard/shipments')}
+                      className="flex items-center justify-between p-2 rounded bg-white/50 cursor-pointer"
                     >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-8 h-8 rounded object-cover"
-                        />
-                        <span className="text-sm font-medium text-amber-900">{product.name}</span>
-                      </div>
+                      <span className="text-sm font-medium text-amber-900">Delivery {order.orderNumber} at risk</span>
                       <Badge variant="outline" className="text-amber-700 border-amber-300">
-                        {product.inventory.quantity} left
+                        {order.riskLevel} risk
+                      </Badge>
+                    </div>
+                  ))}
+                  {openTickets.slice(0, 2).map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      onClick={() => navigate('/dashboard/tickets')}
+                      className="flex items-center justify-between p-2 rounded bg-white/50 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-amber-900 truncate">{ticket.subject}</span>
+                      <Badge variant="outline" className="text-amber-700 border-amber-300">
+                        open ticket
                       </Badge>
                     </div>
                   ))}
@@ -350,9 +347,3 @@ export function Overview () {
     </div>
   );
 }
-
-//  functionOverview
-
-// Import types
-import type { Product, Order } from '@/types';import { de } from "date-fns/locale";
-
