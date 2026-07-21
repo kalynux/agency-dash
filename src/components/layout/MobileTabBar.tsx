@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Truck, BarChart3, Menu, Plus, ChevronRight } from 'lucide-react';
-import { useNotificationStore } from '@/store';
+import { LayoutDashboard, Truck, Wallet, Menu, Plus, ChevronRight } from 'lucide-react';
+import { useNotifications } from '@/store/notifications.store';
 import { useShipments } from '@/store/shipments.store';
 import { cn } from '@/lib/utils';
 import { MobileMoreDrawer } from './MobileMoreDrawer';
@@ -46,7 +46,7 @@ function isPathActive(itemPath: string, pathname: string): boolean {
 export function MobileTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount } = useNotifications();
   const { activeCount: shipmentsBadge } = useShipments();
   const [moreOpen, setMoreOpen] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
@@ -86,10 +86,10 @@ export function MobileTabBar() {
           </button>
 
           <TabButton
-            label="Analytics"
-            icon={BarChart3}
-            active={isPathActive('/dashboard/analytics', location.pathname)}
-            onClick={() => navigate('/dashboard/analytics')}
+            label="Earnings"
+            icon={Wallet}
+            active={isPathActive('/dashboard/earnings', location.pathname)}
+            onClick={() => navigate('/dashboard/earnings')}
           />
 
           <TabButton

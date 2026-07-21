@@ -1,17 +1,17 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { createContext, useContext, useCallback, useState } from 'react';
+import { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 
 // Dashboard pages
 import { Overview } from '@/pages/Overview';
 import { Shipments } from '@/pages/Shipments';
-import { Analytics } from '@/pages/Analytics';
-import { Transactions } from '@/pages/Transactions';
+import { LiveTracking } from '@/pages/LiveTracking';
+import { Earnings } from '@/pages/Earnings';
 import { Notifications } from '@/pages/Notifications';
 import { Tickets } from '@/pages/Tickets';
 import { Agents } from '@/pages/Agents';
+import { CashManagement } from '@/pages/CashManagement';
 import { Vendors } from '@/pages/Vendors';
-import { Storage } from '@/pages/Storage';
 import { Account } from '@/pages/Account';
 import { Settings } from '@/pages/Settings';
 
@@ -36,6 +36,12 @@ import { VendorConnectionsProvider } from '@/store/vendorConnections.store';
 
 // Shipments (real API — polls for the "needs attention" nav badge)
 import { ShipmentsProvider } from '@/store/shipments.store';
+
+// Agents (real API — roster + pending-invite count, shared with the Shipments assign-agent dropdown)
+import { AgentsRosterProvider } from '@/store/agents.store';
+
+// Notifications (real API — unread-count badge poller)
+import { NotificationsProvider } from '@/store/notifications.store';
 
 // ─── Sidebar collapse context (preserved for Sidebar/Header compatibility) ────
 
@@ -81,40 +87,45 @@ function DashboardShell() {
 
   return (
     <ShipmentsProvider>
-      <VendorConnectionsProvider>
-        <div className="min-h-screen bg-background">
-          {!isMobile && <Sidebar />}
-          <div
-            className={cn(
-              'transition-all duration-300 ease-in-out',
-              isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-20' : 'ml-64',
-            )}
-          >
-            {!isMobile && <Header />}
-            <main className={cn('p-6', isMobile && 'pb-24')}>
-              <Routes>
-                <Route index element={<Overview />} />
-                <Route path="shipments" element={<Shipments />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="transactions" element={<Transactions />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="tickets" element={<Tickets />} />
-                <Route path="agents" element={<Navigate to="/dashboard/agents/roster" replace />} />
-                <Route path="agents/:tab" element={<Agents />} />
-                <Route path="vendors" element={<Navigate to="/dashboard/vendors/connections" replace />} />
-                <Route path="vendors/:tab" element={<Vendors />} />
-                <Route path="storage" element={<Storage />} />
-                <Route path="account" element={<Navigate to="/dashboard/account/profile" replace />} />
-                <Route path="account/:tab" element={<Account />} />
-                <Route path="settings" element={<Navigate to="/dashboard/settings/policies" replace />} />
-                <Route path="settings/:tab" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </main>
+      <AgentsRosterProvider>
+        <NotificationsProvider>
+        <VendorConnectionsProvider>
+          <div className="min-h-screen bg-background">
+            {!isMobile && <Sidebar />}
+            <div
+              className={cn(
+                'transition-all duration-300 ease-in-out',
+                isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-20' : 'ml-64',
+              )}
+            >
+              {!isMobile && <Header />}
+              <main className={cn('p-6', isMobile && 'pb-24')}>
+                <Routes>
+                  <Route index element={<Overview />} />
+                  <Route path="shipments" element={<Shipments />} />
+                  <Route path="tracking" element={<LiveTracking />} />
+                  <Route path="earnings" element={<Earnings />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="tickets" element={<Tickets />} />
+                  <Route path="agents" element={<Navigate to="/dashboard/agents/roster" replace />} />
+                  <Route path="agents/:tab" element={<Agents />} />
+                  <Route path="cash" element={<Navigate to="/dashboard/cash/summary" replace />} />
+                  <Route path="cash/:tab" element={<CashManagement />} />
+                  <Route path="vendors" element={<Navigate to="/dashboard/vendors/connections" replace />} />
+                  <Route path="vendors/:tab" element={<Vendors />} />
+                  <Route path="account" element={<Navigate to="/dashboard/account/profile" replace />} />
+                  <Route path="account/:tab" element={<Account />} />
+                  <Route path="settings" element={<Navigate to="/dashboard/settings/policies" replace />} />
+                  <Route path="settings/:tab" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </main>
+            </div>
+            {isMobile && <MobileTabBar />}
           </div>
-          {isMobile && <MobileTabBar />}
-        </div>
-      </VendorConnectionsProvider>
+        </VendorConnectionsProvider>
+        </NotificationsProvider>
+      </AgentsRosterProvider>
     </ShipmentsProvider>
   );
 }
@@ -127,6 +138,14 @@ function AppContent() {
   const reactNavigate = useNavigate();
 
   const toggleSidebar = useCallback(() => setSidebarCollapsed((p) => !p), []);
+
+  // Standardized session-expiry handling: the API layer dispatches `auth:logout`
+  // when a token refresh fails. Route the user to login from a single place.
+  useEffect(() => {
+    const onLogout = () => reactNavigate('/login');
+    window.addEventListener('auth:logout', onLogout);
+    return () => window.removeEventListener('auth:logout', onLogout);
+  }, [reactNavigate]);
 
   const legacyUser = {
     id: 'agency',

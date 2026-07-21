@@ -1,13 +1,13 @@
 import {
   Ticket,
   Truck,
-  Receipt,
-  BarChart3,
+  Wallet,
+  Banknote,
   MapPin,
   type LucideIcon,
 } from 'lucide-react';
 
-export type QuickActionRoute = 'tickets' | 'shipments' | 'transactions' | 'analytics' | 'account/business';
+export type QuickActionRoute = 'tickets' | 'shipments' | 'earnings' | 'cash/summary' | 'account/business';
 
 export interface QuickAction {
   id: string;
@@ -44,18 +44,18 @@ export const QUICK_ACTIONS: QuickAction[] = [
     route: 'shipments',
   },
   {
-    id: 'view-transactions',
-    label: 'View Transactions',
-    description: 'Check payouts & earnings',
-    icon: Receipt,
-    route: 'transactions',
+    id: 'view-earnings',
+    label: 'View Earnings',
+    description: 'Balance & payout requests',
+    icon: Wallet,
+    route: 'earnings',
   },
   {
-    id: 'view-analytics',
-    label: 'View Analytics',
-    description: 'Delivery performance & earnings',
-    icon: BarChart3,
-    route: 'analytics',
+    id: 'view-cash',
+    label: 'Cash Management',
+    description: 'COD deposits & remittances',
+    icon: Banknote,
+    route: 'cash/summary',
   },
   {
     id: 'update-coverage',

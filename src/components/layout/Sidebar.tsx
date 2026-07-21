@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUI } from '@/App';
-import { useNotificationStore } from '@/store';
+import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
 import { useShipments } from '@/store/shipments.store';
@@ -40,7 +40,7 @@ const rowBase =
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUI();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount } = useNotifications();
   const { activeCount: shipmentsActiveCount } = useShipments();
   const { pendingActionCount } = useVendorConnections();
   const navigate = useNavigate();

@@ -105,7 +105,12 @@ export function Step2Payout() {
 
     const { fields, append, remove } = useFieldArray({ control, name: 'payout_details' });
     const payoutDetails = watch('payout_details');
-    const canAddMethods = fields.length < 3;
+    // At most 2 methods (one mobile money + one bank). Also hide "add" for a type
+    // that is already present, so the no-duplicate rule can't be violated.
+    const usedMethods = new Set((payoutDetails ?? []).map((p) => p?.method));
+    const canAddMethods = fields.length < 2;
+    const canAddMobileMoney = canAddMethods && !usedMethods.has('mobile_money');
+    const canAddBank = canAddMethods && !usedMethods.has('bank');
 
     const switchMethod = useCallback((index: number, m: PayoutMethodType) => {
         setValue(`payout_details.${index}`, m === 'mobile_money' ? { ...EMPTY_MOBILE_MONEY } : { ...EMPTY_BANK }, { shouldValidate: false });
@@ -121,7 +126,7 @@ export function Step2Payout() {
         } catch (err) {
             if (err instanceof ApiError) {
                 if (err.isConcurrentModification) setApiError('Profile was modified elsewhere. Please refresh.');
-                else if (err.isValidation && err.details) setApiError(Object.values(err.details)[0]?.[0] ?? err.message);
+                else if (err.isValidation) setApiError(err.firstFieldError() ?? err.message);
                 else setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
             }
         }
@@ -250,14 +255,18 @@ export function Step2Payout() {
                     );
                 })}
 
-                {canAddMethods && (
+                {(canAddMobileMoney || canAddBank) && (
                     <div className="flex gap-2 pt-1">
-                        <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
-                            <Plus className="w-3.5 h-3.5" /> Add Mobile Money
-                        </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
-                            <Plus className="w-3.5 h-3.5" /> Add Bank Account
-                        </Button>
+                        {canAddMobileMoney && (
+                            <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
+                                <Plus className="w-3.5 h-3.5" /> Add Mobile Money
+                            </Button>
+                        )}
+                        {canAddBank && (
+                            <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
+                                <Plus className="w-3.5 h-3.5" /> Add Bank Account
+                            </Button>
+                        )}
                     </div>
                 )}
 

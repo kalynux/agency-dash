@@ -3,6 +3,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet';
 import {
   Accordion,
@@ -10,6 +11,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { responsiveSheetProps } from './ticket.constants';
 
 const FAQS = [
   {
@@ -26,7 +29,7 @@ const FAQS = [
   },
   {
     question: 'What do I do if a delivery is delayed?',
-    answer: 'Update the delivery status from the Deliveries page as soon as possible, and open a ticket if you need support coordinating with the vendor or customer.',
+    answer: 'Update the delivery status from the Shipments page as soon as possible, and open a ticket if you need support coordinating with the vendor or customer.',
   },
 ];
 
@@ -35,14 +38,24 @@ interface FaqSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Frequently Asked Questions, shown as a right-side sheet on desktop and a
+ * bottom sheet on mobile (matching CreateTicketSheet / TicketDetailSheet).
+ */
 export function FaqSheet({ open, onOpenChange }: FaqSheetProps) {
+  const isMobile = useIsMobile();
+  const sheet = responsiveSheetProps(isMobile);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md overflow-y-auto">
-        <SheetHeader>
+      <SheetContent side={sheet.side} className={`flex flex-col p-0 ${sheet.className}`}>
+        <SheetHeader className="border-b">
           <SheetTitle>Frequently Asked Questions</SheetTitle>
+          <SheetDescription>
+            Quick answers to common questions. Still stuck? Create a ticket.
+          </SheetDescription>
         </SheetHeader>
-        <div className="px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
           <Accordion type="single" collapsible className="w-full">
             {FAQS.map((faq, i) => (
               <AccordionItem key={i} value={`faq-${i}`}>

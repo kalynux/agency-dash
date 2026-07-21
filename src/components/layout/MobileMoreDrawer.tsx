@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronDown, Settings, Truck } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { useNotificationStore } from '@/store';
+import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 
 // Items already present in the bottom tab bar — hidden from "More".
-const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments', '/dashboard/analytics']);
+const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments', '/dashboard/earnings']);
 
 interface NavHandlers {
   go: (path: string) => void;
@@ -111,7 +111,7 @@ interface MobileMoreDrawerProps {
 
 export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) {
   const navigate = useNavigate();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount } = useNotifications();
   const { pendingActionCount } = useVendorConnections();
   const roleEntity = useOnboarding().session?.role_entity;
 

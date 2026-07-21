@@ -1,121 +1,414 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Plus, Search, Ticket as TicketIcon, HelpCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Plus, Search, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, RefreshCw, Tag,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { EmptyState } from '@/components/common/state-views';
 import { cn } from '@/lib/utils';
-import { useTicketStore } from '@/store';
-import type { Ticket } from '@/types';
+import { ticketsService } from '@/services/tickets.service';
+import { getApiErrorMessage } from '@/lib/errors';
 import { CreateTicketSheet } from '@/components/tickets/CreateTicketSheet';
 import { TicketDetailSheet } from '@/components/tickets/TicketDetailSheet';
 import { FaqSheet } from '@/components/tickets/FaqSheet';
 import {
-  STATUS_LABELS,
-  STATUS_BADGE_CLASSES,
-  STATUS_DOT_CLASSES,
-  PRIORITY_LABELS,
-  PRIORITY_BADGE_CLASSES,
-  TICKET_TYPE_LABELS,
+  STATUS_LABELS, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, STATUS_TABS,
+  PRIORITY_LABELS, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
+  TICKET_TYPE_GROUPS, getTypeVisual, shortTicketRef, relativeTime, ENTITY_ICONS,
 } from '@/components/tickets/ticket.constants';
+import type {
+  Ticket, TicketPagination, TicketStatus, TicketPriority, TicketType, ListTicketsParams,
+} from '@/types/ticket.types';
+
+const PAGE_LIMIT = 20;
+const ALL = '__all__';
+
+type SortKey = 'updated' | 'created' | 'priority';
+const SORT_OPTIONS: { value: SortKey; label: string; sortBy: ListTicketsParams['sortBy']; sortOrder: 'asc' | 'desc' }[] = [
+  { value: 'updated', label: 'Recently updated', sortBy: 'updatedAt', sortOrder: 'desc' },
+  { value: 'created', label: 'Recently created', sortBy: 'createdAt', sortOrder: 'desc' },
+  { value: 'priority', label: 'Priority', sortBy: 'priority', sortOrder: 'desc' },
+];
 
 export function Tickets() {
-  const { tickets, fetchTickets } = useTicketStore();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [pagination, setPagination] = useState<TicketPagination>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | null>(null);
+  const [typeFilter, setTypeFilter] = useState<TicketType | ''>('');
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
+  const [sort, setSort] = useState<SortKey>('updated');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [createOpen, setCreateOpen] = useState(
     () => Boolean((location.state as { create?: boolean } | null)?.create),
   );
   const [faqOpen, setFaqOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Open the create sheet or a specific ticket when arrived via router state, then clear it.
+  useEffect(() => {
+    const state = location.state as { create?: boolean; openTicketId?: string } | null;
+    if (state?.openTicketId) {
+      setSelectedId(state.openTicketId);
+      navigate(location.pathname, { replace: true, state: null });
+    } else if (state?.create) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const sortConfig = SORT_OPTIONS.find((s) => s.value === sort)!;
+    try {
+      const res = await ticketsService.list({
+        status: statusFilter ?? undefined,
+        type: typeFilter || undefined,
+        priority: priorityFilter || undefined,
+        page,
+        limit: PAGE_LIMIT,
+        sortBy: sortConfig.sortBy,
+        sortOrder: sortConfig.sortOrder,
+      });
+      setTickets(res.data);
+      setPagination(res.pagination);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [statusFilter, typeFilter, priorityFilter, sort, page]);
 
   useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    load();
+  }, [load]);
 
-  const filtered = tickets.filter((t) =>
-    t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // The agency list endpoint has no text search, so search filters the loaded page.
+  const filtered = tickets.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return t.subject.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
+  });
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const hasActiveFilter = !!statusFilter || !!typeFilter || !!priorityFilter || searchQuery.trim().length > 0;
+
+  const clearFilters = () => {
+    setStatusFilter(null);
+    setTypeFilter('');
+    setPriorityFilter('');
+    setSearchQuery('');
+    setPage(1);
+  };
+
+  const rangeStart = tickets.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const rangeEnd = (pagination.page - 1) * pagination.limit + tickets.length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tickets</h1>
           <p className="text-muted-foreground">Get help from the Jovi Mall support team</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={load} title="Refresh" disabled={isLoading}>
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setFaqOpen(true)}>
-            <HelpCircle className="w-4 h-4" />
-            FAQ
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">FAQ</span>
           </Button>
           <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4" />
-            New Ticket
+            <Plus className="h-4 w-4" />
+            New ticket
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Status tabs */}
+      <div className="-mx-1 overflow-x-auto">
+        <div className="flex min-w-max items-center gap-1 border-b px-1">
+          {STATUS_TABS.map((tab) => {
+            const active = statusFilter === tab.value;
+            return (
+              <button
+                key={tab.label}
+                onClick={() => { setStatusFilter(tab.value); setPage(1); }}
+                className={cn(
+                  'relative whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors',
+                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {tab.label}
+                {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <TicketIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No tickets found</p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {filtered.map((ticket) => (
-                <button
-                  key={ticket.id}
-                  onClick={() => setSelectedTicket(ticket)}
-                  className="w-full flex items-start gap-4 p-4 text-left hover:bg-muted/50 transition-colors"
-                >
-                  <div className={cn('mt-1.5 w-2 h-2 rounded-full flex-shrink-0', STATUS_DOT_CLASSES[ticket.status])} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium">{ticket.subject}</p>
-                      <Badge variant="outline" className={cn('text-xs', STATUS_BADGE_CLASSES[ticket.status])}>
-                        {STATUS_LABELS[ticket.status]}
-                      </Badge>
-                      <Badge variant="outline" className={cn('text-xs', PRIORITY_BADGE_CLASSES[ticket.priority])}>
-                        {PRIORITY_LABELS[ticket.priority]}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{ticket.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {TICKET_TYPE_LABELS[ticket.type]} · Updated {formatDate(ticket.updatedAt)}
-                    </p>
-                  </div>
-                </button>
+      {/* Filters */}
+      <div className="flex flex-col gap-3 lg:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search this page by subject or description…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0">
+          {/* Type */}
+          <Select
+            value={typeFilter || ALL}
+            onValueChange={(v) => { setTypeFilter(v === ALL ? '' : (v as TicketType)); setPage(1); }}
+          >
+            <SelectTrigger className="w-40 shrink-0 lg:w-44"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All types</SelectItem>
+              {TICKET_TYPE_GROUPS.map((g) => (
+                <SelectGroup key={g.groupLabel}>
+                  <SelectLabel>{g.groupLabel}</SelectLabel>
+                  {g.values.map((v) => (
+                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </SelectContent>
+          </Select>
 
-      <CreateTicketSheet open={createOpen} onOpenChange={setCreateOpen} />
-      <TicketDetailSheet ticket={selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)} />
+          {/* Priority */}
+          <Select
+            value={priorityFilter || ALL}
+            onValueChange={(v) => { setPriorityFilter(v === ALL ? '' : (v as TicketPriority)); setPage(1); }}
+          >
+            <SelectTrigger className="w-36 shrink-0 lg:w-40"><SelectValue placeholder="All priorities" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All priorities</SelectItem>
+              {TICKET_PRIORITIES.map((p) => (
+                <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Sort */}
+          <Select value={sort} onValueChange={(v) => { setSort(v as SortKey); setPage(1); }}>
+            <SelectTrigger className="w-44 shrink-0 lg:w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>Sort: {o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <TicketListSkeleton />
+      ) : error ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
+          <TicketIcon className="h-10 w-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={TicketIcon}
+          title={hasActiveFilter ? 'No matching tickets' : 'No tickets yet'}
+          description={
+            hasActiveFilter
+              ? 'Try adjusting your search or filters.'
+              : 'Create your first ticket to get help from support.'
+          }
+          action={
+            hasActiveFilter ? (
+              <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+            ) : (
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> New ticket
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <>
+          {/* Desktop / tablet: table */}
+          <div className="hidden overflow-hidden rounded-lg border md:block">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/40 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Ticket</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Priority</th>
+                  <th className="px-4 py-3">Updated</th>
+                  <th className="w-8 px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((t) => (
+                  <tr
+                    key={t._id}
+                    onClick={() => setSelectedId(t._id)}
+                    className="group cursor-pointer border-b last:border-0 hover:bg-muted/40"
+                  >
+                    <td className="px-4 py-3"><TicketIdentity ticket={t} /></td>
+                    <td className="px-4 py-3"><StatusPill status={t.status} /></td>
+                    <td className="px-4 py-3"><PriorityPill priority={t.priority} locked={t.priority_locked} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{relativeTime(t.updatedAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((t) => (
+              <button
+                key={t._id}
+                onClick={() => setSelectedId(t._id)}
+                className="flex w-full flex-col gap-3 rounded-lg border bg-card p-4 text-left"
+              >
+                <TicketIdentity ticket={t} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill status={t.status} />
+                  <PriorityPill priority={t.priority} locked={t.priority_locked} />
+                  <span className="ml-auto text-xs text-muted-foreground">{relativeTime(t.updatedAt)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
+            <span>
+              {searchQuery.trim()
+                ? `${filtered.length} match${filtered.length !== 1 ? 'es' : ''} on this page`
+                : `Showing ${rangeStart}–${rangeEnd} of ${pagination.total}`}
+            </span>
+            {pagination.pages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span>Page {pagination.page} of {pagination.pages}</span>
+                <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => setPage((p) => p + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <CreateTicketSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
+      <TicketDetailSheet
+        ticketId={selectedId}
+        onOpenChange={(open) => !open && setSelectedId(null)}
+        onChanged={load}
+      />
       <FaqSheet open={faqOpen} onOpenChange={setFaqOpen} />
+    </div>
+  );
+}
+
+// ─── Row identity (icon + subject + ref + entity) ─────────────────────────────
+
+function EntityChip({ ticket }: { ticket: Ticket }) {
+  const key = (ticket.entity?.type ?? ticket.entity_type ?? '').toUpperCase();
+  const Icon = ENTITY_ICONS[key] ?? Tag;
+  const label = ticket.entity?.label ?? ticket.entity_type;
+  if (!label) return null;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground">
+      <Icon className="h-3 w-3 shrink-0" />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function TicketIdentity({ ticket }: { ticket: Ticket }) {
+  const { Icon, className } = getTypeVisual(ticket.type);
+  return (
+    <div className="flex items-start gap-3">
+      <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', className)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate font-medium text-foreground">{ticket.subject}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="font-mono">{shortTicketRef(ticket._id)}</span>
+          <span>·</span>
+          <EntityChip ticket={ticket} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pills ────────────────────────────────────────────────────────────────────
+
+function StatusPill({ status }: { status: TicketStatus }) {
+  return (
+    <Badge className={cn('gap-1.5 border-0 font-medium', STATUS_BADGE_CLASSES[status])}>
+      <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASSES[status])} />
+      {STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+function PriorityPill({ priority, locked }: { priority: TicketPriority; locked?: boolean }) {
+  return (
+    <Badge className={cn('gap-1.5 border-0 font-medium', PRIORITY_BADGE_CLASSES[priority])}>
+      <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_CLASSES[priority])} />
+      {PRIORITY_LABELS[priority]}
+      {locked && <LockGlyph />}
+    </Badge>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function TicketListSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 border-b p-4 last:border-0">
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="hidden h-3 w-12 sm:block" />
+        </div>
+      ))}
     </div>
   );
 }

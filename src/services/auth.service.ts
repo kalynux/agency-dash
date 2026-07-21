@@ -3,9 +3,9 @@ import type { AuthMeAgencyResponse } from '@/types/api';
 
 export const authService = {
     /**
-     * Restores session and returns full user + role_entity.
+     * Restores session and returns the API envelope containing user + role_entity.
      * Backend re-issues fresh access/refresh cookies.
-     * Use `role_entity.onboarding_step` for routing decisions.
+     * Use `response.data.role_entity.onboarding_step` for routing decisions.
      */
     getAuthMeAgency(): Promise<AuthMeAgencyResponse> {
         return api.get<AuthMeAgencyResponse>('/auth/auth-me/agency');
@@ -16,5 +16,13 @@ export const authService = {
      */
     logout(): Promise<void> {
         return api.post<void>('/auth/logout');
+    },
+
+    /**
+     * POST /auth/send-email-verification — email the current role entity a
+     * verification link (valid 24h). userId/role are read from the JWT.
+     */
+    sendEmailVerification(): Promise<{ success: boolean; data: { message: string } }> {
+        return api.post<{ success: boolean; data: { message: string } }>('/auth/send-email-verification');
     },
 };

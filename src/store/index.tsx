@@ -3,14 +3,14 @@ import type {
   User, Order,
   Notification, AnalyticsMetrics, DateRange,
   Transaction, TransactionCategory, Ticket, TicketStatus, TicketPriority,
-  Agent, AgentStatus, AgentRequest, StorageItem,
+  StorageItem,
 } from '@/types';
 import {
   mockUsers,
   mockOrders, mockNotifications,
   mockAnalytics, mockSalesData, mockCategoryBreakdown,
   mockTransactions, mockTickets,
-  mockAgents, mockAgentRequests, mockStorageItems,
+  mockStorageItems,
 } from '@/data/mockData';
 
 // Auth Store Context
@@ -101,19 +101,6 @@ interface TicketState {
 }
 
 const TicketStoreContext = createContext<TicketState | null>(null);
-
-// Agent Store Context
-interface AgentState {
-  agents: Agent[];
-  agentRequests: AgentRequest[];
-  isLoading: boolean;
-  fetchAgents: () => Promise<void>;
-  updateAgentStatus: (id: string, status: AgentStatus) => Promise<void>;
-  approveAgentRequest: (id: string) => Promise<void>;
-  declineAgentRequest: (id: string) => Promise<void>;
-}
-
-const AgentStoreContext = createContext<AgentState | null>(null);
 
 // Storage Store Context
 interface StorageState {
@@ -312,50 +299,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ));
   }, []);
 
-  // Agent State
-  const [agents, setAgents] = useState<Agent[]>(mockAgents);
-  const [agentRequests, setAgentRequests] = useState<AgentRequest[]>(mockAgentRequests);
-  const [agentLoading, setAgentLoading] = useState(false);
-
-  const fetchAgents = useCallback(async () => {
-    setAgentLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setAgentLoading(false);
-  }, []);
-
-  const updateAgentStatus = useCallback(async (id: string, status: AgentStatus) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setAgents(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-  }, []);
-
-  const approveAgentRequest = useCallback(async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const request = agentRequests.find(r => r.id === id);
-    if (!request) return;
-    setAgentRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' as const } : r));
-    setAgents(prev => [
-      {
-        id: `agt-${Date.now()}`,
-        name: request.name,
-        email: request.email,
-        phone: request.phone,
-        avatar: request.avatar,
-        zone: request.zone,
-        vehicle: request.vehicle,
-        status: 'active',
-        deliveriesCompleted: 0,
-        rating: 0,
-        joinedAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, [agentRequests]);
-
-  const declineAgentRequest = useCallback(async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setAgentRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'declined' as const } : r));
-  }, []);
-
   // Storage State
   const [storageItems, setStorageItems] = useState<StorageItem[]>(mockStorageItems);
   const [selectedStorageItems, setSelectedStorageItems] = useState<string[]>([]);
@@ -445,28 +388,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                   addNote,
                   closeTicket,
                 }}>
-                  <AgentStoreContext.Provider value={{
-                    agents,
-                    agentRequests,
-                    isLoading: agentLoading,
-                    fetchAgents,
-                    updateAgentStatus,
-                    approveAgentRequest,
-                    declineAgentRequest,
+                  <StorageStoreContext.Provider value={{
+                    items: storageItems,
+                    selectedItems: selectedStorageItems,
+                    isLoading: storageLoading,
+                    fetchStorageItems,
+                    toggleItemSelection,
+                    selectAllItems,
+                    clearSelection: clearStorageSelection,
+                    returnToVendor,
                   }}>
-                    <StorageStoreContext.Provider value={{
-                      items: storageItems,
-                      selectedItems: selectedStorageItems,
-                      isLoading: storageLoading,
-                      fetchStorageItems,
-                      toggleItemSelection,
-                      selectAllItems,
-                      clearSelection: clearStorageSelection,
-                      returnToVendor,
-                    }}>
-                      {children}
-                    </StorageStoreContext.Provider>
-                  </AgentStoreContext.Provider>
+                    {children}
+                  </StorageStoreContext.Provider>
                 </TicketStoreContext.Provider>
               </TransactionStoreContext.Provider>
             </AnalyticsStoreContext.Provider>
@@ -517,12 +450,6 @@ export function useTransactionStore() {
 export function useTicketStore() {
   const context = useContext(TicketStoreContext);
   if (!context) throw new Error('useTicketStore must be used within StoreProvider');
-  return context;
-}
-
-export function useAgentStore() {
-  const context = useContext(AgentStoreContext);
-  if (!context) throw new Error('useAgentStore must be used within StoreProvider');
   return context;
 }
 

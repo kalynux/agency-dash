@@ -196,39 +196,7 @@ export interface Ticket {
   notes: TicketNote[];
 }
 
-// Agent Types (independent delivery agents affiliated with this agency)
-export type AgentStatus = 'active' | 'inactive' | 'suspended';
-export type AgentVehicle = 'motorbike' | 'car' | 'van' | 'bicycle' | 'on_foot';
-
-export interface Agent {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar?: string;
-  zone: string;
-  vehicle: AgentVehicle;
-  status: AgentStatus;
-  deliveriesCompleted: number;
-  rating: number;
-  joinedAt: string;
-}
-
-export type AgentRequestStatus = 'pending' | 'approved' | 'declined';
-
-export interface AgentRequest {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar?: string;
-  zone: string;
-  vehicle: AgentVehicle;
-  experienceYears: number;
-  message?: string;
-  status: AgentRequestStatus;
-  requestedAt: string;
-}
+// Agent Types have moved to '@/types/agent.types' (roster + invites, real API)
 
 // Storage Types (multi-vendor warehouse inventory held by this agency)
 export type StorageStatus = 'in_stock' | 'low_stock' | 'out_of_stock' | 'reserved';

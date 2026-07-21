@@ -1,19 +1,16 @@
 import {
   LayoutDashboard,
   Truck,
-  BarChart3,
-  Receipt,
   Bell,
   Ticket,
   Users,
-  UserPlus,
-  Warehouse,
+  Mail,
+  Banknote,
   UserCog,
   User,
   MapPin,
   Image as ImageIcon,
   Shield,
-  CreditCard,
   Wallet,
   Settings,
   ScrollText,
@@ -21,6 +18,11 @@ import {
   Store,
   Handshake,
   Search,
+  Radio,
+  Gauge,
+  HandCoins,
+  Send,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -56,8 +58,19 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
-  { name: 'Analytics', path: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Transactions', path: '/dashboard/transactions', icon: Receipt },
+  { name: 'Live Tracking', path: '/dashboard/tracking', icon: Radio },
+  { name: 'Earnings', path: '/dashboard/earnings', icon: Wallet },
+  {
+    name: 'Cash Management',
+    path: '/dashboard/cash',
+    icon: Banknote,
+    children: [
+      { name: 'Summary', path: '/dashboard/cash/summary', icon: Gauge },
+      { name: 'Deposits', path: '/dashboard/cash/deposits', icon: HandCoins },
+      { name: 'Remittances', path: '/dashboard/cash/remittances', icon: Send },
+      { name: 'Discrepancies', path: '/dashboard/cash/discrepancies', icon: AlertTriangle },
+    ],
+  },
   { name: 'Notifications', path: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
   { name: 'Tickets', path: '/dashboard/tickets', icon: Ticket },
   {
@@ -66,7 +79,7 @@ export const PRIMARY_NAV: NavItem[] = [
     icon: Users,
     children: [
       { name: 'Roster', path: '/dashboard/agents/roster', icon: Users },
-      { name: 'Applications', path: '/dashboard/agents/applications', icon: UserPlus },
+      { name: 'Invites', path: '/dashboard/agents/invites', icon: Mail },
     ],
   },
   {
@@ -79,7 +92,6 @@ export const PRIMARY_NAV: NavItem[] = [
       { name: 'Browse', path: '/dashboard/vendors/browse', icon: Search },
     ],
   },
-  { name: 'Storage', path: '/dashboard/storage', icon: Warehouse },
 ];
 
 // ─── Bottom group (pinned above Platform Status) ──────────────────────────────
@@ -94,7 +106,6 @@ export const FOOTER_NAV: NavItem[] = [
       { name: 'Business', path: '/dashboard/account/business', icon: MapPin },
       { name: 'Branding', path: '/dashboard/account/branding', icon: ImageIcon },
       { name: 'Security', path: '/dashboard/account/security', icon: Shield },
-      { name: 'Billing', path: '/dashboard/account/billing', icon: CreditCard },
       { name: 'Payout', path: '/dashboard/account/payout', icon: Wallet },
     ],
   },

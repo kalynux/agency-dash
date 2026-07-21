@@ -1,260 +1,182 @@
-import { useEffect } from 'react';
-import {
-  Bell,
-  Truck,
-  Ticket,
-  Wallet,
-  AlertCircle,
-  Check,
-  Settings,
-  ArrowRight,
-} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useNotificationStore } from '@/store';
+import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
+import { useNotifications } from '@/store/notifications.store';
+import { notificationsService } from '@/services/notifications.service';
+import { notificationVisual, notificationHref } from '@/lib/notification-display';
+import { getApiErrorMessage } from '@/lib/errors';
+import { toApiError } from '@/hooks/useResource';
 import { cn } from '@/lib/utils';
+import { ApiError } from '@/types/api';
+import type { AgencyNotification, NotificationListMeta } from '@/types/notification.types';
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'delivery':
-      return Truck;
-    case 'payout':
-      return Wallet;
-    case 'ticket':
-      return Ticket;
-    case 'alert':
-      return AlertCircle;
-    default:
-      return Bell;
-  }
-};
+const PAGE_LIMIT = 20;
 
-const getNotificationColor = (type: string) => {
-  switch (type) {
-    case 'delivery':
-      return 'bg-blue-100 text-blue-600';
-    case 'payout':
-      return 'bg-green-100 text-green-600';
-    case 'ticket':
-      return 'bg-purple-100 text-purple-600';
-    case 'alert':
-      return 'bg-red-100 text-red-600';
-    default:
-      return 'bg-gray-100 text-gray-600';
-  }
-};
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
 
 export function Notifications() {
-  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const navigate = useNavigate();
+  const { unreadCount, markAsRead, markAllAsRead, refetch: refetchBadge } = useNotifications();
+
+  const [items, setItems] = useState<AgencyNotification[]>([]);
+  const [meta, setMeta] = useState<NotificationListMeta>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await notificationsService.list({ page, limit: PAGE_LIMIT });
+      setItems(res.data);
+      setMeta(res.meta);
+    } catch (err) {
+      setError(toApiError(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page]);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    load();
+  }, [load]);
 
-  const unreadNotifications = notifications.filter((n: { read: boolean }) => !n.read);
-  const readNotifications = notifications.filter((n: { read: boolean }) => n.read);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+  const handleOpen = async (n: AgencyNotification) => {
+    if (!n.isRead) {
+      await markAsRead(n.id);
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+    }
+    navigate(notificationHref(n.action));
   };
 
-  const NotificationItem = ({ notification }: { notification: { id: string; type: string; title: string; message: string; read: boolean; createdAt: string; actionUrl?: string } }) => {
-    const Icon = getNotificationIcon(notification.type);
-    
-    return (
-      <div
-        className={cn(
-          'flex items-start gap-4 p-4 rounded-lg transition-colors',
-          !notification.read && 'bg-primary/5',
-          'hover:bg-muted/50'
-        )}
-      >
-        <div className={cn('p-2 rounded-lg flex-shrink-0', getNotificationColor(notification.type))}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className={cn('font-medium', !notification.read && 'text-primary')}>
-                {notification.title}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-            </div>
-            <span className="text-xs text-muted-foreground flex-shrink-0">
-              {formatDate(notification.createdAt)}
-            </span>
-          </div>
-          {notification.actionUrl && (
-            <Button variant="link" size="sm" className="p-0 h-auto mt-2 gap-1">
-              View details
-              <ArrowRight className="w-3 h-3" />
-            </Button>
-          )}
-        </div>
-        {!notification.read && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex-shrink-0 h-8 w-8"
-            onClick={() => markAsRead(notification.id)}
-          >
-            <Check className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-    );
+  const handleMarkRead = async (id: string) => {
+    await markAsRead(id);
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, isRead: true } : x)));
+  };
+
+  const handleMarkAll = async () => {
+    await markAllAsRead();
+    setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">
-            Stay updated with your agency activity
-          </p>
+          <p className="text-muted-foreground">Stay updated with your agency activity</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <Button variant="outline" onClick={() => markAllAsRead()}>
+            <Button variant="outline" onClick={handleMarkAll}>
               <Check className="w-4 h-4 mr-2" />
               Mark all as read
             </Button>
           )}
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={() => { load(); refetchBadge(); }} title="Refresh">
+            <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => navigate('/dashboard/settings/notifications')} title="Notification settings">
             <Settings className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Unread</p>
-                <p className="text-2xl font-bold">{unreadCount}</p>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Bell className="w-5 h-5 text-primary" />
+      <Card>
+        <CardContent className="p-0">
+          <AsyncBoundary
+            isLoading={isLoading && items.length === 0}
+            error={items.length === 0 ? error : undefined}
+            onRetry={load}
+            isEmpty={!isLoading && items.length === 0}
+            emptyState={
+              <EmptyState icon={Bell} title="No notifications yet" description="You're all caught up." className="border-0" />
+            }
+          >
+            <div className="divide-y">
+              {items.map((n) => {
+                const visual = notificationVisual(n.type);
+                const Icon = visual.icon;
+                return (
+                  <div
+                    key={n.id}
+                    className={cn(
+                      'flex items-start gap-4 p-4 transition-colors hover:bg-muted/50 cursor-pointer',
+                      !n.isRead && 'bg-primary/5',
+                    )}
+                    onClick={() => handleOpen(n)}
+                  >
+                    <div className={cn('p-2 rounded-lg flex-shrink-0', visual.chip)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={cn('font-medium', !n.isRead && 'text-primary')}>{n.title}</p>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo(n.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
+                      {n.action && (
+                        <span className="inline-flex items-center gap-1 text-xs text-primary mt-2">
+                          {n.action.label}
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                    {!n.isRead && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0 h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkRead(n.id);
+                        }}
+                        title="Mark as read"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </AsyncBoundary>
+
+          {!isLoading && !error && meta.pages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Page {meta.page} of {meta.pages} · {meta.total} total
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{notifications.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Check className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold">24</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Truck className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Notifications List */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all" className="gap-2">
-            All
-            <Badge variant="secondary">{notifications.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="unread" className="gap-2">
-            Unread
-            {unreadCount > 0 && <Badge variant="destructive">{unreadCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="read">Read</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              {notifications.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No notifications yet</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {notifications.map((notification: { id: string; type: string; title: string; message: string; read: boolean; createdAt: string; actionUrl?: string }) => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="unread" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              {unreadNotifications.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Check className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">All caught up!</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {unreadNotifications.map((notification: { id: string; type: string; title: string; message: string; read: boolean; createdAt: string; actionUrl?: string }) => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="read" className="mt-4">
-          <Card>
-            <CardContent className="p-0">
-              {readNotifications.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No read notifications</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {readNotifications.map((notification: { id: string; type: string; title: string; message: string; read: boolean; createdAt: string; actionUrl?: string }) => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {error && items.length > 0 && (
+        <p className="text-sm text-destructive text-center">{getApiErrorMessage(error)}</p>
+      )}
     </div>
   );
 }

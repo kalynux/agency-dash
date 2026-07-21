@@ -9,9 +9,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/auth.service';
 import { onboardingService } from '@/services/onboarding.service';
+import { agencyProfileService } from '@/services/agency-profile.service';
 import { ApiError } from '@/types/api';
+import type { UpdateAgencyProfilePayload } from '@/types/agency-profile.types';
 import type {
-    AuthMeAgencyResponse,
+    AgencyAuthSession,
     AgencyOnboardingStep,
     LogisticsPayload,
     PayoutPayload,
@@ -41,7 +43,7 @@ interface StepDrafts {
 // ─── State shape ──────────────────────────────────────────────────────────────
 
 export interface OnboardingState {
-    session: AuthMeAgencyResponse | null;
+    session: AgencyAuthSession | null;
     isInitializing: boolean;
     isSubmitting: boolean;
     error: ApiError | null;
@@ -73,6 +75,14 @@ export interface OnboardingState {
     saveDraft(step: 4, values: PoliciesFormValues): void;
 
     initialize: () => Promise<void>;
+    /** Re-fetch the session (used after a post-onboarding profile edit). */
+    refreshSession: () => Promise<void>;
+    /**
+     * Post-onboarding profile edit via PATCH /api/agency/profile. Use this from
+     * Settings — the onboarding step endpoints are locked once onboarding is
+     * complete. Refreshes the session on success.
+     */
+    updateAgencyProfile: (payload: UpdateAgencyProfilePayload) => Promise<void>;
     submitLogistics: (payload: LogisticsPayload) => Promise<void>;
     submitPayout: (payload: PayoutPayload) => Promise<void>;
     submitBranding: (payload: BrandingPayload) => Promise<void>;
@@ -104,7 +114,7 @@ export function stepToRoute(step: AgencyOnboardingStep | number): string {
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
     const navigate = useNavigate();
-    const [session, setSession] = useState<AuthMeAgencyResponse | null>(null);
+    const [session, setSession] = useState<AgencyAuthSession | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<ApiError | null>(null);
@@ -125,9 +135,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         initCalled.current = true;
         setIsInitializing(true);
         try {
-            const data = await authService.getAuthMeAgency();
-            setSession(data);
-            setViewingStep(data.role_entity.onboarding_step);
+            const res = await authService.getAuthMeAgency();
+            setSession(res.data);
+            setViewingStep(res.data.role_entity.onboarding_step);
         } catch (err) {
             if (err instanceof ApiError && err.isUnauthorized) {
                 setSession(null);
@@ -237,6 +247,36 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         [wrapStep],
     );
 
+    const refreshSession = useCallback(async () => {
+        try {
+            const response = await authService.getAuthMeAgency();
+            setSession(response.data);
+        } catch (err) {
+            if (!(err instanceof ApiError && err.isUnauthorized)) {
+                // best-effort; keep the stale session rather than clobbering it
+            }
+        }
+    }, []);
+
+    const updateAgencyProfile = useCallback(
+        async (payload: UpdateAgencyProfilePayload) => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                await agencyProfileService.updateProfile(payload);
+                await refreshSession();
+            } catch (err) {
+                const apiErr =
+                    err instanceof ApiError ? err : new ApiError(500, 'PROFILE_UPDATE_FAILED', 'Profile update failed');
+                setError(apiErr);
+                throw apiErr;
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [refreshSession],
+    );
+
     const goBack = useCallback(() => {
         const v = viewingStep;
         if (!v || v <= 1) return;
@@ -272,6 +312,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
                 drafts,
                 saveDraft,
                 initialize,
+                refreshSession,
+                updateAgencyProfile,
                 submitLogistics,
                 submitPayout,
                 submitBranding,

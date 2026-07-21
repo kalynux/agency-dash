@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
 import { Save, Plus, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -12,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
-import { logisticsSchema, type LogisticsFormValues } from '@/onboarding/schemas/onboarding.schemas';
-import { ApiError } from '@/types/api';
+import { logisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
+import { getApiErrorMessage } from '@/lib/errors';
 import locationsData from '@/constants/locations.json';
 
 type RegionEntry = { key: string; label: string; cities: string[] };
@@ -25,11 +24,14 @@ function getCities(regionLabel: string) {
   return REGIONS.find(r => r.label === regionLabel)?.cities ?? [];
 }
 
-const EMPTY_HQ = { region: '', city: '', address_description: '', support_contact: { phone: '', email: '' } };
+const EMPTY_HQ = {
+  region: '', city: '', address_description: '',
+  support_contact: { phone: '', email: '' },
+  latitude: undefined, longitude: undefined,
+} as unknown as HeadquartersAddressFormValues;
 
 export function BusinessSettings() {
-  const { session, submitLogistics, isSubmitting } = useOnboarding();
-  const navigate = useNavigate();
+  const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -41,7 +43,9 @@ export function BusinessSettings() {
         ? roleEntity.headquarters_addresses.map(addr => ({
           region: addr.region, city: addr.city, address_description: addr.address_description,
           support_contact: { phone: addr.support_contact.phone, email: addr.support_contact.email ?? '' },
-        }))
+          latitude: addr.location?.coordinates?.[1],
+          longitude: addr.location?.coordinates?.[0],
+        } as HeadquartersAddressFormValues))
         : [{ ...EMPTY_HQ }],
     },
   });
@@ -57,21 +61,25 @@ export function BusinessSettings() {
   const onSubmit = useCallback(async (values: LogisticsFormValues) => {
     setApiError(null);
     try {
-      await submitLogistics({
+      // Post-onboarding edit → PATCH /api/agency/profile (full-replace arrays).
+      await updateAgencyProfile({
         coverage_areas: values.coverage_areas,
         headquarters_addresses: values.headquarters_addresses.map(addr => {
           const { email, ...rest } = addr.support_contact;
           const validEmail = email?.trim() || undefined;
-          return { ...addr, support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) } };
+          const { latitude, longitude, ...addrRest } = addr;
+          return {
+            ...addrRest,
+            support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) },
+            location: { type: 'Point' as const, coordinates: [longitude, latitude] as [number, number] },
+          };
         }),
-        version: roleEntity?.version,
       });
       toast.success('Business details saved!');
-      navigate('/dashboard/account/business', { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
+      setApiError(getApiErrorMessage(err));
     }
-  }, [submitLogistics, roleEntity, navigate]);
+  }, [updateAgencyProfile]);
 
   return (
     <Card>
@@ -157,6 +165,18 @@ export function BusinessSettings() {
                       <Label className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />Street Address</Label>
                       <Input placeholder="e.g. Akwa, Rue Sylvani, 3rd floor" {...register(`headquarters_addresses.${index}.address_description`)} />
                       {addrErrors?.address_description && <p className="text-xs text-red-500">{addrErrors.address_description.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Latitude</Label>
+                        <Input type="number" step="any" inputMode="decimal" placeholder="4.0511" {...register(`headquarters_addresses.${index}.latitude`, { valueAsNumber: true })} />
+                        {addrErrors?.latitude && <p className="text-xs text-red-500">{addrErrors.latitude.message}</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Longitude</Label>
+                        <Input type="number" step="any" inputMode="decimal" placeholder="9.7679" {...register(`headquarters_addresses.${index}.longitude`, { valueAsNumber: true })} />
+                        {addrErrors?.longitude && <p className="text-xs text-red-500">{addrErrors.longitude.message}</p>}
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1.5">

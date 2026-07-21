@@ -38,11 +38,21 @@ export interface SupportContact {
   email?: string | null;
 }
 
+/** GeoJSON Point — coordinates are [longitude, latitude]. */
+export interface GeoPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
 export interface HeadquartersAddress {
   region: string;
   city: string;
   address_description: string;
   support_contact: SupportContact;
+  /** Required going forward — placeable on a map for auto-assignment distance. */
+  location?: GeoPoint;
+  /** Assigned by the backend on response. */
+  _id?: string;
 }
 
 // ─── KYC Details ─────────────────────────────────────────────────────────────
@@ -109,10 +119,21 @@ export interface AgencyDamagePolicy {
   notes?: string | null;
 }
 
+export interface AgencyCodPolicy {
+  /** Whether this agency handles cash-on-delivery orders at all. Defaults to false (opt-in). */
+  enabled: boolean;
+  /** Cap on a single COD order's total, minor units. null = no per-order cap. */
+  max_order_amount: number | null;
+}
+
 export interface AgencyPolicies {
   pricing: AgencyPricingPolicy;
   returns: AgencyReturnsPolicy;
   damage: AgencyDamagePolicy;
+  /** COD eligibility gate — separate from pricing.additional_fees.cod_handling_fee, which is just the per-collection fee. */
+  cod: AgencyCodPolicy;
+  /** Up to 2 supporting document URLs (PDF addenda). Full-replace on submit. */
+  documents?: string[];
 }
 
 // ─── Agency Role Entity ───────────────────────────────────────────────────────
@@ -125,6 +146,8 @@ export interface AgencyRoleEntity {
   timezone: string;
   email: string | null;
   phone: string | null;
+  email_verified?: boolean;
+  phone_verified?: boolean;
   /** Region keys from locations.json, e.g. ["littoral", "centre"] */
   coverage_areas: string[];
   headquarters_addresses: HeadquartersAddress[];
@@ -132,6 +155,8 @@ export interface AgencyRoleEntity {
   payout_details: PayoutDetails;
   kyc_details: AgencyKycDetails;
   policies: AgencyPolicies | null;
+  /** Notification/UI language. One of en·fr·pt·es·ar (default en). */
+  preferred_language?: 'en' | 'fr' | 'pt' | 'es' | 'ar';
   /**
    * 0 = onboarding complete (dashboard access granted)
    * 1 = Logistics Setup required
@@ -147,10 +172,17 @@ export interface AgencyRoleEntity {
 
 // ─── Auth Responses ───────────────────────────────────────────────────────────
 
-export interface AuthMeAgencyResponse {
+export interface AgencyAuthSession {
   user: ApiUser;
   role: 'agency';
   role_entity: AgencyRoleEntity;
+}
+
+export interface AuthMeAgencyResponse {
+  success: boolean;
+  data: AgencyAuthSession;
+  meta?: Record<string, unknown>;
+  message?: string;
 }
 
 // ─── Onboarding Step & Status ─────────────────────────────────────────────────
@@ -239,17 +271,30 @@ export type OnboardingStepPayload = LogisticsPayload | PayoutPayload | BrandingP
 
 // ─── API Error ────────────────────────────────────────────────────────────────
 
+/** One normalized field-level validation error. */
+export interface FieldError {
+  field: string;
+  message: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
-  readonly details?: Record<string, string[]>;
+  /**
+   * Raw `error.details` payload. Its shape varies by error code:
+   * - global `VALIDATION_ERROR`: `{ fields: [{ path, message, code }] }`
+   * - agency onboarding/profile: `[{ field, message }]`
+   * - domain errors: an arbitrary context object.
+   * Use {@link fieldErrors} / {@link firstFieldError} to read validation failures.
+   */
+  readonly details?: unknown;
   readonly requestId?: string;
 
   constructor(
     status: number,
     code: string,
     message: string,
-    details?: Record<string, string[]>,
+    details?: unknown,
     requestId?: string,
   ) {
     super(message);
@@ -258,6 +303,34 @@ export class ApiError extends Error {
     this.code = code;
     this.details = details;
     this.requestId = requestId;
+  }
+
+  /**
+   * Normalizes both documented validation-error shapes into a flat
+   * `{ fieldPath: message }` map for wiring into form fields.
+   */
+  fieldErrors(): Record<string, string> {
+    const out: Record<string, string> = {};
+    const d = this.details as { fields?: unknown } | unknown[] | undefined;
+    const arr: unknown[] | null = Array.isArray(d)
+      ? d
+      : d && typeof d === 'object' && Array.isArray((d as { fields?: unknown[] }).fields)
+        ? (d as { fields: unknown[] }).fields
+        : null;
+    if (!arr) return out;
+    for (const raw of arr) {
+      if (!raw || typeof raw !== 'object') continue;
+      const entry = raw as { field?: string; path?: string; message?: string };
+      const key = entry.field ?? entry.path;
+      if (key && entry.message) out[String(key)] = String(entry.message);
+    }
+    return out;
+  }
+
+  /** First field-level validation message, if any. */
+  firstFieldError(): string | undefined {
+    const values = Object.values(this.fieldErrors());
+    return values.length > 0 ? values[0] : undefined;
   }
 
   get isUnauthorized() {

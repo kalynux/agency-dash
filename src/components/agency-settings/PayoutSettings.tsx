@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
 import { Save, Plus, Trash2, Smartphone, Building2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { payoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 
 const MOBILE_MONEY_PROVIDERS = ['MTN Mobile Money', 'Orange Money', 'Wave', 'Moov Money', 'Airtel Money'];
@@ -21,8 +20,7 @@ const EMPTY_MOBILE_MONEY = { method: 'mobile_money' as const, mobile_money: { pr
 const EMPTY_BANK = { method: 'bank' as const, bank: { bank_name: '', account_number: '', account_name: '', country: '' }, mobile_money: null };
 
 export function PayoutSettings() {
-  const { session, submitPayout, isSubmitting } = useOnboarding();
-  const navigate = useNavigate();
+  const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -42,6 +40,9 @@ export function PayoutSettings() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'payout_details' });
   const payoutDetails = watch('payout_details');
+  const usedMethods = new Set((payoutDetails ?? []).map((p) => p?.method));
+  const canAddMobileMoney = fields.length < 2 && !usedMethods.has('mobile_money');
+  const canAddBank = fields.length < 2 && !usedMethods.has('bank');
 
   const switchMethod = useCallback((index: number, m: PayoutMethodType) => {
     setValue(`payout_details.${index}`, m === 'mobile_money' ? { ...EMPTY_MOBILE_MONEY } : { ...EMPTY_BANK });
@@ -50,13 +51,12 @@ export function PayoutSettings() {
   const onSubmit = useCallback(async (values: PayoutFormValues) => {
     setApiError(null);
     try {
-      await submitPayout({ payout_details: values.payout_details, version: roleEntity?.version });
+      await updateAgencyProfile({ payout_details: values.payout_details });
       toast.success('Payout methods saved!');
-      navigate('/dashboard/account/payout', { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
+      setApiError(getApiErrorMessage(err));
     }
-  }, [submitPayout, roleEntity, navigate]);
+  }, [updateAgencyProfile]);
 
   return (
     <Card>
@@ -143,14 +143,18 @@ export function PayoutSettings() {
             );
           })}
 
-          {fields.length < 3 && (
+          {(canAddMobileMoney || canAddBank) && (
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Add Mobile Money
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Add Bank Account
-              </Button>
+              {canAddMobileMoney && (
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Add Mobile Money
+                </Button>
+              )}
+              {canAddBank && (
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Add Bank Account
+                </Button>
+              )}
             </div>
           )}
 

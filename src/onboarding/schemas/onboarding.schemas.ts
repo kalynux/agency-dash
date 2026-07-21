@@ -36,6 +36,19 @@ export const headquartersAddressSchema = z.object({
         .min(1, 'Address description is required')
         .max(200, 'Address description too long (max 200 chars)'),
     support_contact: supportContactSchema,
+    /**
+     * Map coordinates — now REQUIRED per the backend (each HQ must be placeable
+     * on a map so auto-assignment can measure distance to pickup). Converted to a
+     * GeoJSON Point on submit: { type: 'Point', coordinates: [longitude, latitude] }.
+     */
+    latitude: z
+        .number({ message: 'Latitude is required' })
+        .min(-90, 'Latitude must be between -90 and 90')
+        .max(90, 'Latitude must be between -90 and 90'),
+    longitude: z
+        .number({ message: 'Longitude is required' })
+        .min(-180, 'Longitude must be between -180 and 180')
+        .max(180, 'Longitude must be between -180 and 180'),
 });
 
 export const logisticsSchema = z.object({
@@ -97,14 +110,28 @@ export type PayoutMethodFormValue = z.infer<typeof payoutMethodSchema>;
 export type PayoutMethodType = 'mobile_money' | 'bank';
 
 /**
- * Full payout payload schema — ordered array, min 1, max 3 entries.
+ * Full payout payload schema — ordered array, min 1, max 2 entries, no duplicate
+ * method types (at most one mobile_money and one bank). Index 0 is preferred.
  */
 export const payoutSchema = z
     .object({
         payout_details: z
             .array(payoutMethodSchema)
             .min(1, 'At least one payout method is required')
-            .max(3, 'You may add at most 3 payout methods'),
+            .max(2, 'You may add at most 2 payout methods (one mobile money and one bank)')
+            .superRefine((methods, ctx) => {
+                const seen = new Set<string>();
+                for (const m of methods) {
+                    if (seen.has(m.method)) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message: 'You can only add one method of each type (mobile money / bank).',
+                        });
+                        break;
+                    }
+                    seen.add(m.method);
+                }
+            }),
         version: z.number().int().optional(),
     });
 
@@ -186,10 +213,22 @@ const damageSchema = z.object({
     notes: z.string().max(700, 'Notes too long (max 700 chars)').optional(),
 });
 
+/** Nullable non-negative number; empty/null/undefined normalizes to null (no cap). */
+const nullableCap = z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number('Must be a number').nonnegative('Must be 0 or greater').nullable(),
+);
+
+const codSchema = z.object({
+    enabled: z.boolean(),
+    max_order_amount: nullableCap,
+});
+
 export const policiesSchema = z.object({
     pricing: pricingSchema,
     returns: returnsSchema,
     damage: damageSchema,
+    cod: codSchema,
 });
 
 export type PoliciesFormValues = z.infer<typeof policiesSchema>;

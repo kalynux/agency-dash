@@ -13,6 +13,11 @@ const STATUS_MAP: Record<ShipmentStatus, { label: string; dot: string; className
     dot: 'bg-blue-500',
     className: 'text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800',
   },
+  handing_over: {
+    label: 'Handing Over',
+    dot: 'bg-amber-500',
+    className: 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+  },
   picked_up: {
     label: 'Picked Up',
     dot: 'bg-indigo-500',

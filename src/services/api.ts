@@ -23,7 +23,10 @@ function flushQueue(err?: ApiError) {
 }
 
 async function refreshTokens(): Promise<void> {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+    // Browser clients refresh explicitly from the refresh_token cookie.
+    // NB: the endpoint is `/auth/browser/refresh` — there is no `/auth/refresh`.
+    // See api-doc/auth/README.md (POST /auth/browser/refresh).
+    const res = await fetch(`${BASE_URL}/auth/browser/refresh`, {
         method: 'POST',
         credentials: 'include',
     });
@@ -62,7 +65,7 @@ async function buildApiError(res: Response): Promise<ApiError> {
         (body.message as string) ??
         `Request failed with status ${res.status}`;
     const code = (error.code as string) ?? String(res.status);
-    const details = (error.details as Record<string, string[]>) ?? undefined;
+    const details = error.details ?? undefined;
     const requestId = (body.requestId as string) ?? undefined;
 
     return new ApiError(res.status, code, message, details, requestId);
@@ -77,13 +80,18 @@ async function request<T>(
 ): Promise<T> {
     const url = `${BASE_URL}${path}`;
 
+    // For multipart uploads let the browser set the Content-Type (with boundary).
+    const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+
     const res = await fetch(url, {
         ...init,
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(init.headers ?? {}),
-        },
+        headers: isFormData
+            ? { ...(init.headers ?? {}) }
+            : {
+                'Content-Type': 'application/json',
+                ...(init.headers ?? {}),
+            },
     });
 
     if (res.status === 401 && !isRetry) {
@@ -140,6 +148,11 @@ export const api = {
         });
     },
 
+    /** Multipart POST (file uploads). Pass a FormData; the browser sets the boundary. */
+    postForm<T>(path: string, form: FormData): Promise<T> {
+        return request<T>(path, { method: 'POST', body: form });
+    },
+
     patch<T>(path: string, body?: unknown): Promise<T> {
         return request<T>(path, {
             method: 'PATCH',
@@ -154,7 +167,10 @@ export const api = {
         });
     },
 
-    delete<T>(path: string): Promise<T> {
-        return request<T>(path, { method: 'DELETE' });
+    delete<T>(path: string, body?: unknown): Promise<T> {
+        return request<T>(path, {
+            method: 'DELETE',
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
     },
 };

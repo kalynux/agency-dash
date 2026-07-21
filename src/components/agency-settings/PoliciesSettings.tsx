@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
-import { Save, DollarSign, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Save, DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { policiesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
-import { ApiError } from '@/types/api';
+import { agencyProfileService } from '@/services/agency-profile.service';
+import { getApiErrorMessage } from '@/lib/errors';
+import { useRef } from 'react';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -30,11 +31,33 @@ function Section({ icon: Icon, title, description, children }: { icon: React.Ele
 }
 
 export function PoliciesSettings() {
-  const { session, submitPolicies, isSubmitting } = useOnboarding();
-  const navigate = useNavigate();
+  const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const existing = roleEntity?.policies;
   const [apiError, setApiError] = useState<string | null>(null);
+  // policies.documents — existing URLs (full-replace on save; resend to keep).
+  const [documents, setDocuments] = useState<string[]>(existing?.documents ?? []);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadDocuments = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (documents.length + files.length > 2) {
+      toast.error('At most 2 policy documents.');
+      return;
+    }
+    setUploadingDoc(true);
+    try {
+      const res = await agencyProfileService.uploadPolicyDocuments(Array.from(files).slice(0, 2 - documents.length));
+      setDocuments((prev) => [...prev, ...res.data.urls]);
+      toast.success('Document uploaded.');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setUploadingDoc(false);
+      if (docInputRef.current) docInputRef.current.value = '';
+    }
+  };
 
   const { register, handleSubmit, control, watch, formState: { errors } } = useForm<PoliciesFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,11 +99,16 @@ export function PoliciesSettings() {
         max_refund_per_item: existing?.damage?.max_refund_per_item ?? undefined,
         notes: existing?.damage?.notes ?? '',
       },
+      cod: {
+        enabled: existing?.cod?.enabled ?? false,
+        max_order_amount: existing?.cod?.max_order_amount ?? null,
+      },
     },
   });
 
   const storageEnabled = watch('pricing.storage_based.enabled');
   const pickupEnabled = watch('pricing.pickup_based.enabled');
+  const codEnabled = watch('cod.enabled');
   const pe = errors.pricing;
   const re = errors.returns;
   const de = errors.damage;
@@ -88,13 +116,13 @@ export function PoliciesSettings() {
   const onSubmit = useCallback(async (values: PoliciesFormValues) => {
     setApiError(null);
     try {
-      await submitPolicies({ policies: values, version: roleEntity?.version });
+      // Post-onboarding edit → PATCH /api/agency/profile. `documents` is full-replace.
+      await updateAgencyProfile({ policies: { ...values, documents } });
       toast.success('Policies saved!');
-      navigate('/dashboard/settings/policies', { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
+      setApiError(getApiErrorMessage(err));
     }
-  }, [submitPolicies, roleEntity, navigate]);
+  }, [updateAgencyProfile, documents]);
 
   return (
     <Card>
@@ -213,6 +241,24 @@ export function PoliciesSettings() {
 
           <Separator />
 
+          <Section icon={Banknote} title="Cash on Delivery" description="Whether your agency accepts cash-on-delivery orders at all — separate from the COD handling fee above.">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Accept cash-on-delivery orders</p>
+              <Controller control={control} name="cod.enabled" render={({ field }) => (
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              )} />
+            </div>
+            {codEnabled && (
+              <div className="space-y-1.5">
+                <Label>Max COD order amount (XAF)</Label>
+                <Input type="number" min={0} placeholder="No cap" {...register('cod.max_order_amount')} />
+                {errors.cod?.max_order_amount && <p className="text-xs text-red-500">{errors.cod.max_order_amount.message}</p>}
+              </div>
+            )}
+          </Section>
+
+          <Separator />
+
           <Section icon={RotateCcw} title="Returns Policy">
             <div className="space-y-1.5">
               <Label>Return cost paid by</Label>
@@ -262,6 +308,45 @@ export function PoliciesSettings() {
               <Textarea rows={2} placeholder="E.g. original packaging required..." {...register('damage.notes')} />
             </div>
             {de?.claim_deadline_days && <p className="text-xs text-red-500">{de.claim_deadline_days.message}</p>}
+          </Section>
+
+          <Separator />
+
+          <Section icon={FileText} title="Supporting Documents" description="Optional signed PDF addenda (max 2, 5MB each) for terms not covered above.">
+            <input
+              ref={docInputRef}
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => uploadDocuments(e.target.files)}
+            />
+            {documents.length > 0 && (
+              <div className="space-y-1">
+                {documents.map((url, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm rounded-md border px-2 py-1">
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="truncate flex-1 hover:underline">
+                      {url.split('/').pop() ?? `Document ${i + 1}`}
+                    </a>
+                    <button type="button" onClick={() => setDocuments((prev) => prev.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={uploadingDoc || documents.length >= 2}
+              onClick={() => docInputRef.current?.click()}
+            >
+              {uploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              Upload PDF ({documents.length}/2)
+            </Button>
           </Section>
 
           <div className="flex justify-end">

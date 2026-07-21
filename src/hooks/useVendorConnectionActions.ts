@@ -1,26 +1,21 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { vendorConnectionsService } from '@/services/vendor-connections.service';
 import type { ConnectionDto } from '@/types/vendor-connection.types';
 
 // ─── Error mapping ────────────────────────────────────────────────────────────
-// Friendly, user-facing labels for known vendor-connection error codes. Falls
-// back to the backend `err.message` for any unmapped code.
+// Screen-specific phrasing layered over the central registry (@/lib/errors).
 
-const VENDOR_CONNECTION_ERROR_LABELS: Record<string, string> = {
+const VENDOR_CONNECTION_ERROR_OVERRIDES: Record<string, string> = {
   CONNECTION_ALREADY_EXISTS: 'You already have a connection request with this vendor.',
   CONNECTION_NOT_APPROVER: "You can't approve or reject a request you sent yourself.",
   CONNECTION_NOT_REQUESTER: "You can't withdraw a request you didn't send.",
-  CONNECTION_NOT_PENDING: 'This request is no longer pending.',
-  CONNECTION_INVALID_STATUS_TRANSITION: "This connection can't be changed from its current status.",
   CONNECTION_WRONG_REAPPROVAL_PARTY: "It's the vendor's turn to reapprove this connection, not yours.",
-  CONNECTION_VENDOR_NOT_FOUND: 'This vendor could no longer be found.',
 };
 
 export function getVendorConnectionErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return VENDOR_CONNECTION_ERROR_LABELS[err.code] ?? err.message;
-  return 'Something went wrong. Please try again.';
+  return getApiErrorMessage(err, VENDOR_CONNECTION_ERROR_OVERRIDES);
 }
 
 // ─── Shared mutation hook ─────────────────────────────────────────────────────

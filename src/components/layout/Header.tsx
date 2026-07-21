@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationStore } from '@/store';
+import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import type { AgencyNotification } from '@/types/notification.types';
 import {
   Search,
   Bell,
@@ -37,6 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { QUICK_ACTIONS, type QuickAction } from '@/config/quickActions';
+import { notificationVisual, notificationHref } from '@/lib/notification-display';
 
 const recentSearches = [
   'Order #1001',
@@ -54,27 +56,12 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-function notificationDot(type: string) {
-  switch (type) {
-    case 'delivery':
-      return 'bg-blue-500';
-    case 'alert':
-      return 'bg-red-500';
-    case 'payout':
-      return 'bg-green-500';
-    case 'ticket':
-      return 'bg-purple-500';
-    default:
-      return 'bg-gray-500';
-  }
-}
-
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { session, logout } = useOnboarding();
   const roleEntity = session?.role_entity;
 
@@ -94,11 +81,11 @@ export function Header() {
 
   const goToProfile = () => navigate('/dashboard/account/profile');
 
-  const unreadNotifications = notifications.filter((n) => !n.read).slice(0, 5);
+  const unreadNotifications = notifications.filter((n) => !n.isRead).slice(0, 5);
 
-  const openNotification = (n: typeof notifications[number]) => {
+  const openNotification = (n: AgencyNotification) => {
     markAsRead(n.id);
-    navigate(n.actionUrl ?? '/dashboard/notifications');
+    navigate(notificationHref(n.action));
   };
 
   return (
@@ -189,7 +176,7 @@ export function Header() {
                       className="flex flex-col items-start gap-1 p-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-2 w-full">
-                        <span className={`w-2 h-2 rounded-full ${notificationDot(notification.type)}`} />
+                        <span className={`w-2 h-2 rounded-full ${notificationVisual(notification.type).dot}`} />
                         <span className="font-medium text-sm flex-1">{notification.title}</span>
                         <span className="text-xs text-muted-foreground">
                           {new Date(notification.createdAt).toLocaleDateString()}

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Phone, Mail, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
-import { logisticsSchema, type LogisticsFormValues } from '@/onboarding/schemas/onboarding.schemas';
+import { logisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,7 +23,11 @@ function getCities(regionLabel: string) {
     return REGIONS.find(r => r.label === regionLabel || r.key === regionLabel.toLowerCase().replace(/\s/g, '_'))?.cities ?? [];
 }
 
-const EMPTY_HQ = { region: '', city: '', address_description: '', support_contact: { phone: '', email: '' } };
+const EMPTY_HQ = {
+    region: '', city: '', address_description: '',
+    support_contact: { phone: '', email: '' },
+    latitude: undefined, longitude: undefined,
+} as unknown as HeadquartersAddressFormValues;
 
 function FieldRow({ label, required, optional, error, children }: { label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
     return (
@@ -75,7 +79,9 @@ export function Step1Logistics() {
                             phone: addr.support_contact.phone,
                             email: addr.support_contact.email ?? '',
                         },
-                    }))
+                        latitude: addr.location?.coordinates?.[1],
+                        longitude: addr.location?.coordinates?.[0],
+                    } as HeadquartersAddressFormValues))
                     : [{ ...EMPTY_HQ }]
             ),
         },
@@ -100,7 +106,12 @@ export function Step1Logistics() {
                 headquarters_addresses: values.headquarters_addresses.map(addr => {
                     const { email, ...rest } = addr.support_contact;
                     const validEmail = email?.trim() || undefined;
-                    return { ...addr, support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) } };
+                    const { latitude, longitude, ...addrRest } = addr;
+                    return {
+                        ...addrRest,
+                        support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) },
+                        location: { type: 'Point' as const, coordinates: [longitude, latitude] as [number, number] },
+                    };
                 }),
                 version: roleEntity?.version,
             });
@@ -108,7 +119,7 @@ export function Step1Logistics() {
         } catch (err) {
             if (err instanceof ApiError) {
                 if (err.isConcurrentModification) setApiError('Profile was modified elsewhere. Please refresh and try again.');
-                else if (err.isValidation && err.details) setApiError(Object.values(err.details)[0]?.[0] ?? err.message);
+                else if (err.isValidation) setApiError(err.firstFieldError() ?? err.message);
                 else setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
             }
         }
@@ -252,6 +263,20 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                         hasError={!!addrErrors?.address_description}
                         {...register(`headquarters_addresses.${index}.address_description`)} />
                 </FieldRow>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <FieldRow label="Latitude" required error={addrErrors?.latitude?.message}>
+                        <IconInput icon={MapPin} type="number" step="any" inputMode="decimal" placeholder="4.0511"
+                            hasError={!!addrErrors?.latitude}
+                            {...register(`headquarters_addresses.${index}.latitude`, { valueAsNumber: true })} />
+                    </FieldRow>
+                    <FieldRow label="Longitude" required error={addrErrors?.longitude?.message}>
+                        <IconInput icon={MapPin} type="number" step="any" inputMode="decimal" placeholder="9.7679"
+                            hasError={!!addrErrors?.longitude}
+                            {...register(`headquarters_addresses.${index}.longitude`, { valueAsNumber: true })} />
+                    </FieldRow>
+                </div>
+                <p className="text-[11px] text-slate-400 -mt-2">Map coordinates for this location — required so it can be placed on a map for auto-assignment.</p>
 
                 <div className="border-t border-dashed border-slate-200 dark:border-zinc-700 pt-3 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Location Contact</p>

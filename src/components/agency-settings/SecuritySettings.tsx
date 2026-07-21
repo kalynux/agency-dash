@@ -1,103 +1,100 @@
-import { useState } from 'react';
-import { Shield, Globe, Lock, Eye, EyeOff, Save } from 'lucide-react';
-import { toast } from 'sonner';
+import { Mail, Phone, CheckCircle2, AlertCircle, LogOut, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useActionRunner } from '@/hooks/useActionRunner';
+import { authService } from '@/services/auth.service';
+import { whatsappService } from '@/services/channels.service';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
+
+function VerifiedBadge({ verified }: { verified: boolean }) {
+  return verified ? (
+    <Badge variant="outline" className="text-green-600 border-green-200 gap-1">
+      <CheckCircle2 className="w-3 h-3" /> Verified
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="text-amber-600 border-amber-200 gap-1">
+      <AlertCircle className="w-3 h-3" /> Unverified
+    </Badge>
+  );
+}
 
 export function SecuritySettings() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const { session, logout } = useOnboarding();
+  const roleEntity = session?.role_entity;
+  const { run, pendingKey } = useActionRunner();
 
-  const handleUpdatePassword = async () => {
-    setIsSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setIsSaving(false);
-    toast.success('Password updated');
+  const sendEmail = () =>
+    run('email', () => authService.sendEmailVerification(), { success: 'Verification email sent.' });
+
+  const startWhatsapp = async () => {
+    const result = await run('wa', () => whatsappService.requestVerification(false));
+    if (result) window.open(result.data.wa_link, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Lock className="w-4 h-4" />Change Password</CardTitle>
-          <CardDescription>Update your account password</CardDescription>
+          <CardTitle className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Account Verification</CardTitle>
+          <CardDescription>Verify your contact channels to unlock full functionality</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 max-w-md">
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current Password</Label>
-            <div className="relative">
-              <Input id="currentPassword" type={showPassword ? 'text' : 'password'} />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+        <CardContent className="space-y-4">
+          {/* Email */}
+          <div className="flex items-center justify-between p-4 border rounded-lg gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 bg-primary/10 rounded-full flex-shrink-0"><Mail className="w-5 h-5 text-primary" /></div>
+              <div className="min-w-0">
+                <p className="font-medium">Email</p>
+                <p className="text-sm text-muted-foreground truncate">{roleEntity?.email ?? 'No email on file'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <VerifiedBadge verified={!!roleEntity?.email_verified} />
+              {!roleEntity?.email_verified && roleEntity?.email && (
+                <Button variant="outline" size="sm" disabled={pendingKey === 'email'} onClick={sendEmail}>
+                  {pendingKey === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send link'}
+                </Button>
+              )}
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
-            <Input id="newPassword" type="password" />
+
+          {/* Phone (via WhatsApp) */}
+          <div className="flex items-center justify-between p-4 border rounded-lg gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 bg-primary/10 rounded-full flex-shrink-0"><Phone className="w-5 h-5 text-primary" /></div>
+              <div className="min-w-0">
+                <p className="font-medium">Phone (WhatsApp)</p>
+                <p className="text-sm text-muted-foreground truncate">{roleEntity?.phone ?? 'No phone on file'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <VerifiedBadge verified={!!roleEntity?.phone_verified} />
+              {!roleEntity?.phone_verified && (
+                <Button variant="outline" size="sm" disabled={pendingKey === 'wa'} onClick={startWhatsapp}>
+                  {pendingKey === 'wa' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <Input id="confirmPassword" type="password" />
-          </div>
-          <Button onClick={handleUpdatePassword} disabled={isSaving} className="gap-2">
-            <Save className="w-4 h-4" />
-            {isSaving ? 'Updating...' : 'Update Password'}
-          </Button>
+
+          <p className="text-xs text-muted-foreground">
+            Manage notification channels (Telegram / WhatsApp) under Settings → Notifications.
+          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Manage your account security</CardDescription>
+          <CardTitle>Session</CardTitle>
+          <CardDescription>Sign out of this device</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Two-Factor Authentication
-            </h4>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Enable 2FA</p>
-                <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-              </div>
-              <Switch />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Active Sessions
-            </h4>
-            <div className="space-y-3">
-              {[{ device: 'Chrome on Windows', location: 'Douala, Cameroon', current: true }].map((s, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">{s.device}</p>
-                    <p className="text-sm text-muted-foreground">{s.location}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {s.current && <Badge variant="outline">Current</Badge>}
-                    <Button variant="outline" size="sm">Revoke</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <CardContent>
+          <Separator className="mb-4" />
+          <Button variant="outline" className="gap-2 text-destructive" onClick={() => logout()}>
+            <LogOut className="w-4 h-4" /> Sign out
+          </Button>
         </CardContent>
       </Card>
     </div>

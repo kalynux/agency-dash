@@ -1,5 +1,7 @@
 /.env
 /.env.example
+# env/ folder: keep committed defaults, ignore personal/secret overrides
+/env/*.local
 /dist
 /node_modules
 /scripts

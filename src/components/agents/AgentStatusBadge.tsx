@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { AgentStatus } from '@/types';
+import type { AgentStatus } from '@/types/agent.types';
 
 const STATUS_MAP: Record<AgentStatus, { label: string; dot: string; className: string }> = {
   active: { label: 'Active', dot: 'bg-green-500', className: 'border-green-500 text-green-600 bg-green-50' },

@@ -10,6 +10,7 @@ import {
     DollarSign,
     RotateCcw,
     AlertTriangle,
+    Banknote,
     Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -243,6 +244,11 @@ const INFO = {
         'Maximum days after delivery to file a damage claim. Example: 3 means damage must be reported within 3 days of receipt. Leave blank to default to 0.',
     max_refund_per_item:
         'Maximum compensation you will pay per damaged item, regardless of its value. Example: a 10,000 XAF cap means a 50,000 XAF item is refunded up to 10,000 XAF. Leave blank to default to 0.',
+    // COD eligibility
+    cod_enabled:
+        "Whether your agency accepts cash-on-delivery orders at all. When off, customers can't place COD orders whose shipments you would carry. This is separate from the COD handling fee above, which only applies once COD is on.",
+    cod_max_order_amount:
+        'Optional cap on a single COD order\'s total. Checkout rejects COD orders above this amount. Leave blank for no cap.',
 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -301,11 +307,16 @@ export function Step4Policies() {
                 max_refund_per_item: draft?.damage?.max_refund_per_item ?? existing?.damage?.max_refund_per_item ?? undefined,
                 notes: draft?.damage?.notes ?? existing?.damage?.notes ?? '',
             },
+            cod: {
+                enabled: draft?.cod?.enabled ?? existing?.cod?.enabled ?? false,
+                max_order_amount: draft?.cod?.max_order_amount ?? existing?.cod?.max_order_amount ?? null,
+            },
         },
     });
 
     const storageEnabled = watch('pricing.storage_based.enabled');
     const pickupEnabled = watch('pricing.pickup_based.enabled');
+    const codEnabled = watch('cod.enabled');
 
     const handleSave = useCallback(
         async (values: PoliciesFormValues) => {
@@ -317,6 +328,7 @@ export function Step4Policies() {
                         pricing: values.pricing,
                         returns: values.returns,
                         damage: values.damage,
+                        cod: values.cod,
                     },
                     version: roleEntity?.version,
                 });
@@ -643,6 +655,46 @@ export function Step4Policies() {
                             {...register('pricing.notes')}
                         />
                     </FieldRow>
+                </Section>
+
+                {/* ── Cash on Delivery eligibility ── */}
+                <Section icon={Banknote} title="Cash on Delivery">
+                    <Controller
+                        control={control}
+                        name="cod.enabled"
+                        render={({ field }) => (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        Accept cash-on-delivery orders
+                                    </p>
+                                    <InfoTooltip text={INFO.cod_enabled} />
+                                </div>
+                                <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-primary"
+                                />
+                            </div>
+                        )}
+                    />
+
+                    {codEnabled && (
+                        <div className="border-t border-slate-100 dark:border-zinc-800 pt-4">
+                            <FieldRow
+                                label="Max COD order amount (XAF)"
+                                info={INFO.cod_max_order_amount}
+                                hint="Leave blank for no cap"
+                                error={errors.cod?.max_order_amount?.message}
+                            >
+                                <FeeInput
+                                    placeholder="No cap"
+                                    error={!!errors.cod?.max_order_amount}
+                                    {...register('cod.max_order_amount')}
+                                />
+                            </FieldRow>
+                        </div>
+                    )}
                 </Section>
 
                 {/* ── Returns ── */}
