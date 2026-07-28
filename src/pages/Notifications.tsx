@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
 import { useNotifications } from '@/store/notifications.store';
 import { notificationsService } from '@/services/notifications.service';
@@ -73,6 +75,110 @@ export function Notifications() {
     setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
   };
 
+  // Read status has no server-side filter (the list endpoint only takes page/limit),
+  // so the tabs filter the current page's items.
+  const unreadItems = items.filter((n) => !n.isRead);
+  const readItems = items.filter((n) => n.isRead);
+
+  const NotificationRow = ({ n }: { n: AgencyNotification }) => {
+    const visual = notificationVisual(n.type);
+    const Icon = visual.icon;
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => handleOpen(n)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleOpen(n);
+          }
+        }}
+        className={cn(
+          'flex items-start gap-4 p-4 transition-colors hover:bg-muted/50 cursor-pointer',
+          !n.isRead && 'bg-primary/5',
+        )}
+      >
+        <div className={cn('p-2 rounded-lg flex-shrink-0', visual.chip)}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className={cn('font-medium', !n.isRead && 'text-primary')}>{n.title}</p>
+            <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo(n.createdAt)}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
+          {n.action && (
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0 h-auto mt-2 gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpen(n);
+              }}
+            >
+              {n.action.label}
+              <ArrowRight className="w-3 h-3" />
+            </Button>
+          )}
+        </div>
+        {!n.isRead && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0 h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMarkRead(n.id);
+            }}
+            title="Mark as read"
+          >
+            <Check className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  const renderTab = (list: AgencyNotification[], emptyTitle: string, emptyDescription: string) => (
+    <Card>
+      <CardContent className="p-0">
+        <AsyncBoundary
+          isLoading={isLoading && items.length === 0}
+          error={items.length === 0 ? error : undefined}
+          onRetry={load}
+          isEmpty={!isLoading && list.length === 0}
+          emptyState={
+            <EmptyState icon={Bell} title={emptyTitle} description={emptyDescription} className="border-0" />
+          }
+        >
+          <div className="divide-y">
+            {list.map((n) => (
+              <NotificationRow key={n.id} n={n} />
+            ))}
+          </div>
+        </AsyncBoundary>
+
+        {!isLoading && !error && meta.pages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Page {meta.page} of {meta.pages} · {meta.total} total
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -96,83 +202,59 @@ export function Notifications() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <AsyncBoundary
-            isLoading={isLoading && items.length === 0}
-            error={items.length === 0 ? error : undefined}
-            onRetry={load}
-            isEmpty={!isLoading && items.length === 0}
-            emptyState={
-              <EmptyState icon={Bell} title="No notifications yet" description="You're all caught up." className="border-0" />
-            }
-          >
-            <div className="divide-y">
-              {items.map((n) => {
-                const visual = notificationVisual(n.type);
-                const Icon = visual.icon;
-                return (
-                  <div
-                    key={n.id}
-                    className={cn(
-                      'flex items-start gap-4 p-4 transition-colors hover:bg-muted/50 cursor-pointer',
-                      !n.isRead && 'bg-primary/5',
-                    )}
-                    onClick={() => handleOpen(n)}
-                  >
-                    <div className={cn('p-2 rounded-lg flex-shrink-0', visual.chip)}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={cn('font-medium', !n.isRead && 'text-primary')}>{n.title}</p>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo(n.createdAt)}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
-                      {n.action && (
-                        <span className="inline-flex items-center gap-1 text-xs text-primary mt-2">
-                          {n.action.label}
-                          <ArrowRight className="w-3 h-3" />
-                        </span>
-                      )}
-                    </div>
-                    {!n.isRead && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="flex-shrink-0 h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMarkRead(n.id);
-                        }}
-                        title="Mark as read"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </AsyncBoundary>
-
-          {!isLoading && !error && meta.pages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Page {meta.page} of {meta.pages} · {meta.total} total
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+      {/* Stats (desktop only) */}
+      <div className="hidden sm:grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold">{unreadCount}</p>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <Bell className="w-5 h-5 text-primary" />
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{meta.total}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Check className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList>
+          <TabsTrigger value="all" className="gap-2">
+            All
+            <Badge variant="secondary">{items.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="gap-2">
+            Unread
+            {unreadItems.length > 0 && <Badge variant="destructive">{unreadItems.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="read">Read</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-4">
+          {renderTab(items, 'No notifications yet', "You're all caught up.")}
+        </TabsContent>
+        <TabsContent value="unread" className="mt-4">
+          {renderTab(unreadItems, 'All caught up!', 'You have no unread notifications on this page.')}
+        </TabsContent>
+        <TabsContent value="read" className="mt-4">
+          {renderTab(readItems, 'No read notifications', 'Read notifications on this page will show here.')}
+        </TabsContent>
+      </Tabs>
 
       {error && items.length > 0 && (
         <p className="text-sm text-destructive text-center">{getApiErrorMessage(error)}</p>

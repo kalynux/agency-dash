@@ -19,6 +19,7 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   AUTH_INVALID_CREDENTIALS: 'Invalid credentials.',
   UNAUTHORIZED: 'Your session has expired. Please log in again.',
   FORBIDDEN: "You don't have permission to perform this action.",
+  USER_INVALID_PASSWORD: 'Current password is incorrect.',
 
   // ── Validation / generic ────────────────────────────────────────────────
   VALIDATION_ERROR: 'Please check the highlighted fields and try again.',
@@ -36,6 +37,10 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   DELIVERY_ONBOARDING_STEP_INVALID: 'That step could not be submitted here.',
   DELIVERY_POLICY_DOCUMENT_MISSING: 'No document was provided.',
   DELIVERY_POLICY_DOCUMENT_TYPE_INVALID: 'Only PDF files are accepted.',
+
+  // ── Agency magazin (business identity) ──────────────────────────────────
+  MAGAZIN_CONFLICT: 'Your business details were updated elsewhere. Refreshed — please re-apply your changes.',
+  MAGAZIN_NOT_FOUND: 'Your business profile could not be found.',
 
   // ── Vendor connections ──────────────────────────────────────────────────
   CONNECTION_NOT_FOUND: 'This connection could not be found.',

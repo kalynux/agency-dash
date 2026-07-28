@@ -105,11 +105,11 @@ export function Step1Logistics() {
                 coverage_areas: values.coverage_areas,
                 headquarters_addresses: values.headquarters_addresses.map(addr => {
                     const { email, ...rest } = addr.support_contact;
-                    const validEmail = email?.trim() || undefined;
                     const { latitude, longitude, ...addrRest } = addr;
                     return {
                         ...addrRest,
-                        support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) },
+                        // Clearable field: empty input → explicit null (see api-doc/agency/profile.md).
+                        support_contact: { ...rest, email: email?.trim() || null },
                         location: { type: 'Point' as const, coordinates: [longitude, latitude] as [number, number] },
                     };
                 }),

@@ -6,12 +6,12 @@ import { Toaster } from '@/components/ui/sonner';
 import { Overview } from '@/pages/Overview';
 import { Shipments } from '@/pages/Shipments';
 import { LiveTracking } from '@/pages/LiveTracking';
-import { Earnings } from '@/pages/Earnings';
 import { Notifications } from '@/pages/Notifications';
 import { Tickets } from '@/pages/Tickets';
 import { Agents } from '@/pages/Agents';
 import { CashManagement } from '@/pages/CashManagement';
 import { Vendors } from '@/pages/Vendors';
+import { Transactions } from '@/pages/Transactions';
 import { Account } from '@/pages/Account';
 import { Settings } from '@/pages/Settings';
 
@@ -104,7 +104,9 @@ function DashboardShell() {
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
                   <Route path="tracking" element={<LiveTracking />} />
-                  <Route path="earnings" element={<Earnings />} />
+                  {/* Legacy alias — earnings now live under Account → Payout. */}
+                  <Route path="earnings" element={<Navigate to="/dashboard/account/payout" replace />} />
+                  <Route path="transactions" element={<Transactions />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="tickets" element={<Tickets />} />
                   <Route path="agents" element={<Navigate to="/dashboard/agents/roster" replace />} />
@@ -113,6 +115,8 @@ function DashboardShell() {
                   <Route path="cash/:tab" element={<CashManagement />} />
                   <Route path="vendors" element={<Navigate to="/dashboard/vendors/connections" replace />} />
                   <Route path="vendors/:tab" element={<Vendors />} />
+                  {/* Deep-link alias — plan-expiry notification buttons point at the literal `plans` route. */}
+                  <Route path="plans" element={<Navigate to="/dashboard/account/billing" replace />} />
                   <Route path="account" element={<Navigate to="/dashboard/account/profile" replace />} />
                   <Route path="account/:tab" element={<Account />} />
                   <Route path="settings" element={<Navigate to="/dashboard/settings/policies" replace />} />

@@ -10,7 +10,7 @@ import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } f
 import { cn } from '@/lib/utils';
 
 // Items already present in the bottom tab bar — hidden from "More".
-const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments', '/dashboard/earnings']);
+const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments']);
 
 interface NavHandlers {
   go: (path: string) => void;

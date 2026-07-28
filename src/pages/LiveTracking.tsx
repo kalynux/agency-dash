@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, RefreshCw, Navigation, Gauge, Clock, Wifi, WifiOff, ExternalLink, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,11 @@ import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
 import { useResource } from '@/hooks/useResource';
 import { useGeoTrackerSocket } from '@/hooks/useGeoTrackerSocket';
 import { useAgentsRoster } from '@/store/agents.store';
+import { useUIStore } from '@/store';
 import { trackingService } from '@/services/tracking.service';
+import { LiveTrackingMap } from '@/components/tracking/LiveTrackingMap';
 import { cn } from '@/lib/utils';
-import type { AgentLiveFix, TrackingSocketStatus } from '@/types/tracking.types';
+import type { TrackingSocketStatus } from '@/types/tracking.types';
 
 const STATUS_META: Record<TrackingSocketStatus, { label: string; className: string; icon: React.ElementType }> = {
   idle: { label: 'Idle', className: 'text-muted-foreground', icon: WifiOff },
@@ -27,59 +29,9 @@ function secondsAgo(ts: number): string {
   return `${Math.round(s / 60)}m ago`;
 }
 
-/** A relative (not-to-scale) plot of the live fixes, so operators get a spatial sense without a tile map. */
-function RelativeMap({ fixes, nameFor }: { fixes: AgentLiveFix[]; nameFor: (id: string) => string }) {
-  const W = 600;
-  const H = 300;
-  const pad = 30;
-
-  const projected = useMemo(() => {
-    if (fixes.length === 0) return [];
-    const lats = fixes.map((f) => f.position.latitude);
-    const lngs = fixes.map((f) => f.position.longitude);
-    let minLat = Math.min(...lats), maxLat = Math.max(...lats);
-    let minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-    if (maxLat - minLat < 1e-4) { minLat -= 0.01; maxLat += 0.01; }
-    if (maxLng - minLng < 1e-4) { minLng -= 0.01; maxLng += 0.01; }
-    return fixes.map((f) => ({
-      id: f.agentId,
-      x: pad + ((f.position.longitude - minLng) / (maxLng - minLng)) * (W - 2 * pad),
-      y: pad + ((maxLat - f.position.latitude) / (maxLat - minLat)) * (H - 2 * pad),
-      heading: f.headingDegrees,
-    }));
-  }, [fixes]);
-
-  return (
-    <div className="rounded-lg border bg-muted/30 overflow-hidden">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Relative agent positions">
-        <defs>
-          <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width={W} height={H} fill="url(#grid)" className="text-muted-foreground" />
-        {projected.map((p) => (
-          <g key={p.id} transform={`translate(${p.x}, ${p.y})`}>
-            {typeof p.heading === 'number' && (
-              <line x1="0" y1="0" x2={12 * Math.sin((p.heading * Math.PI) / 180)} y2={-12 * Math.cos((p.heading * Math.PI) / 180)}
-                stroke="currentColor" className="text-primary" strokeWidth="2" />
-            )}
-            <circle r="6" className="fill-primary" />
-            <circle r="10" className="fill-primary/20">
-              <animate attributeName="r" values="6;14;6" dur="2s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" />
-            </circle>
-            <text x="10" y="4" className="fill-foreground text-[10px]">{nameFor(p.id)}</text>
-          </g>
-        ))}
-      </svg>
-      <p className="text-[11px] text-muted-foreground px-3 py-1.5 border-t">Relative positions — not to scale.</p>
-    </div>
-  );
-}
-
 export function LiveTracking() {
   const { agents } = useAgentsRoster();
+  const { theme } = useUIStore();
   const [searchParams] = useSearchParams();
   const focusAgentId = searchParams.get('agent');
   const visible = useResource(() => trackingService.getVisibleAgents().then((r) => r.data), []);
@@ -87,18 +39,33 @@ export function LiveTracking() {
   const agentIds = useMemo(() => visible.data?.agents ?? [], [visible.data]);
   const socket = useGeoTrackerSocket(agentIds);
 
+  // The agent the map is centered/highlighted on — seeded from the ?agent= deep link,
+  // then driven by clicking a card or a marker.
+  const [selected, setSelected] = useState<string | null>(focusAgentId);
+  // Follow the deep link if it changes in-place (adjusting state during render — the
+  // React-recommended alternative to a setState-in-effect).
+  const [prevFocus, setPrevFocus] = useState<string | null>(focusAgentId);
+  if (focusAgentId !== prevFocus) {
+    setPrevFocus(focusAgentId);
+    if (focusAgentId) setSelected(focusAgentId);
+  }
+
   const nameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? `Agent ${id.slice(-6)}`;
 
-  // Deep-link from a shipment row: scroll the requested agent's card into view.
   const focusPresent = !!focusAgentId && agentIds.includes(focusAgentId);
+
+  // Keep the selected agent's card in view (deep-link or marker click).
   useEffect(() => {
-    if (!focusPresent || !focusAgentId) return;
-    const el = document.getElementById(`track-agent-${focusAgentId}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [focusPresent, focusAgentId]);
-  const fixList = Object.values(socket.fixes);
+    if (!selected) return;
+    document
+      .getElementById(`track-agent-${selected}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selected]);
+
   const statusMeta = STATUS_META[socket.status];
   const StatusIcon = statusMeta.icon;
+  const isDark = theme === 'dark';
+  const emptyHint = socket.status === 'open' ? 'Waiting for the first position…' : 'No live positions yet.';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -153,29 +120,33 @@ export function LiveTracking() {
         }
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {fixList.length > 0 ? (
-              <RelativeMap fixes={fixList} nameFor={nameFor} />
-            ) : (
-              <div className="rounded-lg border bg-muted/30 h-64 flex items-center justify-center text-sm text-muted-foreground">
-                {socket.status === 'open' ? 'Waiting for the first position…' : 'No live positions yet.'}
-              </div>
-            )}
+          <div className="lg:col-span-2 h-[420px] lg:h-[600px]">
+            <LiveTrackingMap
+              fixes={socket.fixes}
+              trails={socket.trails}
+              nameFor={nameFor}
+              focusAgentId={focusAgentId}
+              selectedAgentId={selected}
+              onSelectAgent={setSelected}
+              isDark={isDark}
+              emptyHint={emptyHint}
+            />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
             {agentIds.map((id) => {
               const fix = socket.fixes[id];
               const isRevoked = socket.revoked.has(id);
-              const isFocused = id === focusAgentId;
+              const isSelected = id === selected;
               return (
                 <Card
                   key={id}
                   id={`track-agent-${id}`}
+                  onClick={() => setSelected(id)}
                   className={cn(
-                    'transition-shadow',
+                    'cursor-pointer transition-shadow hover:shadow-md',
                     isRevoked && 'opacity-60',
-                    isFocused && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                    isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                   )}
                 >
                   <CardContent className="p-4 space-y-2">
@@ -214,6 +185,7 @@ export function LiveTracking() {
                             href={`https://www.google.com/maps?q=${fix.position.latitude},${fix.position.longitude}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center gap-1 text-primary hover:underline"
                           >
                             Open in Maps <ExternalLink className="w-3 h-3" />

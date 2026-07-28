@@ -60,6 +60,8 @@ export interface NotificationEventPreferences {
   shipmentAssigned: boolean;
   payoutUpdates: boolean;
   codDepositUpdates: boolean;
+  /** Billing: plan nearing expiry / expired, or shipment soft-cap exceeded. */
+  planUpdates: boolean;
 }
 
 export type NotificationEventKey = keyof NotificationEventPreferences;
@@ -83,6 +85,12 @@ export interface NotificationPreferencesResponse {
 }
 
 export type NotificationChannel = 'email' | 'telegram' | 'whatsapp';
+
+/** Radio-group selection for the delivery channel: in-app only, or one secondary channel. */
+export type DeliveryChannelChoice = 'in-app' | NotificationChannel;
+
+/** Languages a notification can be rendered in. Lives on the agency profile. */
+export type PreferredLanguage = 'en' | 'fr' | 'pt' | 'es' | 'ar';
 
 export interface UpdateNotificationPreferencesPayload {
   emailEnabled?: boolean;

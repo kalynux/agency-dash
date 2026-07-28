@@ -86,10 +86,10 @@ export function MobileTabBar() {
           </button>
 
           <TabButton
-            label="Earnings"
+            label="Payout"
             icon={Wallet}
-            active={isPathActive('/dashboard/earnings', location.pathname)}
-            onClick={() => navigate('/dashboard/earnings')}
+            active={isPathActive('/dashboard/account/payout', location.pathname)}
+            onClick={() => navigate('/dashboard/account/payout')}
           />
 
           <TabButton

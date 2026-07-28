@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-export type QuickActionRoute = 'tickets' | 'shipments' | 'earnings' | 'cash/summary' | 'account/business';
+export type QuickActionRoute = 'tickets' | 'shipments' | 'account/payout' | 'cash/summary' | 'account/locations';
 
 export interface QuickAction {
   id: string;
@@ -48,7 +48,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
     label: 'View Earnings',
     description: 'Balance & payout requests',
     icon: Wallet,
-    route: 'earnings',
+    route: 'account/payout',
   },
   {
     id: 'view-cash',
@@ -62,6 +62,6 @@ export const QUICK_ACTIONS: QuickAction[] = [
     label: 'Update Coverage Areas',
     description: 'Edit the regions you deliver to',
     icon: MapPin,
-    route: 'account/business',
+    route: 'account/locations',
   },
 ];

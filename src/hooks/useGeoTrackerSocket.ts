@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentLiveFix, LocationBroadcast, TrackingSocketStatus } from '@/types/tracking.types';
+import type { AgentLiveFix, GeoPosition, LocationBroadcast, TrackingSocketStatus } from '@/types/tracking.types';
 
 /**
  * Auth for the geo-tracker WS mirrors the HTTP side's `credentials: 'include'`:
@@ -23,6 +23,8 @@ const ENV_TOKEN = import.meta.env.VITE_GEO_TRACKER_TOKEN as string | undefined;
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
+/** Max recent positions kept per agent for the map trail (older ones are dropped). */
+const MAX_TRAIL = 60;
 
 async function resolveToken(): Promise<string | null> {
   if (typeof window !== 'undefined' && typeof window.joviGetAccessToken === 'function') {
@@ -44,6 +46,8 @@ export interface GeoTrackerSocket {
   status: TrackingSocketStatus;
   /** Latest fix per agentId. */
   fixes: Record<string, AgentLiveFix>;
+  /** Recent positions per agentId (oldest→newest), for drawing a movement trail. */
+  trails: Record<string, GeoPosition[]>;
   /** Agents whose subscription the server revoked (shipment finished, etc.). */
   revoked: Set<string>;
   reconnect: () => void;
@@ -57,6 +61,7 @@ export interface GeoTrackerSocket {
 export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
   const [status, setStatus] = useState<TrackingSocketStatus>('idle');
   const [fixes, setFixes] = useState<Record<string, AgentLiveFix>>({});
+  const [trails, setTrails] = useState<Record<string, GeoPosition[]>>({});
   const [revoked, setRevoked] = useState<Set<string>>(new Set());
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -113,7 +118,6 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
     // cookie the browser forwards automatically (same-site), like fetch's
     // credentials: 'include'.
     const token = await resolveToken();
-    console.log({token})
     if (!mountedRef.current) return;
 
     setStatus('connecting');
@@ -145,13 +149,30 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
       }
       if (frame.type === 'location_broadcast') {
         const b = frame.payload as LocationBroadcast;
-        if (!b?.agentId) return;
+        if (!b?.agentId || !b.position) return;
         setFixes((prev) => ({ ...prev, [b.agentId]: { ...b, receivedAt: Date.now() } }));
+        setTrails((prev) => {
+          const path = prev[b.agentId] ?? [];
+          const last = path[path.length - 1];
+          // Skip a duplicate of the last point so a stationary agent doesn't bloat the trail.
+          if (last && last.latitude === b.position.latitude && last.longitude === b.position.longitude) {
+            return prev;
+          }
+          const next = [...path, b.position];
+          if (next.length > MAX_TRAIL) next.splice(0, next.length - MAX_TRAIL);
+          return { ...prev, [b.agentId]: next };
+        });
       } else if (frame.type === 'permission_revoked') {
         const p = frame.payload as { agentId: string };
         if (!p?.agentId) return;
         subscribedRef.current.delete(p.agentId);
         setFixes((prev) => {
+          const next = { ...prev };
+          delete next[p.agentId];
+          return next;
+        });
+        setTrails((prev) => {
+          if (!(p.agentId in prev)) return prev;
           const next = { ...prev };
           delete next[p.agentId];
           return next;
@@ -211,5 +232,5 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentIds.join(',')]);
 
-  return { status, fixes, revoked, reconnect };
+  return { status, fixes, trails, revoked, reconnect };
 }

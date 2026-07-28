@@ -10,6 +10,7 @@ const PAYOUT_ERROR_LABELS: Record<string, string> = {
   EARNINGS_PAYOUT_ALREADY_PENDING: 'You already have a pending payout request.',
   EARNINGS_PAYOUT_METHOD_MISSING: 'Add a payout method below before requesting a withdrawal.',
   EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE: 'There is no available balance to withdraw yet.',
+  EARNINGS_PAYOUT_BELOW_MINIMUM: 'Your available balance is below the 10,000 XAF minimum payout.',
 };
 
 function getPayoutErrorMessage(err: unknown): string {

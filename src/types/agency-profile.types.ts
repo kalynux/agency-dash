@@ -7,6 +7,7 @@ import type {
   HeadquartersAddress,
   PayoutMethod,
 } from '@/types/api';
+import type { FileRef } from '@/types/file.types';
 
 export interface AgencyPayoutMobileMoneyResponse {
   provider: string;
@@ -30,14 +31,24 @@ export interface AgencyPayoutMethodResponse {
 
 export interface DeliveryAgencyProfile {
   id: string;
-  agencyName: string;
+  /**
+   * The agency's PERSONAL / contact display name. The BUSINESS name lives on the
+   * magazin (see magazin.types.ts), not here.
+   */
+  displayName: string;
   email: string | null;
   emailVerified: boolean;
   phone: string | null;
   phoneVerified: boolean;
-  logoUrl: string | null;
+  /**
+   * The agency's PERSONAL profile avatar (resolved file object, or `null`) —
+   * distinct from the business logo, which lives on the magazin. Set via
+   * `avatarFileId`.
+   */
+  avatar: FileRef | null;
   timezone: string;
   preferredLanguage: string;
+  country: string | null;
   coverageAreas: string[];
   headquartersAddresses: HeadquartersAddress[];
   payoutDetails: AgencyPayoutMethodResponse[];
@@ -59,8 +70,10 @@ export interface AgencyProfileResponse {
 }
 
 export interface UpdateAgencyProfilePayload {
-  agency_name?: string;
-  logo_url?: string | null;
+  /** Personal/contact display name (2–100). The business name is on the magazin. */
+  displayName?: string;
+  /** Id of a file uploaded via `POST /api/files/upload`, or `null`/`""` to clear the personal avatar. */
+  avatarFileId?: string | null;
   timezone?: string;
   preferred_language?: 'en' | 'fr' | 'pt' | 'es' | 'ar';
   coverage_areas?: string[];

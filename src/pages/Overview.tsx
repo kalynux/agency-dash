@@ -88,7 +88,7 @@ export function Overview() {
           value={`${(balance?.available ?? 0).toLocaleString()} ${currency}`}
           icon={Wallet}
           isLoading={earningsLoading}
-          onClick={() => navigate('/dashboard/earnings')}
+          onClick={() => navigate('/dashboard/account/payout')}
         />
         <MetricCard
           title="Shipments Needing Action"
@@ -172,11 +172,11 @@ export function Overview() {
                   <TicketIcon className="w-4 h-4" />
                   <div className="text-left"><p className="font-medium">New Ticket</p><p className="text-xs text-muted-foreground">Get help</p></div>
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/account/business')}>
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/account/locations')}>
                   <MapPin className="w-4 h-4" />
                   <div className="text-left"><p className="font-medium">Coverage</p><p className="text-xs text-muted-foreground">Update regions</p></div>
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/earnings')}>
+                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard/account/payout')}>
                   <Wallet className="w-4 h-4" />
                   <div className="text-left"><p className="font-medium">Earnings</p><p className="text-xs text-muted-foreground">Request payout</p></div>
                 </Button>

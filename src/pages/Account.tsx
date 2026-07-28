@@ -1,16 +1,23 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { ProfileSettings } from '@/components/agency-settings/ProfileSettings';
-import { BusinessSettings } from '@/components/agency-settings/BusinessSettings';
-import { BrandingSettings } from '@/components/agency-settings/BrandingSettings';
+import { MagazinSettings } from '@/components/agency-settings/MagazinSettings';
+import { LocationsSettings } from '@/components/agency-settings/LocationsSettings';
 import { SecuritySettings } from '@/components/agency-settings/SecuritySettings';
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
+import { BillingTab } from '@/components/billing/BillingTab';
 
-const VALID_TABS = ['profile', 'business', 'branding', 'security', 'payout'] as const;
+const VALID_TABS = ['profile', 'store', 'locations', 'security', 'billing', 'payout'] as const;
 type AccountTab = typeof VALID_TABS[number];
 
 export function Account() {
   const { tab } = useParams<{ tab: string }>();
+
+  // Legacy aliases — the business identity moved to the Store (magazin) tab and
+  // coverage/HQ addresses became "Locations". Keep old links/bookmarks working.
+  if (tab === 'branding') return <Navigate to="/dashboard/account/store" replace />;
+  if (tab === 'business') return <Navigate to="/dashboard/account/locations" replace />;
+
   const activeTab: AccountTab = (VALID_TABS as readonly string[]).includes(tab ?? '')
     ? (tab as AccountTab)
     : 'profile';
@@ -19,13 +26,16 @@ export function Account() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Account</h1>
-        <p className="text-muted-foreground">Manage your agency profile and account settings</p>
+        <p className="text-muted-foreground">
+          Manage your personal profile, business identity, and payouts
+        </p>
       </div>
 
       {activeTab === 'profile' && <ProfileSettings />}
-      {activeTab === 'business' && <BusinessSettings />}
-      {activeTab === 'branding' && <BrandingSettings />}
+      {activeTab === 'store' && <MagazinSettings />}
+      {activeTab === 'locations' && <LocationsSettings />}
       {activeTab === 'security' && <SecuritySettings />}
+      {activeTab === 'billing' && <BillingTab />}
       {activeTab === 'payout' && (
         <div className="space-y-6">
           <EarningsPayoutCard />

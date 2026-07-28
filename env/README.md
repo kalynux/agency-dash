@@ -21,6 +21,9 @@ Precedence (highest wins): `.env.development.local` → `.env.development` → `
 | `VITE_APP_NAME` | — | `Jovi Mall Agency` | Display name. |
 | `VITE_GEO_TRACKER_WS_URL` | — | `ws://localhost:8090/ws/track` | geo-tracker live-tracking WebSocket. |
 | `VITE_GEO_TRACKER_TOKEN` | — (cross-site only) | *(empty)* | Bearer-token **override** for the WS. Normally unneeded: the browser forwards the httpOnly `access_token` cookie on the same-site WS handshake (like `credentials:'include'`). Only set it when geo-tracker is on a different site/domain. |
+| `VITE_MAP_TILE_URL` | — | *(empty → CARTO)* | Live Tracking basemap **override**. Leave empty to use the built-in default (CARTO, keyless, with light + dark styles). Set to a Leaflet URL template (`{s}/{z}/{x}/{y}`, optional `{r}` for retina) to switch providers without a code change. |
+| `VITE_MAP_TILE_URL_DARK` | — | *(empty)* | Optional dark-theme tile template used with `VITE_MAP_TILE_URL`. When empty, the light tiles are CSS-dimmed in dark mode. |
+| `VITE_MAP_TILE_ATTRIBUTION` | — | OSM | Attribution string shown on the map when `VITE_MAP_TILE_URL` is set. |
 
 ## Values that must come from the backend / infra
 

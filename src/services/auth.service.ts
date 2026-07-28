@@ -25,4 +25,13 @@ export const authService = {
     sendEmailVerification(): Promise<{ success: boolean; data: { message: string } }> {
         return api.post<{ success: boolean; data: { message: string } }>('/auth/send-email-verification');
     },
+
+    /**
+     * PATCH /me/password — shared, role-agnostic; the password lives on the
+     * User record, so one call covers every role. 403 USER_INVALID_PASSWORD
+     * when `oldPassword` is wrong.
+     */
+    changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        return api.patch<{ success: boolean; message: string }>('/me/password', { oldPassword, newPassword });
+    },
 };

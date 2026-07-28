@@ -9,7 +9,6 @@ import {
   UserCog,
   User,
   MapPin,
-  Image as ImageIcon,
   Shield,
   Wallet,
   Settings,
@@ -23,6 +22,8 @@ import {
   HandCoins,
   Send,
   AlertTriangle,
+  CreditCard,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -59,7 +60,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
   { name: 'Live Tracking', path: '/dashboard/tracking', icon: Radio },
-  { name: 'Earnings', path: '/dashboard/earnings', icon: Wallet },
+  { name: 'Transactions', path: '/dashboard/transactions', icon: Receipt },
   {
     name: 'Cash Management',
     path: '/dashboard/cash',
@@ -103,9 +104,10 @@ export const FOOTER_NAV: NavItem[] = [
     icon: UserCog,
     children: [
       { name: 'Profile', path: '/dashboard/account/profile', icon: User },
-      { name: 'Business', path: '/dashboard/account/business', icon: MapPin },
-      { name: 'Branding', path: '/dashboard/account/branding', icon: ImageIcon },
+      { name: 'Store', path: '/dashboard/account/store', icon: Store },
+      { name: 'Locations', path: '/dashboard/account/locations', icon: MapPin },
       { name: 'Security', path: '/dashboard/account/security', icon: Shield },
+      { name: 'Billing', path: '/dashboard/account/billing', icon: CreditCard },
       { name: 'Payout', path: '/dashboard/account/payout', icon: Wallet },
     ],
   },

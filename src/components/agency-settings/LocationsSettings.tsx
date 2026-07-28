@@ -30,7 +30,14 @@ const EMPTY_HQ = {
   latitude: undefined, longitude: undefined,
 } as unknown as HeadquartersAddressFormValues;
 
-export function BusinessSettings() {
+/**
+ * Coverage regions + headquarters addresses — the agency's operational
+ * footprint. These live on the agency PROFILE (coverage_areas /
+ * headquarters_addresses), distinct from the business identity on the Store
+ * (magazin) tab. Post-onboarding edits go through PATCH /api/agency/profile
+ * (full-replace arrays).
+ */
+export function LocationsSettings() {
   const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
@@ -66,16 +73,16 @@ export function BusinessSettings() {
         coverage_areas: values.coverage_areas,
         headquarters_addresses: values.headquarters_addresses.map(addr => {
           const { email, ...rest } = addr.support_contact;
-          const validEmail = email?.trim() || undefined;
           const { latitude, longitude, ...addrRest } = addr;
           return {
             ...addrRest,
-            support_contact: { ...rest, ...(validEmail ? { email: validEmail } : {}) },
+            // Clearable field: empty input → explicit null (see api-doc/agency/profile.md).
+            support_contact: { ...rest, email: email?.trim() || null },
             location: { type: 'Point' as const, coordinates: [longitude, latitude] as [number, number] },
           };
         }),
       });
-      toast.success('Business details saved!');
+      toast.success('Coverage & locations saved!');
     } catch (err) {
       setApiError(getApiErrorMessage(err));
     }
@@ -84,8 +91,8 @@ export function BusinessSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Business Details</CardTitle>
-        <CardDescription>Coverage regions and headquarters addresses</CardDescription>
+        <CardTitle>Coverage & Locations</CardTitle>
+        <CardDescription>The regions you serve and your headquarters addresses</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {apiError && <div role="alert" className="p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}

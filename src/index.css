@@ -135,3 +135,156 @@ textarea:focus-visible {
 .animate-slide-in {
   animation: slideIn 0.4s ease-out;
 }
+
+/* ─── Live Tracking map (Leaflet) ─────────────────────────────────────────── */
+.agent-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: hsl(var(--muted));
+  font: inherit;
+}
+
+/* Custom div-icon marker (agent position) */
+.leaflet-marker-icon.agent-marker-icon {
+  background: transparent;
+  border: none;
+  transition: transform 0.6s linear;
+}
+/* Suppress the position transition during zoom so markers don't lag the tiles. */
+.agent-map.agent-map--zooming .leaflet-marker-icon.agent-marker-icon {
+  transition: none;
+}
+.agent-marker__dot,
+.agent-marker__pulse,
+.agent-marker__heading,
+.agent-marker__label {
+  position: absolute;
+}
+.agent-marker__dot {
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #2563eb;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.agent-marker__pulse {
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #2563eb;
+  border-radius: 9999px;
+  opacity: 0.35;
+  animation: agentPulse 2s ease-out infinite;
+}
+@keyframes agentPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  70%,
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+.agent-marker__heading {
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+.agent-marker__arrow {
+  position: absolute;
+  left: 50%;
+  top: 1px;
+  margin-left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid #2563eb;
+}
+.agent-marker__label {
+  left: 50%;
+  top: 26px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.9);
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+/* Selected / focused agent — amber accent */
+.agent-marker-icon--selected .agent-marker__dot {
+  background: #f59e0b;
+  transform: scale(1.15);
+}
+.agent-marker-icon--selected .agent-marker__pulse {
+  background: #f59e0b;
+}
+.agent-marker-icon--selected .agent-marker__arrow {
+  border-bottom-color: #f59e0b;
+}
+.agent-marker-icon--selected .agent-marker__label {
+  background: #f59e0b;
+  color: #1f2937;
+  border-color: #f59e0b;
+}
+
+/* Popup themed to match the app */
+.agent-popup-wrap .leaflet-popup-content-wrap {
+  border-radius: 10px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+.agent-popup-wrap .leaflet-popup-content {
+  margin: 10px 12px;
+}
+.agent-popup-wrap .leaflet-popup-tip {
+  background: hsl(var(--popover));
+}
+.agent-popup__name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.agent-popup__coords {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.agent-popup__meta {
+  font-size: 12px;
+  margin-top: 4px;
+}
+.agent-popup__seen {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 2px;
+}
+.agent-popup__link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2563eb;
+}
+
+/* Dark-tiles fallback for a provider without a dedicated dark basemap */
+.agent-map.agent-map--dim .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}

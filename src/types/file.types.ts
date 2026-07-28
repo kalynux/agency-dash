@@ -1,5 +1,21 @@
 // Files & uploads (all roles) — see api-doc/uploads/README.md
 
+/**
+ * A resolved file reference as it appears *embedded* in other resources — an
+ * agency avatar, a magazin logo, product media, etc. Same shape everywhere:
+ * `{ id, key, url, mimeType, size, originalName }`. Distinct from
+ * {@link UploadedFile}, which is the richer payload returned by the upload
+ * endpoint itself.
+ */
+export interface FileRef {
+  id: string;
+  key: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  originalName: string;
+}
+
 export interface UploadedFile {
   id: string;
   originalName: string;

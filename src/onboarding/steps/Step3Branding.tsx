@@ -61,7 +61,8 @@ export function Step3Branding() {
         // Save raw form values BEFORE the API call.
         saveDraft(3, values);
         try {
-            await submitBranding({ skip: false, logo_url: values.logo_url || undefined, timezone: values.timezone || undefined });
+            // logo_url is clearable (empty → null); timezone is NOT (min 1 char, server default) so empty is omitted.
+            await submitBranding({ skip: false, logo_url: values.logo_url || null, timezone: values.timezone || undefined });
             toast.success('Profile complete! Welcome aboard 🎉');
         } catch (err) {
             if (err instanceof ApiError) setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
