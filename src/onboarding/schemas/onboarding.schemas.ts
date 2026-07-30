@@ -1,16 +1,9 @@
 import { z } from 'zod';
+import type { GeoAddress } from '@/types/geo.types';
 
 // ─── Phone regex (matches backend) ───────────────────────────────────────────
 
 const phoneRegex = /^\+?[0-9\s\-()]+$/;
-
-// ─── URL helper ───────────────────────────────────────────────────────────────
-
-const urlSchema = z
-    .string()
-    .url('Must be a valid URL')
-    .or(z.literal(''))
-    .optional();
 
 // ─── Step 1: Logistics Setup ──────────────────────────────────────────────────
 
@@ -28,32 +21,52 @@ const supportContactSchema = z.object({
         .optional(),
 });
 
+/**
+ * A geocoded address the user SELECTED from `GET /api/geo/search`.
+ * See api-doc/geo/README.md — the backend stores this verbatim and derives the
+ * bare `location` point from `coordinates`.
+ *
+ * Validated as an opaque `GeoAddress` rather than re-declared field-by-field:
+ * the object is never hand-built, it comes straight off our own geo service, so
+ * the only thing worth asserting in the form is that one was actually picked.
+ * This also keeps the inferred form type identical to the app-wide `GeoAddress`.
+ */
+const geoAddressSchema = z.custom<GeoAddress>(
+    (v) => !!v && typeof v === 'object' && 'formatted_address' in v && 'coordinates' in v,
+    { message: 'Search for and select this location’s address' },
+);
+
 export const headquartersAddressSchema = z.object({
-    region: z.string().min(1, 'Region is required').max(100),
-    city: z.string().min(1, 'City is required').max(100),
+    /** Human name for this location — the agency counterpart of a vendor address label. */
+    label: z
+        .string()
+        .min(1, 'Label is required')
+        .max(50, 'Label must be 50 characters or fewer'),
+    /**
+     * DERIVED, not collected: the backend reads region/city off `geo.components`
+     * and stores `null` when the geocode names neither. They stay in the form
+     * only so the agency can optionally name a rural / landmark place the
+     * provider left blank — never sent when `geo` carries a value.
+     */
+    region: z.string().max(100, 'Region too long (max 100 chars)').optional(),
+    city: z.string().max(100, 'City too long (max 100 chars)').optional(),
     address_description: z
         .string()
         .min(1, 'Address description is required')
         .max(200, 'Address description too long (max 200 chars)'),
     support_contact: supportContactSchema,
     /**
-     * Map coordinates — now REQUIRED per the backend (each HQ must be placeable
-     * on a map so auto-assignment can measure distance to pickup). Converted to a
-     * GeoJSON Point on submit: { type: 'Point', coordinates: [longitude, latitude] }.
+     * The canonical geospatial address. REQUIRED on every new or edited entry —
+     * hand-typed coordinates are rejected with `400 ADDRESS_GEO_REQUIRED`, and an
+     * address outside the agency's country with `400 ADDRESS_COUNTRY_MISMATCH`.
+     * `location` is derived from `geo.coordinates` on submit.
      */
-    latitude: z
-        .number({ message: 'Latitude is required' })
-        .min(-90, 'Latitude must be between -90 and 90')
-        .max(90, 'Latitude must be between -90 and 90'),
-    longitude: z
-        .number({ message: 'Longitude is required' })
-        .min(-180, 'Longitude must be between -180 and 180')
-        .max(180, 'Longitude must be between -180 and 180'),
+    geo: geoAddressSchema,
 });
 
 export const logisticsSchema = z.object({
     /**
-     * Region keys from locations.json (e.g. "littoral", "centre").
+     * Region keys of the agency's country from locations.json (e.g. "littoral").
      * At least 1 region must be selected.
      */
     coverage_areas: z
@@ -139,8 +152,11 @@ export type PayoutFormValues = z.infer<typeof payoutSchema>;
 
 // ─── Step 3: Branding Setup (Optional / Skippable) ───────────────────────────
 
+// The logo is picked from the media library, so the form carries the file `id`
+// the API wants plus the resolved URL used only to render the preview.
 export const brandingSchema = z.object({
-    logo_url: urlSchema,
+    logo_file_id: z.string().nullable().optional(),
+    logo_preview_url: z.string().nullable().optional(),
     timezone: z.string().optional(),
 });
 

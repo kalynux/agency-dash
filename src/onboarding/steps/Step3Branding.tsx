@@ -6,11 +6,10 @@ import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
 import { brandingSchema, type BrandingFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { MediaPickerTrigger, type MediaRef } from '@/components/common/MediaPickerTrigger';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
-import { cn } from '@/lib/utils';
 
 const TIMEZONES = [
     { value: 'Africa/Douala', label: 'Douala (WAT, UTC+1)' },
@@ -48,10 +47,22 @@ export function Step3Branding() {
     const roleEntity = session?.role_entity;
     const draft = drafts.branding;
 
-    const { register, handleSubmit, control, formState: { errors } } = useForm<BrandingFormValues>({
+    // The logo lives outside RHF: it's picked, not typed. The draft keeps both the
+    // id (what we submit) and the preview URL (what we render on back-navigation).
+    const [logo, setLogo] = useState<MediaRef | null>(
+        draft?.logo_file_id && draft.logo_preview_url
+            ? { id: draft.logo_file_id, url: draft.logo_preview_url }
+            : null,
+    );
+
+    // A logo saved on a previous visit comes back as a URL only (no id), so
+    // detaching it is a separate intent from picking a new one.
+    const [logoCleared, setLogoCleared] = useState(false);
+    const previewUrl = logo?.url ?? (logoCleared ? null : roleEntity?.logo_url ?? null);
+
+    const { handleSubmit, control, formState: { errors } } = useForm<BrandingFormValues>({
         resolver: zodResolver(brandingSchema),
         defaultValues: {
-            logo_url: draft?.logo_url ?? roleEntity?.logo_url ?? '',
             timezone: draft?.timezone ?? roleEntity?.timezone ?? '',
         },
     });
@@ -59,15 +70,21 @@ export function Step3Branding() {
     const handleSave = useCallback(async (values: BrandingFormValues) => {
         setApiError(null);
         // Save raw form values BEFORE the API call.
-        saveDraft(3, values);
+        saveDraft(3, { ...values, logo_file_id: logo?.id ?? null, logo_preview_url: logo?.url ?? null });
         try {
-            // logo_url is clearable (empty → null); timezone is NOT (min 1 char, server default) so empty is omitted.
-            await submitBranding({ skip: false, logo_url: values.logo_url || null, timezone: values.timezone || undefined });
+            // Send logo_file_id only on an explicit pick (the id) or removal (null);
+            // omitting it leaves any existing logo alone. timezone is NOT clearable
+            // (min 1 char, server default) so an empty value is omitted.
+            await submitBranding({
+                skip: false,
+                ...(logo ? { logo_file_id: logo.id } : logoCleared ? { logo_file_id: null } : {}),
+                timezone: values.timezone || undefined,
+            });
             toast.success('Profile complete! Welcome aboard 🎉');
         } catch (err) {
             if (err instanceof ApiError) setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
         }
-    }, [submitBranding]);
+    }, [submitBranding, saveDraft, logo, logoCleared]);
 
     const handleSkip = useCallback(async () => {
         setApiError(null);
@@ -121,24 +138,46 @@ export function Step3Branding() {
                         <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
                         <span className="text-xs font-semibold text-slate-500">Agency Logo</span>
                     </div>
-                    <div className="p-4 bg-white dark:bg-zinc-900 space-y-1.5">
-                        <FieldRow
-                            label="Logo URL"
-                            hint="Publicly accessible image URL (square, min 200×200 px recommended)"
-                            error={errors.logo_url?.message}
-                        >
-                            <div className="relative">
-                                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                                <Input
-                                    id="logo_url"
-                                    type="url"
-                                    inputMode="url"
-                                    placeholder="https://cdn.example.com/logo.png"
-                                    className={cn('pl-9 h-11 rounded-lg bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-sm', errors.logo_url && 'border-red-400')}
-                                    {...register('logo_url')}
-                                />
+                    <div className="p-4 bg-white dark:bg-zinc-900">
+                        <div className="flex items-center gap-4">
+                            {/* The tile is the control — clicking it opens the media library. */}
+                            <MediaPickerTrigger
+                                label={previewUrl ? 'Change logo' : 'Add logo'}
+                                acceptedTypes={['image']}
+                                onSelect={(media) => { setLogo(media); setLogoCleared(false); }}
+                                className="h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800"
+                            >
+                                {previewUrl ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt="Agency logo"
+                                        crossOrigin="use-credentials"
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="flex h-full w-full items-center justify-center">
+                                        <ImageIcon className="w-7 h-7 text-slate-400" />
+                                    </span>
+                                )}
+                            </MediaPickerTrigger>
+                            <div className="min-w-0 space-y-1">
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    {previewUrl ? 'Logo selected' : 'No logo yet'}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                    Click the tile to upload or pick an image (square, min 200×200 px recommended).
+                                </p>
+                                {previewUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setLogo(null); setLogoCleared(true); }}
+                                        className="text-xs text-red-500 hover:underline"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
                             </div>
-                        </FieldRow>
+                        </div>
                     </div>
                 </div>
 

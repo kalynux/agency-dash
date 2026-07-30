@@ -12,6 +12,7 @@ import { Agents } from '@/pages/Agents';
 import { CashManagement } from '@/pages/CashManagement';
 import { Vendors } from '@/pages/Vendors';
 import { Transactions } from '@/pages/Transactions';
+import { MediaLibrary } from '@/pages/MediaLibrary';
 import { Account } from '@/pages/Account';
 import { Settings } from '@/pages/Settings';
 
@@ -19,8 +20,9 @@ import { Settings } from '@/pages/Settings';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { applyDocumentDirection } from '@/lib/direction';
 
 // Onboarding system
 import { OnboardingProvider } from '@/onboarding/store/onboarding.store';
@@ -43,16 +45,25 @@ import { AgentsRosterProvider } from '@/store/agents.store';
 // Notifications (real API — unread-count badge poller)
 import { NotificationsProvider } from '@/store/notifications.store';
 
+// ─── Shared content-frame width ──────────────────────────────────────────────
+// The header and the main content share one centered column so their edges line
+// up on every viewport and content never stretches unusably wide on large
+// monitors. Keep these two class strings in sync.
+const CONTENT_FRAME = 'mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8';
+
 // ─── Sidebar collapse context (preserved for Sidebar/Header compatibility) ────
 
 interface UIContextType {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  /** True when the collapse is forced by the tablet band, not the user toggle. */
+  autoCollapsed: boolean;
 }
 
 const UIContext = createContext<UIContextType>({
   sidebarCollapsed: false,
   toggleSidebar: () => { },
+  autoCollapsed: false,
 });
 
 export const useUI = () => useContext(UIContext);
@@ -95,15 +106,22 @@ function DashboardShell() {
             <div
               className={cn(
                 'transition-all duration-300 ease-in-out',
-                isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-20' : 'ml-64',
+                isMobile ? 'ms-0' : sidebarCollapsed ? 'ms-20' : 'ms-64',
               )}
             >
               {!isMobile && <Header />}
-              <main className={cn('p-6', isMobile && 'pb-24')}>
+              <main
+                className={cn(
+                  CONTENT_FRAME,
+                  'py-6 lg:py-8',
+                  isMobile && 'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+                )}
+              >
                 <Routes>
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
                   <Route path="tracking" element={<LiveTracking />} />
+                  <Route path="media" element={<MediaLibrary />} />
                   {/* Legacy alias — earnings now live under Account → Payout. */}
                   <Route path="earnings" element={<Navigate to="/dashboard/account/payout" replace />} />
                   <Route path="transactions" element={<Transactions />} />
@@ -119,6 +137,8 @@ function DashboardShell() {
                   <Route path="plans" element={<Navigate to="/dashboard/account/billing" replace />} />
                   <Route path="account" element={<Navigate to="/dashboard/account/profile" replace />} />
                   <Route path="account/:tab" element={<Account />} />
+                  {/* Deep-link alias — `storage.alert` notifications point at the literal `settings/storage` path. */}
+                  <Route path="settings/storage" element={<Navigate to="/dashboard/media" replace />} />
                   <Route path="settings" element={<Navigate to="/dashboard/settings/policies" replace />} />
                   <Route path="settings/:tab" element={<Settings />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -137,11 +157,17 @@ function DashboardShell() {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 function AppContent() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [manualCollapsed, setManualCollapsed] = useState(false);
   const { theme } = useUIStore();
   const reactNavigate = useNavigate();
 
-  const toggleSidebar = useCallback(() => setSidebarCollapsed((p) => !p), []);
+  // Tablet band (768–1023px): force the sidebar to its icon rail so a fixed
+  // 256px sidebar doesn't squeeze the content column. At ≥1024px the user's
+  // manual toggle takes over again.
+  const autoCollapsed = useIsBelowDesktop();
+  const sidebarCollapsed = autoCollapsed || manualCollapsed;
+
+  const toggleSidebar = useCallback(() => setManualCollapsed((p) => !p), []);
 
   // Standardized session-expiry handling: the API layer dispatches `auth:logout`
   // when a token refresh fails. Route the user to login from a single place.
@@ -150,6 +176,12 @@ function AppContent() {
     window.addEventListener('auth:logout', onLogout);
     return () => window.removeEventListener('auth:logout', onLogout);
   }, [reactNavigate]);
+
+  // i18n direction seam: mirror the whole shell for RTL languages (Arabic).
+  // A language switcher re-mirrors by calling applyDocumentDirection(lang).
+  useEffect(() => {
+    applyDocumentDirection(document.documentElement.lang || 'en');
+  }, []);
 
   const legacyUser = {
     id: 'agency',
@@ -168,7 +200,7 @@ function AppContent() {
         logout: () => reactNavigate('/login'),
       }}
     >
-      <UIContext.Provider value={{ sidebarCollapsed, toggleSidebar }}>
+      <UIContext.Provider value={{ sidebarCollapsed, toggleSidebar, autoCollapsed }}>
         <div className={theme === 'dark' ? 'dark' : ''}>
           <OnboardingErrorBoundary>
             <OnboardingProvider>

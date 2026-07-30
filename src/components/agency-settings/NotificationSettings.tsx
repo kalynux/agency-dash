@@ -12,6 +12,7 @@ import {
   Wallet,
   Banknote,
   CalendarClock,
+  HardDrive,
   CheckCircle2,
   ShieldCheck,
   ShieldAlert,
@@ -107,6 +108,19 @@ const SECONDARY_CHANNELS: ChannelMeta[] = [
   },
 ];
 
+/**
+ * `storageAlert` is newer than some deployed backends. Default it to the
+ * documented `true` so its switch is never uncontrolled — applied on every read
+ * so the dirty-check snapshot and the editable copy always agree.
+ */
+function withEventDefaults(data: NotificationPreferences): NotificationPreferences {
+  // `storageAlert` is declared required, so a leading literal default would be
+  // dead code to the compiler. Destructure instead: at runtime an older backend
+  // omits the key entirely, and `?? true` is what actually fills it in.
+  const { storageAlert, ...rest } = data.preferences;
+  return { ...data, preferences: { ...rest, storageAlert: storageAlert ?? true } };
+}
+
 type EventMeta = { key: NotificationEventKey; label: string; description: string; Icon: LucideIcon };
 
 const EVENTS: EventMeta[] = [
@@ -115,6 +129,7 @@ const EVENTS: EventMeta[] = [
   { key: 'payoutUpdates', label: 'Payout updates', description: 'When your payout request is created, paid or rejected.', Icon: Wallet },
   { key: 'codDepositUpdates', label: 'COD cash updates', description: 'Agent hand-over declarations you must answer, and direct-to-platform payments.', Icon: Banknote },
   { key: 'planUpdates', label: 'Plan updates', description: 'When your subscription plan is nearing expiry, has expired, or you cross your shipment cap.', Icon: CalendarClock },
+  { key: 'storageAlert', label: 'Storage alerts', description: 'When your media storage passes 80%, 90% or 100% of your plan’s limit.', Icon: HardDrive },
 ];
 
 const LANGUAGES: { value: PreferredLanguage; label: string }[] = [
@@ -181,11 +196,12 @@ export function NotificationSettings() {
     setLoadError(null);
     try {
       const { data } = await notificationsService.getPreferences();
-      setPrefs(data);
+      const normalized = withEventDefaults(data);
+      setPrefs(normalized);
       const ch = deriveChannel(data);
       setChannel(ch);
       setSavedChannel(ch);
-      setEvents({ ...data.preferences });
+      setEvents({ ...normalized.preferences });
     } catch (err) {
       setLoadError(getApiErrorMessage(err));
     } finally {
@@ -227,7 +243,7 @@ export function NotificationSettings() {
   const refreshForChannel = useCallback(
     async (ch: NotificationChannel): Promise<boolean> => {
       const { data } = await notificationsService.getPreferences();
-      setPrefs(data);
+      setPrefs(withEventDefaults(data));
       setSavedChannel(deriveChannel(data));
       return isVerified(data, ch);
     },
@@ -241,7 +257,7 @@ export function NotificationSettings() {
         if (ch === 'telegram') await telegramService.disconnect();
         else if (ch === 'whatsapp') await whatsappService.unlink();
         const { data } = await notificationsService.getPreferences();
-        setPrefs(data);
+        setPrefs(withEventDefaults(data));
         const derived = deriveChannel(data);
         setSavedChannel(derived);
         // If the unlinked channel was the active selection, fall back to in-app.
@@ -271,11 +287,12 @@ export function NotificationSettings() {
             : {}),
           ...(eventsDirty ? { preferences: events } : {}),
         });
-        setPrefs(updated);
+        const normalized = withEventDefaults(updated);
+        setPrefs(normalized);
         const ch = deriveChannel(updated);
         setChannel(ch);
         setSavedChannel(ch);
-        setEvents({ ...updated.preferences });
+        setEvents({ ...normalized.preferences });
       }
 
       if (languageDirty) {

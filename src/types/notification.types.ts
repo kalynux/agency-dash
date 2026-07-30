@@ -62,6 +62,8 @@ export interface NotificationEventPreferences {
   codDepositUpdates: boolean;
   /** Billing: plan nearing expiry / expired, or shipment soft-cap exceeded. */
   planUpdates: boolean;
+  /** Media storage crossed 80 / 90 / 100% of the plan cap (`storage.alert`). */
+  storageAlert: boolean;
 }
 
 export type NotificationEventKey = keyof NotificationEventPreferences;

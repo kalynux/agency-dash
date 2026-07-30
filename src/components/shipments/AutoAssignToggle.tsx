@@ -50,8 +50,10 @@ export function AutoAssignToggle() {
           </Label>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          When on, each newly-dispatched shipment is automatically offered to the top-ranked eligible
-          agent — no manual pick needed.
+          When on, each newly-dispatched shipment starts an auto-assignment broadcast: the nearest
+          eligible agent is offered it, then the next-nearest every couple of minutes while earlier
+          offers still stand. First to accept wins. If nobody takes it after two rounds, you're told
+          and can assign manually.
         </TooltipContent>
       </Tooltip>
       <Switch id="auto-assign" checked={enabled} disabled={isBusy} onCheckedChange={handleChange} />

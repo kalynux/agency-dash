@@ -13,6 +13,11 @@ import type {
   AgentInviteStatus,
   MembershipStatus,
   UpdateEmploymentPayload,
+  UpdateTermsPayload,
+  ContractSettlementsResponse,
+  ContractStatusRequestsResponse,
+  ContractStatusRequestResponse,
+  ContractStatusRequestDecision,
 } from '@/types/agent.types';
 
 export const agentsService = {
@@ -58,6 +63,18 @@ export const agentsService = {
   suspend(membershipId: string, reason: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/suspend`, { reason });
   },
+  /**
+   * POST /agency/agents/:membershipId/pause — the softer sibling of suspend.
+   * Same effect (no new assignments, in-flight work untouched), different
+   * meaning: a mutual break rather than a sanction. Only an active contract can
+   * be paused; `reinstate` returns from either state.
+   */
+  pause(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
+    return api.post<MembershipMutationResponse>(
+      `/agency/agents/${membershipId}/pause`,
+      reason ? { reason } : undefined,
+    );
+  },
   /** POST /agency/agents/:membershipId/reinstate — reinstate a suspended agent. */
   reinstate(membershipId: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/reinstate`);
@@ -69,13 +86,52 @@ export const agentsService = {
       reason ? { reason } : undefined,
     );
   },
-  /** PATCH /agency/agents/:membershipId/employment — update employment terms. */
+  /**
+   * PATCH /agency/agents/:membershipId/employment — update employment terms.
+   * A thin alias for the `employment` group of `/terms`, kept because it predates
+   * it; new code should prefer {@link updateTerms}.
+   */
   updateEmployment(membershipId: string, payload: UpdateEmploymentPayload): Promise<AgentMembershipResponse> {
     return api.patch<AgentMembershipResponse>(`/agency/agents/${membershipId}/employment`, payload);
+  },
+  /**
+   * PATCH /agency/agents/:membershipId/terms — the negotiated contract: fee split,
+   * remittance cadence, coverage, per-shipment value ceiling. Groups are merged
+   * field-by-field, so send only what changed.
+   */
+  updateTerms(membershipId: string, payload: UpdateTermsPayload): Promise<AgentMembershipResponse> {
+    return api.patch<AgentMembershipResponse>(`/agency/agents/${membershipId}/terms`, payload);
   },
   /** PATCH /agency/agents/:membershipId/cod-limit — set this contract's COD threshold slice. */
   updateCodLimit(membershipId: string, threshold: number): Promise<CodLimitResponse> {
     return api.patch<CodLimitResponse>(`/agency/agents/${membershipId}/cod-limit`, { threshold });
+  },
+  /** GET /agency/agents/:membershipId/settlements — this contract's cash history + what is outstanding. */
+  getSettlements(membershipId: string, page = 1, limit = 20): Promise<ContractSettlementsResponse> {
+    return api.get<ContractSettlementsResponse>(
+      `/agency/agents/${membershipId}/settlements?page=${page}&limit=${limit}`,
+    );
+  },
+
+  // ── Status requests (agent-raised, awaiting your decision) ───────────────────
+  /** GET /agency/agents/status-requests — pauses, reactivations and departures agents have proposed. */
+  listStatusRequests(): Promise<ContractStatusRequestsResponse> {
+    return api.get<ContractStatusRequestsResponse>('/agency/agents/status-requests');
+  },
+  /**
+   * POST /agency/agents/status-requests/:requestId/resolve — approve or reject.
+   * You cannot resolve a request you raised yourself (`403
+   * CONTRACT_STATUS_REQUEST_NOT_YOURS`); the agent clears those from their side.
+   */
+  resolveStatusRequest(
+    requestId: string,
+    decision: ContractStatusRequestDecision,
+    note?: string,
+  ): Promise<ContractStatusRequestResponse> {
+    return api.post<ContractStatusRequestResponse>(
+      `/agency/agents/status-requests/${requestId}/resolve`,
+      { decision, ...(note ? { note } : {}) },
+    );
   },
 
   // ── Eligibility & history ────────────────────────────────────────────────────

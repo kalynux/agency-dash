@@ -1,3 +1,4 @@
+import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Lock, Pencil, X, Check, CircleSlash, Info, XCircle, ShieldAlert,
@@ -44,7 +45,7 @@ export interface TicketDetailSheetProps {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return fmtDate(iso);
 }
 
 export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketDetailSheetProps) {

@@ -1,5 +1,6 @@
 // ─── Agency Billing — display constants & helpers ────────────────────────────────
 
+import { formatNumber } from '@/lib/format';
 import type {
   PaymentGateway,
   PhoneOperator,
@@ -133,11 +134,11 @@ export function formatTerm(termDays: number | null): string {
 
 /** Render a shipment cap (`null` = unlimited). */
 export function formatShipmentCap(cap: number | null): string {
-  return cap === null || cap === undefined ? 'Unlimited' : new Intl.NumberFormat().format(cap);
+  return cap === null || cap === undefined ? 'Unlimited' : formatNumber(cap);
 }
 
 export function formatCredits(n: number): string {
-  return new Intl.NumberFormat().format(n);
+  return formatNumber(n);
 }
 
 /**

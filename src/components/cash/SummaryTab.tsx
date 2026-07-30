@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Wallet, Users, PackageOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,19 +69,19 @@ export function SummaryTab() {
         <StatCard
           icon={Wallet}
           label="Owed to Platform"
-          value={`${summary.liability.balance.toLocaleString()} ${summary.liability.currency}`}
+          value={formatCurrency(summary.liability.balance, summary.liability.currency)}
           hint="Falls only when a remittance is confirmed"
         />
         <StatCard
           icon={PackageOpen}
           label="Unsettled Collections"
-          value={`${summary.unsettledCollections.amount.toLocaleString()} ${summary.liability.currency}`}
+          value={formatCurrency(summary.unsettledCollections.amount, summary.liability.currency)}
           hint={`${summary.unsettledCollections.count} collection${summary.unsettledCollections.count === 1 ? '' : 's'} blocking earnings`}
         />
         <StatCard
           icon={Users}
           label="Held by Agents"
-          value={`${summary.agents.reduce((sum, a) => sum + a.cashHeld, 0).toLocaleString()} ${summary.liability.currency}`}
+          value={formatCurrency(summary.agents.reduce((sum, a) => sum + a.cashHeld, 0), summary.liability.currency)}
           hint={`${summary.agents.filter((a) => a.cashHeld > 0).length} agent(s) currently holding cash`}
         />
       </div>
@@ -105,10 +106,10 @@ export function SummaryTab() {
                 ) : (
                   summary.agents.map((a) => (
                     <tr key={a.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{a.name}</td>
+                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={a.name}>{a.name}</span></td>
                       <td className="p-4">
                         {a.cashHeld > 0 ? (
-                          <span className="text-amber-600 font-medium">{a.cashHeld.toLocaleString()} {summary.liability.currency}</span>
+                          <span className="text-amber-600 font-medium">{formatCurrency(a.cashHeld, summary.liability.currency)}</span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

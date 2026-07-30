@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, formatFileSize } from '@/lib/utils';
 import type { PricingPlan, CurrentPlanData } from '@/types/billing.types';
 import {
   formatMoney,
@@ -51,6 +51,10 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
                 <Feature>{formatCredits(plan.credit_allowance)} credits on activation</Feature>
                 <Feature>{formatShipmentCap(plan.max_unterminated_shipments)} concurrent shipments</Feature>
                 {plan.live_tracking_enabled && <Feature>Live agent tracking included</Feature>}
+                {/* Storage caps are per-plan and admin-editable — only advertise one when the plan actually carries it. */}
+                {typeof plan.max_storage_bytes === 'number' && plan.max_storage_bytes > 0 && (
+                  <Feature>{formatFileSize(plan.max_storage_bytes)} media storage</Feature>
+                )}
               </ul>
               <div className="mt-auto">
                 {isCurrent ? (

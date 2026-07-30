@@ -1,3 +1,4 @@
+import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import type { CodDiscrepancy, CodDiscrepancyType, CodListMeta } from '@/types/co
 const PAGE_LIMIT = 20;
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return fmtDateTime(iso);
 }
 
 export function DiscrepanciesTab() {
@@ -125,9 +126,9 @@ export function DiscrepanciesTab() {
                 ) : (
                   discrepancies.map((d) => (
                     <tr key={d.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{agentName(d.agentId)}</td>
+                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
                       <td className="p-4 text-sm capitalize">{d.type.replace(/_/g, ' ')}</td>
-                      <td className="p-4">{d.amount != null ? `${d.amount.toLocaleString()} ${d.currency}` : '—'}</td>
+                      <td className="p-4">{d.amount != null ? formatCurrency(d.amount, d.currency) : '—'}</td>
                       <td className="p-4"><CodDiscrepancyStatusBadge status={d.status} /></td>
                       <td className="p-4 text-sm text-muted-foreground">{formatDateTime(d.openedAt)}</td>
                     </tr>

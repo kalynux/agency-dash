@@ -2,11 +2,7 @@
 // Responses are camelCase; the PATCH body (UpdateAgencyProfilePayload) is snake_case
 // and maps 1:1 to UpdateAgencyProfileSchema. Arrays/objects are FULL REPLACE.
 
-import type {
-  AgencyPolicies,
-  HeadquartersAddress,
-  PayoutMethod,
-} from '@/types/api';
+import type { AgencyPolicies, PayoutMethod } from '@/types/api';
 import type { FileRef } from '@/types/file.types';
 
 export interface AgencyPayoutMobileMoneyResponse {
@@ -48,9 +44,12 @@ export interface DeliveryAgencyProfile {
   avatar: FileRef | null;
   timezone: string;
   preferredLanguage: string;
+  /**
+   * ISO-2 operating country. SET-ONCE during onboarding, then immutable
+   * (`403 PROFILE_COUNTRY_IMMUTABLE`). Anchors the magazin's coverage areas and
+   * HQ address geocoding.
+   */
   country: string | null;
-  coverageAreas: string[];
-  headquartersAddresses: HeadquartersAddress[];
   payoutDetails: AgencyPayoutMethodResponse[];
   kycVerified: boolean;
   kycDetails?: { registration_number: string | null; transport_license_id: string | null };
@@ -76,8 +75,8 @@ export interface UpdateAgencyProfilePayload {
   avatarFileId?: string | null;
   timezone?: string;
   preferred_language?: 'en' | 'fr' | 'pt' | 'es' | 'ar';
-  coverage_areas?: string[];
-  headquarters_addresses?: HeadquartersAddress[];
+  // NOTE: `coverage_areas` and `headquarters_addresses` are NOT accepted here —
+  // they moved to the magazin (`PATCH /api/agency/magazin`). See magazin.types.ts.
   payout_details?: PayoutMethod[];
   kyc_details?: { registration_number?: string | null; transport_license_id?: string | null };
   policies?: AgencyPolicies;

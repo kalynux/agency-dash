@@ -23,7 +23,7 @@ function ActiveBar({ show, faded }: { show: boolean; faded?: boolean }) {
   return (
     <span
       className={cn(
-        'absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full',
+        'absolute start-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-e-full',
         faded ? 'bg-primary/40' : 'bg-primary',
       )}
     />
@@ -44,7 +44,7 @@ const FOOTER_PAD_Y = 24; // py-3 top + bottom
 const ROW_GAP = 4; // space-y-1
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUI();
+  const { sidebarCollapsed, toggleSidebar, autoCollapsed } = useUI();
   const { unreadCount } = useNotifications();
   const { activeCount: shipmentsActiveCount } = useShipments();
   const { pendingActionCount } = useVendorConnections();
@@ -163,8 +163,8 @@ export function Sidebar() {
           disabled={item.disabled}
           className={cn(
             rowBase,
-            solid && 'bg-accent text-accent-foreground',
-            childActive && !solid && 'bg-accent/50 text-accent-foreground',
+            solid && 'bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary',
+            childActive && !solid && 'text-primary hover:text-primary',
             sidebarCollapsed && 'justify-center',
             item.disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground',
           )}
@@ -173,7 +173,7 @@ export function Sidebar() {
           <div className="relative">
             <Icon className="w-5 h-5 flex-shrink-0" />
             {badgeCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -end-1.5 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-card">
                 {badgeCount > 9 ? '9+' : badgeCount}
               </span>
             )}
@@ -185,13 +185,13 @@ export function Sidebar() {
           )}
           {!sidebarCollapsed && hasChildren && (
             <ChevronDown
-              className={cn('w-4 h-4 transition-transform', open && 'rotate-180')}
+              className={cn('w-4 h-4 transition-transform opacity-60', open && 'rotate-180')}
             />
           )}
         </button>
 
         {open && (
-          <div className="ml-5 border-l pl-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
+          <div className="ms-5 border-s border-border ps-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
             {item.children!.map((child) => {
               const ChildIcon = child.icon;
               const cActive = isLeafActive(child, item);
@@ -203,7 +203,7 @@ export function Sidebar() {
                   className={cn(
                     rowBase,
                     'py-2',
-                    cActive && 'bg-accent text-accent-foreground',
+                    cActive && 'bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary',
                     child.disabled &&
                     'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground',
                   )}
@@ -223,22 +223,22 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-card border-r',
+        'fixed start-0 top-0 z-40 h-screen bg-card border-e',
         'flex flex-col transition-all duration-300 ease-in-out',
         sidebarCollapsed ? 'w-20' : 'w-64'
       )}
     >
       {/* Top — agency name */}
-      <div className="h-16 flex items-center gap-2 px-4 border-b flex-shrink-0">
-        <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
+      <div className="h-16 flex items-center gap-3 px-4 border-b flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-gradient shadow-brand-sm flex items-center justify-center flex-shrink-0">
           {agencyLogo ? (
             <img src={agencyLogo} alt={agencyName} className="w-full h-full object-cover" />
           ) : (
-            <Truck className="w-5 h-5 text-primary-foreground" />
+            <Truck className="w-5 h-5 text-white" />
           )}
         </div>
         {!sidebarCollapsed && (
-          <span className="font-bold text-base truncate">{agencyName}</span>
+          <span className="font-display font-bold text-base truncate tracking-tight">{agencyName}</span>
         )}
       </div>
 
@@ -273,46 +273,48 @@ export function Sidebar() {
         </ScrollArea>
       </div>
 
-      {/* Footer — Jovi Mall platform + health, then the collapse toggle */}
+      {/* Footer — Wi Mall platform + health, then the collapse toggle */}
       <div className="border-t flex-shrink-0">
         {sidebarCollapsed ? (
           <div className="flex justify-center py-3">
-            <div className="relative w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-              <Truck className="w-4 h-4 text-primary-foreground" />
+            <div className="relative w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-sm flex items-center justify-center">
+              <Truck className="w-4 h-4 text-white" />
               <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-card p-0.5">
                 <PlatformStatus compact />
               </span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-3">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
-              <Truck className="w-4 h-4 text-primary-foreground" />
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-sm flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">Jovi Mall</p>
+              <p className="text-sm font-display font-bold leading-tight tracking-tight">Wi Mall</p>
               <PlatformStatus />
             </div>
           </div>
         )}
 
-        <Button
-          variant="ghost"
-          onClick={toggleSidebar}
-          className={cn(
-            'w-full h-10 rounded-none border-t text-xs text-muted-foreground gap-2',
-            sidebarCollapsed && 'px-0'
-          )}
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <>
-              <ChevronLeft className="h-4 w-4" />
-              Collapse
-            </>
-          )}
-        </Button>
+        {!autoCollapsed && (
+          <Button
+            variant="ghost"
+            onClick={toggleSidebar}
+            className={cn(
+              'w-full h-10 rounded-none border-t text-xs text-muted-foreground gap-2 font-medium',
+              sidebarCollapsed && 'px-0'
+            )}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4 rtl:-scale-x-100" />
+            ) : (
+              <>
+                <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" />
+                Collapse
+              </>
+            )}
+          </Button>
+        )}
       </div>
     </aside>
   );

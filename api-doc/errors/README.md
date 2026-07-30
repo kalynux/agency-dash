@@ -152,6 +152,13 @@ your upload list and show the per-file reason inline. `violation.code` is one of
 [File Management API](../vendor/file-management.md#post-apifilesupload) for the full
 per-code reference.
 
+Always read `details.violations[]`, never the top-level `message` — it is
+`"Upload policy permissions violated"` only when a `PERMISSION_DENIED` rule fired,
+and `"Upload policy violations found"` for everything else. `PERMISSION_DENIED` is
+not expected from `POST /api/files/upload`, which is open to every authenticated
+role; it belongs to the purpose-scoped upload routes (digital assets, delivery
+proof, system files).
+
 ### 8. Other Contextual Domain Errors
 The backend frequently includes context variables inside the `details` object for general domain errors. For example:
 - `PAYMENT_ORDER_NOT_FOUND` may include `{"orderId": "..."}`

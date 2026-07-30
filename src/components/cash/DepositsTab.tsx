@@ -1,3 +1,4 @@
+import { formatCurrency, formatNumber, formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, HandCoins, Loader2, AlertTriangle, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,14 +31,7 @@ const STATUS_FILTERS: { value: CodDepositStatus | 'all'; label: string }[] = [
 ];
 
 function formatDateTime(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return fmtDateTime(iso);
 }
 
 export function DepositsTab() {
@@ -164,7 +158,7 @@ export function DepositsTab() {
               <SelectContent>
                 {agents.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({a.cashHeld.toLocaleString()} held)
+                    {a.name} ({formatNumber(a.cashHeld)} held)
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -260,9 +254,9 @@ export function DepositsTab() {
                     const actionable = isDeclared && isAgencyRecipient;
                     return (
                       <tr key={d.id} className="border-b hover:bg-muted/50 transition-colors align-top">
-                        <td className="p-4 font-medium">{agentName(d.agentId)}</td>
+                        <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
                         <td className="p-4">
-                          {d.amount.toLocaleString()} {d.currency}
+                          {formatCurrency(d.amount, d.currency)}
                         </td>
                         <td className="p-4 text-sm capitalize text-muted-foreground">
                           {d.recipient ?? 'agency'}

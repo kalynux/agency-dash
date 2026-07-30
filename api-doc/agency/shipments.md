@@ -48,22 +48,33 @@ pending → assigned → picked_up → in_transit → agent_delivered → delive
           ↘ pending_agency_reassignment (admin agency-deactivation cascade only)
 
   (agent → agent reassignment, POST .../reassign — see agency/assignment.md)
-    assigned                        → assigned      (pre-pickup: back to queue)
-    picked_up / in_transit / failed → handing_over → picked_up (new agent picks up)
-                                                    ↘ returned  (handover abandoned)
+    assigned                                   → assigned      (pre-pickup: back to queue)
+    picked_up / in_transit / failed / returned → handing_over → picked_up (new agent picks up)
+                                                               ↘ returned  (handover abandoned)
 ```
+
+> **Two actors drive this state machine, by the same rules.** The agency does, via `PATCH
+> .../status` below; the assigned **agent** does too, via
+> [`POST /api/agent/shipments/:id/status`](../agent/shipments.md#status). The transition table is
+> **identical** for both — including `handing_over`, so a replacement agent records their own pickup
+> after a reassignment. What differs is ownership (your `agency_id` vs their `agent_id`), the
+> optional failure reason only the agent may attach, and
+> `status_history[].changedByRole`, which records which of you it was.
+>
+> Either may act at any moment, so both endpoints write through a from-status compare-and-set: the
+> loser of a race gets `409 SHIPMENT_STATUS_CONFLICT` and must reload before retrying.
 
 | Status | Set by | Meaning |
 |---|---|---|
 | `pending` | System | Shipment created at checkout; not yet handed to the agency. **Invisible to the agency.** |
 | `assigned` | **Vendor** (dispatch) or System (auto-redirect) | Order paid and dispatched; the agency now owns this shipment — first status the agency can see. |
-| `handing_over` | System (`POST .../reassign`, post-pickup) | A picked-up parcel was reassigned off its agent and is being handed over to a replacement. Trackable (the replacement is tracked once they accept), non-terminal — resolves when the new agent sets `picked_up` (or `returned` if the handover is abandoned). See [agency/assignment.md](./assignment.md#reassign). |
-| `picked_up` | **Agency** (`PATCH .../status`) | Agency has physically picked up / pulled from storage. |
-| `in_transit` | **Agency** | Out for delivery. |
-| `agent_delivered` | **Agency** | Agent reports delivered — **awaiting customer confirmation**. |
-| `delivered` | **System** (customer confirms, or the 7-day sweep) | Terminal, and an agency can never set it directly. **Prepaid:** the customer confirms via [`POST …/confirm-delivery`](../customer/orders.md#confirm-shipment), or the sweep does it for them after 7 days at `agent_delivered`. **COD:** the agent submits the customer's delivery code, or — after 7 days at `agent_delivered` — the sweep records the cash as collected without one. COD never reaches `delivered` without a cash collection behind it. |
-| `failed` | **Agency** | A delivery attempt failed (e.g. customer unreachable). |
-| `returned` | **Agency** | Terminal. Goods returned after a failed attempt. |
+| `handing_over` | System (`POST .../reassign`, post-pickup) | A picked-up parcel was reassigned off its agent and is being handed over to a replacement. Trackable (the replacement is tracked once they accept), non-terminal — resolves when the new agent sets `picked_up` (or `returned` if the handover is abandoned). **The replacement agent can record that pickup themselves**, from the agent app, just like a first-assigned shipment. See [agency/assignment.md](./assignment.md#reassign). |
+| `picked_up` | **Agency** or **agent** | Physically picked up / pulled from storage. |
+| `in_transit` | **Agency** or **agent** | Out for delivery. |
+| `agent_delivered` | **Agency** or **agent** | Agent reports delivered — **awaiting customer confirmation**. |
+| `delivered` | **System** (customer confirms, or the 7-day sweep) | Terminal, and neither an agency nor an agent can set it directly. **Prepaid:** the customer confirms via [`POST …/confirm-delivery`](../customer/orders.md#confirm-shipment), or the sweep does it for them after 7 days at `agent_delivered`. **COD:** the agent submits the customer's delivery code, or — after 7 days at `agent_delivered` — the sweep records the cash as collected without one. COD never reaches `delivered` without a cash collection behind it. |
+| `failed` | **Agency** or **agent** | A delivery attempt failed (e.g. customer unreachable). Non-terminal — the parcel is still with the agent. When the **agent** reports it they may attach a reason + note, appended to the shipment's `deliveryFailures` log; the agency endpoint records none. |
+| `returned` | **Agency** or **agent** | Terminal. Goods returned after a failed attempt. Same optional agent-supplied reason as `failed`. |
 | `rejected` | **Agency** (`POST .../reject`) | Terminal for this shipment. Agency declined the assignment; its items move to `pending_agency_reassignment` for the vendor to reroute. |
 | `pending_agency_reassignment` | System | Awaiting a new agency (rejection, or admin deactivated this agency). |
 
@@ -106,8 +117,15 @@ The [detail](#detail) response carries a `cod` block for these shipments:
 
 **Query Parameters**:
 - `status` (string, optional) — filter by shipment status (see lifecycle table above).
+- `q` (string, optional, **min 2 chars**, max 100) — free-text search over the customer's name and
+  phone, the product titles on the shipment, the order number and the tracking number. Identical to
+  the agent list's search — see [agent/shipments.md](../agent/shipments.md#list) for the full table.
 - `page` (integer, optional, default 1)
 - `limit` (integer, optional, default 20, max 100)
+
+Each row also carries `pickup` (where the parcel is collected, with coordinates) and
+`deliveryAddress` (the drop-off geocoded at checkout). The agent-facing `earning` field is **not**
+included here — it is that agent's contracted cut, not agency-scoped data.
 
 **Success Response** (`200 OK`):
 ```json
@@ -315,11 +333,15 @@ one transaction.
 ```
 
 `requiresDeliveryCode` is `true` only for a COD shipment that just reached `agent_delivered`;
-`nextAction` accompanies it. Both are absent/false otherwise.
+`nextAction` accompanies it. Both are absent/false otherwise. `recordedFailure` is always `null`
+here — reasons are recorded only when the **agent** reports the outcome
+([agent/shipments.md](../agent/shipments.md#status)).
 
 **Error Responses**:
 - `404` – `SHIPMENT_NOT_FOUND` – Shipment does not exist or is not handled by this agency.
 - `400` – `SHIPMENT_INVALID_STATUS_TRANSITION` – Not a valid transition from the current status. `details` includes `{ from, to, allowed }`.
+- `409` – `SHIPMENT_STATUS_CONFLICT` – The shipment moved between your read and your write — the assigned **agent** (or another dashboard session) transitioned it first. `details` includes `{ expectedStatus, to }`. **Reload the shipment and decide again** rather than blind-retrying the same body: the correct next status may have changed. Same handling as `SHIPMENT_CANCEL_CONFLICT` / `SHIPMENT_REASSIGNMENT_CONFLICT`.
+- `422` – `SHIPMENT_AGENT_NOT_ASSIGNED` – `picked_up` requested but no agent has accepted the shipment yet.
 
 ---
 

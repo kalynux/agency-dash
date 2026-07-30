@@ -57,6 +57,29 @@ export interface ShipmentCustomerSummary {
   phone: string;
 }
 
+/**
+ * Pickup / drop-off summary carried on a list row (added 2026-07-29). The list
+ * contract names these fields but not their members, so every part is optional
+ * and read defensively — see {@link describeShipmentPlace}.
+ */
+export interface ShipmentPlaceSummary {
+  label?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  formattedAddress?: string | null;
+  location?: GeoPoint | null;
+}
+
+/** Shortest useful description of a pickup/drop-off, or `null` if it says nothing. */
+export function describeShipmentPlace(place?: ShipmentPlaceSummary | null): string | null {
+  if (!place) return null;
+  const cityState = [place.city, place.state].filter(Boolean).join(', ');
+  return cityState || place.formattedAddress || place.label || place.addressLine1 || null;
+}
+
 /** One row from GET /api/agency/shipments. */
 export interface ShipmentListItem {
   id: string;
@@ -71,6 +94,10 @@ export interface ShipmentListItem {
   vendor: ShipmentVendorSummary;
   customer: ShipmentCustomerSummary;
   itemCount: number;
+  /** Where the parcel is collected. */
+  pickup?: ShipmentPlaceSummary | null;
+  /** The drop-off, geocoded at checkout. */
+  deliveryAddress?: ShipmentPlaceSummary | null;
 }
 
 export interface ShipmentPickupAddress {
@@ -332,6 +359,12 @@ export interface AssignmentSettingsResponse {
 
 export interface ListShipmentsParams {
   status?: ShipmentStatus;
+  /**
+   * Free-text search (min 2 chars, max 100) across the customer's name and phone,
+   * the product titles on the shipment, the order number and the tracking number.
+   * Server-side, so it spans every page — not just the one on screen.
+   */
+  q?: string;
   page?: number;
   limit?: number;
 }

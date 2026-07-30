@@ -1,8 +1,9 @@
 import { useParams } from 'react-router-dom';
 import { RosterTab } from '@/components/agents/RosterTab';
 import { InvitesTab } from '@/components/agents/InvitesTab';
+import { RequestsTab } from '@/components/agents/RequestsTab';
 
-const VALID_TABS = ['roster', 'invites'] as const;
+const VALID_TABS = ['roster', 'invites', 'requests'] as const;
 type AgentsTab = typeof VALID_TABS[number];
 
 export function Agents() {
@@ -20,6 +21,7 @@ export function Agents() {
 
       {activeTab === 'roster' && <RosterTab />}
       {activeTab === 'invites' && <InvitesTab />}
+      {activeTab === 'requests' && <RequestsTab />}
     </div>
   );
 }

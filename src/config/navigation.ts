@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   CreditCard,
   Receipt,
+  Image,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -60,6 +62,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
   { name: 'Live Tracking', path: '/dashboard/tracking', icon: Radio },
+  { name: 'Media', path: '/dashboard/media', icon: Image },
   { name: 'Transactions', path: '/dashboard/transactions', icon: Receipt },
   {
     name: 'Cash Management',
@@ -81,6 +84,7 @@ export const PRIMARY_NAV: NavItem[] = [
     children: [
       { name: 'Roster', path: '/dashboard/agents/roster', icon: Users },
       { name: 'Invites', path: '/dashboard/agents/invites', icon: Mail },
+      { name: 'Requests', path: '/dashboard/agents/requests', icon: Inbox },
     ],
   },
   {

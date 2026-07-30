@@ -2,7 +2,11 @@ import { useCallback } from 'react';
 import { getApiErrorMessage } from '@/lib/errors';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { agentsService } from '@/services/agents.service';
-import type { AgentInvite, UpdateEmploymentPayload } from '@/types/agent.types';
+import type {
+  AgentInvite,
+  ContractStatusRequestDecision,
+  UpdateTermsPayload,
+} from '@/types/agent.types';
 
 // All agent/membership/COD codes live in the central registry (@/lib/errors).
 export function getAgentErrorMessage(err: unknown): string {
@@ -16,7 +20,8 @@ export interface UseAgentActionsOptions {
 
 /**
  * Shared agent-roster mutations (invites + membership lifecycle: approve /
- * decline / suspend / reinstate / remove / employment / COD threshold).
+ * decline / suspend / pause / reinstate / remove / employment / contract terms /
+ * COD threshold, plus resolving the status requests agents raise).
  */
 export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentActionsOptions = {}) {
   const { pendingKey, run } = useActionRunner();
@@ -79,6 +84,17 @@ export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentAc
     [run, onRosterChanged],
   );
 
+  const pause = useCallback(
+    (membershipId: string, reason?: string) =>
+      run(`pause:${membershipId}`, () => agentsService.pause(membershipId, reason), {
+        success: 'Agent paused — they keep current shipments but receive no new ones.',
+      }).then((r) => {
+        if (r) onRosterChanged?.();
+        return r;
+      }),
+    [run, onRosterChanged],
+  );
+
   const reinstate = useCallback(
     (membershipId: string) =>
       run(`reinstate:${membershipId}`, () => agentsService.reinstate(membershipId), {
@@ -101,11 +117,28 @@ export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentAc
     [run, onRosterChanged],
   );
 
-  const updateEmployment = useCallback(
-    (membershipId: string, payload: UpdateEmploymentPayload) =>
-      run(`employment:${membershipId}`, () => agentsService.updateEmployment(membershipId, payload), {
-        success: 'Employment updated.',
+  // Employment is one group of `updateTerms` — `PATCH .../employment` is only a
+  // legacy alias for it, so there is no separate action here.
+  const updateTerms = useCallback(
+    (membershipId: string, payload: UpdateTermsPayload) =>
+      run(`terms:${membershipId}`, () => agentsService.updateTerms(membershipId, payload), {
+        success: 'Contract terms updated.',
       }).then((r) => {
+        if (r) onRosterChanged?.();
+        return r;
+      }),
+    [run, onRosterChanged],
+  );
+
+  const resolveStatusRequest = useCallback(
+    (requestId: string, decision: ContractStatusRequestDecision, note?: string) =>
+      run(
+        `resolve:${requestId}`,
+        () => agentsService.resolveStatusRequest(requestId, decision, note),
+        {
+          success: decision === 'approve' ? 'Request approved.' : 'Request rejected.',
+        },
+      ).then((r) => {
         if (r) onRosterChanged?.();
         return r;
       }),
@@ -130,9 +163,11 @@ export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentAc
     approve,
     decline,
     suspend,
+    pause,
     reinstate,
     remove,
-    updateEmployment,
+    updateTerms,
+    resolveStatusRequest,
     updateCodLimit,
   };
 }

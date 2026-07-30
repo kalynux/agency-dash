@@ -4,6 +4,7 @@
 // "medium" (that's importance); note content caps at 300 and create description
 // at 700, matching the agency endpoints.
 
+import { formatDate as fmtDate } from '@/lib/format';
 import type { LucideIcon } from 'lucide-react';
 import {
   ShoppingCart, CreditCard, Wallet, Package, Calendar, Truck, Wrench, Bug,
@@ -374,10 +375,10 @@ export function relativeTime(iso: string): string {
   if (hr < 24) return `${hr}h ago`;
   const day = Math.round(hr / 24);
   if (day < 30) return `${day}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return fmtDate(iso);
 }
 
 /** Longer date, e.g. "Jul 5, 2026". */
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return fmtDate(iso);
 }

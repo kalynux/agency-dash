@@ -1,3 +1,4 @@
+import { formatNumber } from '@/lib/format';
 import { useState } from 'react';
 import { Search, Users, Star, Loader2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ const STATUS_FILTERS: { value: MembershipStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'pending', label: 'Pending requests' },
   { value: 'approved', label: 'Approved' },
+  { value: 'paused', label: 'Paused' },
   { value: 'suspended', label: 'Suspended' },
 ];
 
@@ -109,7 +111,7 @@ export function RosterTab() {
                             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                             {agent.trustScore}
                           </span>
-                          {cashHeld > 0 && <span className="text-amber-600">Holds {cashHeld.toLocaleString()}</span>}
+                          {cashHeld > 0 && <span className="text-amber-600">Holds {formatNumber(cashHeld)}</span>}
                         </div>
                       </div>
                     </button>

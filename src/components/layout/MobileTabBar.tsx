@@ -21,14 +21,17 @@ function TabButton({ label, icon: Icon, active, badge, onClick }: TabButtonProps
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center justify-center gap-0.5 flex-1 py-1',
-        active ? 'text-foreground' : 'text-muted-foreground',
+        'relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-colors',
+        active ? 'text-primary' : 'text-muted-foreground',
       )}
     >
+      {active && (
+        <span className="absolute -top-px h-0.5 w-9 rounded-full bg-primary" />
+      )}
       <div className="relative">
-        <Icon className="w-5 h-5" />
+        <Icon className={cn('w-5 h-5', active && 'scale-105 transition-transform')} />
         {badge !== undefined && badge > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute -top-1.5 -end-1.5 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-background">
             {badge > 9 ? '9+' : badge}
           </span>
         )}
@@ -61,8 +64,8 @@ export function MobileTabBar() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-[0_-4px_12px_rgba(0,0,0,0.05)] h-16 safe-area-inset-bottom">
-        <div className="flex items-center justify-around h-full px-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-[0_-4px_16px_rgba(6,36,26,0.06)] pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around h-16 px-2">
           <TabButton
             label="Overview"
             icon={LayoutDashboard}
@@ -80,7 +83,7 @@ export function MobileTabBar() {
           {/* FAB */}
           <button
             onClick={() => setQuickActionsOpen(true)}
-            className="-mt-5 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center flex-shrink-0"
+            className="-mt-5 w-14 h-14 rounded-2xl bg-brand-gradient text-white shadow-brand flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
           >
             <Plus className="w-6 h-6" />
           </button>
@@ -119,7 +122,7 @@ export function MobileTabBar() {
                 onClick={() => handleQuickAction(action)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-accent transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
                   <action.icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 text-left">
@@ -130,7 +133,7 @@ export function MobileTabBar() {
               </button>
             ))}
           </div>
-          <div className="h-safe-bottom pb-2" />
+          <div className="h-2 pb-[env(safe-area-inset-bottom)]" />
         </SheetContent>
       </Sheet>
     </>

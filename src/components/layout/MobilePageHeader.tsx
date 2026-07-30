@@ -41,9 +41,9 @@ export function MobilePageHeader({
             type="button"
             onClick={onBack}
             aria-label="Go back"
-            className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
+            className="-ms-2 flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 rtl:-scale-x-100" />
           </button>
         )}
         <h1 className="flex-1 truncate text-xl font-bold">{title}</h1>

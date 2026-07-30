@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Save, DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, Loader2, X } from 'lucide-react';
+import { Save, DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { MediaPicker } from '@/components/features/MediaPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,9 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { policiesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
-import { agencyProfileService } from '@/services/agency-profile.service';
+import { resolveFileUrl } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
-import { useRef } from 'react';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -37,27 +37,9 @@ export function PoliciesSettings() {
   const [apiError, setApiError] = useState<string | null>(null);
   // policies.documents — existing URLs (full-replace on save; resend to keep).
   const [documents, setDocuments] = useState<string[]>(existing?.documents ?? []);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const docInputRef = useRef<HTMLInputElement>(null);
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
 
-  const uploadDocuments = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    if (documents.length + files.length > 2) {
-      toast.error('At most 2 policy documents.');
-      return;
-    }
-    setUploadingDoc(true);
-    try {
-      const res = await agencyProfileService.uploadPolicyDocuments(Array.from(files).slice(0, 2 - documents.length));
-      setDocuments((prev) => [...prev, ...res.data.urls]);
-      toast.success('Document uploaded.');
-    } catch (err) {
-      toast.error(getApiErrorMessage(err));
-    } finally {
-      setUploadingDoc(false);
-      if (docInputRef.current) docInputRef.current.value = '';
-    }
-  };
+  const remainingDocs = 2 - documents.length;
 
   const { register, handleSubmit, control, watch, formState: { errors } } = useForm<PoliciesFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -312,15 +294,7 @@ export function PoliciesSettings() {
 
           <Separator />
 
-          <Section icon={FileText} title="Supporting Documents" description="Optional signed PDF addenda (max 2, 5MB each) for terms not covered above.">
-            <input
-              ref={docInputRef}
-              type="file"
-              accept="application/pdf"
-              multiple
-              className="hidden"
-              onChange={(e) => uploadDocuments(e.target.files)}
-            />
+          <Section icon={FileText} title="Supporting Documents" description="Optional signed PDF addenda (max 2) for terms not covered above.">
             {documents.length > 0 && (
               <div className="space-y-1">
                 {documents.map((url, i) => (
@@ -341,12 +315,26 @@ export function PoliciesSettings() {
               variant="outline"
               size="sm"
               className="gap-2"
-              disabled={uploadingDoc || documents.length >= 2}
-              onClick={() => docInputRef.current?.click()}
+              disabled={remainingDocs <= 0}
+              onClick={() => setDocPickerOpen(true)}
             >
-              {uploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-              Upload PDF ({documents.length}/2)
+              <FileText className="w-4 h-4" />
+              Add document ({documents.length}/2)
             </Button>
+
+            <MediaPicker
+              open={docPickerOpen}
+              onClose={() => setDocPickerOpen(false)}
+              multiple
+              maxFiles={remainingDocs}
+              acceptedTypes={['document']}
+              onSelect={(picked) =>
+                setDocuments((prev) => [
+                  ...prev,
+                  ...picked.slice(0, 2 - prev.length).map((f) => resolveFileUrl(f)),
+                ])
+              }
+            />
           </Section>
 
           <div className="flex justify-end">

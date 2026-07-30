@@ -1,32 +1,37 @@
 import { useCallback, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Phone, Mail, Building } from 'lucide-react';
+import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Phone, Mail, Building, Tag } from 'lucide-react';
 import { toast } from 'sonner';
-import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
+import { OnboardingLayout } from '@/onboarding/OnboardingLayout';
 import { logisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
-import locationsData from '@/constants/locations.json';
+import { regionsFor, DEFAULT_COUNTRY, type RegionEntry } from '@/lib/regions';
+import type { GeoAddress } from '@/types/geo.types';
 
-type RegionEntry = { key: string; label: string; cities: string[] };
+/**
+ * The agency's operating country, sent with step 1.
+ *
+ * Hardcoded because locations.json only ships regions for Cameroon, so coverage
+ * areas can only ever be picked from `CM` today. The backend treats this as
+ * SET-ONCE: it stays correctable across step re-edits while onboarding is in
+ * progress, then locks at completion (`403 PROFILE_COUNTRY_IMMUTABLE` on the
+ * profile PATCH). A multi-country rollout must expose this as a real form field
+ * here — it cannot be fixed after the fact from Settings.
+ */
+const AGENCY_COUNTRY = DEFAULT_COUNTRY;
 
-const REGIONS: RegionEntry[] = Object.entries(locationsData.countries.cm.regions).map(([key, val]) => ({
-    key, label: val.name.en, cities: val.cities,
-}));
-
-function getCities(regionLabel: string) {
-    return REGIONS.find(r => r.label === regionLabel || r.key === regionLabel.toLowerCase().replace(/\s/g, '_'))?.cities ?? [];
-}
+const REGIONS: RegionEntry[] = regionsFor(AGENCY_COUNTRY);
 
 const EMPTY_HQ = {
-    region: '', city: '', address_description: '',
+    label: '', region: '', city: '', address_description: '',
     support_contact: { phone: '', email: '' },
-    latitude: undefined, longitude: undefined,
+    geo: null,
 } as unknown as HeadquartersAddressFormValues;
 
 function FieldRow({ label, required, optional, error, children }: { label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
@@ -61,29 +66,15 @@ export function Step1Logistics() {
     const [apiError, setApiError] = useState<string | null>(null);
 
     const roleEntity = session?.role_entity;
-    // Draft takes precedence over session data — it contains the last form values
-    // the user actually typed, saved synchronously before each API call.
+    // Drafts are the ONLY pre-population source: coverage areas and HQ addresses
+    // now live on the magazin, so the session's role_entity no longer carries them.
     const draft = drafts.logistics;
 
     const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<LogisticsFormValues>({
         resolver: zodResolver(logisticsSchema),
         defaultValues: {
-            coverage_areas: draft?.coverage_areas ?? roleEntity?.coverage_areas ?? [],
-            headquarters_addresses: draft?.headquarters_addresses ?? (
-                roleEntity?.headquarters_addresses?.length
-                    ? roleEntity.headquarters_addresses.map(addr => ({
-                        region: addr.region,
-                        city: addr.city,
-                        address_description: addr.address_description,
-                        support_contact: {
-                            phone: addr.support_contact.phone,
-                            email: addr.support_contact.email ?? '',
-                        },
-                        latitude: addr.location?.coordinates?.[1],
-                        longitude: addr.location?.coordinates?.[0],
-                    } as HeadquartersAddressFormValues))
-                    : [{ ...EMPTY_HQ }]
-            ),
+            coverage_areas: draft?.coverage_areas ?? [],
+            headquarters_addresses: draft?.headquarters_addresses ?? [{ ...EMPTY_HQ }],
         },
     });
 
@@ -102,15 +93,26 @@ export function Step1Logistics() {
         saveDraft(1, values);
         try {
             await submitLogistics({
+                country: AGENCY_COUNTRY,
                 coverage_areas: values.coverage_areas,
                 headquarters_addresses: values.headquarters_addresses.map(addr => {
-                    const { email, ...rest } = addr.support_contact;
-                    const { latitude, longitude, ...addrRest } = addr;
+                    const { email, phone } = addr.support_contact;
+                    const geo = addr.geo as GeoAddress;
                     return {
-                        ...addrRest,
+                        label: addr.label.trim(),
+                        address_description: addr.address_description.trim(),
                         // Clearable field: empty input → explicit null (see api-doc/agency/profile.md).
-                        support_contact: { ...rest, email: email?.trim() || null },
-                        location: { type: 'Point' as const, coordinates: [longitude, latitude] as [number, number] },
+                        support_contact: { phone, email: email?.trim() || null },
+                        // `location`, `region` and `city` are all derived from `geo`
+                        // server-side — region/city go out only where the geocode
+                        // named neither and the agency typed one in.
+                        geo,
+                        ...(!geo.components.region && addr.region?.trim()
+                            ? { region: addr.region.trim() }
+                            : {}),
+                        ...(!geo.components.city && addr.city?.trim()
+                            ? { city: addr.city.trim() }
+                            : {}),
                     };
                 }),
                 version: roleEntity?.version,
@@ -123,7 +125,7 @@ export function Step1Logistics() {
                 else setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
             }
         }
-    }, [submitLogistics, roleEntity]);
+    }, [submitLogistics, saveDraft, roleEntity]);
 
     return (
         <OnboardingLayout stepKey={1} viewingStepOverride={1}
@@ -175,7 +177,10 @@ export function Step1Logistics() {
                             <Plus className="w-3 h-3" /> Add address
                         </Button>
                     </div>
-                    <p className="text-xs text-slate-400 mb-4">The first address is your primary headquarters.</p>
+                    <p className="text-xs text-slate-400 mb-4">
+                        Search for each location and pick it from the results — the street, city and region
+                        are read off the map result. The first address is your primary headquarters.
+                    </p>
                     {errors.headquarters_addresses && !Array.isArray(errors.headquarters_addresses) && (
                         <p className="text-xs text-red-500 mb-3" role="alert">{errors.headquarters_addresses.message}</p>
                     )}
@@ -184,7 +189,6 @@ export function Step1Logistics() {
                             <HQAddressCard key={field.id} index={index} isPrimary={index === 0}
                                 canRemove={fields.length > 1} control={control} register={register}
                                 watch={watch} setValue={setValue} errors={errors}
-                                availableRegions={REGIONS.filter(r => (selectedAreas ?? []).includes(r.key))}
                                 onRemove={() => remove(index)} />
                         ))}
                     </div>
@@ -201,13 +205,32 @@ interface HQAddressCardProps {
     watch: ReturnType<typeof useForm<LogisticsFormValues>>['watch'];
     setValue: ReturnType<typeof useForm<LogisticsFormValues>>['setValue'];
     errors: ReturnType<typeof useForm<LogisticsFormValues>>['formState']['errors'];
-    availableRegions: RegionEntry[]; onRemove: () => void;
+    onRemove: () => void;
 }
 
-function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, setValue, errors, availableRegions, onRemove }: HQAddressCardProps) {
+function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, setValue, errors, onRemove }: HQAddressCardProps) {
     const addrErrors = errors.headquarters_addresses?.[index];
-    const selectedRegion = watch(`headquarters_addresses.${index}.region`);
-    const cities = getCities(selectedRegion ?? '');
+    const geo = watch(`headquarters_addresses.${index}.geo`);
+    const region = watch(`headquarters_addresses.${index}.region`);
+    const city = watch(`headquarters_addresses.${index}.city`);
+
+    /**
+     * Selecting a candidate is what makes this entry storable — and what fills it
+     * in. Region, city and the street line all come off the resolved components,
+     * so the agency only types a label and a phone. The manual inputs below
+     * appear only when the provider returned no city / region to read.
+     */
+    const applyGeo = (address: GeoAddress) => {
+        const opts = { shouldValidate: true } as const;
+        setValue(`headquarters_addresses.${index}.geo`, address, opts);
+        setValue(`headquarters_addresses.${index}.region`, address.components.region?.trim() ?? '', opts);
+        setValue(`headquarters_addresses.${index}.city`, address.components.city?.trim() ?? '', opts);
+        setValue(
+            `headquarters_addresses.${index}.address_description`,
+            (address.components.street?.trim() || address.formatted_address).slice(0, 200),
+            opts,
+        );
+    };
 
     return (
         <div className={cn('rounded-xl border-2 overflow-hidden', isPrimary ? 'border-primary/25' : 'border-slate-200 dark:border-zinc-700')}>
@@ -226,57 +249,59 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
             </div>
 
             <div className="p-4 bg-white dark:bg-zinc-900 space-y-4">
-                <FieldRow label="Region" required error={addrErrors?.region?.message}>
-                    <Controller control={control} name={`headquarters_addresses.${index}.region`} render={({ field }) => (
-                        <Select value={field.value} onValueChange={v => { field.onChange(v); setValue(`headquarters_addresses.${index}.city`, '', { shouldValidate: false }); }}>
-                            <SelectTrigger className={selectTriggerClass(!!addrErrors?.region)}>
-                                <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                    <SelectValue placeholder="Select region" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableRegions.length === 0
-                                    ? <div className="py-3 text-xs text-slate-400 text-center px-4">Select coverage regions above first</div>
-                                    : availableRegions.map(({ label }) => <SelectItem key={label} value={label}>{label}</SelectItem>)
-                                }
-                            </SelectContent>
-                        </Select>
+                <FieldRow label="Find this location" required error={addrErrors?.geo?.message}>
+                    <Controller control={control} name={`headquarters_addresses.${index}.geo`} render={({ field }) => (
+                        <AddressSearchInput
+                            value={field.value ?? null}
+                            country={AGENCY_COUNTRY.toLowerCase()}
+                            hasError={!!addrErrors?.geo}
+                            placeholder="Search a street, area, or city…"
+                            onSelect={applyGeo}
+                            onClear={() => field.onChange(null)}
+                        />
                     )} />
+                    <p className="text-[11px] text-slate-400">
+                        Pick your address from the results so it can be placed on a map — auto-assignment
+                        measures distance from here.
+                    </p>
                 </FieldRow>
 
-                <FieldRow label="City" required error={addrErrors?.city?.message}>
-                    <Controller control={control} name={`headquarters_addresses.${index}.city`} render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange} disabled={!selectedRegion || cities.length === 0}>
-                            <SelectTrigger className={selectTriggerClass(!!addrErrors?.city)}>
-                                <SelectValue placeholder={!selectedRegion ? 'Select a region first' : 'Select city'} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    )} />
+                <FieldRow label="Label" required error={addrErrors?.label?.message}>
+                    <IconInput icon={Tag} type="text" placeholder="e.g. Main Warehouse, Douala Hub"
+                        maxLength={50} hasError={!!addrErrors?.label}
+                        {...register(`headquarters_addresses.${index}.label`)} />
                 </FieldRow>
 
                 <FieldRow label="Street Address" required error={addrErrors?.address_description?.message}>
                     <IconInput icon={MapPin} type="text" placeholder="e.g. Akwa, Rue Sylvani, 3rd floor"
                         hasError={!!addrErrors?.address_description}
                         {...register(`headquarters_addresses.${index}.address_description`)} />
+                    {geo && (city || region) && (
+                        <p className="text-[11px] text-slate-400">
+                            {[city, region].filter(Boolean).join(', ')} · read from the map result
+                        </p>
+                    )}
                 </FieldRow>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <FieldRow label="Latitude" required error={addrErrors?.latitude?.message}>
-                        <IconInput icon={MapPin} type="number" step="any" inputMode="decimal" placeholder="4.0511"
-                            hasError={!!addrErrors?.latitude}
-                            {...register(`headquarters_addresses.${index}.latitude`, { valueAsNumber: true })} />
+                {/* City / region are geo-derived. They only become inputs when the
+                    provider returned neither — the backend still requires both. */}
+                {geo && !city && (
+                    <FieldRow label="City" optional error={addrErrors?.city?.message}>
+                        <IconInput icon={MapPin} type="text" placeholder="Douala" maxLength={100}
+                            hasError={!!addrErrors?.city}
+                            {...register(`headquarters_addresses.${index}.city`)} />
+                        <p className="text-[11px] text-slate-400">The map result named no city — add one if it helps.</p>
                     </FieldRow>
-                    <FieldRow label="Longitude" required error={addrErrors?.longitude?.message}>
-                        <IconInput icon={MapPin} type="number" step="any" inputMode="decimal" placeholder="9.7679"
-                            hasError={!!addrErrors?.longitude}
-                            {...register(`headquarters_addresses.${index}.longitude`, { valueAsNumber: true })} />
+                )}
+
+                {geo && !region && (
+                    <FieldRow label="Region" optional error={addrErrors?.region?.message}>
+                        <IconInput icon={MapPin} type="text" placeholder="Littoral" maxLength={100}
+                            hasError={!!addrErrors?.region}
+                            {...register(`headquarters_addresses.${index}.region`)} />
+                        <p className="text-[11px] text-slate-400">The map result named no region — add one if it helps.</p>
                     </FieldRow>
-                </div>
-                <p className="text-[11px] text-slate-400 -mt-2">Map coordinates for this location — required so it can be placed on a map for auto-assignment.</p>
+                )}
 
                 <div className="border-t border-dashed border-slate-200 dark:border-zinc-700 pt-3 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Location Contact</p>

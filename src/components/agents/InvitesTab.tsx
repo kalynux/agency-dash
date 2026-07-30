@@ -1,3 +1,4 @@
+import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Mail, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,8 +55,7 @@ export function InvitesTab() {
 
   const sorted = [...invites].sort((a, b) => (a.status === b.status ? 0 : a.status === 'pending' ? -1 : 1));
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (dateStr: string) => fmtDate(dateStr);
 
   return (
     <div className="space-y-6">

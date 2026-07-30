@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/store/notifications.store';
@@ -91,7 +92,7 @@ export function Header() {
   return (
     <>
       <header className="h-16 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-        <div className="h-full px-6 flex items-center justify-between">
+        <div className="h-full mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Left - search */}
           <div className="flex items-center gap-4">
             <Button
@@ -142,7 +143,7 @@ export function Header() {
                 <Button variant="outline" size="icon" className="h-9 w-9 relative">
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -end-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -179,7 +180,7 @@ export function Header() {
                         <span className={`w-2 h-2 rounded-full ${notificationVisual(notification.type).dot}`} />
                         <span className="font-medium text-sm flex-1">{notification.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(notification.createdAt).toLocaleDateString()}
+                          {formatDate(notification.createdAt)}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 pl-4">

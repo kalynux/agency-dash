@@ -1,3 +1,4 @@
+import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, Banknote, Clock, Loader2, Mail, MapPin, Phone, XCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -19,13 +20,7 @@ import { cn } from '@/lib/utils';
 import type { ShipmentActionableStatus, ShipmentDetail } from '@/types/shipment.types';
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return fmtDateTime(iso);
 }
 
 export interface ShipmentDetailSheetProps {
@@ -183,7 +178,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-amber-900">
-                    {detail.cod.expectedAmount.toLocaleString()} {detail.cod.currency}
+                    {formatCurrency(detail.cod.expectedAmount, detail.cod.currency)}
                   </p>
                   <p className="text-xs text-amber-700 capitalize">
                     {detail.cod.status}

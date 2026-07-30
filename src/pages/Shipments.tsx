@@ -1,3 +1,4 @@
+import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Navigation, Package, RefreshCw, Search, Store } from 'lucide-react';
@@ -14,6 +15,7 @@ import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
 import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
+import { describeShipmentPlace } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
 
 const STATUS_FILTERS: { value: ShipmentStatus | 'all'; label: string }[] = [
@@ -31,6 +33,10 @@ const STATUS_FILTERS: { value: ShipmentStatus | 'all'; label: string }[] = [
 
 const PAGE_LIMIT = 20;
 
+/** The backend ignores anything shorter, so we don't send it either. */
+const MIN_SEARCH_CHARS = 2;
+const SEARCH_DEBOUNCE_MS = 350;
+
 function initials(name: string): string {
   return name
     .split(/\s+/)
@@ -42,7 +48,7 @@ function initials(name: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return fmtDate(iso);
 }
 
 export function Shipments() {
@@ -53,6 +59,10 @@ export function Shipments() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Debounced, server-side. Search runs across every page of the agency's
+  // shipments (customer name/phone, product titles, order #, tracking #), so it
+  // is a query parameter rather than a filter over the rows already loaded.
+  const [appliedQuery, setAppliedQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,6 +74,7 @@ export function Shipments() {
     try {
       const { data, meta: m } = await shipmentsService.list({
         status: statusFilter === 'all' ? undefined : statusFilter,
+        q: appliedQuery || undefined,
         page,
         limit: PAGE_LIMIT,
       });
@@ -74,26 +85,29 @@ export function Shipments() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, page]);
+  }, [statusFilter, appliedQuery, page]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // Debounce typing into the query the API actually runs, and go back to page 1
+  // whenever the search changes — page 3 of the old result set means nothing.
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    const next = trimmed.length >= MIN_SEARCH_CHARS ? trimmed : '';
+    if (next === appliedQuery) return;
+    const timer = setTimeout(() => {
+      setAppliedQuery(next);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery, appliedQuery]);
+
   const handleStatusFilterChange = (value: ShipmentStatus | 'all') => {
     setStatusFilter(value);
     setPage(1);
   };
-
-  const filtered = shipments.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.orderNumber.toLowerCase().includes(q) ||
-      s.customer.name.toLowerCase().includes(q) ||
-      s.vendor.businessName.toLowerCase().includes(q)
-    );
-  });
 
   const openDetail = (id: string) => {
     setSelectedId(id);
@@ -101,6 +115,17 @@ export function Shipments() {
   };
 
   const agentNameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? 'Assigned';
+
+  /**
+   * "Douala → Yaoundé" from the row's own pickup/drop-off. Both are optional on
+   * the payload, so a row that carries neither simply shows no route line.
+   */
+  const routeLabel = (shipment: ShipmentListItem): string | null => {
+    const from = describeShipmentPlace(shipment.pickup);
+    const to = describeShipmentPlace(shipment.deliveryAddress);
+    if (!from && !to) return null;
+    return `${from ?? '—'} → ${to ?? '—'}`;
+  };
 
   const handleChanged = () => {
     load();
@@ -154,7 +179,7 @@ export function Shipments() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page by order #, customer, or vendor…"
+                placeholder="Search by order #, customer, product, or tracking #…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -173,6 +198,11 @@ export function Shipments() {
               </SelectContent>
             </Select>
           </div>
+          {searchQuery.trim().length === 1 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Keep typing — search needs at least {MIN_SEARCH_CHARS} characters.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -192,12 +222,12 @@ export function Shipments() {
                 Retry
               </Button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : shipments.length === 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center gap-3">
                 <Package className="w-12 h-12 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  {shipments.length === 0 ? 'No shipments in this category yet' : 'No shipments match your search'}
+                  {appliedQuery ? 'No shipments match your search' : 'No shipments in this category yet'}
                 </p>
                 {searchQuery && (
                   <Button variant="outline" onClick={() => setSearchQuery('')}>
@@ -223,7 +253,7 @@ export function Shipments() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((shipment) => (
+                    {shipments.map((shipment) => (
                       <tr
                         key={shipment.id}
                         className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
@@ -234,18 +264,23 @@ export function Shipments() {
                           <div className="text-sm text-muted-foreground">
                             {shipment.itemCount} item{shipment.itemCount === 1 ? '' : 's'}
                           </div>
+                          {routeLabel(shipment) && (
+                            <div className="mt-0.5 max-w-[16rem] truncate text-xs text-muted-foreground" title={routeLabel(shipment) ?? undefined}>
+                              {routeLabel(shipment)}
+                            </div>
+                          )}
                         </td>
                         <td className="p-4">
-                          <div className="text-sm">{shipment.vendor.businessName}</div>
+                          <div className="max-w-[14rem] truncate text-sm" title={shipment.vendor.businessName}>{shipment.vendor.businessName}</div>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
                               {initials(shipment.customer.name)}
                             </div>
-                            <div>
-                              <div className="font-medium">{shipment.customer.name}</div>
-                              <div className="text-sm text-muted-foreground">{shipment.customer.phone}</div>
+                            <div className="min-w-0">
+                              <div className="truncate font-medium" title={shipment.customer.name}>{shipment.customer.name}</div>
+                              <div className="truncate text-sm text-muted-foreground" title={shipment.customer.phone}>{shipment.customer.phone}</div>
                             </div>
                           </div>
                         </td>
@@ -273,7 +308,7 @@ export function Shipments() {
 
               {/* Mobile: cards */}
               <div className="md:hidden divide-y">
-                {filtered.map((shipment) => (
+                {shipments.map((shipment) => (
                   <div
                     key={shipment.id}
                     className="p-4 hover:bg-muted/50 active:bg-muted/50 transition-colors cursor-pointer"
@@ -315,6 +350,10 @@ export function Shipments() {
                         <span className="flex-shrink-0 text-muted-foreground">Unassigned</span>
                       )}
                     </div>
+
+                    {routeLabel(shipment) && (
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{routeLabel(shipment)}</p>
+                    )}
                   </div>
                 ))}
               </div>

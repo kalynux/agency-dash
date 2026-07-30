@@ -38,9 +38,21 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   DELIVERY_POLICY_DOCUMENT_MISSING: 'No document was provided.',
   DELIVERY_POLICY_DOCUMENT_TYPE_INVALID: 'Only PDF files are accepted.',
 
-  // ── Agency magazin (business identity) ──────────────────────────────────
+  // ── Agency magazin (business identity + logistics footprint) ────────────
   MAGAZIN_CONFLICT: 'Your business details were updated elsewhere. Refreshed — please re-apply your changes.',
   MAGAZIN_NOT_FOUND: 'Your business profile could not be found.',
+  AGENCY_COVERAGE_AREA_INVALID:
+    'One of the selected regions is not part of your operating country.',
+
+  // ── Geospatial addresses ────────────────────────────────────────────────
+  // Coverage areas and HQ addresses are anchored to the agency's set-once
+  // `country`; every new or edited address must carry a selected search result.
+  ADDRESS_GEO_REQUIRED: 'Pick an address from the search results so it can be placed on the map.',
+  ADDRESS_COUNTRY_MISMATCH: 'That address is outside your agency’s operating country.',
+  PROFILE_COUNTRY_IMMUTABLE: 'Your operating country was set during onboarding and cannot be changed.',
+  GEO_PROVIDER_UNAVAILABLE: 'Address search is temporarily unavailable. Please try again.',
+  GEO_SEARCH_FAILED: 'Address search failed. Please try again.',
+  GEO_PROVIDER_NOT_CONFIGURED: 'Address search is not configured. Please contact support.',
 
   // ── Vendor connections ──────────────────────────────────────────────────
   CONNECTION_NOT_FOUND: 'This connection could not be found.',
@@ -118,6 +130,12 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   CONTRACT_NOT_FOUND: 'That agent contract could not be found.',
   CONTRACT_STATUS_REQUEST_ALREADY_PENDING:
     'A removal request is already pending for this agent.',
+  CONTRACT_STATUS_REQUEST_NOT_FOUND: 'That request no longer exists.',
+  CONTRACT_STATUS_REQUEST_NOT_PENDING: 'That request has already been resolved.',
+  CONTRACT_STATUS_REQUEST_NOT_YOURS:
+    'You raised this request — the agent has to clear it from their side.',
+  CONTRACT_FEE_SPLIT_INVALID:
+    'That fee split has no value for its model — set a share percentage for a percentage split, or a flat fee for a flat one.',
   CONTRACT_INVALID_TRANSITION: 'That contract change no longer applies.',
   CONTRACT_HAS_OUTSTANDING_COD:
     'This agent still holds cash for your agency — record their deposits first.',
@@ -150,6 +168,11 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   // ── Uploads / files ─────────────────────────────────────────────────────
   UPLOAD_POLICY_VIOLATION: 'One or more files were rejected. See the details below.',
   CATALOG_FILE_TOO_LARGE: 'That file is too large.',
+  FILE_TOO_LARGE: 'That file is too large.',
+  CATALOG_FILE_STILL_REFERENCED: 'This file is still in use — detach it before deleting.',
+  // NOTE: per-file upload rejections (QUOTA_EXCEEDED, MIME_NOT_ALLOWED, …) arrive
+  // as entries in UPLOAD_POLICY_VIOLATION.details.violations[], not as top-level
+  // codes — they are mapped in lib/uploadErrors.ts, not here.
 
   // ── Notifications / channels ────────────────────────────────────────────
   DELIVERY_AGENCY_NOTIFICATION_NOT_FOUND: 'This notification could not be found.',

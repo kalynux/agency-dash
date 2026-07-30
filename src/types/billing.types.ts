@@ -39,9 +39,15 @@ export interface PricingPlan {
   max_unterminated_shipments: number | null;
   /** Always `true` today; reserved for a future free-tier restriction. Read it, don't gate on it. */
   live_tracking_enabled: boolean;
+  /**
+   * Media storage cap in bytes (api-doc/agency/storage.md). `null` = uncapped.
+   * NB: api-doc/agency/billing.md still describes this as vendor-only, but the
+   * storage docs give agency plans real caps — so treat it as possibly-set and
+   * always read *live* usage/limit from `GET /files/storage`, never from here.
+   */
+  max_storage_bytes?: number | null;
   // Vendor-only fields — always `null` for agency plans. Kept optional for tolerance.
   max_active_products?: number | null;
-  max_storage_bytes?: number | null;
   commission_percent?: number | null;
   is_active?: boolean;
   sort_order?: number;

@@ -1,3 +1,4 @@
+import { formatCurrency, formatDate } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Info, Loader2, Lock, RefreshCw, Send, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ function BalanceStat({
     <div className="rounded-lg border p-4 flex items-start justify-between gap-3">
       <div>
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold mt-1">{value.toLocaleString()} {currency}</p>
+        <p className="text-2xl font-bold mt-1">{formatCurrency(value, currency)}</p>
         <p className="text-xs text-muted-foreground mt-1.5">{hint}</p>
       </div>
       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -62,7 +63,7 @@ export function EarningsPayoutCard() {
       : available <= 0
         ? 'No available balance to withdraw yet.'
         : available < MIN_PAYOUT
-          ? `Minimum payout is ${MIN_PAYOUT.toLocaleString()} ${currency}.`
+          ? `Minimum payout is ${formatCurrency(MIN_PAYOUT, currency)}.`
           : null;
 
   return (
@@ -121,6 +122,19 @@ export function EarningsPayoutCard() {
               />
             </div>
 
+            {/* When the money is earned, and what has already come out of it. */}
+            <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
+              <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                You earn a delivery fee when the agent delivers the shipment — not when the customer
+                pays — and one entry is created per shipment. What lands here is the fee{' '}
+                <span className="font-medium">minus the delivering agent's contracted share</span>,
+                which the platform pays them directly. It becomes available once the whole order
+                completes and the hold window elapses (for COD, also once the cash is remitted and
+                confirmed). A shipment that comes back earns your return-to-origin fee instead.
+              </p>
+            </div>
+
             {latestPayout && (
               <div className="rounded-lg border p-4 flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -132,10 +146,10 @@ export function EarningsPayoutCard() {
                   )}
                   <div className="text-sm">
                     <span className="font-medium">
-                      {latestPayout.amount.toLocaleString()} {latestPayout.currency}
+                      {formatCurrency(latestPayout.amount, latestPayout.currency)}
                     </span>
                     <span className="text-muted-foreground">
-                      {' '}· requested {new Date(latestPayout.createdAt).toLocaleDateString()}
+                      {' '}· requested {formatDate(latestPayout.createdAt)}
                     </span>
                     {latestPayout.status === 'rejected' && latestPayout.rejectionReason && (
                       <span className="text-destructive"> — {latestPayout.rejectionReason}</span>
@@ -160,14 +174,14 @@ export function EarningsPayoutCard() {
                   ? 'Requesting…'
                   : disabledReason
                     ? 'Request Withdrawal'
-                    : `Withdraw ${available.toLocaleString()} ${currency}`}
+                    : `Withdraw ${formatCurrency(available, currency)}`}
               </Button>
             </div>
 
             <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
               <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
-                If your available balance reaches {AUTO_PAYOUT_THRESHOLD.toLocaleString()} {currency}, we automatically
+                If your available balance reaches {formatCurrency(AUTO_PAYOUT_THRESHOLD, currency)}, we automatically
                 request a payout on your behalf so funds don't sit unclaimed. Make sure a payout method is saved —
                 otherwise the automatic request can't be created.
               </p>

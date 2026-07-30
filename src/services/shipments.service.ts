@@ -62,17 +62,23 @@ export const shipmentsService = {
     return api.patch<AssignmentResponse>(`/agency/shipments/${id}/assign-agent`, { agentId });
   },
 
-  /** POST /agency/shipments/:id/auto-assign — rank eligible agents and offer the top one now. */
+  /**
+   * POST /agency/shipments/:id/auto-assign — start an auto-assignment broadcast
+   * now, even if the standing toggle is off. The nearest eligible agent is
+   * offered immediately, then the next-nearest each timeout window while earlier
+   * offers still stand; the first to accept wins. Two rounds, then the agency is
+   * notified the shipment went unfilled.
+   */
   autoAssign(id: string): Promise<AssignmentResponse> {
     return api.post<AssignmentResponse>(`/agency/shipments/${id}/auto-assign`);
   },
 
-  /** GET /agency/shipments/:id/assignment-candidates — preview the ranked agent pool without offering. */
+  /** GET /agency/shipments/:id/assignment-candidates — preview the pool, nearest first, without offering. */
   getAssignmentCandidates(id: string): Promise<AssignmentCandidatesResponse> {
     return api.get<AssignmentCandidatesResponse>(`/agency/shipments/${id}/assignment-candidates`);
   },
 
-  /** POST /agency/shipments/:id/offer/cancel — withdraw the shipment's live offer. */
+  /** POST /agency/shipments/:id/offer/cancel — withdraw every live offer, returning the shipment to the queue. */
   cancelOffer(id: string): Promise<OfferCancelResponse> {
     return api.post<OfferCancelResponse>(`/agency/shipments/${id}/offer/cancel`);
   },

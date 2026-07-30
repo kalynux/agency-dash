@@ -1,17 +1,15 @@
+import { formatDate as fmtDate } from '@/lib/format';
 import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ComponentProps,
   type ReactNode,
 } from 'react';
 import {
-  Loader2,
   X,
   Store as StoreIcon,
-  Camera,
   Mail,
   Phone,
   MessageCircle,
@@ -25,7 +23,6 @@ import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { useResource } from '@/hooks/useResource';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import { magazinService } from '@/services/magazin.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ApiError } from '@/types/api';
@@ -33,6 +30,7 @@ import type { AgencyMagazin, MagazinUpdatePayload } from '@/types/magazin.types'
 
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
+import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -152,9 +150,6 @@ export function MagazinSettings() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { isUploading, upload } = useFileUpload();
-  const logoInputRef = useRef<HTMLInputElement>(null);
-
   // (Re)seed the form whenever the underlying magazin changes (load / save).
   useEffect(() => {
     if (magazin) {
@@ -173,18 +168,6 @@ export function MagazinSettings() {
     if (!magazin || !form) return false;
     return Object.keys(buildPayload(form, magazin)).length > 1; // more than just `version`
   }, [magazin, form]);
-
-  const handleLogoFile = useCallback(
-    async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
-      const uploaded = await upload([files[0]]);
-      if (logoInputRef.current) logoInputRef.current.value = '';
-      if (uploaded && uploaded[0]) {
-        set('logo', { id: uploaded[0].id, url: uploaded[0].url });
-      }
-    },
-    [upload, set],
-  );
 
   const handleDiscard = useCallback(() => {
     if (magazin) {
@@ -234,62 +217,37 @@ export function MagazinSettings() {
       {/* ─── Identity hero ────────────────────────────────────────────────── */}
       <Card>
         <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
+          {/* The logo box itself is the click target — it opens the media library. */}
           <div className="relative shrink-0">
-            {form.logo ? (
-              <>
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border bg-muted shadow-sm">
-                  <img
-                    src={form.logo.url}
-                    alt="Business logo"
-                    crossOrigin="use-credentials"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <button
-                  type="button"
-                  aria-label="Change logo"
-                  disabled={isUploading}
-                  onClick={() => logoInputRef.current?.click()}
-                  className="absolute -bottom-1.5 -right-1.5 rounded-full border border-border bg-background p-1.5 text-foreground shadow-sm transition-colors hover:bg-accent disabled:opacity-60"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Camera className="w-3.5 h-3.5" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Remove logo"
-                  onClick={() => set('logo', null)}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </>
-            ) : (
-              // No logo yet — the whole box is a click target to add one.
+            <MediaPickerTrigger
+              label={form.logo ? 'Change logo' : 'Add logo'}
+              acceptedTypes={['image']}
+              onSelect={(media) => set('logo', media)}
+              className="h-20 w-20 rounded-xl border bg-muted shadow-sm"
+            >
+              {form.logo ? (
+                <img
+                  src={form.logo.url}
+                  alt="Business logo"
+                  crossOrigin="use-credentials"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center">
+                  <StoreIcon className="w-8 h-8 text-muted-foreground" />
+                </span>
+              )}
+            </MediaPickerTrigger>
+            {form.logo && (
               <button
                 type="button"
-                aria-label="Add logo"
-                disabled={isUploading}
-                onClick={() => logoInputRef.current?.click()}
-                className="group flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border bg-muted shadow-sm transition-colors hover:bg-accent disabled:opacity-60"
+                aria-label="Remove logo"
+                onClick={() => set('logo', null)}
+                className="absolute -right-1.5 -top-1.5 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
               >
-                {isUploading ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                ) : (
-                  <StoreIcon className="w-8 h-8 text-muted-foreground transition-colors group-hover:text-foreground" />
-                )}
+                <X className="w-3 h-3" />
               </button>
             )}
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleLogoFile(e.target.files)}
-            />
           </div>
 
           <div className="min-w-0 flex-1 space-y-1">
@@ -297,6 +255,7 @@ export function MagazinSettings() {
             <p className="text-sm text-muted-foreground">
               Your agency's business identity — the name, logo and contacts vendors and customers see.
             </p>
+            <p className="text-xs text-muted-foreground">Click the logo to pick one from your media library.</p>
           </div>
         </CardContent>
       </Card>
@@ -509,7 +468,5 @@ function DetailRow({
 }
 
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return fmtDate(iso);
 }

@@ -2,66 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ─── Wi Mall · Cash Emerald ──────────────────────────────────────────────────
+ * Brand identity for the agency dashboard. Emerald reads as money, go-signal and
+ * momentum; a warm off-white keeps dense operations legible; gold marks value and
+ * attention. Everything downstream (pages, primitives, shell) inherits from here.
+ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 150 30% 99%;
+    --foreground: 156 40% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 156 40% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --popover-foreground: 156 40% 8%;
+
+    /* Emerald — deep enough that white text and text-primary both clear AA. */
+    --primary: 158 84% 26%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 24% 95%;
+    --secondary-foreground: 156 40% 12%;
+    --muted: 150 20% 96%;
+    --muted-foreground: 155 12% 38%;
+    --accent: 152 44% 93%;
+    --accent-foreground: 158 70% 18%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 84% 26%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 46%;
+    --gold: 42 90% 45%;
+
+    --border: 150 16% 89%;
+    --input: 150 16% 86%;
+    --ring: 158 84% 26%;
+    --radius: 0.75rem;
+
+    /* Custom Sidebar surface — a deep emerald ink that anchors the brand on every
+       page. Rows and active states are expressed against this dark ground. */
+    --sidebar-background: 158 42% 8%;
+    --sidebar-foreground: 150 16% 72%;
+    --sidebar-primary: 152 70% 46%;
+    --sidebar-primary-foreground: 158 45% 6%;
+    --sidebar-accent: 156 34% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 156 28% 16%;
+    --sidebar-ring: 152 70% 46%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 156 32% 6%;
+    --foreground: 150 14% 96%;
+    --card: 156 26% 9%;
+    --card-foreground: 150 14% 96%;
+    --popover: 156 26% 9%;
+    --popover-foreground: 150 14% 96%;
+
+    --primary: 152 66% 44%;
+    --primary-foreground: 158 45% 6%;
+
+    --secondary: 156 16% 16%;
+    --secondary-foreground: 150 14% 92%;
+    --muted: 156 14% 15%;
+    --muted-foreground: 150 10% 63%;
+    --accent: 156 24% 17%;
+    --accent-foreground: 150 22% 92%;
+
+    --destructive: 0 62% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 66% 44%;
+    --success-foreground: 158 45% 6%;
+    --warning: 38 92% 55%;
+    --gold: 42 90% 58%;
+
+    --border: 156 16% 17%;
+    --input: 156 16% 19%;
+    --ring: 152 66% 44%;
+
+    --sidebar-background: 158 44% 6%;
+    --sidebar-foreground: 150 14% 70%;
+    --sidebar-primary: 152 70% 48%;
+    --sidebar-primary-foreground: 158 45% 5%;
+    --sidebar-accent: 156 30% 13%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 156 24% 14%;
+    --sidebar-ring: 152 70% 48%;
   }
 }
 
@@ -70,14 +98,38 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  /* Page-level headings speak in the display voice — one confident, brand-owned
+     face across every route. Card/section titles stay in the body face. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.22);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  /* Money and measured figures — tabular so columns of numbers line up. */
+  .font-numeric {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,12 +137,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
+  background: hsl(var(--primary) / 0.22);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--primary) / 0.4);
 }
 
 /* Smooth transitions */
@@ -128,12 +180,28 @@ textarea:focus-visible {
   }
 }
 
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
 
 .animate-slide-in {
   animation: slideIn 0.4s ease-out;
+}
+
+/* Staggered rise for grids/lists — one authored entrance, not per-element noise. */
+.animate-rise {
+  animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ─── Live Tracking map (Leaflet) ─────────────────────────────────────────── */
@@ -166,7 +234,7 @@ textarea:focus-visible {
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  background: #2563eb;
+  background: #0e9f6e;
   border: 2px solid #fff;
   border-radius: 9999px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
@@ -177,7 +245,7 @@ textarea:focus-visible {
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  background: #2563eb;
+  background: #0e9f6e;
   border-radius: 9999px;
   opacity: 0.35;
   animation: agentPulse 2s ease-out infinite;
@@ -210,7 +278,7 @@ textarea:focus-visible {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-bottom: 8px solid #2563eb;
+  border-bottom: 8px solid #0e9f6e;
 }
 .agent-marker__label {
   left: 50%;
@@ -227,29 +295,29 @@ textarea:focus-visible {
   border: 1px solid hsl(var(--border));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
-/* Selected / focused agent — amber accent */
+/* Selected / focused agent — gold accent */
 .agent-marker-icon--selected .agent-marker__dot {
-  background: #f59e0b;
+  background: #eaa916;
   transform: scale(1.15);
 }
 .agent-marker-icon--selected .agent-marker__pulse {
-  background: #f59e0b;
+  background: #eaa916;
 }
 .agent-marker-icon--selected .agent-marker__arrow {
-  border-bottom-color: #f59e0b;
+  border-bottom-color: #eaa916;
 }
 .agent-marker-icon--selected .agent-marker__label {
-  background: #f59e0b;
+  background: #eaa916;
   color: #1f2937;
-  border-color: #f59e0b;
+  border-color: #eaa916;
 }
 
 /* Popup themed to match the app */
 .agent-popup-wrap .leaflet-popup-content-wrap {
-  border-radius: 10px;
+  border-radius: 12px;
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 30px rgba(6, 36, 26, 0.22);
 }
 .agent-popup-wrap .leaflet-popup-content {
   margin: 10px 12px;
@@ -280,8 +348,8 @@ textarea:focus-visible {
   display: inline-block;
   margin-top: 6px;
   font-size: 12px;
-  font-weight: 500;
-  color: #2563eb;
+  font-weight: 600;
+  color: hsl(var(--primary));
 }
 
 /* Dark-tiles fallback for a provider without a dedicated dark basemap */

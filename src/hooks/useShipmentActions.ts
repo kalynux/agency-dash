@@ -49,15 +49,19 @@ export function useShipmentActions() {
   const autoAssign = useCallback(
     (id: string) =>
       run(`auto:${id}`, async () => (await shipmentsService.autoAssign(id)).data, {
-        success: 'Offered to the best-matched agent.',
+        // A broadcast, not a single offer — the nearest agent is offered now and
+        // the rest follow in turn until one accepts.
+        success: 'Searching — offered to the nearest agent first.',
       }),
     [run],
   );
 
   const cancelOffer = useCallback(
     (id: string) =>
+      // Withdraws every live offer on the shipment, not just the newest — an
+      // auto-assign broadcast can have several standing at once.
       run(`cancel-offer:${id}`, async () => (await shipmentsService.cancelOffer(id)).data, {
-        success: 'Offer withdrawn.',
+        success: 'Offers withdrawn — the shipment is back in your queue.',
       }),
     [run],
   );

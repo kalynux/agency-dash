@@ -12,7 +12,9 @@ import {
   initiateTopup,
   verifyTopup,
 } from '@/services/billing.service';
+import { fetchStorageUsage } from '@/services/files.service';
 import { ApiError } from '@/types/api';
+import type { StorageUsage } from '@/types/file.types';
 import type {
   CurrentPlanData,
   PricingPlan,
@@ -24,6 +26,7 @@ import type {
 } from '@/types/billing.types';
 import { CurrentPlanCard } from './CurrentPlanCard';
 import { CreditWalletCard } from './CreditWalletCard';
+import { StorageUsageCard } from './StorageUsageCard';
 import { PlansCatalog } from './PlansCatalog';
 import { BillingSettingsCard } from './BillingSettingsCard';
 import { SavedPaymentMethodsCard } from './SavedPaymentMethodsCard';
@@ -58,6 +61,7 @@ export function BillingTab() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [packs, setPacks] = useState<CreditPack[]>([]);
+  const [storage, setStorage] = useState<StorageUsage | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,16 +75,19 @@ export function BillingTab() {
     setLoading(true);
     setError(null);
     try {
-      const [planData, planList, bal, packList] = await Promise.all([
+      const [planData, planList, bal, packList, storageUsage] = await Promise.all([
         fetchCurrentPlan(),
         fetchPlans(),
         fetchCreditBalance(),
         fetchCreditPacks(),
+        // Storage is supplementary — a hiccup here must not blank the whole page.
+        fetchStorageUsage().catch(() => null),
       ]);
       setCurrent(planData);
       setPlans(planList);
       setBalance(bal);
       setPacks(packList);
+      setStorage(storageUsage);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load billing information.');
     } finally {
@@ -202,6 +209,13 @@ export function BillingTab() {
           <CreditWalletCard balance={balance} packs={packs} onBuyPack={openPackPurchase} />
         )}
       </div>
+
+      {storage && (
+        <StorageUsageCard
+          storage={storage}
+          onViewPlans={() => plansRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        />
+      )}
 
       <section ref={plansRef} className="space-y-3">
         <div>

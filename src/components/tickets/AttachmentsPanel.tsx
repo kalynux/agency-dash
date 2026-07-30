@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Upload, FileText, ImageIcon, Download, Globe, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useFileUpload } from '@/hooks/useFileUpload';
+import { MediaPicker } from '@/components/features/MediaPicker';
 import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { FollowerSelect } from './FollowerSelect';
 import { MAX_ATTACHMENTS, formatFileSize, roleLabel } from './ticket.constants';
+import type { ApiFile } from '@/types/file.types';
 import type { TicketAttachment, TicketActor } from '@/types/ticket.types';
 
 type VisibilityInput = 'PUBLIC' | 'PRIVATE';
@@ -20,8 +21,7 @@ export function AttachmentsPanel({
   const [busy, setBusy] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityInput>('PUBLIC');
   const [viewerIds, setViewerIds] = useState<string[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { isUploading, upload } = useFileUpload();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,15 +41,13 @@ export function AttachmentsPanel({
   const remaining = MAX_ATTACHMENTS - attachments.length;
   const atLimit = remaining <= 0;
 
-  async function handleFiles(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0) return;
-    const toUpload = Array.from(fileList).slice(0, remaining);
-    if (inputRef.current) inputRef.current.value = '';
-    const uploaded = await upload(toUpload);
-    if (!uploaded || uploaded.length === 0) return;
+  /** Files come from the media library already uploaded — we only link them here. */
+  async function attachPicked(picked: ApiFile[]) {
+    const toAttach = picked.slice(0, remaining);
+    if (toAttach.length === 0) return;
     setBusy(true);
     try {
-      for (const f of uploaded) {
+      for (const f of toAttach) {
         const res = await ticketsService.addAttachment(
           ticketId,
           f.id,
@@ -58,7 +56,7 @@ export function AttachmentsPanel({
         );
         setAttachments((prev) => [...prev, res.data]);
       }
-      toast.success(`Attached ${uploaded.length} file${uploaded.length !== 1 ? 's' : ''}`);
+      toast.success(`Attached ${toAttach.length} file${toAttach.length !== 1 ? 's' : ''}`);
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -66,7 +64,7 @@ export function AttachmentsPanel({
     }
   }
 
-  const uploading = isUploading || busy;
+  const uploading = busy;
 
   return (
     <section className="space-y-3">
@@ -147,25 +145,26 @@ export function AttachmentsPanel({
             )}
           </div>
 
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
           <button
             type="button"
             disabled={uploading}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => setPickerOpen(true)}
             className={cn(
               'flex w-full items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm font-medium transition-colors',
               'text-muted-foreground hover:border-primary/50 hover:text-foreground',
             )}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? 'Uploading…' : 'Upload attachment'}
+            {uploading ? 'Attaching…' : 'Add attachment'}
           </button>
+
+          <MediaPicker
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            multiple
+            maxFiles={remaining}
+            onSelect={attachPicked}
+          />
         </div>
       )}
 

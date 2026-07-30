@@ -1,3 +1,4 @@
+import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ const STATUS_FILTERS: { value: CodRemittanceStatus | 'all'; label: string }[] = 
 ];
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return fmtDateTime(iso);
 }
 
 export function RemittancesTab() {
@@ -133,8 +134,8 @@ export function RemittancesTab() {
                 ) : (
                   remittances.map((r) => (
                     <tr key={r.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{r.reference}</td>
-                      <td className="p-4">{r.amount.toLocaleString()} {r.currency}</td>
+                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={r.reference}>{r.reference}</span></td>
+                      <td className="p-4">{formatCurrency(r.amount, r.currency)}</td>
                       <td className="p-4"><CodRemittanceStatusBadge status={r.status} /></td>
                       <td className="p-4 text-sm text-muted-foreground">{formatDateTime(r.declaredAt)}</td>
                       <td className="p-4 text-sm text-muted-foreground">{r.resolvedAt ? formatDateTime(r.resolvedAt) : '—'}</td>

@@ -29,7 +29,7 @@ import {
   responsiveSheetProps,
   humanizeEnum,
 } from './ticket.constants';
-import type { UploadedFile } from '@/types/file.types';
+import type { ApiFile } from '@/types/file.types';
 import type { TicketType, TicketImportance, TicketEntityType } from '@/types/ticket.types';
 
 const MANUAL = '__manual__';
@@ -54,7 +54,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
   const [trackingOptions, setTrackingOptions] = useState<OrderTrackingOption[]>([]);
   const [trackingManual, setTrackingManual] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
-  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+  const [attachments, setAttachments] = useState<ApiFile[]>([]);
 
   const reset = () => {
     setSubject('');

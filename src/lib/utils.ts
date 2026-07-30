@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatCurrency, formatDate as formatDateBase } from "@/lib/format"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -13,26 +14,34 @@ export function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-/**
- * Format a whole-currency-unit amount (billing/plan/credit prices are whole XAF —
- * never in minor units). Falls back to a plain number + code for unknown currencies.
- */
-export function formatMoney(amount: number, currency = 'XAF'): string {
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${new Intl.NumberFormat().format(amount)} ${currency}`;
-  }
+// ─── Storage usage helpers (api-doc/agency/storage.md) ───────────────────────
+
+/** Percentage of the plan limit used, clamped 0–100. `null` limit (no cap) → 0. */
+export function storagePercent(usedBytes: number, limitBytes: number | null): number {
+  if (!limitBytes || limitBytes <= 0) return 0;
+  return Math.min(100, Math.round((usedBytes / limitBytes) * 100));
 }
 
-/** Absolute date, e.g. "Jun 1, 2026". */
+/**
+ * Tailwind color for the usage-bar indicator at the storage-alert bands
+ * (storage.md §4): ≥90% danger, ≥80% warning, else normal.
+ */
+export function storageBarColor(percent: number): string {
+  if (percent >= 90) return 'bg-destructive';
+  if (percent >= 80) return 'bg-amber-500';
+  return 'bg-primary';
+}
+
+/**
+ * Whole-currency-unit amount (billing/plan/credit prices are whole XAF — never in
+ * minor units). Delegates to the locale-aware {@link formatCurrency} so grouping,
+ * separator and currency placement follow the active language.
+ */
+export function formatMoney(amount: number, currency = 'XAF'): string {
+  return formatCurrency(amount, currency);
+}
+
+/** Absolute date, e.g. "Jun 1, 2026". Null/invalid → em dash. */
 export function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return formatDateBase(iso);
 }

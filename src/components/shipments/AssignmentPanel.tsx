@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Sparkles, ListOrdered, UserCheck, XCircle, Repeat, Clock, Navigation } from 'lucide-react';
+import { Loader2, Sparkles, ListOrdered, UserCheck, XCircle, Repeat, Clock, Navigation, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,6 +31,11 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   // no live offer, so this lets us show "offer pending / cancel" right after
   // offering, until the shipment reloads with an accepted agent.
   const [pendingOffer, setPendingOffer] = useState<{ offer: ShipmentOffer; agentId: string | null } | null>(null);
+  // An auto-assign is a BROADCAST, not one offer: the nearest agent is offered
+  // now, the next-nearest every timeout window after that, while earlier offers
+  // still stand — first to accept wins. So it reads as "searching", not
+  // "offer pending to X", and there is no single agent to name.
+  const isBroadcasting = !!pendingOffer && pendingOffer.agentId === null;
 
   const [candidates, setCandidates] = useState<AssignmentCandidate[] | null>(null);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
@@ -130,31 +135,46 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
         </div>
       )}
 
-      {/* Pending offer (best-effort) */}
+      {/* Live offer / broadcast (best-effort) */}
       {pendingOffer && !hasBoundAgent && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm text-amber-900">
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span>
-              Offer pending{pendingOffer.agentId ? ` to ${nameFor(pendingOffer.agentId)}` : ''} — awaiting
-              acceptance.
-            </span>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-amber-900">
+              {isBroadcasting ? (
+                <Radar className="w-4 h-4 flex-shrink-0" />
+              ) : (
+                <Clock className="w-4 h-4 flex-shrink-0" />
+              )}
+              <span>
+                {isBroadcasting
+                  ? 'Searching for an agent…'
+                  : `Offer pending to ${nameFor(pendingOffer.agentId)} — awaiting acceptance.`}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0 gap-1"
+              disabled={pendingKey === `cancel-offer:${detail.id}`}
+              onClick={handleCancelOffer}
+            >
+              {pendingKey === `cancel-offer:${detail.id}` ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <XCircle className="w-3.5 h-3.5" /> {isBroadcasting ? 'Stop' : 'Cancel'}
+                </>
+              )}
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-shrink-0 gap-1"
-            disabled={pendingKey === `cancel-offer:${detail.id}`}
-            onClick={handleCancelOffer}
-          >
-            {pendingKey === `cancel-offer:${detail.id}` ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <>
-                <XCircle className="w-3.5 h-3.5" /> Cancel
-              </>
-            )}
-          </Button>
+          {isBroadcasting && (
+            <p className="text-xs text-amber-800">
+              Agents are being offered this shipment nearest-first, one every couple of minutes, with
+              earlier offers left standing — the first to accept gets it. If nobody accepts after two
+              rounds you'll be notified so you can assign manually. Stopping withdraws every live
+              offer.
+            </p>
+          )}
         </div>
       )}
 
@@ -205,7 +225,11 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               </PopoverTrigger>
               <PopoverContent align="end" className="w-72 p-0">
                 <div className="p-3 border-b flex items-center justify-between">
-                  <p className="text-sm font-medium">Ranked candidates</p>
+                  <div>
+                    <p className="text-sm font-medium">Candidates, nearest first</p>
+                    {/* Proximity is the sort; the weighted score is tie-break context. */}
+                    <p className="text-xs text-muted-foreground">The order auto-assign would walk.</p>
+                  </div>
                   <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={loadCandidates}>
                     Refresh
                   </Button>

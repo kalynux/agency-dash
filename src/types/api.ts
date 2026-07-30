@@ -1,3 +1,5 @@
+import type { GeoAddress, GeoPoint } from '@/types/geo.types';
+
 // ─── API User ────────────────────────────────────────────────────────────────
 
 export interface ApiUser {
@@ -38,21 +40,56 @@ export interface SupportContact {
   email?: string | null;
 }
 
-/** GeoJSON Point — coordinates are [longitude, latitude]. */
-export interface GeoPoint {
-  type: 'Point';
-  coordinates: [number, number];
-}
+// GeoJSON Point — coordinates are [longitude, latitude]. Canonical definition
+// lives in geo.types.ts; re-exported here for existing consumers.
+export type { GeoPoint } from '@/types/geo.types';
 
+/**
+ * An agency headquarters / pickup location as RETURNED by the API. Lives on the
+ * MAGAZIN, not the profile — see magazin.types.ts and api-doc/agency/magazin.md.
+ *
+ * `label`, `region` and `city` are all nullable on read: `label` is `null` on
+ * entries saved before labels existed, and `region`/`city` are `null` whenever
+ * the entry's geocode named neither (common for rural / landmark results). Fall
+ * back to "Primary Headquarters" / "Branch N" and `geo.formatted_address`.
+ */
 export interface HeadquartersAddress {
-  region: string;
-  city: string;
+  /** The agency's own name for this location, e.g. "Douala HQ". 1–50 chars. */
+  label: string | null;
+  /** Derived from `geo.components.region` on write. */
+  region: string | null;
+  /** Derived from `geo.components.city` on write. */
+  city: string | null;
   address_description: string;
   support_contact: SupportContact;
-  /** Required going forward — placeable on a map for auto-assignment distance. */
+  /** Derived from `geo` on write; kept for map/proximity use. */
   location?: GeoPoint;
+  /** The canonical geospatial address. Required on new/edited entries. */
+  geo?: GeoAddress | null;
   /** Assigned by the backend on response. */
   _id?: string;
+}
+
+/**
+ * An HQ / pickup location as SENT (onboarding step 1, magazin PATCH).
+ *
+ * `geo` is the whole placement: `location`, `region` and `city` are all derived
+ * from it server-side, so none of them are sent. Every NEW or EDITED entry must
+ * carry one, resolving inside the agency's `country`, else the write fails with
+ * `400 ADDRESS_GEO_REQUIRED` / `400 ADDRESS_COUNTRY_MISMATCH`. "Edited" means a
+ * changed `address_description` or a changed geocoded place — renaming a `label`
+ * is not a move, so legacy `geo`-less entries survive a re-save.
+ */
+export interface HeadquartersAddressInput {
+  /** Required on every entry written — the one field the map result can't supply. */
+  label: string;
+  address_description: string;
+  support_contact: SupportContact;
+  geo?: GeoAddress | null;
+  /** Fallback only, for a place whose geocode names no region. `geo` wins when it has one. */
+  region?: string | null;
+  /** Fallback only, for a place whose geocode names no city. `geo` wins when it has one. */
+  city?: string | null;
 }
 
 // ─── KYC Details ─────────────────────────────────────────────────────────────
@@ -148,9 +185,21 @@ export interface AgencyRoleEntity {
   phone: string | null;
   email_verified?: boolean;
   phone_verified?: boolean;
-  /** Region keys from locations.json, e.g. ["littoral", "centre"] */
-  coverage_areas: string[];
-  headquarters_addresses: HeadquartersAddress[];
+  /**
+   * The agency's operating country (ISO-2). Set once during onboarding step 1
+   * and immutable afterwards (`403 PROFILE_COUNTRY_IMMUTABLE`). Anchors both
+   * coverage areas and HQ address geocoding.
+   */
+  country?: string | null;
+  /**
+   * @deprecated The MAGAZIN is the source of truth for the agency's logistics
+   * footprint — read these from `GET /api/agency/magazin`, not from the session.
+   * Kept optional only because it is unspecified whether `/auth/me` still
+   * echoes them. Never seed a form from these.
+   */
+  coverage_areas?: string[];
+  /** @deprecated See `coverage_areas` above — read from the magazin instead. */
+  headquarters_addresses?: HeadquartersAddress[];
   /** Ordered array — index 0 is the preferred method */
   payout_details: PayoutDetails;
   kyc_details: AgencyKycDetails;
@@ -230,11 +279,23 @@ export interface OnboardingStatusResponse {
 
 // ─── Step Payloads ────────────────────────────────────────────────────────────
 
-/** PUT /api/agency/onboarding/logistics */
+/**
+ * PUT /api/agency/onboarding/logistics
+ *
+ * `country` lands on the profile; `coverage_areas` + `headquarters_addresses`
+ * are routed to the MAGAZIN server-side and validated against that country.
+ * Post-onboarding, edit them via `PATCH /api/agency/magazin` instead.
+ */
 export interface LogisticsPayload {
-  /** Region keys from locations.json, e.g. ["littoral", "centre"] */
+  /**
+   * ISO-2 operating country, auto-uppercased server-side. Correctable while
+   * onboarding is in progress, then locked (`403 PROFILE_COUNTRY_IMMUTABLE`).
+   * All headquarters addresses must geocode inside it.
+   */
+  country: string;
+  /** Region keys of `country` from locations.json, e.g. ["littoral", "centre"] */
   coverage_areas: string[];
-  headquarters_addresses: HeadquartersAddress[];
+  headquarters_addresses: HeadquartersAddressInput[];
   /** Integer version from role_entity.version — optional optimistic concurrency lock */
   version?: number;
 }
@@ -249,7 +310,8 @@ export interface PayoutPayload {
 /** PUT /api/agency/onboarding/branding (with data) */
 export interface BrandingPayloadWithData {
   skip?: false;
-  logo_url?: string | null;
+  /** Id returned by POST /api/files/upload; `null` detaches the current logo. */
+  logo_file_id?: string | null;
   timezone?: string;
 }
 

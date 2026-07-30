@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Camera,
   CheckCircle2,
   Clock,
   Globe,
-  Loader2,
   Lock,
   ShieldCheck,
   Store as StoreIcon,
@@ -12,7 +10,6 @@ import {
 import { toast } from 'sonner';
 
 import { useResource } from '@/hooks/useResource';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type {
@@ -22,6 +19,7 @@ import type {
 
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
+import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -137,9 +135,6 @@ export function ProfileSettings() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { isUploading, upload } = useFileUpload();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (profile) {
       setForm(toForm(profile));
@@ -156,18 +151,6 @@ export function ProfileSettings() {
     if (!profile || !form) return false;
     return Object.keys(buildPayload(form, profile)).length > 0;
   }, [profile, form]);
-
-  const handleAvatarFile = useCallback(
-    async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
-      const uploaded = await upload([files[0]]);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
-      if (uploaded && uploaded[0]) {
-        set('avatar', { id: uploaded[0].id, url: uploaded[0].url });
-      }
-    },
-    [upload, set],
-  );
 
   const handleDiscard = useCallback(() => {
     if (profile) {
@@ -222,10 +205,15 @@ export function ProfileSettings() {
           <CardDescription>Your personal contact details — separate from your business identity.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar */}
+          {/* Avatar — the picture itself opens the media library. */}
           <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="w-24 h-24 ring-2 ring-border">
+            <MediaPickerTrigger
+              label="Change photo"
+              acceptedTypes={['image']}
+              onSelect={(media) => set('avatar', media)}
+              className="rounded-full ring-2 ring-border"
+            >
+              <Avatar className="w-24 h-24">
                 {avatarUrl && (
                   <AvatarImage
                     src={avatarUrl}
@@ -236,23 +224,7 @@ export function ProfileSettings() {
                 )}
                 <AvatarFallback className="text-2xl font-medium">{initialsFrom(displayName)}</AvatarFallback>
               </Avatar>
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                aria-label="Change photo"
-                disabled={isUploading}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground shadow-md transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
-                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-              </button>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleAvatarFile(e.target.files)}
-              />
-            </div>
+            </MediaPickerTrigger>
             <div className="space-y-1">
               <p className="font-medium">{displayName}</p>
               <p className="text-sm text-muted-foreground">{profile.email ?? '—'}</p>
@@ -260,15 +232,18 @@ export function ProfileSettings() {
                 <StoreIcon className="w-3 h-3" />
                 Your business name &amp; logo live on the Store tab.
               </p>
-              {form.avatar && (
-                <button
-                  type="button"
-                  onClick={() => set('avatar', null)}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  Remove photo
-                </button>
-              )}
+              <div className="flex items-center gap-3 pt-1">
+                <p className="text-xs text-muted-foreground">Click your photo to pick a new one.</p>
+                {form.avatar && (
+                  <button
+                    type="button"
+                    onClick={() => set('avatar', null)}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Remove photo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
