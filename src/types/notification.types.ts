@@ -60,9 +60,11 @@ export interface NotificationEventPreferences {
   connectionUpdated: boolean;
   /**
    * **Agent** contracts (`agent_contract.*`): an agent applied to deliver for
-   * you, or answered a request you raised. A separate switch from
-   * `connectionUpdated` on purpose — recruiting couriers and taking on vendors
-   * are different jobs, often different people.
+   * you, answered a request you raised, or proposed a change to a contract they
+   * already hold — `status_request_raised` / `status_request_resolved`, most
+   * often asking to leave. A separate switch from `connectionUpdated` on purpose
+   * — recruiting couriers and taking on vendors are different jobs, often
+   * different people.
    */
   contractUpdated: boolean;
   shipmentAssigned: boolean;

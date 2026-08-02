@@ -6,6 +6,7 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useShipments } from '@/store/shipments.store';
+import { useMagazin } from '@/store/magazin.store';
 import {
   ChevronLeft,
   ChevronRight,
@@ -54,9 +55,12 @@ export function Sidebar() {
   const location = useLocation();
   const pathname = location.pathname;
   const roleEntity = useOnboarding().session?.role_entity;
+  const { data: magazin } = useMagazin();
 
-  const agencyName = roleEntity?.agency_name || 'My Agency';
-  const agencyLogo = roleEntity?.logo_url || null;
+  // The magazin is authoritative for the business identity; the session is only
+  // the first-paint fallback for the name (it carries no magazin logo at all).
+  const agencyName = magazin?.name?.trim() || roleEntity?.agency_name || 'My Agency';
+  const agencyLogo = magazin?.logo?.url ?? roleEntity?.logo_url ?? null;
 
   // Per-item manual expand overrides; otherwise a group auto-opens when a child
   // is active. Works for any item with children.
@@ -231,8 +235,8 @@ export function Sidebar() {
         sidebarCollapsed ? 'w-20' : 'w-64'
       )}
     >
-      {/* Top — agency name */}
-      <div className="h-16 flex items-center gap-3 px-4 border-b flex-shrink-0">
+      {/* Top — business identity (magazin name + logo) */}
+      <div className="h-16 flex items-center gap-3 px-4 border-b flex-shrink-0" title={agencyName}>
         <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-gradient shadow-brand-sm flex items-center justify-center flex-shrink-0">
           {agencyLogo ? (
             <img src={agencyLogo} alt={agencyName} crossOrigin="use-credentials" className="w-full h-full object-cover" />

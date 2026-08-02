@@ -369,9 +369,13 @@ export interface AgentHistoryEvent {
 
 // ─── Contract status requests (two-party transitions) ───────────────────────────
 // Ending, pausing or reactivating a contract is not one party's call: the mover
-// raises a request and the other side clears it. Requests the AGENCY raised are
-// resolved by the agent; requests the AGENT raised land in the agency's inbox
-// (`GET /agency/agents/status-requests`).
+// raises a request and the other side clears it.
+//
+// `GET /agency/agents/status-requests` returns BOTH directions — the ones the
+// agent raised for us to answer AND the ones we raised waiting on them — because
+// it is the only endpoint that exposes a `requestId`, and without ours `/cancel`
+// would be uncallable. Which verb applies is never inferred: read
+// `availableActions`, and count `awaitingMyDecision` (never rows) for badges.
 
 export interface ContractBlockingConditions {
   outstandingCod: number;
@@ -400,25 +404,42 @@ export type ContractStatusRequestState =
   | 'cancelled'
   | (string & {});
 export type ContractStatusRequestDecision = 'approve' | 'reject';
+/** The verbs the server will accept on a request, as it names them itself. */
+export type ContractStatusRequestAction = ContractStatusRequestDecision | 'cancel';
 
 export interface ContractStatusRequest {
   id: string;
   /** The membership this is about — a contract IS a membership. */
   contractId: string;
+  agentId: string;
+  agencyId: string;
   transition: ContractTransition;
   targetStatus: string;
   fromStatus: string;
   state: ContractStatusRequestState;
-  requestedByRole: 'agency' | 'agent' | (string & {});
+  /** Who raised it — and therefore whether `/resolve` or `/cancel` is our verb. */
+  requestedByRole: 'agency' | 'agent' | 'admin' | 'system' | (string & {});
+  /**
+   * True only while pending AND raised by the agent, i.e. ours to answer. False
+   * on rows we raised (ours to cancel) and on resolved ones. **The** predicate
+   * for the pending-action badge — counting rows over-counts by our own.
+   */
+  awaitingMyDecision: boolean;
+  /** What we may call on this row, in render order. Empty once resolved. */
+  availableActions: ContractStatusRequestAction[];
   /**
    * Advisory only, and `null` when nothing is in the way — the same conditions
    * are re-checked on approval, never trusted from when the request was raised.
    */
   blockingConditions: ContractBlockingConditions | null;
   reason?: string | null;
-  note?: string | null;
+  resolvedByRole?: 'agency' | 'agent' | 'admin' | 'system' | null;
+  resolvedAt?: string | null;
+  /** The note from whichever of `/resolve` or `/cancel` closed it. */
+  resolutionNote?: string | null;
+  autoApproved?: boolean;
   createdAt?: string;
-  requestedAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Contract settlements (per-contract cash view) ──────────────────────────────

@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
-import { useResource } from '@/hooks/useResource';
+import { useMagazin } from '@/store/magazin.store';
 import { magazinService } from '@/services/magazin.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ApiError } from '@/types/api';
@@ -141,10 +141,9 @@ function validateForm(form: FormState): FieldErrors {
 }
 
 export function MagazinSettings() {
-  const { data: magazin, isLoading, error, refetch, setData } = useResource(
-    () => magazinService.getMagazin(),
-    [],
-  );
+  // Shared with the app chrome (sidebar identity block) — saving through `setData`
+  // updates the business name and logo everywhere without a refetch.
+  const { data: magazin, isLoading, error, refetch, setData } = useMagazin();
 
   const [form, setForm] = useState<FormState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

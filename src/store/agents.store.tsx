@@ -48,7 +48,12 @@ export interface AgentsRosterState {
    * a deactivated agent must never be offered a shipment or a cash deposit.
    */
   agents: AgentSummary[];
-  /** Pauses, resumes and departures agents have proposed, waiting on your decision. */
+  /**
+   * Every pending contract change on the roster — pauses, resumes and
+   * departures — in **both** directions: the ones the agent raised for you to
+   * answer, and the ones you raised waiting on them. Read each row's
+   * `awaitingMyDecision` / `availableActions`; the list itself is not an inbox.
+   */
   statusRequests: ContractStatusRequest[];
   /** Pending contracts the AGENT raised — the ones you can approve or decline. */
   pendingRequestsCount: number;
@@ -101,8 +106,10 @@ export function AgentsRosterProvider({ children }: { children: ReactNode }) {
         agentsService.listStatusRequests(),
       ]);
       setRoster(rosterEntries);
-      // The endpoint only returns what is waiting on you; the state check is belt
-      // and braces (and case-insensitive, since it is a free-form string here).
+      // The endpoint only returns pending rows; the state check is belt and
+      // braces (and case-insensitive, since it is a free-form string here).
+      // Rows we raised ourselves are KEPT — they are what `cancel` acts on, and
+      // `awaitingMyDecision` is what keeps them out of the badge.
       setStatusRequests(
         requestsRes.data.filter((r) => (r.state ?? 'pending').toLowerCase() === 'pending'),
       );
@@ -140,7 +147,10 @@ export function AgentsRosterProvider({ children }: { children: ReactNode }) {
         .length,
     [roster],
   );
-  const pendingActionCount = pendingRequestsCount + statusRequests.length;
+  // `awaitingMyDecision`, never `statusRequests.length`: the list carries our own
+  // proposals too, and badging those would tell the agency to go answer itself.
+  const pendingActionCount =
+    pendingRequestsCount + statusRequests.filter((r) => r.awaitingMyDecision).length;
 
   return (
     <AgentsRosterContext.Provider

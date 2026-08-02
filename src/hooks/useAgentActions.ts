@@ -19,7 +19,8 @@ export interface UseAgentActionsOptions {
 /**
  * Shared agent-contract mutations: request / withdraw / approve / reject, the
  * contract lifecycle (suspend / pause / reinstate / terminate / terms / COD
- * threshold), and resolving the status requests agents raise.
+ * threshold), and clearing pending status requests — `resolve` for the ones the
+ * agent raised, `cancel` for our own.
  *
  * `request`+`withdraw` and `approve`+`reject` are **not interchangeable** — the
  * server picks the valid pair from who raised the contract (`initiatedBy`), and
@@ -146,6 +147,7 @@ export function useAgentActions({ onContractChanged, onRosterChanged }: UseAgent
     [run, onRosterChanged],
   );
 
+  /** Answer a change the AGENT proposed. `note` is the optional reason they see. */
   const resolveStatusRequest = useCallback(
     (requestId: string, decision: ContractStatusRequestDecision, note?: string) =>
       run(
@@ -155,6 +157,23 @@ export function useAgentActions({ onContractChanged, onRosterChanged }: UseAgent
           success: decision === 'approve' ? 'Request approved.' : 'Request rejected.',
         },
       ).then((r) => {
+        if (r) onRosterChanged?.();
+        return r;
+      }),
+    [run, onRosterChanged],
+  );
+
+  /**
+   * Pull back a change **we** proposed. Not interchangeable with
+   * `resolveStatusRequest` — the server picks the valid verb from
+   * `requestedByRole`, and the wrong one is a 403. Render from the row's
+   * `availableActions` rather than guessing.
+   */
+  const cancelStatusRequest = useCallback(
+    (requestId: string, note?: string) =>
+      run(`cancel:${requestId}`, () => agentsService.cancelStatusRequest(requestId, note), {
+        success: 'Request cancelled — the contract is unchanged.',
+      }).then((r) => {
         if (r) onRosterChanged?.();
         return r;
       }),
@@ -184,6 +203,7 @@ export function useAgentActions({ onContractChanged, onRosterChanged }: UseAgent
     terminate,
     updateTerms,
     resolveStatusRequest,
+    cancelStatusRequest,
     updateCodLimit,
   };
 }

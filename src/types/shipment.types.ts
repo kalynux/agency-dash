@@ -143,8 +143,14 @@ export interface ShipmentItem {
   orderItemId: string;
   productId: string;
   quantity: number;
-  title: string;
-  sku: string;
+  /**
+   * Product name and variant SKU, read from the order-item snapshot the shipment
+   * points at. All three are null when that snapshot cannot be resolved — the
+   * shipment references an `orderItemId` the order no longer carries — so the
+   * row has to stay readable on the picture and quantity alone.
+   */
+  title: string | null;
+  sku: string | null;
   variantTitle: string | null;
   /**
    * Every picture of this item, thumbnail first. `images[0]` is exactly what the
@@ -303,17 +309,24 @@ export interface AssignmentResponse {
 }
 
 export interface AssignmentCandidateBreakdown {
-  distance_km?: number;
-  distance_score?: number;
-  free_capacity?: number;
-  capacity_score?: number;
-  trust_score?: number;
-  weighted?: number;
+  /** `null` when the pickup point or the agent's position could not be resolved
+   * — the distance is then scored as neutral, not zero. Never assume a number. */
+  distance_km: number | null;
+  distance_score: number;
+  free_capacity: number;
+  capacity_score: number;
+  trust_score: number;
+  trust_score_norm: number;
+  weighted: number;
 }
 
 export interface AssignmentCandidate {
   agentId: string;
   rank: number;
+  /** Road-network distance/duration from the geo provider; `null` on the
+   * haversine fallback or when the pickup point is unknown. */
+  distanceMeters: number | null;
+  durationSeconds: number | null;
   score: number;
   breakdown: AssignmentCandidateBreakdown;
 }

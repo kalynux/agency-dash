@@ -118,6 +118,16 @@ counterparty clears it from their inbox (`GET /status-requests`), and only then 
 move. **The party who raised a request can never resolve it themselves** — that consent is the
 point. At most one open request per contract per transition.
 
+A pending request has exactly two exits, and which one is yours depends on `requestedByRole`:
+
+| `requestedByRole` | Your verb | Effect |
+|---|---|---|
+| the *other* party | `POST /status-requests/:id/resolve` | approve → the contract moves; reject → it does not |
+| **you** | `POST /status-requests/:id/cancel` | the request is withdrawn; the contract never moves |
+
+Asking for the wrong one is a `403 CONTRACT_STATUS_REQUEST_NOT_YOURS`. Cancelling frees the
+per-(contract, transition) slot, so you may raise the same transition again afterwards.
+
 Requests carry `blockingConditions`, which is **advisory**: every condition is re-checked at
 approval time, never trusted from when the request was raised, because cash can be collected in
 between.
@@ -585,8 +595,26 @@ request.
 
 ### GET /api/agency/agents/status-requests
 
-**Description**: Contract changes an **agent** has raised that are waiting on your decision — a
-pause, a reactivation, or a departure. Newest first.
+**Description**: Every **pending** contract change on your roster, newest first — a pause, a
+reactivation, or a departure.
+
+**Both directions appear here, and that is required, not incidental.** The query filters on your
+agency and on `pending`, nothing else, so the list carries the requests an agent raised that await
+*your* decision **and** the ones you raised that await *theirs*. This endpoint is the **only** place
+a `requestId` is exposed, so dropping the rows you raised would leave `/cancel` uncallable.
+
+**Read `awaitingMyDecision`, don't count rows.** It is `true` only on rows that are yours to answer,
+and `availableActions` names the verbs you may call:
+
+| `requestedByRole` | `awaitingMyDecision` | `availableActions` | Render |
+|---|---|---|---|
+| `agent` | `true` | `["approve","reject"]` | "Wants to leave — Approve / Reject" |
+| `agency` | `false` | `["cancel"]` | "You proposed removing them — Cancel" |
+
+Both fields are computed server-side from the same rule the service guards enforce, so a button this
+DTO offers is one the service will accept. Use `awaitingMyDecision` for the sidebar badge —
+counting rows over-counts by every request you raised yourself, and rendering a self-raised row as
+"Approve" produces a `403 CONTRACT_STATUS_REQUEST_NOT_YOURS` on click.
 
 Declared before `/:membershipId`, so `status-requests` is never read as a contract id.
 
@@ -621,6 +649,42 @@ from their inbox — that mutual consent is the whole point.
 | `409` | `CONTRACT_STATUS_REQUEST_NOT_PENDING` | Already resolved. `details: { state }` |
 | `409` | `CONTRACT_INVALID_TRANSITION` | The contract moved since the request was raised |
 | `422` | `CONTRACT_HAS_OUTSTANDING_COD` / `CONTRACT_HAS_UNPAID_EARNINGS` | On approving a departure while either side still owes the other |
+
+---
+
+### POST /api/agency/agents/status-requests/:requestId/cancel
+
+**Description**: Pull back a still-pending request **you** raised — a termination proposal thought
+better of, most often. The exact inverse of `/resolve`: that one answers the agent's requests, this
+one withdraws your own.
+
+**The contract is untouched.** A cancelled request never moved it, so there is nothing to undo and
+nothing to settle: outstanding COD and unpaid earnings gate *ending* a contract, not abandoning a
+proposal to end one. Consequently there is no `422` here, and `membership` is always `null`.
+
+Cancelling frees the per-(contract, transition) pending slot, so you may raise the same transition
+again afterwards. It appends no membership-history event — a cancelled request moved no state, and
+the request row's own `state` / `resolvedByRole` / `resolvedAt` is the complete trail.
+
+**Request Body** (optional):
+```json
+{ "note": "Sorted it out with him directly" }
+```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `note` | string \| null | ❌ | ≤300 chars. Stored as `resolutionNote` |
+
+**Success Response** (`200 OK`): same shape as `/resolve` —
+`{ request: ContractStatusRequestDto, membership: null }`, with `request.state` now `cancelled`.
+
+**Error Responses**:
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `403` | `CONTRACT_STATUS_REQUEST_NOT_YOURS` | The **agent** raised it — answer it with `/resolve` instead. `details: { requestedByRole, hint }` |
+| `404` | `CONTRACT_STATUS_REQUEST_NOT_FOUND` | Unknown, or not on your roster |
+| `409` | `CONTRACT_STATUS_REQUEST_NOT_PENDING` | Already resolved. `details: { state }`. This is also what a cancel racing the agent's approval returns to the loser — the write is a compare-and-set on `pending`, so exactly one of the two wins |
 
 ---
 
@@ -837,11 +901,26 @@ interface ContractStatusRequestDto {
   targetStatus: ContractStatus;
   fromStatus: ContractStatus;
   state: StatusRequestState;
+  /** Who raised it — and therefore whether /resolve or /cancel is your verb. */
   requestedByRole: 'agent' | 'agency' | 'admin' | 'system';
+  /**
+   * True when this row is pending AND the other party raised it, i.e. it is
+   * yours to answer. False on rows you raised (those are yours to /cancel) and
+   * on rows already resolved. The right predicate for an unread badge.
+   */
+  awaitingMyDecision: boolean;
+  /** The verbs you may call on this row, in render order. Empty once resolved. */
+  availableActions: Array<'approve' | 'reject' | 'cancel'>;
   reason: string | null;
+  /** Null while `state` is 'pending'. Set by /resolve AND by /cancel. */
+  resolvedByRole: 'agent' | 'agency' | 'admin' | 'system' | null;
+  resolvedAt: string | null;
+  /** The `note` from whichever of /resolve or /cancel closed it. */
+  resolutionNote: string | null;
   blockingConditions: { outstandingCod: number; outstandingPayment: number; clear: boolean } | null;
   autoApproved: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 /** A row from GET /browse. */
@@ -879,22 +958,37 @@ POST  /api/agency/agents/665f.../reinstate
 POST  /api/agency/agents/665f.../terminate             { "reason": "Contract ended" }
 PATCH /api/agency/agents/665f.../terms                 { "fee_split": { "model": "flat", "agent_flat_fee": 1500 } }
 PATCH /api/agency/agents/665f.../cod-limit             { "threshold": 500000 }
+GET   /api/agency/agents/status-requests
+POST  /api/agency/agents/status-requests/778a.../resolve  { "decision": "approve" }
+POST  /api/agency/agents/status-requests/778a.../cancel   { "note": "Sorted it out directly" }
 ```
 
 ---
 
 ## Notifications
 
-Three agency-facing situations, all gated on the `contractUpdated` preference
-(see [notifications.md](./notifications.md)):
+Five agency-facing situations, all gated on the `contractUpdated` preference
+(see [notifications.md](./notifications.md)).
+
+The handshake that **forms** a contract:
 
 - `agent_contract.request_received` — an agent applied to deliver for you.
 - `agent_contract.approved` — an agent accepted a request you raised.
 - `agent_contract.rejected` — an agent refused a request you raised.
 
-Each carries `contractId` and `agentName`, and deep-links to `agents/{{contractId}}`. The same three
-event names are consumed by the **agent** stack with different copy; a `recipientRole` discriminator
-in the payload decides whose they are. See
+Changes to a contract that **already exists** — the status-request inbox above:
+
+- `agent_contract.status_request_raised` — an agent proposed a change that needs your answer, most
+  often asking to leave. Fires only for transitions that actually stay pending; a `unilateral` one
+  self-clears and never waits on anyone.
+- `agent_contract.status_request_resolved` — a pending change was approved, declined, or cancelled.
+  It covers both "the agent answered what you raised" and "the agent withdrew what you were waiting
+  on", so the copy names the change rather than whose request it was.
+
+Each carries `contractId` and `agentName`, and deep-links to `agents/{{contractId}}`; the two
+`status_request_*` events also carry `requestId`, `transition` and `state`, and are made idempotent
+on the **request** id. All five event names are consumed by the **agent** stack with different copy;
+a `recipientRole` discriminator in the payload decides whose they are. See
 [the agent's side](../agent/agency-membership.md#notifications).
 
 > Nothing is emitted for `withdraw`, `suspend`, `pause`, `reinstate` or the status-request

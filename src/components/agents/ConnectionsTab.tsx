@@ -1,9 +1,7 @@
-import { formatNumber, formatDate } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, Loader2, Star, User, Users, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Check, Loader2, Star, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -13,6 +11,7 @@ import { useAgentsRoster } from '@/store/agents.store';
 import { useAgentActions } from '@/hooks/useAgentActions';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
 import { AgentMembershipDialog } from '@/components/agents/AgentMembershipDialog';
+import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
 import {
   agentAvatarUrl,
@@ -34,11 +33,12 @@ import {
  * 1. **Join requests** — a `pending` contract. Whoever raised it cannot answer
  *    it, so the buttons come from `initiatedBy`: the agent applied → Approve /
  *    Reject; we approached them → Withdraw. Offering the wrong pair is a 403.
- * 2. **Contract changes** — a pause, a resume or a departure the *agent*
- *    proposed (`GET /agency/agents/status-requests`). Ending or pausing a
- *    contract is a two-party transition: whoever moves raises a request and the
- *    other side clears it. Requests we raised ourselves (e.g. proposing a
- *    removal) are absent here by design — the agent clears those.
+ * 2. **Contract changes** — a pause, a resume or a departure someone proposed
+ *    (`GET /agency/agents/status-requests`). Ending or pausing a contract is a
+ *    two-party transition: whoever moves raises a request and the other side
+ *    clears it. The endpoint returns BOTH directions, so a row is either ours to
+ *    answer (Approve / Reject) or ours to pull back (Cancel) — never both, and
+ *    never inferred: `availableActions` names the verbs the server will accept.
  */
 
 type StatusChip = 'all' | 'requests' | 'active' | 'change_requested' | 'paused' | 'suspended' | 'history';
@@ -52,110 +52,6 @@ const STATUS_FILTERS: { value: StatusChip; label: string }[] = [
   { value: 'suspended', label: 'Suspended' },
   { value: 'history', label: 'History' },
 ];
-
-const TRANSITION_COPY: Record<string, { label: string; description: string }> = {
-  pause: {
-    label: 'Wants to pause',
-    description: 'They want to stop taking new assignments for a while, keeping the contract alive.',
-  },
-  reactivate: {
-    label: 'Wants to resume',
-    description: 'They want to come back off a pause and start receiving assignments again.',
-  },
-  deactivate: {
-    label: 'Wants to leave',
-    description: 'They want to leave your roster. Any cash and unpaid earnings must be settled first.',
-  },
-};
-
-function transitionCopy(transition: string) {
-  return (
-    TRANSITION_COPY[transition] ?? {
-      label: transition.replace(/_/g, ' '),
-      description: 'A contract change awaiting your decision.',
-    }
-  );
-}
-
-// ─── Row ────────────────────────────────────────────────────────────────────────
-
-function StatusRequestPanel({
-  request,
-  busy,
-  note,
-  noteOpen,
-  onNoteChange,
-  onOpenNote,
-  onResolve,
-}: {
-  request: ContractStatusRequest;
-  busy: boolean;
-  note: string;
-  noteOpen: boolean;
-  onNoteChange: (value: string) => void;
-  onOpenNote: () => void;
-  onResolve: (decision: ContractStatusRequestDecision) => void;
-}) {
-  const copy = transitionCopy(request.transition);
-  const blocking = request.blockingConditions;
-  const isBlocked = blocking != null && !blocking.clear;
-
-  return (
-    <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-      <div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline">{copy.label}</Badge>
-          <span className="text-xs text-muted-foreground">
-            Raised {formatDate(request.requestedAt ?? request.createdAt)}
-          </span>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">{copy.description}</p>
-        {request.reason && <p className="text-sm mt-1">“{request.reason}”</p>}
-      </div>
-
-      {isBlocked && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-500">
-          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <div className="space-y-0.5">
-            <p className="font-medium">Settle up before approving</p>
-            {blocking.outstandingCod > 0 && (
-              <p>They still hold {formatNumber(blocking.outstandingCod)} of your COD cash.</p>
-            )}
-            {blocking.outstandingPayment > 0 && (
-              <p>You still owe them {formatNumber(blocking.outstandingPayment)} in earnings.</p>
-            )}
-            <p className="opacity-80">Checked again when you approve — approving now would be refused.</p>
-          </div>
-        </div>
-      )}
-
-      {noteOpen && (
-        <Textarea
-          value={note}
-          onChange={(e) => onNoteChange(e.target.value)}
-          rows={2}
-          maxLength={300}
-          placeholder="Add a note for the agent (optional)…"
-        />
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" className="gap-1.5" disabled={busy} onClick={() => onResolve('approve')}>
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          Approve
-        </Button>
-        <Button size="sm" variant="outline" className="gap-1.5" disabled={busy} onClick={() => onResolve('reject')}>
-          <X className="w-3.5 h-3.5" /> Reject
-        </Button>
-        {!noteOpen && (
-          <Button size="sm" variant="ghost" onClick={onOpenNote}>
-            Add a note
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Tab ────────────────────────────────────────────────────────────────────────
 
@@ -207,13 +103,18 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
     return map;
   }, [statusRequests]);
 
-  const resolve = async (request: ContractStatusRequest, decision: ContractStatusRequestDecision) => {
-    const result = await actions.resolveStatusRequest(request.id, decision, note.trim() || undefined);
+  const clearNote = (result: unknown) => {
     if (result) {
       setNoteFor(null);
       setNote('');
     }
   };
+
+  const resolve = async (request: ContractStatusRequest, decision: ContractStatusRequestDecision) =>
+    clearNote(await actions.resolveStatusRequest(request.id, decision, note.trim() || undefined));
+
+  const cancel = async (request: ContractStatusRequest) =>
+    clearNote(await actions.cancelStatusRequest(request.id, note.trim() || undefined));
 
   const matchesChip = (entry: RosterEntry): boolean => {
     const status: MembershipStatus = entry.membership.status;
@@ -378,12 +279,16 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                 {request && (
                   <StatusRequestPanel
                     request={request}
-                    busy={actions.pendingKey === `resolve:${request.id}`}
+                    busy={
+                      actions.pendingKey === `resolve:${request.id}` ||
+                      actions.pendingKey === `cancel:${request.id}`
+                    }
                     note={note}
                     noteOpen={noteFor === request.id}
                     onNoteChange={setNote}
                     onOpenNote={() => { setNoteFor(request.id); setNote(''); }}
                     onResolve={(decision) => resolve(request, decision)}
+                    onCancel={() => cancel(request)}
                   />
                 )}
               </div>

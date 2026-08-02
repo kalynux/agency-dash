@@ -42,6 +42,9 @@ import { AgentsRosterProvider } from '@/store/agents.store';
 // Notifications (real API — unread-count badge poller)
 import { NotificationsProvider } from '@/store/notifications.store';
 
+// Magazin (real API — business name + logo shown in the app chrome)
+import { MagazinProvider } from '@/store/magazin.store';
+
 // ─── Shared content-frame width ──────────────────────────────────────────────
 // The header and the main content share one centered column so their edges line
 // up on every viewport and content never stretches unusably wide on large
@@ -98,6 +101,7 @@ function DashboardShell() {
       <AgentsRosterProvider>
         <NotificationsProvider>
         <VendorConnectionsProvider>
+        <MagazinProvider>
           <div className="min-h-screen bg-background">
             {!isMobile && <Sidebar />}
             <div
@@ -148,6 +152,7 @@ function DashboardShell() {
             </div>
             {isMobile && <MobileTabBar />}
           </div>
+        </MagazinProvider>
         </VendorConnectionsProvider>
         </NotificationsProvider>
       </AgentsRosterProvider>

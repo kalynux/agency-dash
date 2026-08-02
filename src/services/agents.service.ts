@@ -151,15 +151,25 @@ export const agentsService = {
     );
   },
 
-  // ── Status requests (agent-raised, awaiting your decision) ───────────────────
-  /** GET /agency/agents/status-requests — pauses, reactivations and departures agents have proposed. */
+  // ── Status requests (pending contract changes, both directions) ──────────────
+  /**
+   * GET /agency/agents/status-requests — every pending contract change on the
+   * roster: pauses, resumes and departures.
+   *
+   * **Both directions come back**, ours and theirs, because this is the only
+   * endpoint that exposes a `requestId` and dropping our own rows would leave
+   * `cancel` uncallable. Read `awaitingMyDecision` / `availableActions` per row
+   * rather than counting the list.
+   */
   listStatusRequests(): Promise<ContractStatusRequestsResponse> {
     return api.get<ContractStatusRequestsResponse>('/agency/agents/status-requests');
   },
   /**
-   * POST /agency/agents/status-requests/:requestId/resolve — approve or reject.
+   * POST /agency/agents/status-requests/:requestId/resolve — answer a request the
+   * AGENT raised. `note` (≤300 chars) is the optional reason shown to them.
+   *
    * You cannot resolve a request you raised yourself (`403
-   * CONTRACT_STATUS_REQUEST_NOT_YOURS`); the agent clears those from their side.
+   * CONTRACT_STATUS_REQUEST_NOT_YOURS`); those are {@link cancelStatusRequest}.
    */
   resolveStatusRequest(
     requestId: string,
@@ -169,6 +179,21 @@ export const agentsService = {
     return api.post<ContractStatusRequestResponse>(
       `/agency/agents/status-requests/${requestId}/resolve`,
       { decision, ...(note ? { note } : {}) },
+    );
+  },
+  /**
+   * POST /agency/agents/status-requests/:requestId/cancel — pull back a request
+   * **you** raised, most often a termination thought better of.
+   *
+   * The exact inverse of `resolve`, and the contract is untouched either way:
+   * cancelling a proposal to end a contract settles nothing, so there is no
+   * outstanding-cash 422 here and `membership` always comes back null. It frees
+   * the per-(contract, transition) slot, so the same move can be raised again.
+   */
+  cancelStatusRequest(requestId: string, note?: string): Promise<ContractStatusRequestResponse> {
+    return api.post<ContractStatusRequestResponse>(
+      `/agency/agents/status-requests/${requestId}/cancel`,
+      note ? { note } : undefined,
     );
   },
 

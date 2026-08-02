@@ -148,11 +148,17 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                       />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      {/* An unresolvable order-item snapshot leaves the name and
+                          SKU null. Say so rather than printing a bare "SKU:"
+                          label with nothing after it, which reads as a missing
+                          value on an otherwise fine parcel. */}
+                      <p className="text-sm font-medium truncate">
+                        {item.title ?? <span className="italic text-muted-foreground">Unnamed product</span>}
+                      </p>
                       {item.variantTitle && (
                         <p className="text-xs text-muted-foreground">{item.variantTitle}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
+                      {item.sku && <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>}
                     </div>
                     <Badge variant="secondary" className="flex-shrink-0">
                       ×{item.quantity}

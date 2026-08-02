@@ -257,12 +257,16 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                           </span>
                           <Badge variant="secondary">{(c.score * 100).toFixed(0)}%</Badge>
                         </div>
-                        {c.breakdown.distance_km !== undefined && (
-                          <p className="text-xs text-muted-foreground">
-                            {c.breakdown.distance_km.toFixed(1)} km · capacity{' '}
-                            {c.breakdown.free_capacity ?? '—'} · trust {c.breakdown.trust_score ?? '—'}
-                          </p>
-                        )}
+                        {/* `distance_km` is null whenever the pickup point or the
+                            agent's position could not be resolved — the rest of
+                            the breakdown still stands, so only the distance drops. */}
+                        <p className="text-xs text-muted-foreground">
+                          {typeof c.breakdown?.distance_km === 'number'
+                            ? `${c.breakdown.distance_km.toFixed(1)} km`
+                            : 'distance n/a'}{' '}
+                          · capacity {c.breakdown?.free_capacity ?? '—'} · trust{' '}
+                          {c.breakdown?.trust_score ?? '—'}
+                        </p>
                       </button>
                     ))
                   )}

@@ -1,21 +1,28 @@
 import { formatNumber, formatDate as fmtDate } from '@/lib/format';
-import { useEffect, useState } from 'react';
+import { useState, type ComponentType, type ReactNode } from 'react';
 import {
+  Banknote,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
+  History,
   Loader2,
-  Phone,
   Mail,
-  Star,
+  MapPin,
   Package,
   PauseCircle,
+  Phone,
   ShieldAlert,
-  CheckCircle2,
-  XCircle,
-  MapPin,
+  ShieldCheck,
+  Signal,
+  Star,
   User,
+  XCircle,
 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -24,15 +31,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
+import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
 import { useAgentActions } from '@/hooks/useAgentActions';
+import { useAgentsRoster } from '@/store/agents.store';
 import { agentsService } from '@/services/agents.service';
-import { agentAvatarUrl, readContractTerms } from '@/types/agent.types';
+import {
+  agentAvatarUrl,
+  readContractTerms,
+  HISTORY_MEMBERSHIP_STATUSES,
+} from '@/types/agent.types';
 import type {
   RosterEntry,
   AgentMembership,
@@ -56,6 +68,10 @@ const REMITTANCE_CADENCES: { value: RemittanceCadence; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'on_demand', label: 'On demand' },
 ];
+
+const CADENCE_LABEL: Record<string, string> = Object.fromEntries(
+  REMITTANCE_CADENCES.map((c) => [c.value, c.label]),
+);
 
 // ─── Contract terms form ──────────────────────────────────────────────────────
 // One editor for everything negotiated on the contract, saved through
@@ -81,13 +97,6 @@ interface TermsForm {
   regions: string;
   ceiling: string;
 }
-
-const EMPTY_TERMS: TermsForm = {
-  empType: '', empRef: '', empStart: '', empEnd: '',
-  feeModel: '', sharePercent: '', flatFee: '', currency: '',
-  cadence: '', dayOfWeek: '', dayOfMonth: '', graceHours: '',
-  regions: '', ceiling: '',
-};
 
 function num(value: number | null | undefined): string {
   return value == null ? '' : String(value);
@@ -228,6 +237,91 @@ function contractEnding(
   }
 }
 
+// ─── Layout primitives ────────────────────────────────────────────────────────
+
+/** One labelled cell of the at-a-glance grid. Hairlines come from the parent's `gap-px`. */
+function InfoTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="bg-card px-3 py-2.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <Icon className="h-3 w-3 shrink-0" />
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-medium">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * A disclosure card. The trigger is a full-width row with a rotating chevron —
+ * the old bare ghost button read as a heading, so nobody knew the terms editor
+ * was in there at all.
+ */
+function Section({
+  icon: Icon,
+  title,
+  summary,
+  defaultOpen = false,
+  onOpen,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  summary?: ReactNode;
+  defaultOpen?: boolean;
+  onOpen?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible
+      defaultOpen={defaultOpen}
+      onOpenChange={(open) => { if (open) onOpen?.(); }}
+      className="group/section rounded-xl border bg-card"
+    >
+      <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-muted/50">
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">{title}</span>
+          {summary && <span className="mt-0.5 block truncate text-xs text-muted-foreground">{summary}</span>}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]/section:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border-t px-4 py-4">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function FormField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+      {hint && <p className="text-[11px] leading-relaxed text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+// ─── Dialog ───────────────────────────────────────────────────────────────────
+
 export interface AgentMembershipDialogProps {
   entry: RosterEntry | null;
   open: boolean;
@@ -236,16 +330,57 @@ export interface AgentMembershipDialogProps {
 }
 
 export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: AgentMembershipDialogProps) {
+  return (
+    <Dialog open={open && !!entry} onOpenChange={onOpenChange}>
+      {/* `flex`/`p-0` override the base grid+padding; `overflow-hidden` keeps the
+          rounded corners clipping the scroller. */}
+      <DialogContent className="flex max-h-[min(92vh,48rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        {entry && (
+          // Keyed on the contract so switching rows resets every editor and drops
+          // the lazily-loaded panels — otherwise the previous agent's eligibility,
+          // history and settlements would be shown for the next one.
+          <MembershipBody
+            key={entry.membership.id}
+            entry={entry}
+            onOpenChange={onOpenChange}
+            onChanged={onChanged}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MembershipBody({
+  entry,
+  onOpenChange,
+  onChanged,
+}: {
+  entry: RosterEntry;
+  onOpenChange: (open: boolean) => void;
+  onChanged: () => void;
+}) {
   const actions = useAgentActions({ onRosterChanged: onChanged });
+  const { statusRequests } = useAgentsRoster();
+  const { membership, agent, cashHeld } = entry;
+  const mid = membership.id;
+
+  // The pending two-party change on this contract, either direction — a break or
+  // a departure the agent proposed, or a removal we did. It is read here as well
+  // as on the row because this sheet is where "manage this agent" leads, and a
+  // decision waiting on you must not be reachable only from the list behind it.
+  const statusRequest = statusRequests.find((r) => r.contractId === mid) ?? null;
 
   // Inline "confirm with reason" modes
   const [mode, setMode] = useState<'suspend' | 'pause' | 'terminate' | 'reject' | null>(null);
   const [reason, setReason] = useState('');
+  const [requestNoteOpen, setRequestNoteOpen] = useState(false);
+  const [requestNote, setRequestNote] = useState('');
 
   // COD threshold + contract terms editors
   const [threshold, setThreshold] = useState('');
-  const [terms, setTerms] = useState<TermsForm>(EMPTY_TERMS);
-  const [termsSeed, setTermsSeed] = useState<TermsForm>(EMPTY_TERMS);
+  const [termsSeed, setTermsSeed] = useState<TermsForm>(() => seedTermsForm(membership));
+  const [terms, setTerms] = useState<TermsForm>(termsSeed);
   const [termsError, setTermsError] = useState<string | null>(null);
 
   // Lazy eligibility / history / settlements
@@ -256,36 +391,25 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
   const [settlements, setSettlements] = useState<ContractSettlements | null>(null);
   const [settlementsLoading, setSettlementsLoading] = useState(false);
 
-  // This dialog stays mounted while the roster row behind it changes, so the
-  // lazily-loaded panels must be dropped when it points at a different contract
-  // — otherwise the previous agent's eligibility/history/settlements would be
-  // shown for the next one.
-  const membershipId = entry?.membership.id;
-  useEffect(() => {
-    setEligibility(null);
-    setHistory(null);
-    setSettlements(null);
-    setThreshold('');
-    setMode(null);
-    setReason('');
-  }, [membershipId]);
-
-  if (!entry) return null;
-  const { membership, agent, cashHeld } = entry;
-  const mid = membership.id;
   const VehicleIcon = getVehicleIcon(agent.vehicleInfo?.vehicle_type);
   const ending = contractEnding(membership);
+  /** Terminal contracts are history — nothing on them can still be negotiated. */
+  const editable = !HISTORY_MEMBERSHIP_STATUSES.includes(membership.status);
+
+  const termsPayload = buildTermsPayload(terms, termsSeed);
+  const dirty = Object.keys(termsPayload).length > 0;
 
   const resetInline = () => {
     setMode(null);
     setReason('');
   };
 
-  const seedTerms = () => {
-    const seeded = seedTermsForm(membership);
-    setTerms(seeded);
-    setTermsSeed(seeded);
-    setTermsError(null);
+  const clearRequestNote = <T,>(result: T): T => {
+    if (result) {
+      setRequestNoteOpen(false);
+      setRequestNote('');
+    }
+    return result;
   };
 
   const setTerm = <K extends keyof TermsForm>(key: K, value: TermsForm[K]) => {
@@ -319,13 +443,6 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
     }
   };
 
-  const saveThreshold = async () => {
-    const value = Number(threshold);
-    if (Number.isNaN(value)) return;
-    const result = await actions.updateCodLimit(mid, value);
-    if (result) setThreshold('');
-  };
-
   const loadSettlements = async () => {
     if (settlements) return;
     setSettlementsLoading(true);
@@ -339,9 +456,15 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
     }
   };
 
+  const saveThreshold = async () => {
+    const value = Number(threshold);
+    if (Number.isNaN(value)) return;
+    const result = await actions.updateCodLimit(mid, value);
+    if (result) setThreshold('');
+  };
+
   const saveTerms = async () => {
-    const payload = buildTermsPayload(terms, termsSeed);
-    if (Object.keys(payload).length === 0) {
+    if (!dirty) {
       setTermsError('Nothing changed yet.');
       return;
     }
@@ -350,7 +473,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
       setTermsError(splitError);
       return;
     }
-    const result = await actions.updateTerms(mid, payload);
+    const result = await actions.updateTerms(mid, termsPayload);
     if (result) setTermsSeed(terms);
   };
 
@@ -372,476 +495,569 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
   };
 
   const pk = actions.pendingKey;
+  const avatar = agentAvatarUrl(agent);
+  const cadence = terms.cadence || termsSeed.cadence;
+  const feeModel = terms.feeModel || termsSeed.feeModel;
+
+  const termsSummary = [
+    membership.employment.employmentType,
+    membership.feeSplit.model === 'flat'
+      ? `${formatNumber(membership.feeSplit.agentFlatFee ?? 0)} flat`
+      : `${membership.feeSplit.agentSharePercent ?? 0}% share`,
+    CADENCE_LABEL[membership.remittanceTerms.cadence],
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  // A departure is already on the table — from either side. Offering "Remove"
+  // again would 409 (`CONTRACT_STATUS_REQUEST_ALREADY_PENDING`); the panel at the
+  // top of the sheet is where that request gets answered or pulled back.
+  const departurePending = statusRequest?.transition === 'deactivate';
+
+  const showActions =
+    membership.status === 'pending' ||
+    membership.status === 'active' ||
+    membership.status === 'paused' ||
+    membership.status === 'suspended';
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) resetInline(); onOpenChange(o); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-5 pt-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {agentAvatarUrl(agent) ? (
-                <img src={agentAvatarUrl(agent)!} crossOrigin="use-credentials" alt={agent.name} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-5 h-5 text-muted-foreground" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <DialogTitle className="truncate">{agent.name}</DialogTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <MembershipStatusBadge status={membership.status} />
-                {membership.isPrimary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
-                <span className="text-xs text-muted-foreground capitalize">{membership.origin.replace(/_/g, ' ')}</span>
-              </div>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 px-5">
-          <div className="py-4 space-y-5">
-            {/* How a terminal contract ended. Terminal is terminal — the row
-                survives only as history, so the reason is the whole story. */}
-            {ending && (
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-sm font-medium">{ending.label}</p>
-                {ending.at && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{formatDate(ending.at)}</p>
-                )}
-                {ending.reason ? (
-                  <p className="text-sm mt-1.5">“{ending.reason}”</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground mt-1.5">No reason was given.</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  Contracting with this agent again starts a new contract; this one stays as history.
-                </p>
+    <>
+      <DialogHeader className="flex-shrink-0 gap-0 border-b px-6 py-5 pr-14">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted">
+            {avatar ? (
+              <img src={avatar} crossOrigin="use-credentials" alt={agent.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <User className="h-6 w-6 text-muted-foreground" />
               </div>
             )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="truncate text-base">{agent.name}</DialogTitle>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <MembershipStatusBadge status={membership.status} className="text-[10px]" />
+              {membership.isPrimary && <Badge variant="secondary" className="text-[10px]">Primary</Badge>}
+              <Badge variant="outline" className="text-[10px] capitalize text-muted-foreground">
+                {membership.origin.replace(/_/g, ' ')}
+              </Badge>
+            </div>
+          </div>
+        </div>
+        <DialogDescription className="sr-only">
+          Contract details for {agent.name} — COD limit, negotiated terms, settlements and history.
+        </DialogDescription>
+      </DialogHeader>
 
-            {/* Contact + vehicle + stats */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4" />{agent.email ?? '—'}</div>
-              <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4" />{agent.phone ?? '—'}</div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <VehicleIcon className="w-4 h-4" />
-                {agent.vehicleInfo ? formatVehicleType(agent.vehicleInfo.vehicle_type) : '—'}
+      {/* `min-h-0` is what makes this scroll: a flex child defaults to
+          `min-height: auto`, so without it the viewport grows past the dialog
+          instead of overflowing inside it. */}
+      <ScrollArea className="min-h-0 flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
+        <div className="space-y-4 px-6 py-5">
+          {/* A pending two-party change comes first: it is the one thing here
+              that is waiting on somebody, and burying it under the terms would
+              make an agent's request to leave look like nothing had arrived. */}
+          {statusRequest && (
+            <StatusRequestPanel
+              request={statusRequest}
+              busy={
+                pk === `resolve:${statusRequest.id}` || pk === `cancel:${statusRequest.id}`
+              }
+              note={requestNote}
+              noteOpen={requestNoteOpen}
+              onNoteChange={setRequestNote}
+              onOpenNote={() => { setRequestNoteOpen(true); setRequestNote(''); }}
+              onResolve={(decision) =>
+                actions
+                  .resolveStatusRequest(statusRequest.id, decision, requestNote.trim() || undefined)
+                  .then(clearRequestNote)
+              }
+              onCancel={() =>
+                actions
+                  .cancelStatusRequest(statusRequest.id, requestNote.trim() || undefined)
+                  .then(clearRequestNote)
+              }
+            />
+          )}
+
+          {/* How a terminal contract ended. Terminal is terminal — the row
+              survives only as history, so the reason is the whole story. */}
+          {ending && (
+            <div className="rounded-xl border bg-muted/40 p-4">
+              <p className="text-sm font-medium">{ending.label}</p>
+              {ending.at && <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(ending.at)}</p>}
+              {ending.reason ? (
+                <p className="mt-2 text-sm">“{ending.reason}”</p>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">No reason was given.</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Contracting with this agent again starts a new contract; this one stays as history.
+              </p>
+            </div>
+          )}
+
+          {/* At a glance — contact, vehicle, standing */}
+          <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
+            <InfoTile icon={Mail} label="Email" value={agent.email ?? '—'} />
+            <InfoTile icon={Phone} label="Phone" value={agent.phone ?? '—'} />
+            <InfoTile
+              icon={VehicleIcon}
+              label="Vehicle"
+              value={agent.vehicleInfo ? formatVehicleType(agent.vehicleInfo.vehicle_type) : '—'}
+            />
+            <InfoTile
+              icon={Star}
+              label="Trust score"
+              value={<span className="flex items-center gap-1">{agent.trustScore}<span className="font-normal text-muted-foreground">/ 100</span></span>}
+            />
+            <InfoTile icon={Package} label="Active jobs" value={agent.activeShipmentCount} />
+            <InfoTile icon={Signal} label="Availability" value={<span className="capitalize">{String(agent.availability).replace(/_/g, ' ')}</span>} />
+          </div>
+
+          {/* Cash + COD threshold */}
+          <div className="rounded-xl border bg-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <Banknote className="h-3 w-3" /> COD cash held
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(cashHeld)}</p>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground"><Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />Trust {agent.trustScore}</div>
-              <div className="flex items-center gap-2 text-muted-foreground"><Package className="w-4 h-4" />{agent.activeShipmentCount} active</div>
-              <div className="flex items-center gap-2 text-muted-foreground capitalize">{agent.availability}</div>
+              <div className="text-right">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Current cap</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {membership.codThreshold > 0 ? formatNumber(membership.codThreshold) : <span className="text-base font-normal text-muted-foreground">No cap</span>}
+                </p>
+              </div>
             </div>
 
-            <Separator />
-
-            {/* Cash + COD threshold */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">COD cash</p>
-              <p className="text-sm text-muted-foreground">
-                Holds <span className="font-medium text-foreground">{formatNumber(cashHeld)}</span> · current cap{' '}
-                {formatNumber(membership.codThreshold)}
-              </p>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder="New COD threshold (0 = none)"
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                  className="flex-1"
-                />
-                <Button size="sm" disabled={threshold === '' || pk === `cod-limit:${mid}`} onClick={saveThreshold}>
-                  {pk === `cod-limit:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Set'}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool.
-              </p>
-            </div>
-
-            <Separator />
-
-            {/* Contract terms — employment, fee split, remittance, value ceiling */}
-            <Collapsible onOpenChange={(o) => o && seedTerms()}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-0 text-sm font-medium">Contract terms</Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-2">
-                {/* Employment */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Employment</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Type</Label>
-                      <Select value={terms.empType} onValueChange={(v) => setTerm('empType', v as EmploymentType)}>
-                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          {EMPLOYMENT_TYPES.map((t) => (
-                            <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Employee ref</Label>
-                      <Input value={terms.empRef} onChange={(e) => setTerm('empRef', e.target.value)} placeholder="EMP-042" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Started</Label>
-                      <Input type="date" value={terms.empStart} onChange={(e) => setTerm('empStart', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Ends</Label>
-                      <Input type="date" value={terms.empEnd} onChange={(e) => setTerm('empEnd', e.target.value)} />
-                    </div>
-                  </div>
+            {editable && (
+              <>
+                <div className="mt-4 flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="New COD threshold (0 = none)"
+                    value={threshold}
+                    onChange={(e) => setThreshold(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button size="sm" disabled={threshold === '' || pk === `cod-limit:${mid}`} onClick={saveThreshold}>
+                    {pk === `cod-limit:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set'}
+                  </Button>
                 </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool.
+                </p>
+              </>
+            )}
+          </div>
 
-                {/* Fee split — what this agent is paid per delivery */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fee split</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Model</Label>
-                      <Select value={terms.feeModel} onValueChange={(v) => setTerm('feeModel', v as FeeSplitModel)}>
-                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentage</SelectItem>
-                          <SelectItem value="flat">Flat fee</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {(terms.feeModel || termsSeed.feeModel) === 'flat' ? (
-                      <div className="space-y-1">
-                        <Label className="text-xs">Flat fee per delivery</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={terms.flatFee}
-                          onChange={(e) => setTerm('flatFee', e.target.value)}
-                          placeholder="1500"
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        <Label className="text-xs">Agent share (%)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={terms.sharePercent}
-                          onChange={(e) => setTerm('sharePercent', e.target.value)}
-                          placeholder="40"
-                        />
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <Label className="text-xs">Currency</Label>
-                      <Input
-                        value={terms.currency}
-                        maxLength={3}
-                        onChange={(e) => setTerm('currency', e.target.value.toUpperCase())}
-                        placeholder="XAF"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    The agent's cut comes <span className="font-medium">out of</span> your delivery fee, never on
-                    top — the vendor pays the same either way. The platform pays it from the agent's own
-                    earnings account.
-                  </p>
+          {/* Contract terms — employment, fee split, remittance, value ceiling */}
+          <Section
+            icon={ClipboardList}
+            title="Contract terms"
+            summary={termsSummary || 'Employment, fee split, remittance and limits'}
+            defaultOpen={editable}
+          >
+            <div className="space-y-5">
+              <FieldGroup title="Employment">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Type">
+                    <Select
+                      value={terms.empType}
+                      disabled={!editable}
+                      onValueChange={(v) => setTerm('empType', v as EmploymentType)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        {EMPLOYMENT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="Employee ref">
+                    <Input
+                      value={terms.empRef}
+                      disabled={!editable}
+                      onChange={(e) => setTerm('empRef', e.target.value)}
+                      placeholder="EMP-042"
+                    />
+                  </FormField>
+                  <FormField label="Started">
+                    <Input type="date" value={terms.empStart} disabled={!editable} onChange={(e) => setTerm('empStart', e.target.value)} />
+                  </FormField>
+                  <FormField label="Ends">
+                    <Input type="date" value={terms.empEnd} disabled={!editable} onChange={(e) => setTerm('empEnd', e.target.value)} />
+                  </FormField>
                 </div>
+              </FieldGroup>
 
-                {/* Remittance cadence */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">COD remittance</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Cadence</Label>
-                      <Select value={terms.cadence} onValueChange={(v) => setTerm('cadence', v as RemittanceCadence)}>
-                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          {REMITTANCE_CADENCES.map((c) => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Grace hours</Label>
+              {/* Fee split — what this agent is paid per delivery */}
+              <FieldGroup title="Fee split">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Model">
+                    <Select
+                      value={terms.feeModel}
+                      disabled={!editable}
+                      onValueChange={(v) => setTerm('feeModel', v as FeeSplitModel)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="flat">Flat fee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  {feeModel === 'flat' ? (
+                    <FormField label="Flat fee per delivery">
                       <Input
                         type="number"
                         min={0}
-                        max={720}
-                        value={terms.graceHours}
-                        onChange={(e) => setTerm('graceHours', e.target.value)}
-                        placeholder="24"
+                        value={terms.flatFee}
+                        disabled={!editable}
+                        onChange={(e) => setTerm('flatFee', e.target.value)}
+                        placeholder="1500"
                       />
-                    </div>
-                    {['weekly', 'biweekly'].includes(terms.cadence || termsSeed.cadence) && (
-                      <div className="space-y-1">
-                        <Label className="text-xs">Day of week (0 = Sunday)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={6}
-                          value={terms.dayOfWeek}
-                          onChange={(e) => setTerm('dayOfWeek', e.target.value)}
-                        />
-                      </div>
-                    )}
-                    {(terms.cadence || termsSeed.cadence) === 'monthly' && (
-                      <div className="space-y-1">
-                        <Label className="text-xs">Day of month (1–28)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={28}
-                          value={terms.dayOfMonth}
-                          onChange={(e) => setTerm('dayOfMonth', e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
+                    </FormField>
+                  ) : (
+                    <FormField label="Agent share (%)">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={terms.sharePercent}
+                        disabled={!editable}
+                        onChange={(e) => setTerm('sharePercent', e.target.value)}
+                        placeholder="40"
+                      />
+                    </FormField>
+                  )}
+                  <FormField label="Currency">
+                    <Input
+                      value={terms.currency}
+                      maxLength={3}
+                      disabled={!editable}
+                      onChange={(e) => setTerm('currency', e.target.value.toUpperCase())}
+                      placeholder="XAF"
+                    />
+                  </FormField>
                 </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  The agent's cut comes <span className="font-medium">out of</span> your delivery fee, never on
+                  top — the vendor pays the same either way. The platform pays it from the agent's own
+                  earnings account.
+                </p>
+              </FieldGroup>
 
-                {/* Coverage regions */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Coverage regions</Label>
+              {/* Remittance cadence */}
+              <FieldGroup title="COD remittance">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Cadence">
+                    <Select
+                      value={terms.cadence}
+                      disabled={!editable}
+                      onValueChange={(v) => setTerm('cadence', v as RemittanceCadence)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        {REMITTANCE_CADENCES.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="Grace hours">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={720}
+                      value={terms.graceHours}
+                      disabled={!editable}
+                      onChange={(e) => setTerm('graceHours', e.target.value)}
+                      placeholder="24"
+                    />
+                  </FormField>
+                  {['weekly', 'biweekly'].includes(cadence) && (
+                    <FormField label="Day of week" hint="0 = Sunday">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={6}
+                        value={terms.dayOfWeek}
+                        disabled={!editable}
+                        onChange={(e) => setTerm('dayOfWeek', e.target.value)}
+                      />
+                    </FormField>
+                  )}
+                  {cadence === 'monthly' && (
+                    <FormField label="Day of month" hint="1–28">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={28}
+                        value={terms.dayOfMonth}
+                        disabled={!editable}
+                        onChange={(e) => setTerm('dayOfMonth', e.target.value)}
+                      />
+                    </FormField>
+                  )}
+                </div>
+              </FieldGroup>
+
+              <FieldGroup title="Coverage & limits">
+                <FormField
+                  label="Coverage regions"
+                  hint="Comma-separated. Where this agent works for you — it cannot exceed the area they agreed to cover. Leave empty for no restriction."
+                >
                   <Input
                     value={terms.regions}
+                    disabled={!editable}
                     onChange={(e) => setTerm('regions', e.target.value)}
                     placeholder="Douala, Bonabéri"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Comma-separated. Where this agent works for you — it cannot exceed the area they
-                    agreed to cover. Leave empty for no restriction.
-                  </p>
-                </div>
-
-                {/* Per-shipment value ceiling */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Shipment value ceiling</Label>
+                </FormField>
+                <FormField
+                  label="Shipment value ceiling"
+                  hint="The most this agent may carry on one shipment. Leave empty for no cap."
+                >
                   <Input
                     type="number"
                     min={0}
                     value={terms.ceiling}
+                    disabled={!editable}
                     onChange={(e) => setTerm('ceiling', e.target.value)}
                     placeholder="No cap"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    The most this agent may carry on one shipment. Leave empty for no cap.
+                </FormField>
+              </FieldGroup>
+
+              {editable && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                  <p className={termsError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                    {termsError ?? (dirty ? 'Unsaved changes' : 'Only changed fields are sent.')}
                   </p>
-                </div>
-
-                {termsError && <p className="text-xs text-destructive">{termsError}</p>}
-
-                <Button size="sm" variant="outline" disabled={pk === `terms:${mid}`} onClick={saveTerms}>
-                  {pk === `terms:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save contract terms'}
-                </Button>
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Settlements — this contract's cash history */}
-            <Collapsible onOpenChange={(o) => o && loadSettlements()}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-0 text-sm font-medium">Settlements</Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2">
-                {settlementsLoading ? (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</p>
-                ) : settlements ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Outstanding</p>
-                        <p className={settlements.cod.outstandingBalance > 0 ? 'font-medium text-amber-600' : 'font-medium'}>
-                          {formatNumber(settlements.cod.outstandingBalance)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Settled lifetime</p>
-                        <p className="font-medium">{formatNumber(settlements.cod.lifetimeSettled)}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Outstanding cash must reach zero before this contract can end. Last settled{' '}
-                      {formatDate(settlements.cod.lastSettledAt)}.
-                    </p>
-                    {settlements.deposits.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {settlements.deposits.map((deposit) => (
-                          <div key={deposit.id} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              {formatDate(deposit.declaredAt)} · to {deposit.recipient}
-                            </span>
-                            <span className="flex items-center gap-2">
-                              {formatNumber(deposit.amount)}
-                              <Badge variant="outline" className="capitalize">{deposit.status}</Badge>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No deposits recorded under this contract.</p>
+                  <div className="flex gap-2">
+                    {dirty && (
+                      <Button size="sm" variant="ghost" onClick={() => { setTerms(termsSeed); setTermsError(null); }}>
+                        Discard
+                      </Button>
                     )}
+                    <Button size="sm" disabled={!dirty || pk === `terms:${mid}`} onClick={saveTerms}>
+                      {pk === `terms:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save terms'}
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Could not load settlements.</p>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
+                </div>
+              )}
+            </div>
+          </Section>
 
-            {/* Eligibility */}
-            <Collapsible onOpenChange={(o) => o && loadEligibility()}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-0 text-sm font-medium">Assignment eligibility</Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2">
-                {eligLoading ? (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Checking…</p>
-                ) : eligibility ? (
-                  <div className="space-y-1">
-                    <p className="text-sm flex items-center gap-1">
-                      {eligibility.eligible ? (
-                        <><CheckCircle2 className="w-4 h-4 text-green-500" /> Eligible now</>
-                      ) : (
-                        <><XCircle className="w-4 h-4 text-destructive" /> Not eligible</>
-                      )}
-                      <span className="text-muted-foreground ml-1">
-                        ({eligibility.activeShipmentCount}/{eligibility.maxConcurrentShipments} capacity)
-                      </span>
+          {/* Settlements — this contract's cash history */}
+          <Section icon={Banknote} title="Settlements" summary="Outstanding cash and deposits on this contract" onOpen={loadSettlements}>
+            {settlementsLoading ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              </p>
+            ) : settlements ? (
+              <div className="space-y-3">
+                <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
+                  <div className="bg-card px-3 py-2.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Outstanding</p>
+                    <p className={`mt-1 text-lg font-semibold tabular-nums ${settlements.cod.outstandingBalance > 0 ? 'text-amber-600' : ''}`}>
+                      {formatNumber(settlements.cod.outstandingBalance)}
                     </p>
-                    {eligibility.rules.map((rule) => (
-                      <div key={rule.rule} className="text-xs flex items-center gap-1.5">
-                        {rule.passed ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-destructive" />}
-                        <span className={rule.passed ? 'text-muted-foreground' : 'text-destructive'}>
-                          {rule.rule.replace(/_/g, ' ')}{rule.reason ? ` — ${rule.reason.replace(/_/g, ' ')}` : ''}
+                  </div>
+                  <div className="bg-card px-3 py-2.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Settled lifetime</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums">{formatNumber(settlements.cod.lifetimeSettled)}</p>
+                  </div>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Outstanding cash must reach zero before this contract can end. Last settled{' '}
+                  {formatDate(settlements.cod.lastSettledAt)}.
+                </p>
+                {settlements.deposits.length > 0 ? (
+                  <div className="divide-y rounded-lg border">
+                    {settlements.deposits.map((deposit) => (
+                      <div key={deposit.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {formatDate(deposit.declaredAt)} · to {deposit.recipient}
+                        </span>
+                        <span className="flex flex-shrink-0 items-center gap-2 tabular-nums">
+                          {formatNumber(deposit.amount)}
+                          <Badge variant="outline" className="capitalize">{deposit.status}</Badge>
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Could not load eligibility.</p>
+                  <p className="text-xs text-muted-foreground">No deposits recorded under this contract.</p>
                 )}
-              </CollapsibleContent>
-            </Collapsible>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Could not load settlements.</p>
+            )}
+          </Section>
 
-            {/* History */}
-            <Collapsible onOpenChange={(o) => o && loadHistory()}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-0 text-sm font-medium">History</Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2">
-                {historyLoading ? (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</p>
-                ) : history && history.length > 0 ? (
-                  <div className="space-y-2">
-                    {history.map((event, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <div>
-                          <span className="font-medium capitalize">{event.type.replace(/_/g, ' ')}</span>
-                          <span className="text-muted-foreground ml-1">{formatDate(event.createdAt ?? event.at)}</span>
-                          {event.note && <p className="text-muted-foreground">{String(event.note)}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No history.</p>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Inline reason mode */}
-            {mode && (
-              <div className="rounded-lg border p-3 space-y-2">
-                <p className="text-sm font-medium">
-                  {mode === 'suspend' && 'Reason for suspension'}
-                  {mode === 'pause' && 'Reason for pausing (optional)'}
-                  {mode === 'reject' && 'Reason for declining (optional)'}
-                  {mode === 'terminate' && 'Reason for removal (optional)'}
+          {/* Eligibility */}
+          <Section icon={ShieldCheck} title="Assignment eligibility" summary="Whether this agent can take a shipment right now" onOpen={loadEligibility}>
+            {eligLoading ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking…
+              </p>
+            ) : eligibility ? (
+              <div className="space-y-2">
+                <p className="flex flex-wrap items-center gap-1.5 text-sm">
+                  {eligibility.eligible ? (
+                    <><CheckCircle2 className="h-4 w-4 text-green-500" /> Eligible now</>
+                  ) : (
+                    <><XCircle className="h-4 w-4 text-destructive" /> Not eligible</>
+                  )}
+                  <span className="text-muted-foreground">
+                    ({eligibility.activeShipmentCount}/{eligibility.maxConcurrentShipments} capacity)
+                  </span>
                 </p>
-                <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Add a reason…" />
-                {mode === 'pause' && (
-                  <p className="text-xs text-muted-foreground">
-                    A mutual break: no new assignments, shipments already in flight are untouched.
-                    Reinstate whenever you both want to restart.
-                  </p>
-                )}
-                {mode === 'terminate' && (
-                  <p className="text-xs text-muted-foreground">
-                    This proposes termination — the contract ends once the agent agrees and any outstanding cash
-                    and unpaid earnings are settled.
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={resetInline}>Cancel</Button>
-                  <Button
-                    size="sm"
-                    variant={mode === 'suspend' || mode === 'terminate' ? 'destructive' : 'default'}
-                    className="flex-1"
-                    disabled={(mode === 'suspend' && !reason.trim()) || pk === `${mode}:${mid}`}
-                    onClick={confirmInline}
-                  >
-                    {pk === `${mode}:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
-                  </Button>
+                <div className="space-y-1">
+                  {eligibility.rules.map((rule) => (
+                    <div key={rule.rule} className="flex items-center gap-1.5 text-xs">
+                      {rule.passed ? (
+                        <CheckCircle2 className="h-3 w-3 flex-shrink-0 text-green-500" />
+                      ) : (
+                        <XCircle className="h-3 w-3 flex-shrink-0 text-destructive" />
+                      )}
+                      <span className={rule.passed ? 'text-muted-foreground' : 'text-destructive'}>
+                        {rule.rule.replace(/_/g, ' ')}{rule.reason ? ` — ${rule.reason.replace(/_/g, ' ')}` : ''}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Could not load eligibility.</p>
             )}
-          </div>
-        </ScrollArea>
+          </Section>
 
-        {/* Action footer */}
-        {!mode && (
-          <div className="px-5 py-4 border-t flex flex-wrap gap-2">
-            {/* Whoever raised the contract cannot answer it — the server picks the
-                valid pair from `initiatedBy`, and the wrong one is a 403. */}
-            {membership.status === 'pending' && membership.initiatedBy === 'agent' && (
-              <>
-                <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
-                  {pk === `approve:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Approve'}
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>Decline</Button>
-              </>
+          {/* History */}
+          <Section icon={History} title="History" summary="Everything that has happened with this agent" onOpen={loadHistory}>
+            {historyLoading ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              </p>
+            ) : history && history.length > 0 ? (
+              <div className="space-y-2.5">
+                {history.map((event, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs">
+                    <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <span className="font-medium capitalize">{event.type.replace(/_/g, ' ')}</span>
+                      <span className="ml-1 text-muted-foreground">{formatDate(event.createdAt ?? event.at)}</span>
+                      {event.note && <p className="break-words text-muted-foreground">{String(event.note)}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No history.</p>
             )}
-            {membership.status === 'pending' && membership.initiatedBy === 'agency' && (
-              <>
-                <p className="w-full text-xs text-muted-foreground">
-                  Waiting on the agent to accept your request.
+          </Section>
+        </div>
+      </ScrollArea>
+
+      {/* Action footer. The reason box lives here too, so confirming never
+          depends on finding a panel buried at the bottom of the scroller. */}
+      {(mode || showActions) && (
+        <div className="flex-shrink-0 border-t bg-muted/20 px-6 py-4">
+          {mode ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                {mode === 'suspend' && 'Reason for suspension'}
+                {mode === 'pause' && 'Reason for pausing (optional)'}
+                {mode === 'reject' && 'Reason for declining (optional)'}
+                {mode === 'terminate' && 'Reason for removal (optional)'}
+              </p>
+              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Add a reason…" />
+              {mode === 'pause' && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  A mutual break: no new assignments, shipments already in flight are untouched.
+                  Reinstate whenever you both want to restart.
                 </p>
+              )}
+              {mode === 'terminate' && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  This proposes termination — the contract ends once the agent agrees and any outstanding cash
+                  and unpaid earnings are settled.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={resetInline}>Cancel</Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant={mode === 'suspend' || mode === 'terminate' ? 'destructive' : 'default'}
                   className="flex-1"
-                  disabled={pk === `withdraw:${mid}`}
-                  onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
+                  disabled={(mode === 'suspend' && !reason.trim()) || pk === `${mode}:${mid}`}
+                  onClick={confirmInline}
                 >
-                  {pk === `withdraw:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Withdraw request'}
+                  {pk === `${mode}:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
                 </Button>
-              </>
-            )}
-            {membership.status === 'active' && (
-              <>
-                <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('pause')}>
-                  <PauseCircle className="w-4 h-4" /> Pause
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('suspend')}>
-                  <ShieldAlert className="w-4 h-4" /> Suspend
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
-              </>
-            )}
-            {(membership.status === 'paused' || membership.status === 'suspended') && (
-              <>
-                <Button size="sm" className="flex-1" disabled={pk === `reinstate:${mid}`} onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}>
-                  {pk === `reinstate:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reinstate'}
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
-              </>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {/* Whoever raised the contract cannot answer it — the server picks the
+                  valid pair from `initiatedBy`, and the wrong one is a 403. */}
+              {membership.status === 'pending' && membership.initiatedBy === 'agent' && (
+                <>
+                  <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
+                    {pk === `approve:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>Decline</Button>
+                </>
+              )}
+              {membership.status === 'pending' && membership.initiatedBy === 'agency' && (
+                <>
+                  <p className="w-full text-xs text-muted-foreground">
+                    Waiting on the agent to accept your request.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={pk === `withdraw:${mid}`}
+                    onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
+                  >
+                    {pk === `withdraw:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw request'}
+                  </Button>
+                </>
+              )}
+              {membership.status === 'active' && (
+                <>
+                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('pause')}>
+                    <PauseCircle className="h-4 w-4" /> Pause
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('suspend')}>
+                    <ShieldAlert className="h-4 w-4" /> Suspend
+                  </Button>
+                  {!departurePending && (
+                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
+                  )}
+                </>
+              )}
+              {(membership.status === 'paused' || membership.status === 'suspended') && (
+                <>
+                  <Button size="sm" className="flex-1" disabled={pk === `reinstate:${mid}`} onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}>
+                    {pk === `reinstate:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reinstate'}
+                  </Button>
+                  {!departurePending && (
+                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
