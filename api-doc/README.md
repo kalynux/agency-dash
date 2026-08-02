@@ -136,6 +136,7 @@ Every route tree is guarded by role. `✅` = full access to that area's endpoint
 | Shipment status transitions | — | — | — | ✅ | ✅ (own)² | ✅ |
 | COD cash chain | — | — | — | ✅ (collect/remit) | ✅ (collect/deposit) | ✅ (confirm/oversight) |
 | Agency ⇄ vendor connections | — | — | ✅ | ✅ | — | — |
+| Agency ⇄ agent contracts | — | — | — | ✅ | ✅ | ✅ (transfer) |
 | Tickets (support) | — | ✅ | ✅ | ✅ | ✅ | ✅ (all) |
 | Notifications & preferences | — | — | ✅ (self) | ✅ (self) | ✅ (self) | — |
 | Saved payment methods (`/me/payment-methods`) | — | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -213,14 +214,14 @@ Same JWT signs both services — forward the viewer's access token to geo-tracke
 - [Store](./vendor/store.md) · [Profile](./vendor/profile.md) · [Onboarding](./vendor/onboarding.md)
 - [Products](./vendor/products.md) · [Product update](./vendor/product-update.md) · [Upload flow](./vendor/product-upload-flow.md) · [Variants](./vendor/variants.md) · [Options & variants](./vendor/option-variant-management.md) · [Digital products](./vendor/digital-products.md)
 - [Inventory](./vendor/inventory.md) · [Orders](./vendor/orders.md) · [Shipping](./vendor/shipping.md) · [Delivery agencies](./vendor/delivery-agencies.md) · [Agency connections](./vendor/agency-connections.md)
-- [Bookings](./vendor/bookings.md) · [Booking guide](./vendor/booking-implementation-guide.md) · [Calendar](./vendor/calendar.md) · [Availability rules](./vendor/availability-rules.md)
+- [Bookings](./vendor/bookings.md) · [Booking guide](./booking-implementation-guide.md) · [Calendar](./vendor/calendar.md) · [Availability rules](./vendor/availability-rules.md)
 - [Billing](./vendor/billing.md) · [Billing overview](./vendor/billing-overview.md) · [Earnings](./vendor/earnings.md) · [Transactions](./vendor/transactions.md) · [Stripe payments](./vendor/stripe-payments.md) · [Payment methods](./vendor/payment-methods.md)
 - [Analytics](./vendor/analytics.md) · [Customer management](./vendor/customer-management.md) · [Storage](./vendor/storage.md) · [File management](./vendor/file-management.md)
 - [Notifications](./vendor/notifications.md) · [Notification channels](./vendor/notification-channels.md) · [Tickets](./vendor/tickets.md)
 
 ### Agency
 - [Profile](./agency/profile.md) · [Profile schema](./agency/profile-schema.md) · [Onboarding](./agency/onboarding.md)
-- [Agents](./agency/agents.md) · [Agent roster](./agency/agent-roster.md) · [Shipments](./agency/shipments.md)
+- [Agent roster & contracts](./agency/agent-roster.md) · [Shipments](./agency/shipments.md)
 - [Billing (plans & credit)](./agency/billing.md) · [COD cash management](./agency/cod-cash-management.md) · [Earnings](./agency/earnings.md) · [Payment methods](./agency/payment-methods.md)
 - [Vendor connections](./agency/vendor-connections.md) · [Vendors](./agency/vendors.md) · [Products](./agency/products.md)
 - [File management](./agency/file-management.md) · [Storage](./agency/storage.md)

@@ -3,93 +3,96 @@
 @tailwind utilities;
 
 /*
- * ─── Wi Mall · Cash Emerald ──────────────────────────────────────────────────
- * Brand identity for the agency dashboard. Emerald reads as money, go-signal and
- * momentum; a warm off-white keeps dense operations legible; gold marks value and
- * attention. Everything downstream (pages, primitives, shell) inherits from here.
+ * ─── Wi Mall · Dispatch Cobalt ───────────────────────────────────────────────
+ * Brand identity for the agency dashboard. A bold cobalt blue reads as trust,
+ * live tracking and logistics tech — the language of last-mile dispatch; a deep
+ * navy "dispatch" shell anchors the brand on every page; gold marks value and
+ * money, and green stays reserved for real success/delivered states. Everything
+ * downstream (pages, primitives, shell) inherits from here.
  */
 
 @layer base {
   :root {
-    --background: 150 30% 99%;
-    --foreground: 156 40% 8%;
+    --background: 214 42% 99%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 156 40% 8%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 156 40% 8%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Emerald — deep enough that white text and text-primary both clear AA. */
-    --primary: 158 84% 26%;
+    /* Cobalt — deep enough that white text and text-primary both clear AA (6.5:1). */
+    --primary: 222 84% 47%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 24% 95%;
-    --secondary-foreground: 156 40% 12%;
-    --muted: 150 20% 96%;
-    --muted-foreground: 155 12% 38%;
-    --accent: 152 44% 93%;
-    --accent-foreground: 158 70% 18%;
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 40% 20%;
+    --muted: 214 30% 96%;
+    --muted-foreground: 216 16% 40%;
+    --accent: 214 62% 93%;
+    --accent-foreground: 222 72% 30%;
 
     --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --success: 158 84% 26%;
+    /* Success stays green — reserved for delivered / paid / positive money states. */
+    --success: 152 63% 31%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 46%;
     --gold: 42 90% 45%;
 
-    --border: 150 16% 89%;
-    --input: 150 16% 86%;
-    --ring: 158 84% 26%;
+    --border: 214 24% 89%;
+    --input: 214 24% 85%;
+    --ring: 222 84% 47%;
     --radius: 0.75rem;
 
-    /* Custom Sidebar surface — a deep emerald ink that anchors the brand on every
+    /* Custom Sidebar surface — a deep navy ink that anchors the brand on every
        page. Rows and active states are expressed against this dark ground. */
-    --sidebar-background: 158 42% 8%;
-    --sidebar-foreground: 150 16% 72%;
-    --sidebar-primary: 152 70% 46%;
-    --sidebar-primary-foreground: 158 45% 6%;
-    --sidebar-accent: 156 34% 14%;
+    --sidebar-background: 223 55% 9%;
+    --sidebar-foreground: 214 20% 72%;
+    --sidebar-primary: 214 92% 62%;
+    --sidebar-primary-foreground: 223 60% 8%;
+    --sidebar-accent: 222 40% 16%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 156 28% 16%;
-    --sidebar-ring: 152 70% 46%;
+    --sidebar-border: 222 32% 18%;
+    --sidebar-ring: 214 92% 62%;
   }
 
   .dark {
-    --background: 156 32% 6%;
-    --foreground: 150 14% 96%;
-    --card: 156 26% 9%;
-    --card-foreground: 150 14% 96%;
-    --popover: 156 26% 9%;
-    --popover-foreground: 150 14% 96%;
+    --background: 222 47% 6%;
+    --foreground: 214 22% 96%;
+    --card: 222 40% 9%;
+    --card-foreground: 214 22% 96%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 214 22% 96%;
 
-    --primary: 152 66% 44%;
-    --primary-foreground: 158 45% 6%;
+    --primary: 214 92% 62%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 156 16% 16%;
-    --secondary-foreground: 150 14% 92%;
-    --muted: 156 14% 15%;
-    --muted-foreground: 150 10% 63%;
-    --accent: 156 24% 17%;
-    --accent-foreground: 150 22% 92%;
+    --secondary: 222 24% 16%;
+    --secondary-foreground: 214 20% 92%;
+    --muted: 222 20% 15%;
+    --muted-foreground: 214 16% 66%;
+    --accent: 222 30% 18%;
+    --accent-foreground: 214 30% 92%;
 
     --destructive: 0 62% 47%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 66% 44%;
-    --success-foreground: 158 45% 6%;
+    --success: 152 58% 46%;
+    --success-foreground: 150 45% 7%;
     --warning: 38 92% 55%;
     --gold: 42 90% 58%;
 
-    --border: 156 16% 17%;
-    --input: 156 16% 19%;
-    --ring: 152 66% 44%;
+    --border: 222 20% 17%;
+    --input: 222 20% 19%;
+    --ring: 214 92% 62%;
 
-    --sidebar-background: 158 44% 6%;
-    --sidebar-foreground: 150 14% 70%;
-    --sidebar-primary: 152 70% 48%;
-    --sidebar-primary-foreground: 158 45% 5%;
-    --sidebar-accent: 156 30% 13%;
+    --sidebar-background: 223 58% 7%;
+    --sidebar-foreground: 214 18% 72%;
+    --sidebar-primary: 214 92% 64%;
+    --sidebar-primary-foreground: 223 60% 6%;
+    --sidebar-accent: 222 34% 14%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 156 24% 14%;
-    --sidebar-ring: 152 70% 48%;
+    --sidebar-border: 222 26% 15%;
+    --sidebar-ring: 214 92% 64%;
   }
 }
 
@@ -234,7 +237,7 @@ textarea:focus-visible {
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  background: #0e9f6e;
+  background: #2563eb;
   border: 2px solid #fff;
   border-radius: 9999px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
@@ -245,7 +248,7 @@ textarea:focus-visible {
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  background: #0e9f6e;
+  background: #2563eb;
   border-radius: 9999px;
   opacity: 0.35;
   animation: agentPulse 2s ease-out infinite;
@@ -278,7 +281,7 @@ textarea:focus-visible {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-bottom: 8px solid #0e9f6e;
+  border-bottom: 8px solid #2563eb;
 }
 .agent-marker__label {
   left: 50%;
@@ -317,7 +320,7 @@ textarea:focus-visible {
   border-radius: 12px;
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
-  box-shadow: 0 8px 30px rgba(6, 36, 26, 0.22);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.24);
 }
 .agent-popup-wrap .leaflet-popup-content {
   margin: 10px 12px;

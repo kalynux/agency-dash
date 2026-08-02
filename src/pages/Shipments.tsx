@@ -1,11 +1,15 @@
 import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Navigation, Package, RefreshCw, Search, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Navigation, Package, RefreshCw, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { shipmentsService } from '@/services/shipments.service';
 import { useShipments } from '@/store/shipments.store';
 import { useAgentsRoster } from '@/store/agents.store';
@@ -15,7 +19,7 @@ import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
 import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
-import { describeShipmentPlace } from '@/types/shipment.types';
+import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
 
 const STATUS_FILTERS: { value: ShipmentStatus | 'all'; label: string }[] = [
@@ -119,12 +123,18 @@ export function Shipments() {
   /**
    * "Douala → Yaoundé" from the row's own pickup/drop-off. Both are optional on
    * the payload, so a row that carries neither simply shows no route line.
+   *
+   * A shipment can have several collection points (one vendor with two business
+   * addresses, or a mix of vendor-collected and agency-stored items), which is
+   * an operationally different job — so say so rather than naming only the first.
    */
   const routeLabel = (shipment: ShipmentListItem): string | null => {
-    const from = describeShipmentPlace(shipment.pickup);
-    const to = describeShipmentPlace(shipment.deliveryAddress);
+    const from = describeAddress(shipment.pickup?.address);
+    const to = describeAddress(shipment.deliveryAddress);
     if (!from && !to) return null;
-    return `${from ?? '—'} → ${to ?? '—'}`;
+    const stops = shipment.pickup?.count ?? 0;
+    const fromLabel = from ? (stops > 1 ? `${from} +${stops - 1}` : from) : 'Unknown';
+    return `${fromLabel} → ${to ?? 'Unknown'}`;
   };
 
   const handleChanged = () => {
@@ -134,6 +144,7 @@ export function Shipments() {
 
   const rangeStart = shipments.length === 0 ? 0 : (meta.page - 1) * meta.limit + 1;
   const rangeEnd = (meta.page - 1) * meta.limit + shipments.length;
+
 
   /** The agent / tracking cell, shared by the table and the mobile card. */
   const renderAgentLink = (shipment: ShipmentListItem) =>
@@ -173,41 +184,33 @@ export function Shipments() {
       </div>
 
       {/* Filters & Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by order #, customer, product, or tracking #…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={(v) => handleStatusFilterChange(v as ShipmentStatus | 'all')}>
-              <SelectTrigger className="w-full sm:w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTERS.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {searchQuery.trim().length === 1 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Keep typing — search needs at least {MIN_SEARCH_CHARS} characters.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search shipments…"
+        searchLabel="Search by order #, customer, product, or tracking #"
+        activeCount={statusFilter === 'all' ? 0 : 1}
+        onReset={() => handleStatusFilterChange('all')}
+        filterDescription="Filters apply across every page of your shipments."
+        resultCount={meta.total}
+        resultNoun="shipment"
+        hint={
+          searchQuery.trim().length === 1
+            ? `Keep typing — search needs at least ${MIN_SEARCH_CHARS} characters.`
+            : undefined
+        }
+      >
+        <FilterSection label="Status">
+          <FilterOptionGroup
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+            options={STATUS_FILTERS}
+          />
+        </FilterSection>
+      </SearchFilterBar>
 
       {/* Shipments list */}
-      <Card>
+      <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4 space-y-3">

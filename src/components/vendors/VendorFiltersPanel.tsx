@@ -1,72 +1,58 @@
-import { RotateCcw, X, XCircle } from 'lucide-react';
+import { RotateCcw, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { FilterField, FilterSection, FilterToggle } from '@/components/common/SearchFilterBar';
 import type { VendorFilters } from '@/components/vendors/vendorFilters';
 
 export interface VendorFiltersPanelProps {
   filters: VendorFilters;
   onChange: (key: keyof VendorFilters, value: string | boolean) => void;
-  onClear: () => void;
 }
 
-export function VendorFiltersPanel({ filters, onChange, onClear }: VendorFiltersPanelProps) {
+/** Body of the vendor-browse filter sheet — see `SearchFilterBar`. */
+export function VendorFiltersPanel({ filters, onChange }: VendorFiltersPanelProps) {
   return (
-    <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="filter-city" className="text-xs">City</Label>
-          <Input
-            id="filter-city"
-            placeholder="e.g. Douala"
-            value={filters.city}
-            onChange={(e) => onChange('city', e.target.value)}
-            className="h-8 text-sm"
-          />
+    <>
+      <FilterSection label="Location" description="Matches the vendor's registered pickup area.">
+        <div className="grid grid-cols-2 gap-3">
+          <FilterField label="City" htmlFor="filter-city">
+            <Input
+              id="filter-city"
+              placeholder="e.g. Douala"
+              value={filters.city}
+              onChange={(e) => onChange('city', e.target.value)}
+              className="h-10"
+            />
+          </FilterField>
+          <FilterField label="State" htmlFor="filter-state">
+            <Input
+              id="filter-state"
+              placeholder="e.g. Littoral"
+              value={filters.state}
+              onChange={(e) => onChange('state', e.target.value)}
+              className="h-10"
+            />
+          </FilterField>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="filter-state" className="text-xs">State</Label>
-          <Input
-            id="filter-state"
-            placeholder="e.g. Littoral"
-            value={filters.state}
-            onChange={(e) => onChange('state', e.target.value)}
-            className="h-8 text-sm"
-          />
-        </div>
-      </div>
+      </FilterSection>
 
-      <div className="flex items-center gap-5">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="filter-return-eligible"
+      <FilterSection label="Order policy">
+        <div className="space-y-2">
+          <FilterToggle
+            icon={RotateCcw}
+            label="Returns accepted"
+            description="The vendor takes goods back after delivery."
             checked={filters.returnEligible}
-            onCheckedChange={(v) => onChange('returnEligible', !!v)}
+            onCheckedChange={(v) => onChange('returnEligible', v)}
           />
-          <span className="text-xs flex items-center gap-1">
-            <RotateCcw className="w-3 h-3" /> Returns accepted
-          </span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="filter-cancellable"
+          <FilterToggle
+            icon={XCircle}
+            label="Cancellable"
+            description="Orders can still be called off before pickup."
             checked={filters.cancellable}
-            onCheckedChange={(v) => onChange('cancellable', !!v)}
+            onCheckedChange={(v) => onChange('cancellable', v)}
           />
-          <span className="text-xs flex items-center gap-1">
-            <XCircle className="w-3 h-3" /> Cancellable
-          </span>
-        </label>
-      </div>
-
-      <button
-        type="button"
-        onClick={onClear}
-        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-      >
-        <X className="w-3 h-3" />
-        Clear filters
-      </button>
-    </div>
+        </div>
+      </FilterSection>
+    </>
   );
 }

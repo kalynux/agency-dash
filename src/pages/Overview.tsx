@@ -24,7 +24,13 @@ import { useVendorConnections } from '@/store/vendorConnections.store';
 import { shipmentsService } from '@/services/shipments.service';
 import { codCashService } from '@/services/cod-cash.service';
 import { cn } from '@/lib/utils';
-import { PageHeader } from '@/components/layout/PageContainer';
+import {
+  PageHeader,
+  listSurfaceClass,
+  sectionRuleClass,
+  sectionSurfaceClass,
+} from '@/components/layout/PageContainer';
+import { SectionHeading } from '@/components/common/InfoHint';
 import { formatCurrency } from '@/lib/format';
 
 type MetricAccent = 'emerald' | 'blue' | 'gold';
@@ -46,57 +52,66 @@ interface MetricCardProps {
   hero?: boolean;
 }
 
+/**
+ * Title + icon on one row, the figure beneath it — the same stack for the hero
+ * and the supporting tiles. Two of these sit side by side on a phone, so the
+ * label can't share a row with the value: it would leave the amount ~70px to
+ * render in. Everything steps up a size from `sm:`.
+ */
 function MetricCard({ title, value, icon: Icon, isLoading, onClick, hint, accent = 'emerald', hero }: MetricCardProps) {
-  if (hero) {
-    return (
-      <Card
-        className="relative overflow-hidden border-0 bg-brand-gradient text-white shadow-brand cursor-pointer transition-transform hover:-translate-y-0.5"
-        onClick={onClick}
-      >
-        <div className="pointer-events-none absolute inset-0 bg-brand-sheen" />
-        <CardContent className="relative p-6">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-medium text-white/80">{title}</p>
-            <div className="rounded-xl bg-white/15 p-2.5 backdrop-blur-sm">
-              <Icon className="h-5 w-5 text-white" />
-            </div>
-          </div>
-          {isLoading ? (
-            <Skeleton className="mt-5 h-8 w-36 bg-white/25" />
-          ) : (
-            <p className="mt-5 font-numeric text-2xl font-bold tracking-tight">{value}</p>
-          )}
-          {hint && (
-            <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-white/75">
-              {hint}
-              <ArrowUpRight className="h-3 w-3 rtl:-scale-x-100" />
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card
-      className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg"
+      className={cn(
+        // The Card's own `py-6` doubles up with the content padding; drop it on
+        // phones so four tiles in a 2×2 don't cost a screenful of whitespace.
+        'cursor-pointer py-0 transition-all hover:-translate-y-0.5 md:py-6',
+        hero
+          ? 'relative overflow-hidden border-0 bg-brand-gradient text-white shadow-brand'
+          : 'hover:shadow-lg',
+      )}
       onClick={onClick}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-2.5">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <p className="truncate font-numeric text-2xl font-bold tracking-tight">{value}</p>
+      {hero && <div className="pointer-events-none absolute inset-0 bg-brand-sheen" />}
+      <CardContent className="relative p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-2">
+          <p
+            className={cn(
+              'text-xs font-medium leading-snug sm:text-sm',
+              hero ? 'text-white/80' : 'text-muted-foreground',
             )}
-            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-          </div>
-          <div className={cn('flex-shrink-0 rounded-xl p-2.5', ACCENT_TILE[accent])}>
-            <Icon className="h-5 w-5" />
+          >
+            {title}
+          </p>
+          <div
+            className={cn(
+              'flex-shrink-0 rounded-lg p-2 sm:rounded-xl sm:p-2.5',
+              hero ? 'bg-white/15 backdrop-blur-sm' : ACCENT_TILE[accent],
+            )}
+          >
+            <Icon className={cn('h-4 w-4 sm:h-5 sm:w-5', hero && 'text-white')} />
           </div>
         </div>
+        {isLoading ? (
+          <Skeleton className={cn('mt-4 h-7 w-24 sm:mt-5 sm:h-8 sm:w-36', hero && 'bg-white/25')} />
+        ) : (
+          // Half a phone screen is not always enough for a seven-figure amount.
+          // Wrap rather than truncate — the grid stretches every tile to the
+          // tallest row, so a second line costs nothing and keeps the figure whole.
+          <p className="mt-4 break-words font-numeric text-base font-bold tracking-tight sm:mt-5 sm:text-2xl">
+            {value}
+          </p>
+        )}
+        {hint && (
+          <p
+            className={cn(
+              'mt-1.5 flex items-center gap-1 text-[11px] font-medium sm:text-xs',
+              hero ? 'text-white/75' : 'text-muted-foreground',
+            )}
+          >
+            <span className="truncate">{hint}</span>
+            {hero && <ArrowUpRight className="h-3 w-3 flex-shrink-0 rtl:-scale-x-100" />}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -132,10 +147,11 @@ export function Overview() {
       <PageHeader
         title="Overview"
         description="Welcome back! Here's what's happening with your agency."
+        shortDescription="Welcome back!"
       />
 
-      {/* Metrics — one filled hero (money), three supporting counts */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics — one filled hero (money), three supporting counts. 2×2 on phones. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <MetricCard
           hero
           title="Available Earnings"
@@ -168,14 +184,14 @@ export function Overview() {
           icon={Users}
           accent="emerald"
           hint="Active riders"
-          onClick={() => navigate('/dashboard/agents/roster')}
+          onClick={() => navigate('/dashboard/agents/connections')}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent shipments */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className={cn(listSurfaceClass, 'gap-4 md:gap-6')}>
+          <CardHeader className="flex flex-row items-center justify-between px-4 pt-4 md:px-6 md:pt-0">
             <div>
               <CardTitle>Recent Shipments</CardTitle>
               <CardDescription>Latest shipments assigned to your agency</CardDescription>
@@ -185,9 +201,9 @@ export function Overview() {
               <ArrowRight className="w-4 h-4 rtl:-scale-x-100" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 md:px-6">
             {dashboard.isLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-3 px-4 md:px-0">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
               </div>
             ) : recent.length === 0 ? (
@@ -199,12 +215,12 @@ export function Overview() {
                 <p className="text-xs text-muted-foreground">New assignments from vendors will appear here.</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y md:space-y-2 md:divide-y-0">
                 {recent.map((s) => (
                   <div
                     key={s.id}
                     onClick={() => navigate('/dashboard/shipments')}
-                    className="group flex items-center justify-between rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/60 cursor-pointer"
+                    className="group flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-muted/60 md:rounded-xl md:border md:border-transparent md:px-3 md:hover:border-border"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -225,12 +241,16 @@ export function Overview() {
 
         {/* Quick actions + attention */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks you might want to perform</CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* The tinted "Attention Needed" card below keeps its frame — the
+              colour is the signal. Quick Actions is ordinary content, so on a
+              phone it sheds the frame and is ruled off from the list above. */}
+          <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
+            <SectionHeading
+              title="Quick Actions"
+              description="Common tasks you might want to perform"
+              short="Common tasks"
+            />
+            <CardContent className="max-md:px-0">
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="outline" className="h-auto justify-start gap-3 py-3" onClick={() => navigate('/dashboard/tickets', { state: { create: true } })}>
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><TicketIcon className="w-4 h-4" /></span>

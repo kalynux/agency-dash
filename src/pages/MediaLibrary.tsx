@@ -30,7 +30,6 @@ import {
   Paperclip,
   Pencil,
   Play,
-  Search,
   Store,
   Trash2,
   Truck,
@@ -50,13 +49,6 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -70,6 +62,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/common/state-views';
+import { InfoHint } from '@/components/common/InfoHint';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn, formatFileSize, storageBarColor, storagePercent } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -128,6 +126,11 @@ const KIND_FILTERS: { value: FileKind | 'all'; label: string }[] = [
 const PROVIDERS: StorageProvider[] = ['local', 's3', 'gcs', 'r2', 'firebase', 'cloudinary'];
 
 const ALL_PROVIDERS = '__all__';
+
+const PROVIDER_FILTERS: { value: StorageProvider | typeof ALL_PROVIDERS; label: string }[] = [
+  { value: ALL_PROVIDERS, label: 'All providers' },
+  ...PROVIDERS.map((p) => ({ value: p, label: p.toUpperCase() })),
+];
 
 type SortValue = `${FileSortField}:${'asc' | 'desc'}`;
 
@@ -429,6 +432,10 @@ export function MediaLibrary() {
 
   const hasFilters = !!search || kind !== 'all' || provider !== 'all';
 
+  /** Sort counts too — it changes which files land on the page you're looking at. */
+  const activeFilterCount =
+    (kind === 'all' ? 0 : 1) + (provider === 'all' ? 0 : 1) + (sort === 'createdAt:desc' ? 0 : 1);
+
   // ─── Upload ─────────────────────────────────────────────────────────────────
 
   const handleFiles = useCallback(
@@ -607,10 +614,16 @@ export function MediaLibrary() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Media Library</h1>
-            <p className="text-muted-foreground">
+            <h1 className="flex items-center gap-1.5 text-2xl font-bold">
+              Media Library
+              <InfoHint className="md:hidden" label="About the media library">
+                Every file your agency has uploaded, and exactly where each one is attached.
+              </InfoHint>
+            </h1>
+            <p className="text-muted-foreground max-md:hidden">
               Every file your agency has uploaded, and exactly where each one is attached
             </p>
+            <p className="text-muted-foreground md:hidden">Every file you've uploaded</p>
           </div>
           <Button
             onClick={() => fileInputRef.current?.click()}
@@ -669,91 +682,71 @@ export function MediaLibrary() {
         </div>
 
         {/* Toolbar */}
-        <Card>
-          <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by file name…"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        <SearchFilterBar
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Search files…"
+          searchLabel="Search by file name"
+          activeCount={activeFilterCount}
+          onReset={() => {
+            setKind('all');
+            setProvider('all');
+            setSort('createdAt:desc');
+            setPage(1);
+          }}
+          filterDescription="Filters and sorting apply to your whole library."
+          resultCount={pagination?.total}
+          resultNoun="file"
+          trailing={
+            <Tabs
+              value={viewMode}
+              onValueChange={(v) => setViewMode(v as 'grid' | 'list')}
+              className="flex-shrink-0"
+            >
+              <TabsList className="h-11">
+                <TabsTrigger value="grid" aria-label="Grid view">
+                  <Grid3X3 className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="list" aria-label="List view">
+                  <List className="h-4 w-4" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        >
+          <FilterSection label="File type">
+            <FilterOptionGroup
+              value={kind}
+              onChange={(v) => {
+                setKind(v);
+                setPage(1);
+              }}
+              options={KIND_FILTERS}
+            />
+          </FilterSection>
 
-            <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
-              <div className="flex shrink-0 items-center gap-1 rounded-lg border p-1">
-                {KIND_FILTERS.map((k) => (
-                  <button
-                    key={k.value}
-                    onClick={() => {
-                      setKind(k.value);
-                      setPage(1);
-                    }}
-                    className={cn(
-                      'whitespace-nowrap rounded-md px-2.5 py-1 text-sm transition-colors',
-                      kind === k.value
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    {k.label}
-                  </button>
-                ))}
-              </div>
+          <FilterSection label="Storage provider">
+            <FilterOptionGroup
+              value={provider === 'all' ? ALL_PROVIDERS : provider}
+              onChange={(v) => {
+                setProvider(v === ALL_PROVIDERS ? 'all' : (v as StorageProvider));
+                setPage(1);
+              }}
+              options={PROVIDER_FILTERS}
+            />
+          </FilterSection>
 
-              <Select
-                value={provider === 'all' ? ALL_PROVIDERS : provider}
-                onValueChange={(v) => {
-                  setProvider(v === ALL_PROVIDERS ? 'all' : (v as StorageProvider));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[140px] shrink-0">
-                  <SelectValue placeholder="Provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_PROVIDERS}>All providers</SelectItem>
-                  {PROVIDERS.map((p) => (
-                    <SelectItem key={p} value={p} className="uppercase">
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={sort}
-                onValueChange={(v) => {
-                  setSort(v as SortValue);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[150px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'grid' | 'list')}>
-                <TabsList>
-                  <TabsTrigger value="grid">
-                    <Grid3X3 className="h-4 w-4" />
-                  </TabsTrigger>
-                  <TabsTrigger value="list">
-                    <List className="h-4 w-4" />
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </CardContent>
-        </Card>
+          <FilterSection label="Sort by">
+            <FilterOptionGroup
+              value={sort}
+              onChange={(v) => {
+                setSort(v);
+                setPage(1);
+              }}
+              options={SORT_OPTIONS}
+            />
+          </FilterSection>
+        </SearchFilterBar>
 
         {/* Library + persistent inspector (desktop) */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -1004,11 +997,11 @@ export function MediaLibrary() {
 function StorageBar({ storage }: { storage: StorageUsage }) {
   const pct = storagePercent(storage.usedBytes, storage.limitBytes);
   return (
-    <Card>
-      <CardContent className="space-y-2 p-4">
-        <div className="flex items-center justify-between text-sm">
+    <Card className="max-md:rounded-lg max-md:py-0 max-md:shadow-none">
+      <CardContent className="space-y-2 p-4 max-md:px-3 max-md:py-2.5 max-md:text-xs">
+        <div className="flex items-center justify-between text-sm max-md:text-xs">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            <HardDrive className="h-4 w-4" /> Media storage
+            <HardDrive className="h-4 w-4 max-md:h-3.5 max-md:w-3.5" /> Media storage
           </span>
           <span className="font-medium">
             {formatFileSize(storage.usedBytes)} of {formatFileSize(storage.limitBytes ?? 0)} ({pct}%)
@@ -1036,15 +1029,19 @@ function StatCard({
   label: string;
   value: string;
 }) {
+  // On a phone these four are reference figures, not the point of the page —
+  // the Card's `py-6` on top of the content's `p-4` made each one ~124px tall,
+  // pushing the library itself off the first screen. Below `md` the label and
+  // value share one line and the tile lands at roughly a button's height.
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="h-5 w-5" />
+    <Card className="max-md:rounded-lg max-md:py-0 max-md:shadow-none">
+      <CardContent className="flex items-center gap-3 p-4 max-md:gap-2 max-md:px-3 max-md:py-2">
+        <div className="rounded-lg bg-primary/10 p-2 text-primary max-md:p-1.5">
+          <Icon className="h-5 w-5 max-md:h-3.5 max-md:w-3.5" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-xs text-muted-foreground">{label}</p>
-          <p className="text-lg font-semibold">{value}</p>
+        <div className="min-w-0 max-md:flex max-md:flex-1 max-md:items-baseline max-md:justify-between max-md:gap-2">
+          <p className="truncate text-xs text-muted-foreground max-md:text-[11px]">{label}</p>
+          <p className="text-lg font-semibold max-md:shrink-0 max-md:text-sm">{value}</p>
         </div>
       </CardContent>
     </Card>

@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
 import { useResource } from '@/hooks/useResource';
 import { useGeoTrackerSocket } from '@/hooks/useGeoTrackerSocket';
 import { useAgentsRoster } from '@/store/agents.store';
@@ -22,6 +27,15 @@ const STATUS_META: Record<TrackingSocketStatus, { label: string; className: stri
   error: { label: 'Connection error', className: 'text-destructive', icon: WifiOff },
 };
 
+type SignalFilter = 'all' | 'live' | 'no_signal' | 'ended';
+
+const SIGNAL_FILTERS: { value: SignalFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'live', label: 'Live' },
+  { value: 'no_signal', label: 'No signal' },
+  { value: 'ended', label: 'Ended' },
+];
+
 function secondsAgo(ts: number): string {
   const s = Math.round((Date.now() - ts) / 1000);
   if (s < 5) return 'just now';
@@ -31,7 +45,7 @@ function secondsAgo(ts: number): string {
 
 export function LiveTracking() {
   const { agents } = useAgentsRoster();
-  const { theme } = useUIStore();
+  const { resolvedTheme } = useUIStore();
   const [searchParams] = useSearchParams();
   const focusAgentId = searchParams.get('agent');
   const visible = useResource(() => trackingService.getVisibleAgents().then((r) => r.data), []);
@@ -42,6 +56,8 @@ export function LiveTracking() {
   // The agent the map is centered/highlighted on — seeded from the ?agent= deep link,
   // then driven by clicking a card or a marker.
   const [selected, setSelected] = useState<string | null>(focusAgentId);
+  const [search, setSearch] = useState('');
+  const [signalFilter, setSignalFilter] = useState<SignalFilter>('all');
   // Follow the deep link if it changes in-place (adjusting state during render — the
   // React-recommended alternative to a setState-in-effect).
   const [prevFocus, setPrevFocus] = useState<string | null>(focusAgentId);
@@ -62,9 +78,21 @@ export function LiveTracking() {
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [selected]);
 
+  // The card list narrows; the map keeps every agent so a filtered view never
+  // hides someone who is actually moving.
+  const query = search.trim().toLowerCase();
+  const visibleAgentIds = agentIds.filter((id) => {
+    const live = !!socket.fixes[id];
+    const ended = socket.revoked.has(id);
+    if (signalFilter === 'live' && !live) return false;
+    if (signalFilter === 'ended' && !ended) return false;
+    if (signalFilter === 'no_signal' && (live || ended)) return false;
+    return !query || nameFor(id).toLowerCase().includes(query);
+  });
+
   const statusMeta = STATUS_META[socket.status];
   const StatusIcon = statusMeta.icon;
-  const isDark = theme === 'dark';
+  const isDark = resolvedTheme === 'dark';
   const emptyHint = socket.status === 'open' ? 'Waiting for the first position…' : 'No live positions yet.';
 
   return (
@@ -134,7 +162,33 @@ export function LiveTracking() {
           </div>
 
           <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
-            {agentIds.map((id) => {
+            <SearchFilterBar
+              value={search}
+              onChange={setSearch}
+              placeholder="Search agents…"
+              searchLabel="Search tracked agents by name"
+              activeCount={signalFilter === 'all' ? 0 : 1}
+              onReset={() => setSignalFilter('all')}
+              filterDescription="Narrows the agent cards. The map always shows everyone."
+              resultCount={visibleAgentIds.length}
+              resultNoun="agent"
+            >
+              <FilterSection label="Signal">
+                <FilterOptionGroup
+                  value={signalFilter}
+                  onChange={setSignalFilter}
+                  options={SIGNAL_FILTERS}
+                />
+              </FilterSection>
+            </SearchFilterBar>
+
+            {visibleAgentIds.length === 0 && (
+              <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                No agents match your search or filter.
+              </p>
+            )}
+
+            {visibleAgentIds.map((id) => {
               const fix = socket.fixes[id];
               const isRevoked = socket.revoked.has(id);
               const isSelected = id === selected;

@@ -56,7 +56,15 @@ export interface MarkAllReadResponse {
 
 /** Per-event on/off subscriptions. */
 export interface NotificationEventPreferences {
+  /** **Vendor** connections — the agency-side mirror of the vendor's own switch. */
   connectionUpdated: boolean;
+  /**
+   * **Agent** contracts (`agent_contract.*`): an agent applied to deliver for
+   * you, or answered a request you raised. A separate switch from
+   * `connectionUpdated` on purpose — recruiting couriers and taking on vendors
+   * are different jobs, often different people.
+   */
+  contractUpdated: boolean;
   shipmentAssigned: boolean;
   payoutUpdates: boolean;
   codDepositUpdates: boolean;

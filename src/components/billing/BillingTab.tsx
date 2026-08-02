@@ -32,6 +32,9 @@ import { BillingSettingsCard } from './BillingSettingsCard';
 import { SavedPaymentMethodsCard } from './SavedPaymentMethodsCard';
 import { PaymentDialog } from './PaymentDialog';
 import { CardSkeleton, PlansSkeleton } from './BillingSkeletons';
+import { InfoHint } from '@/components/common/InfoHint';
+import { sectionRuleClass } from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import {
   formatCredits,
   readStripeResume,
@@ -201,6 +204,10 @@ export function BillingTab() {
     );
   }
 
+  // Each card below opens its own mobile section (`sectionRuleClass`) rather
+  // than leaning on `sectionGroupClass`: the children here alternate between
+  // Cards and plain `<section>`s, so the group's adjacent-sibling selector
+  // would skip half the boundaries.
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
@@ -217,10 +224,15 @@ export function BillingTab() {
         />
       )}
 
-      <section ref={plansRef} className="space-y-3">
+      <section ref={plansRef} className={cn('space-y-3', sectionRuleClass)}>
         <div>
-          <h3 className="text-lg font-semibold">Plans</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="flex items-center gap-1.5 text-lg font-semibold">
+            Plans
+            <InfoHint className="md:hidden" label="About plans">
+              Upgrade any time — a paid plan you buy now starts when your current one ends.
+            </InfoHint>
+          </h3>
+          <p className="text-sm text-muted-foreground max-md:hidden">
             Upgrade any time — a paid plan you buy now starts when your current one ends.
           </p>
         </div>

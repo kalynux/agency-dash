@@ -133,7 +133,7 @@ and offers the shipment to that replacement — in one call.
 2. The **old agent is released**: their tracking session is closed (a *release*, not a terminal — the
    shipment isn't over), their reserved capacity is returned, and — the moment `agent_id` is cleared —
    they **lose all access to the shipment**: customer personal data (delivery address, phone), live
-   tracking, and every shipment action (pickup / COD collect / tracking-number) now return
+   tracking, and every shipment action (pickup / status / COD collect) now return
    `404 SHIPMENT_NOT_FOUND` for them. They keep only their **activity history** (their accepted offer
    row, which carries no customer PII). The old agent also receives a **`shipment.reassigned_away`**
    notification telling them they are no longer responsible for it.

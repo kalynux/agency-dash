@@ -1,16 +1,46 @@
 // Agency Agents — membership/contract model. See api-doc/agency/agent-roster.md
 
+import type { FileRef } from '@/types/file.types';
+
 export type AgentStatus = 'active' | 'inactive' | 'suspended';
 export type AgentAvailability = 'online' | 'offline' | 'on_break' | string;
 export type AgentWorkingState = 'working' | 'idle' | 'at_capacity' | (string & {});
+export type AgentVehicleType = 'bike' | 'car' | 'van' | 'truck';
 
 /**
  * `paused` is the softer sibling of `suspended` — both stop new assignments and
  * leave in-flight shipments alone, but a pause reads as a mutual break and is the
  * only one of the two an agent may also raise. `reinstate` returns from either.
+ *
+ * `rejected`, `withdrawn` and `deactivated` are terminal: the row survives as
+ * history and a fresh request between the same pair creates a **new** contract
+ * rather than reviving the old one.
  */
-export type MembershipStatus = 'pending' | 'approved' | 'paused' | 'suspended' | 'removed';
-export type MembershipOrigin = 'invitation' | 'join_request' | string;
+export type MembershipStatus =
+  | 'pending'
+  | 'rejected'
+  | 'withdrawn'
+  | 'active'
+  | 'paused'
+  | 'suspended'
+  | 'deactivated';
+
+/** Contracts that still exist as a live relationship. */
+export const LIVE_MEMBERSHIP_STATUSES: MembershipStatus[] = ['pending', 'active', 'paused', 'suspended'];
+
+/** Terminal contracts — kept only as history. */
+export const HISTORY_MEMBERSHIP_STATUSES: MembershipStatus[] = ['rejected', 'withdrawn', 'deactivated'];
+
+export type MembershipOrigin = 'invitation' | 'join_request' | 'transfer' | 'admin' | 'migration' | (string & {});
+
+/**
+ * Which side raised the contract. Derived server-side from `origin` (only
+ * `join_request` is agent-raised) and the same rule the API enforces, so read
+ * this rather than re-deriving it: the initiator gets **Withdraw**, the
+ * counterparty gets **Approve / Decline**. Asking for the wrong one is a 403.
+ */
+export type ContractParty = 'agent' | 'agency';
+
 export type EmploymentType = 'employee' | 'contractor' | 'freelancer';
 
 export interface AgentVehicleInfo {
@@ -54,22 +84,29 @@ export interface ContractFeeSplit {
   agentSharePercent: number | null;
   /** Required in effect when `model` is `flat`. Minor units. */
   agentFlatFee: number | null;
-  currency: string | null;
+  /** Always set — defaults to `XAF` server-side. */
+  currency: string;
 }
 
 export interface ContractRemittanceTerms {
   cadence: RemittanceCadence;
-  /** 0–6, weekly/biweekly cadences only. */
+  /** 0=Sunday … 6=Saturday, weekly/biweekly cadences only. */
   dayOfWeek: number | null;
   /** 1–28, monthly cadence only. */
   dayOfMonth: number | null;
-  /** 0–720. */
-  graceHours: number | null;
+  /** 0–720. Always set — defaulted server-side. */
+  graceHours: number;
+}
+
+/** GeoJSON polygon, as stored — the same shape `PATCH .../terms` accepts back. */
+export interface ContractCoverageArea {
+  type: 'Polygon';
+  coordinates: number[][][];
 }
 
 export interface ContractCoverage {
   regions: string[];
-  area: unknown | null;
+  area: ContractCoverageArea | null;
 }
 
 export interface AgentMembership {
@@ -78,78 +115,88 @@ export interface AgentMembership {
   agencyId: string;
   status: MembershipStatus;
   origin: MembershipOrigin;
+  /** Who raised it — drives Withdraw vs Approve/Decline. See {@link ContractParty}. */
+  initiatedBy: ContractParty;
   isPrimary: boolean;
-  employment: AgentEmployment | null;
-  codMaxExposureOverride: number | null;
+
+  // ── Negotiated terms ───────────────────────────────────────────────────────
+  // Everything `PATCH /agency/agents/:id/terms` writes is read back here, key
+  // for key but camelCased. The backend fills each group from `contractDefaults`
+  // when the contract carries none, so none of these are ever absent — seed a
+  // terms editor straight from them via {@link readContractTerms}.
+  employment: AgentEmployment;
+  remittanceTerms: ContractRemittanceTerms;
+  coverage: ContractCoverage;
+  feeSplit: ContractFeeSplit;
+  /** Per-shipment value cap in minor units; `null` = uncapped. */
+  shipmentValueCeiling: number | null;
+
+  /**
+   * This agency's slice of the agent's global COD pool — a sub-allocation, not
+   * an independent cap. Written by `PATCH .../cod-limit`, not by `/terms`.
+   */
+  codThreshold: number;
+  /** Cash the agent currently holds attributable to THIS contract. */
+  codOutstandingBalance: number;
+
+  // ── Lifecycle stamps ───────────────────────────────────────────────────────
+  /** Set when the AGENCY raised the contract; `requestedAt` when the agent did. */
+  invitedAt: string | null;
+  requestedAt: string | null;
   approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  withdrawnAt: string | null;
+  withdrawalReason: string | null;
   suspendedAt: string | null;
   suspensionReason: string | null;
-  /**
-   * Negotiated terms. Not documented on the roster response, so treat every one
-   * as possibly-absent and read them through {@link readContractTerms}, which
-   * also tolerates a snake_case payload.
-   */
-  feeSplit?: ContractFeeSplit | null;
-  remittanceTerms?: ContractRemittanceTerms | null;
-  coverage?: ContractCoverage | null;
-  shipmentValueCeiling?: number | null;
+  /** Termination stamps — the field names predate the `deactivated` status. */
+  removedAt: string | null;
+  removalReason: string | null;
+  /** Set when the contract ended because an admin moved the agent elsewhere. */
+  transferredToAgencyId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** Normalized, form-friendly view of a contract's terms. */
 export interface ContractTerms {
-  feeSplit: ContractFeeSplit | null;
-  remittanceTerms: ContractRemittanceTerms | null;
+  feeSplit: ContractFeeSplit;
+  remittanceTerms: ContractRemittanceTerms;
+  coverage: ContractCoverage;
   shipmentValueCeiling: number | null;
 }
 
-function pick<T>(source: Record<string, unknown>, ...keys: string[]): T | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null) return value as T;
-  }
-  return null;
-}
-
 /**
- * Read a membership's negotiated terms, accepting either casing.
+ * A contract's negotiated terms, ready to seed an editor.
  *
- * The roster/detail responses document `employment` in camelCase but say nothing
- * about the other groups, and the write side is snake_case throughout — so rather
- * than betting on one, seed editors from whichever the backend actually sends.
+ * Kept as its own function despite being a plain projection, because the read
+ * and write sides of `/terms` deliberately disagree on casing: the response is
+ * camelCase like every DTO on this API, the request body is snake_case to mirror
+ * the stored document (`feeSplit.agentSharePercent` out, `fee_split.agent_share_percent`
+ * in). This is the one place that asymmetry is crossed.
  */
 export function readContractTerms(membership: AgentMembership): ContractTerms {
-  const raw = membership as unknown as Record<string, unknown>;
-
-  const feeSplitRaw = pick<Record<string, unknown>>(raw, 'feeSplit', 'fee_split');
-  const remittanceRaw = pick<Record<string, unknown>>(raw, 'remittanceTerms', 'remittance_terms');
-
   return {
-    feeSplit: feeSplitRaw
-      ? {
-          model: (pick<FeeSplitModel>(feeSplitRaw, 'model') ?? 'percentage') as FeeSplitModel,
-          agentSharePercent: pick<number>(feeSplitRaw, 'agentSharePercent', 'agent_share_percent'),
-          agentFlatFee: pick<number>(feeSplitRaw, 'agentFlatFee', 'agent_flat_fee'),
-          currency: pick<string>(feeSplitRaw, 'currency'),
-        }
-      : null,
-    remittanceTerms: remittanceRaw
-      ? {
-          cadence: (pick<RemittanceCadence>(remittanceRaw, 'cadence') ?? 'per_delivery') as RemittanceCadence,
-          dayOfWeek: pick<number>(remittanceRaw, 'dayOfWeek', 'day_of_week'),
-          dayOfMonth: pick<number>(remittanceRaw, 'dayOfMonth', 'day_of_month'),
-          graceHours: pick<number>(remittanceRaw, 'graceHours', 'grace_hours'),
-        }
-      : null,
-    shipmentValueCeiling: pick<number>(raw, 'shipmentValueCeiling', 'shipment_value_ceiling'),
+    feeSplit: membership.feeSplit,
+    remittanceTerms: membership.remittanceTerms,
+    coverage: membership.coverage,
+    shipmentValueCeiling: membership.shipmentValueCeiling,
   };
 }
 
 export interface AgentProfile {
   id: string;
   name: string;
-  email: string;
-  phone: string;
-  avatarUrl: string | null;
+  email: string | null;
+  phone: string | null;
+  /**
+   * Resolved file reference. The roster sends `avatar`; `avatarUrl` is the older
+   * flat field some responses still carry — read both through
+   * {@link agentAvatarUrl} rather than picking one.
+   */
+  avatar?: FileRef | null;
+  avatarUrl?: string | null;
   status: AgentStatus;
   vehicleInfo: AgentVehicleInfo | null;
   availability: AgentAvailability;
@@ -173,6 +220,11 @@ export interface RosterEntry {
   cashHeld: number;
 }
 
+/** The agent's picture, from whichever field the response carried it in. */
+export function agentAvatarUrl(agent: { avatar?: FileRef | null; avatarUrl?: string | null }): string | null {
+  return agent.avatar?.url ?? agent.avatarUrl ?? null;
+}
+
 /**
  * Flattened, convenient view of a roster entry for assign/deposit dropdowns.
  * `id` is the agent id; `membershipId` the membership id used by roster actions.
@@ -190,7 +242,8 @@ export interface AgentSummary {
   trustScore: number;
   cashHeld: number;
   vehicleInfo: AgentVehicleInfo | null;
-  codMaxExposureOverride: number | null;
+  /** This contract's slice of the agent's COD pool, minor units. */
+  codThreshold: number;
   activeShipmentCount: number;
 }
 
@@ -199,31 +252,92 @@ export function toAgentSummary(entry: RosterEntry): AgentSummary {
     id: entry.agent.id,
     membershipId: entry.membership.id,
     name: entry.agent.name,
-    email: entry.agent.email,
-    phone: entry.agent.phone,
-    avatarUrl: entry.agent.avatarUrl,
+    email: entry.agent.email ?? '',
+    phone: entry.agent.phone ?? '',
+    avatarUrl: agentAvatarUrl(entry.agent),
     status: entry.agent.status,
     membershipStatus: entry.membership.status,
     availability: entry.agent.availability,
     trustScore: entry.agent.trustScore,
     cashHeld: entry.cashHeld,
     vehicleInfo: entry.agent.vehicleInfo,
-    codMaxExposureOverride: entry.membership.codMaxExposureOverride,
+    codThreshold: entry.membership.codThreshold,
     activeShipmentCount: entry.agent.activeShipmentCount,
   };
 }
 
-// ─── Invites ────────────────────────────────────────────────────────────────────
+// ─── Directory (GET /agency/agents/browse) ──────────────────────────────────────
+// The platform-wide agent directory — how an agency finds agents to work with,
+// mirroring the vendor browse. There are NO email invites: you reach an agent by
+// finding them here and requesting them by `agentId`, which means you cannot
+// approach someone who has not signed up yet.
+//
+// This is a PUBLIC work profile, deliberately narrower than `AgentProfile`: no
+// email, phone, ID documents, payout details, position or raw capacity counters.
+// Contact details are earned by contracting and arrive with the roster.
 
-export type AgentInviteStatus = 'pending' | 'accepted' | 'declined' | 'revoked';
+export interface AgentHomeBase {
+  /** Human label the agent set ("Douala — Akwa"). */
+  label: string | null;
+  /** GeoJSON [lng, lat], or null if the agent has not set a home base. */
+  coordinates: [number, number] | null;
+  serviceRadiusKm: number | null;
+}
 
-export interface AgentInvite {
+export interface AgentRating {
+  average: number | null;
+  count: number;
+}
+
+/** The caller's standing with a directory agent — the live contract, else the most recent terminal one. */
+export interface AgentContractRef {
   id: string;
-  agencyId?: string;
-  email: string;
-  status: AgentInviteStatus;
-  respondedAt?: string | null;
-  createdAt: string;
+  status: MembershipStatus;
+  initiatedBy: ContractParty;
+  isPrimary: boolean;
+}
+
+/** A directory row: the agent's public work profile plus your contract with them (if any). */
+export interface AgentDirectoryItem {
+  id: string;
+  name: string;
+  avatar: FileRef | null;
+  vehicleType: AgentVehicleType | null;
+  homeBase: AgentHomeBase;
+  /** Composite 0–100. */
+  trustScore: number;
+  /** Always true here — unverified agents are filtered out server-side. */
+  kycVerified: boolean;
+  /** Does the agent want work right now? */
+  availability: AgentAvailability;
+  /** How loaded they are, as a label — the raw counters are not exposed to a non-contracted agency. */
+  workingState: AgentWorkingState;
+  completedShipments: number;
+  /** 0–1, or null before enough deliveries to mean anything. */
+  onTimeRate: number | null;
+  ratings: {
+    customer: AgentRating;
+    agency: AgentRating;
+    vendor: AgentRating;
+  };
+  contract: AgentContractRef | null;
+}
+
+export interface AgentBrowseQueryParams {
+  search?: string;
+  vehicle_type?: AgentVehicleType;
+  availability?: 'online' | 'offline' | 'on_break';
+  /** 0–100. */
+  min_trust_score?: number;
+  /** Radius search on the agent's declared home base — all three or none, or the API 400s. */
+  lng?: number;
+  lat?: number;
+  radius_km?: number;
+  /** `trust` (default, descending) or `name` (ascending). */
+  sort?: 'trust' | 'name';
+  page?: number;
+  /** Max 100. */
+  limit?: number;
 }
 
 // ─── Eligibility & history ──────────────────────────────────────────────────────
@@ -265,8 +379,26 @@ export interface ContractBlockingConditions {
   clear: boolean;
 }
 
-export type ContractTransition = 'pause' | 'reactivate' | 'deactivate' | (string & {});
-export type ContractStatusRequestState = 'pending' | 'approved' | 'rejected' | (string & {});
+/**
+ * Every contract transition the API names. Only `pause`, `reactivate` and
+ * `deactivate` ever reach a status request — the handshake verbs move the
+ * contract directly — but the wire type covers all of them.
+ */
+export type ContractTransition =
+  | 'approve'
+  | 'reject'
+  | 'withdraw'
+  | 'pause'
+  | 'suspend'
+  | 'reactivate'
+  | 'deactivate'
+  | (string & {});
+export type ContractStatusRequestState =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | (string & {});
 export type ContractStatusRequestDecision = 'approve' | 'reject';
 
 export interface ContractStatusRequest {
@@ -358,9 +490,36 @@ export interface UpdateTermsPayload {
 
 // ─── Response envelopes ─────────────────────────────────────────────────────────
 
+export interface AgentListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface AgentBrowseResponse {
+  success: true;
+  data: AgentDirectoryItem[];
+  meta: AgentListMeta;
+}
+
+/**
+ * `GET /agency/agents` — **every status by default**, terminal rows included:
+ * this is the relationship history, not only who is working today. Paginated at
+ * 20 a page unless told otherwise, so read `meta` rather than assuming one page
+ * holds the roster.
+ */
+export interface ListRosterParams {
+  status?: MembershipStatus;
+  page?: number;
+  /** Max 100. */
+  limit?: number;
+}
+
 export interface ListAgentsResponse {
   success: true;
   data: RosterEntry[];
+  meta: AgentListMeta;
 }
 
 export interface AgentMembershipResponse {
@@ -369,9 +528,10 @@ export interface AgentMembershipResponse {
   message?: string;
 }
 
+/** Every contract mutation (request/approve/decline/withdraw/…) returns the whole contract. */
 export interface MembershipMutationResponse {
   success: true;
-  data: { id: string; status: MembershipStatus; suspensionReason?: string | null } | AgentMembership;
+  data: AgentMembership;
   message?: string;
 }
 
@@ -411,9 +571,14 @@ export interface CodLimitResponse {
   message?: string;
 }
 
+/**
+ * `GET /agency/agents/eligible` returns bare agent profiles — the `agent` half
+ * of a roster entry, without the contract or the cash held. It is the
+ * dispatchable subset, already filtered by every eligibility rule.
+ */
 export interface EligibleAgentsResponse {
   success: true;
-  data: RosterEntry[];
+  data: AgentProfile[];
 }
 
 export interface AgentEligibilityResponse {
@@ -424,15 +589,4 @@ export interface AgentEligibilityResponse {
 export interface AgentHistoryResponse {
   success: true;
   data: AgentHistoryEvent[];
-}
-
-export interface ListAgentInvitesResponse {
-  success: true;
-  data: AgentInvite[];
-}
-
-export interface AgentInviteResponse {
-  success: true;
-  data: AgentInvite;
-  message?: string;
 }

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { CreditCard, Smartphone, Plus, Trash2, Star, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { InfoHint } from '@/components/common/InfoHint';
+import { sectionRuleClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -87,13 +90,19 @@ export function SavedPaymentMethodsCard() {
   const atLimit = methods.length >= MAX_METHODS;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+    <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 max-md:px-0">
         <div className="space-y-1.5">
-          <CardTitle>Payment methods</CardTitle>
-          <CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Payment methods
+            <InfoHint className="md:hidden" label="About saved payment methods">
+              Saved methods pre-fill checkout. We never store full card numbers or CVV.
+            </InfoHint>
+          </CardTitle>
+          <CardDescription className="max-md:hidden">
             Saved methods pre-fill checkout. We never store full card numbers or CVV.
           </CardDescription>
+          <CardDescription className="md:hidden">Pre-fill checkout</CardDescription>
         </div>
         <Button
           size="sm"
@@ -105,7 +114,7 @@ export function SavedPaymentMethodsCard() {
           <Plus className="h-4 w-4" /> Add
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-md:px-0">
         {loading ? (
           <CardSkeleton lines={3} />
         ) : error ? (

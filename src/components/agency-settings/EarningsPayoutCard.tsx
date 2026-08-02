@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, Info, Loader2, Lock, RefreshCw, Send, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { InfoHint } from '@/components/common/InfoHint';
+import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
 import { useEarnings } from '@/hooks/useEarnings';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
@@ -19,6 +21,16 @@ const STATUS_MAP: Record<EarningsPayoutStatus, { label: string; className: strin
   rejected: { label: 'Rejected', className: 'border-red-500 text-red-600 bg-red-50' },
 };
 
+/**
+ * One balance tile. Sized as a flex item so the row below can pair them up:
+ * `basis` asks for half a row, while the amount's `whitespace-nowrap` sets the
+ * tile's automatic minimum size. A tile whose figure needs more than half the
+ * row therefore can't share one — see `BALANCE_ROW`.
+ *
+ * The icon sits beside the label rather than beside the amount so the figure
+ * gets the tile's full inner width; sharing a row with a 36px chip would leave
+ * roughly 70px for it on a phone, and every balance would then claim a row.
+ */
 function BalanceStat({
   icon: Icon,
   label,
@@ -33,18 +45,34 @@ function BalanceStat({
   hint: string;
 }) {
   return (
-    <div className="rounded-lg border p-4 flex items-start justify-between gap-3">
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold mt-1">{formatCurrency(value, currency)}</p>
-        <p className="text-xs text-muted-foreground mt-1.5">{hint}</p>
+    <div className="flex grow basis-[calc(50%_-_0.5rem)] flex-col rounded-lg border p-3 sm:p-4 lg:basis-[calc(25%_-_0.75rem)]">
+      <div className="flex items-start justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+          {label}
+          {/* The hint is 2–3 wrapped lines in a half-width tile on a phone, which
+              triples the tile's height for text the user reads once. */}
+          <InfoHint className="md:hidden" label={`About your ${label.toLowerCase()} balance`}>
+            {hint}
+          </InfoHint>
+        </p>
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 sm:h-9 sm:w-9">
+          <Icon className="w-4 h-4 text-primary" />
+        </div>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
+      <p className="mt-2 whitespace-nowrap text-lg font-bold sm:text-2xl">{formatCurrency(value, currency)}</p>
+      <p className="text-xs text-muted-foreground mt-1.5 max-md:hidden">{hint}</p>
     </div>
   );
 }
+
+/**
+ * 2×2 on phones, one row of four from `lg`. A wrapping flex row rather than a
+ * grid on purpose: grid tracks are fixed, so a long amount would either clip or
+ * overflow its cell. Here each tile's minimum size is driven by its own
+ * (non-wrapping) figure, so a balance too wide to sit beside a sibling pushes
+ * itself onto its own full-width line instead.
+ */
+const BALANCE_ROW = 'flex flex-wrap gap-3 sm:gap-4';
 
 export function EarningsPayoutCard() {
   const { balance, latestPayout, isLoading, loadError, isRequesting, requestPayout, refetch } = useEarnings();
@@ -67,19 +95,36 @@ export function EarningsPayoutCard() {
           : null;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+    <Card className={sectionSurfaceClass}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 max-md:px-0">
         <div>
-          <CardTitle>Earnings</CardTitle>
-          <CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Earnings
+            <InfoHint className="md:hidden" label="About earnings">
+              <span className="block">
+                Your delivery-fee balance — held while orders are in flight, released once
+                completed.
+              </span>
+              <span className="mt-2 block">
+                You earn a delivery fee when the agent delivers the shipment — not when the
+                customer pays — and one entry is created per shipment. What lands here is the fee{' '}
+                <span className="font-medium">minus the delivering agent's contracted share</span>,
+                which the platform pays them directly. It becomes available once the whole order
+                completes and the hold window elapses (for COD, also once the cash is remitted and
+                confirmed). A shipment that comes back earns your return-to-origin fee instead.
+              </span>
+            </InfoHint>
+          </CardTitle>
+          <CardDescription className="max-md:hidden">
             Your delivery-fee balance — held while orders are in flight, released once completed
           </CardDescription>
+          <CardDescription className="md:hidden">Your delivery-fee balance</CardDescription>
         </div>
         <Button variant="outline" size="icon" onClick={refetch} title="Refresh" className="flex-shrink-0">
           <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 max-md:px-0">
         {isLoading && !balance ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading earnings…
@@ -91,7 +136,7 @@ export function EarningsPayoutCard() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={BALANCE_ROW}>
               <BalanceStat
                 icon={Wallet}
                 label="Available"
@@ -122,8 +167,10 @@ export function EarningsPayoutCard() {
               />
             </div>
 
-            {/* When the money is earned, and what has already come out of it. */}
-            <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
+            {/* When the money is earned, and what has already come out of it.
+                Six lines of prose on a phone — folded into the ⓘ on the
+                heading there, where it stays one tap away. */}
+            <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 max-md:hidden">
               <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
                 You earn a delivery fee when the agent delivers the shipment — not when the customer
@@ -163,7 +210,15 @@ export function EarningsPayoutCard() {
             )}
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-xs text-muted-foreground">{disabledReason}</p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {disabledReason}
+                <InfoHint className="md:hidden" label="About automatic payouts">
+                  If your available balance reaches{' '}
+                  {formatCurrency(AUTO_PAYOUT_THRESHOLD, currency)}, we automatically request a
+                  payout on your behalf so funds don't sit unclaimed. Make sure a payout method is
+                  saved — otherwise the automatic request can't be created.
+                </InfoHint>
+              </p>
               <Button
                 onClick={() => requestPayout()}
                 disabled={!!disabledReason || isRequesting}
@@ -178,7 +233,8 @@ export function EarningsPayoutCard() {
               </Button>
             </div>
 
-            <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
+            {/* Mobile reads this from the ⓘ beside the withdraw row above. */}
+            <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 max-md:hidden">
               <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
                 If your available balance reaches {formatCurrency(AUTO_PAYOUT_THRESHOLD, currency)}, we automatically

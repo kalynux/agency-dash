@@ -17,7 +17,10 @@
 - [`PATCH /api/agency/shipments/:id/status`](#status) — advance a shipment (picked up, in transit, delivered by agent, failed/retry)
 - [`POST /api/agency/shipments/:id/reject`](#reject) — decline an assigned shipment
 - [`PATCH /api/agency/shipments/:id/assign-agent`](#assign-agent) — **offer** the shipment to one of this agency's agents (agent-acceptance workflow)
-- [`PATCH /api/agency/shipments/:id/tracking-number`](#tracking-number) — record the carrier tracking number
+
+> **The tracking number is generated, not recorded.** `PATCH /api/agency/shipments/:id/tracking-number`
+> **no longer exists** — see [Tracking number](#tracking-number) below. Every shipment is stamped with
+> one the moment it is created, and it is read-only on every endpoint.
 
 > **Assignment is now an offer, not a push.** `assign-agent` creates an offer the agent must accept
 > (accept / reject / ignore-timeout), and the shipment gains an `agent_id` only on acceptance. The
@@ -138,18 +141,29 @@ included here — it is that agent's contracted cut, not agency-scoped data.
       "agencyId": "507f1f77bcf86cd799439099",
       "agentId": null,
       "status": "assigned",
-      "trackingNumber": null,
+      "trackingNumber": "FDO-260705-090000-K7Q2M",
       "createdAt": "2026-07-05T09:00:00.000Z",
       "updatedAt": "2026-07-05T09:00:00.000Z",
       "orderNumber": "ORD-2026-000123",
       "vendor": { "id": "507f1f77bcf86cd799439aaa", "businessName": "Acme Store", "phone": "+237670000001" },
       "customer": { "id": "507f1f77bcf86cd799439ccc", "name": "Jane Doe", "phone": "+237670000002" },
-      "itemCount": 2
+      "itemCount": 2,
+      "itemImages": [
+        { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" }
+      ]
     }
   ],
   "meta": { "total": 1, "page": 1, "limit": 20, "pages": 1 }
 }
 ```
+
+**`itemImages`** is a thumbnail preview of what is in the parcel: **one picture per item**,
+deduplicated and capped at **3** — `itemCount` remains the true number of items. Each entry is the
+standard file shape `{ id, key, url, mimeType, size, originalName }`; always an array, `[]` when
+nothing on the shipment has a picture. The picture is the **variant's** own image where the variant
+has one, otherwise the product's first image, and it is read **live** rather than snapshotted onto
+the order — a vendor who replaces their photo changes what you see. The full per-item gallery is on
+the [detail](#detail).
 
 ---
 
@@ -171,7 +185,7 @@ history, and the parent order's merged multi-agency timeline.
     "agencyId": "507f1f77bcf86cd799439099",
     "agentId": "507f1f77bcf86cd799439077",
     "status": "picked_up",
-    "trackingNumber": "FS-1234567890",
+    "trackingNumber": "FDO-260705-090000-K7Q2M",
     "items": [
       {
         "orderItemId": "507f1f77bcf86cd799439055",
@@ -180,6 +194,10 @@ history, and the parent order's merged multi-agency timeline.
         "title": "T-Shirt",
         "sku": "TSHIRT-RED-L",
         "variantTitle": "Size: Large, Color: Red",
+        "images": [
+          { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" },
+          { "id": "...", "key": "products/def.jpg", "url": "https://…/products/def.jpg", "mimeType": "image/jpeg", "size": 91002, "originalName": "tshirt-back.jpg" }
+        ],
         "pickupLocation": {
           "mode": "pickup_based",
           "alreadyInYourStorage": false,
@@ -193,6 +211,7 @@ history, and the parent order's merged multi-agency timeline.
         "title": "Bulk Rice 25kg",
         "sku": "RICE-25KG",
         "variantTitle": null,
+        "images": [],
         "pickupLocation": {
           "mode": "storage_based",
           "alreadyInYourStorage": true,
@@ -230,6 +249,12 @@ history, and the parent order's merged multi-agency timeline.
   }
 }
 ```
+
+**`items[].images`** is **every** picture of that item, thumbnail first — enough to identify a parcel
+by sight rather than by reading labels. `images[0]` is exactly the picture the list shows in
+`itemImages` for the same item, so one thumbnail component serves both. Always an array, `[]` when
+the item has no picture. Same selection and freshness rules as `itemImages` above (variant image
+first, product image as fallback, resolved live).
 
 `handover` is non-null only for a **reassigned** shipment — the collection point the replacement agent
 uses, and where it came from:
@@ -322,7 +347,7 @@ one transaction.
     "agencyId": "507f1f77bcf86cd799439099",
     "agentId": "507f1f77bcf86cd799439077",
     "status": "agent_delivered",
-    "trackingNumber": "FS-1234567890",
+    "trackingNumber": "FDO-260705-090000-K7Q2M",
     "requiresDeliveryCode": true,
     "nextAction": "Ask the customer for their delivery code and submit it to record the cash and complete the delivery.",
     "createdAt": "2026-07-05T09:00:00.000Z",
@@ -379,7 +404,7 @@ they know why it was declined before rerouting.
     "agencyId": "507f1f77bcf86cd799439099",
     "agentId": null,
     "status": "rejected",
-    "trackingNumber": null,
+    "trackingNumber": "FDO-260705-090000-K7Q2M",
     "createdAt": "2026-07-05T09:00:00.000Z",
     "updatedAt": "2026-07-05T09:30:00.000Z"
   },
@@ -419,40 +444,33 @@ they have auto-accept on), and `data.shipment.assignmentState` is `offered` (or 
 ---
 
 <a name="tracking-number"></a>
-### PATCH /api/agency/shipments/:id/tracking-number
+### Tracking number (read-only — no endpoint)
 
-**Description**: Record or replace the carrier tracking number on a shipment this agency handles.
+**There is no endpoint to set a tracking number.** `PATCH /api/agency/shipments/:id/tracking-number`
+was removed: the number is now generated by the platform when the shipment is created, so it is never
+absent and never editable. It is returned as `trackingNumber` on every shipment payload above (list,
+detail, status transitions).
 
-**Request Body**:
-```json
-{
-  "trackingNumber": "FS-1234567890"
-}
-```
-- `trackingNumber` (string, required, 1–120 chars).
+**Format** — `ACR-YYMMDD-HHMMSS-XXXXX`, e.g. `FDO-260730-142309-K7Q2M`:
 
-**Success Response** (`200 OK`):
-```json
-{
-  "success": true,
-  "data": {
-    "id": "507f1f77bcf86cd799439100",
-    "orderId": "507f1f77bcf86cd799439010",
-    "agencyId": "507f1f77bcf86cd799439099",
-    "agentId": null,
-    "status": "assigned",
-    "trackingNumber": "FS-1234567890"
-  },
-  "message": "Tracking number updated successfully"
-}
-```
+| Segment | Meaning |
+|---|---|
+| `FDO` | the **owning agency's acronym**, derived from your magazin's business name |
+| `260730` | the UTC **date** the shipment was created (`YYMMDD`) |
+| `142309` | the UTC **time**, to the second (`HHMMSS`) |
+| `K7Q2M` | 5 random characters guaranteeing uniqueness (no `I`, `L`, `O` or `U`, so nothing is misread off a label) |
 
-> Once set, the tracking number is surfaced on the vendor order detail
-> (`items[].delivery.trackingNumber` and `deliveries[].trackingNumber`) and on the ticket
-> reference lookups (`/reference/orders`).
+Notes worth knowing:
 
-**Error Responses**:
-- `400` – `VALIDATION_ERROR` – Missing/invalid `trackingNumber`.
+- The acronym is **snapshotted at creation**. Renaming your magazin changes the prefix on *future*
+  shipments only — existing tracking numbers never change, because a customer is already holding them.
+- The number is **unique platform-wide** and is what
+  [`GET /api/agency/shipments?q=`](#list) matches on, alongside customer name/phone, product titles
+  and order number.
+- It is surfaced on the vendor order detail (`items[].delivery.trackingNumber` and
+  `deliveries[].trackingNumber`) and on the ticket reference lookups (`/reference/orders`).
+- Shipments created before generation existed may still carry a hand-typed carrier number, or `null`
+  until the platform backfill has run.
 
 ---
 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
+import { useAgentsRoster } from '@/store/agents.store';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 
@@ -113,6 +114,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
   const { pendingActionCount } = useVendorConnections();
+  const { pendingActionCount: agentActionCount } = useAgentsRoster();
   const roleEntity = useOnboarding().session?.role_entity;
 
   const agencyName = roleEntity?.agency_name || 'My Agency';
@@ -126,6 +128,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
     badgeCount: (badge) => {
       if (badge === 'notifications') return unreadCount;
       if (badge === 'vendorConnections') return pendingActionCount;
+      if (badge === 'agentContracts') return agentActionCount;
       return 0;
     },
   };
@@ -147,7 +150,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
             <div className="mx-4 mt-4 mb-4 p-4 bg-card rounded-xl border flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden bg-primary flex items-center justify-center">
                 {agencyLogo ? (
-                  <img src={agencyLogo} alt={agencyName} className="w-full h-full object-cover" />
+                  <img src={agencyLogo} alt={agencyName} crossOrigin="use-credentials" className="w-full h-full object-cover" />
                 ) : (
                   <Truck className="w-6 h-6 text-primary-foreground" />
                 )}

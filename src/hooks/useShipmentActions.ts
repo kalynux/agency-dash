@@ -74,15 +74,8 @@ export function useShipmentActions() {
     [run],
   );
 
-  const updateTrackingNumber = useCallback(
-    (id: string, trackingNumber: string) =>
-      run(
-        `tracking:${id}`,
-        async () => (await shipmentsService.updateTrackingNumber(id, trackingNumber)).data,
-        { success: 'Tracking number updated.' },
-      ),
-    [run],
-  );
+  // No tracking-number action: the number is generated at shipment creation and
+  // is read-only on every endpoint.
 
   return {
     pendingKey,
@@ -93,6 +86,5 @@ export function useShipmentActions() {
     autoAssign,
     cancelOffer,
     reassign,
-    updateTrackingNumber,
   };
 }

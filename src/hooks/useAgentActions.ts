@@ -1,76 +1,91 @@
 import { useCallback } from 'react';
-import { getApiErrorMessage } from '@/lib/errors';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { agentsService } from '@/services/agents.service';
 import type {
-  AgentInvite,
+  AgentMembership,
   ContractStatusRequestDecision,
   UpdateTermsPayload,
 } from '@/types/agent.types';
 
-// All agent/membership/COD codes live in the central registry (@/lib/errors).
-export function getAgentErrorMessage(err: unknown): string {
-  return getApiErrorMessage(err);
-}
+// Every contract code this screen can raise now has copy in the central
+// registry (@/lib/errors), so there is nothing to override here.
 
 export interface UseAgentActionsOptions {
-  onInviteChanged?: (invite: AgentInvite) => void;
+  /** Called with the updated contract after a directory-level mutation (request/withdraw/approve/reject). */
+  onContractChanged?: (agentId: string, contract: AgentMembership) => void;
   onRosterChanged?: () => void;
 }
 
 /**
- * Shared agent-roster mutations (invites + membership lifecycle: approve /
- * decline / suspend / pause / reinstate / remove / employment / contract terms /
- * COD threshold, plus resolving the status requests agents raise).
+ * Shared agent-contract mutations: request / withdraw / approve / reject, the
+ * contract lifecycle (suspend / pause / reinstate / terminate / terms / COD
+ * threshold), and resolving the status requests agents raise.
+ *
+ * `request`+`withdraw` and `approve`+`reject` are **not interchangeable** — the
+ * server picks the valid pair from who raised the contract (`initiatedBy`), and
+ * offering the wrong one is a 403, not a no-op.
  */
-export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentActionsOptions = {}) {
+export function useAgentActions({ onContractChanged, onRosterChanged }: UseAgentActionsOptions = {}) {
   const { pendingKey, run } = useActionRunner();
 
-  // ── Invites ────────────────────────────────────────────────────────────────
-  const invite = useCallback(
-    (email: string) =>
-      run('invite', async () => (await agentsService.invite(email)).data, {
-        success: `Invite sent to ${email}.`,
-        onError: () => {},
-      }).then((data) => {
-        if (data) onInviteChanged?.(data);
-        return data;
+  const runContract = useCallback(
+    (key: string, agentId: string, action: () => Promise<{ data: AgentMembership }>, success: string) =>
+      run(key, async () => (await action()).data, { success }).then((contract) => {
+        if (contract) {
+          onContractChanged?.(agentId, contract);
+          onRosterChanged?.();
+        }
+        return contract;
       }),
-    [run, onInviteChanged],
+    [run, onContractChanged, onRosterChanged],
   );
 
-  const revokeInvite = useCallback(
-    (id: string) =>
-      run(`revoke:${id}`, async () => (await agentsService.revokeInvite(id)).data, {
-        success: 'Invite revoked.',
-      }).then((data) => {
-        if (data) onInviteChanged?.(data);
-        return data;
-      }),
-    [run, onInviteChanged],
+  // ── The handshake ───────────────────────────────────────────────────────────
+  /** Ask an agent from the directory to contract. They accept from their own app. */
+  const request = useCallback(
+    (agentId: string) =>
+      runContract(
+        `request:${agentId}`,
+        agentId,
+        () => agentsService.requestAgent(agentId),
+        'Request sent — the agent has to accept before the contract starts.',
+      ),
+    [runContract],
+  );
+
+  /** Pull back a request we raised, while it is still pending. */
+  const withdraw = useCallback(
+    (agentId: string, membershipId: string, reason?: string) =>
+      runContract(
+        `withdraw:${membershipId}`,
+        agentId,
+        () => agentsService.withdraw(membershipId, reason),
+        'Request withdrawn.',
+      ),
+    [runContract],
   );
 
   // ── Membership lifecycle ─────────────────────────────────────────────────────
   const approve = useCallback(
-    (membershipId: string) =>
-      run(`approve:${membershipId}`, () => agentsService.approve(membershipId), {
-        success: 'Agent approved.',
-      }).then((r) => {
-        if (r) onRosterChanged?.();
-        return r;
-      }),
-    [run, onRosterChanged],
+    (membershipId: string, agentId = '') =>
+      runContract(
+        `approve:${membershipId}`,
+        agentId,
+        () => agentsService.approve(membershipId),
+        'Agent approved.',
+      ),
+    [runContract],
   );
 
-  const decline = useCallback(
-    (membershipId: string, reason?: string) =>
-      run(`decline:${membershipId}`, () => agentsService.decline(membershipId, reason), {
-        success: 'Request declined.',
-      }).then((r) => {
-        if (r) onRosterChanged?.();
-        return r;
-      }),
-    [run, onRosterChanged],
+  const reject = useCallback(
+    (membershipId: string, reason?: string, agentId = '') =>
+      runContract(
+        `reject:${membershipId}`,
+        agentId,
+        () => agentsService.reject(membershipId, reason),
+        'Request declined.',
+      ),
+    [runContract],
   );
 
   const suspend = useCallback(
@@ -106,9 +121,10 @@ export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentAc
     [run, onRosterChanged],
   );
 
-  const remove = useCallback(
+  /** Proposes termination — the agent has to agree before the contract actually ends. */
+  const terminate = useCallback(
     (membershipId: string, reason?: string) =>
-      run(`remove:${membershipId}`, () => agentsService.remove(membershipId, reason), {
+      run(`terminate:${membershipId}`, () => agentsService.terminate(membershipId, reason), {
         success: 'Removal requested — the contract ends once the agent agrees and cash is settled.',
       }).then((r) => {
         if (r) onRosterChanged?.();
@@ -158,14 +174,14 @@ export function useAgentActions({ onInviteChanged, onRosterChanged }: UseAgentAc
 
   return {
     pendingKey,
-    invite,
-    revokeInvite,
+    request,
+    withdraw,
     approve,
-    decline,
+    reject,
     suspend,
     pause,
     reinstate,
-    remove,
+    terminate,
     updateTerms,
     resolveStatusRequest,
     updateCodLimit,

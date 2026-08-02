@@ -114,20 +114,30 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
   COD_DISCREPANCY_NOT_FOUND: 'This discrepancy could not be found.',
   COD_DISCREPANCY_ALREADY_RESOLVED: 'This discrepancy is already closed.',
 
-  // ── Agent roster / membership ───────────────────────────────────────────
-  DELIVERY_INVITE_NOT_FOUND: 'This invite no longer exists or was already resolved.',
-  DELIVERY_INVITE_ALREADY_PENDING: 'There is already an open invite for this email.',
+  // ── Agent contracts ─────────────────────────────────────────────────────
+  // There are no email invites any more: an agency reaches an agent through the
+  // directory (`/agency/agents/browse` → `/agency/agents/requests`), so
+  // DELIVERY_INVITE_* went with the endpoints.
   DELIVERY_AGENT_ALREADY_IN_AGENCY: 'That agent already belongs to an agency.',
   DELIVERY_AGENT_NOT_IN_AGENCY: "That agent doesn't belong to your agency.",
   DELIVERY_AGENT_HAS_ACTIVE_SHIPMENTS:
     'This agent has shipments in flight — resolve those first.',
-  AGENT_MEMBERSHIP_ALREADY_EXISTS: 'This agent already has a membership with your agency.',
-  AGENT_MEMBERSHIP_ALREADY_APPROVED: 'This membership is already approved.',
-  AGENT_MEMBERSHIP_NOT_PENDING: 'This membership is no longer pending.',
-  AGENT_MEMBERSHIP_NOT_APPROVED: 'This membership is not approved.',
-  AGENT_MEMBERSHIP_NOT_SUSPENDED: 'This membership is not suspended.',
+  AGENT_NOT_FOUND: 'That agent could not be found.',
+  AGENT_KYC_NOT_VERIFIED:
+    "This agent's identity check has not been completed — they cannot be contracted yet.",
+  AGENT_PLATFORM_BANNED: 'This agent is banned from the platform.',
+  AGENT_MEMBERSHIP_NOT_FOUND: 'That agent contract could not be found.',
+  AGENT_MEMBERSHIP_ALREADY_EXISTS: 'You already have a contract with this agent.',
+  AGENT_MEMBERSHIP_ALREADY_APPROVED: 'This contract is already active.',
+  AGENT_MEMBERSHIP_NOT_PENDING: 'This contract is no longer pending.',
+  // Despite the name this means "not **active**" — the code predates the
+  // approved → active status rename and is kept as part of the wire contract.
+  AGENT_MEMBERSHIP_NOT_APPROVED: 'This contract is not active.',
+  AGENT_MEMBERSHIP_NOT_SUSPENDED: 'This contract is not suspended.',
   AGENT_MEMBERSHIP_LIMIT_REACHED: 'This agent has reached their agency limit.',
   CONTRACT_NOT_FOUND: 'That agent contract could not be found.',
+  CONTRACT_TRANSITION_NOT_PERMITTED:
+    'That is the other party’s move to make on this contract, not yours.',
   CONTRACT_STATUS_REQUEST_ALREADY_PENDING:
     'A removal request is already pending for this agent.',
   CONTRACT_STATUS_REQUEST_NOT_FOUND: 'That request no longer exists.',
@@ -145,6 +155,10 @@ export const API_ERROR_MESSAGES: Record<string, string> = {
     "That exceeds the agent's remaining COD pool. Ask them to raise their global limit.",
   CONTRACT_COD_THRESHOLD_BELOW_OUTSTANDING:
     'You cannot set a limit below the cash the agent already holds for you.',
+  CONTRACT_COVERAGE_OUTSIDE_AGENT_RADIUS:
+    "That coverage reaches beyond the area this agent agreed to work.",
+  CONTRACT_SHIPMENT_VALUE_EXCEEDED:
+    "This shipment is worth more than this contract's per-shipment ceiling.",
 
   // ── Earnings / payout ───────────────────────────────────────────────────
   EARNINGS_PAYOUT_ALREADY_PENDING: 'You already have a payout request in progress.',

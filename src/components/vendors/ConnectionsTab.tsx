@@ -4,7 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
 import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
 import { ApiError } from '@/types/api';
@@ -15,12 +19,12 @@ type StatusChip = 'all' | 'pending' | 'active' | 'paused_reapproval' | 'history'
 
 const HISTORY_STATUSES: ConnectionStatus[] = ['rejected', 'withdrawn', 'terminated'];
 
-const CHIPS: { key: StatusChip; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'active', label: 'Active' },
-  { key: 'paused_reapproval', label: 'Paused' },
-  { key: 'history', label: 'History' },
+const STATUS_FILTERS: { value: StatusChip; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused_reapproval', label: 'Paused' },
+  { value: 'history', label: 'History' },
 ];
 
 function matchesChip(status: ConnectionStatus, chip: StatusChip): boolean {
@@ -175,6 +179,7 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [chip, setChip] = useState<StatusChip>('all');
+  const [search, setSearch] = useState('');
 
   const actions = useVendorConnectionActions({
     onChanged: (_vendorId, dto) => {
@@ -217,27 +222,34 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
     load();
   }, [load]);
 
-  const filtered = connections.filter((c) => matchesChip(c.status, chip));
+  /** The name shown on a row — also what the search box matches against. */
+  const nameFor = (connection: ConnectionDto): string => {
+    const vendor = vendorDisplay.get(connection.vendorId);
+    return vendor?.displayName ?? vendor?.businessName ?? `Vendor ${connection.vendorId.slice(-6)}`;
+  };
+
+  const query = search.trim().toLowerCase();
+  const filtered = connections.filter(
+    (c) => matchesChip(c.status, chip) && (!query || nameFor(c).toLowerCase().includes(query)),
+  );
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
-        {CHIPS.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setChip(c.key)}
-            className={cn(
-              'text-xs px-3 py-1.5 rounded-full border transition-colors',
-              chip === c.key
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card border-border text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      <SearchFilterBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Search connections…"
+        searchLabel="Search your connections by vendor name"
+        activeCount={chip === 'all' ? 0 : 1}
+        onReset={() => setChip('all')}
+        filterDescription="Every vendor relationship your agency has, past and present."
+        resultCount={filtered.length}
+        resultNoun="connection"
+      >
+        <FilterSection label="Connection status">
+          <FilterOptionGroup value={chip} onChange={setChip} options={STATUS_FILTERS} />
+        </FilterSection>
+      </SearchFilterBar>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
@@ -251,29 +263,29 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
       ) : filtered.length === 0 ? (
         <div className="text-center py-10 border border-dashed rounded-xl">
           <Store className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No connections in this category yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {query ? 'No connections match your search.' : 'No connections in this category yet.'}
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="-mx-4 divide-y border-y sm:-mx-6 md:mx-0 md:space-y-2 md:divide-y-0 md:border-y-0">
           {filtered.map((connection) => {
             const vendor = vendorDisplay.get(connection.vendorId);
             return (
               <div
                 key={connection.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
+                className="flex items-center justify-between gap-3 p-4 md:rounded-xl md:border md:border-border md:p-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {vendor?.logoUrl ? (
-                      <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
+                      <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="use-credentials" className="w-full h-full object-cover" />
                     ) : (
                       <Store className="w-4 h-4 text-muted-foreground" />
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {vendor?.displayName ?? vendor?.businessName ?? `Vendor ${connection.vendorId.slice(-6)}`}
-                    </p>
+                    <p className="text-sm font-medium truncate">{nameFor(connection)}</p>
                     <ConnectionStatusBadge status={connection.status} className="text-[10px] mt-0.5" />
                   </div>
                 </div>

@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { sectionRuleClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,14 +69,14 @@ export function BillingSettingsCard() {
   if (loading) return <CardSkeleton lines={2} />;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
+      <CardHeader className="max-md:px-0">
         <CardTitle>Expiry reminders</CardTitle>
         <CardDescription>
           How many days before your plan expires should we warn you?
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-md:px-0">
         {loadError ? (
           <p className="text-sm text-destructive">{loadError}</p>
         ) : (

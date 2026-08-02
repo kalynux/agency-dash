@@ -9,6 +9,12 @@ import type {
   TransactionsListMeta,
 } from '@/types/transactions.types';
 import { ApiError } from '@/types/api';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
 import { LedgerSkeleton } from './BillingSkeletons';
 import { formatDate, gatewayLabel } from './billing.constants';
 import {
@@ -37,6 +43,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(
     async (p: number, cat: CategoryFilter) => {
@@ -70,33 +77,48 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
     load(page, category);
   }, [load, page, category, refreshKey]);
 
+  // The endpoint has no text search, so this narrows the page already loaded.
+  const query = search.trim().toLowerCase();
+  const visibleRows = query
+    ? rows.filter(
+        (tx) =>
+          tx.description.toLowerCase().includes(query) ||
+          categoryLabel(tx.category).toLowerCase().includes(query),
+      )
+    : rows;
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(listSurfaceClass, 'gap-4 md:gap-6')}>
+      {/* On a phone this sits directly under a page header that already says
+          the same thing — two near-identical paragraphs stacked. Only the
+          heading survives there; the page header's ⓘ carries the detail. */}
+      <CardHeader className="px-4 pt-4 md:px-6 md:pt-0">
         <CardTitle>Transactions</CardTitle>
-        <CardDescription>
+        <CardDescription className="max-md:hidden">
           Every money and credit movement on your account — plan purchases, credit top-ups and
           usage, and delivery-fee earnings.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Category sub-tabs */}
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1">
-          {TRANSACTION_CATEGORY_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setCategory(tab.value)}
-              className={cn(
-                'flex-shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                category === tab.value
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-border bg-background hover:bg-accent',
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <CardContent className="space-y-4 px-4 pb-4 md:px-6 md:pb-0">
+        <SearchFilterBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search transactions…"
+          searchLabel="Search this page by description or category"
+          activeCount={category === 'all' ? 0 : 1}
+          onReset={() => setCategory('all')}
+          filterDescription="Category filters the whole ledger; search looks at the page you're on."
+          resultCount={query ? visibleRows.length : meta?.total}
+          resultNoun="transaction"
+        >
+          <FilterSection label="Category">
+            <FilterOptionGroup
+              value={category}
+              onChange={setCategory}
+              options={TRANSACTION_CATEGORY_TABS}
+            />
+          </FilterSection>
+        </SearchFilterBar>
 
         {loading ? (
           <LedgerSkeleton />
@@ -107,14 +129,14 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
               Retry
             </button>
           </div>
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No transactions yet.
+            {query ? 'No transactions match your search.' : 'No transactions yet.'}
           </p>
         ) : (
           <>
-            {/* Desktop table */}
-            <div className="hidden overflow-hidden rounded-lg border sm:block">
+            {/* Desktop table — switches at `md`, where the card regains its frame */}
+            <div className="hidden overflow-hidden rounded-lg border md:block">
               <table className="w-full text-sm">
                 <thead className="border-b bg-muted/40 text-left">
                   <tr>
@@ -125,7 +147,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((tx) => {
+                  {visibleRows.map((tx) => {
                     const amount = transactionAmount(tx);
                     return (
                       <tr key={tx.id} className="border-b align-top last:border-0">
@@ -159,12 +181,12 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
               </table>
             </div>
 
-            {/* Mobile stacked rows */}
-            <ul className="space-y-2 sm:hidden">
-              {rows.map((tx) => {
+            {/* Mobile stacked rows — full-bleed, separated by a line */}
+            <ul className="-mx-4 divide-y border-y md:hidden">
+              {visibleRows.map((tx) => {
                 const amount = transactionAmount(tx);
                 return (
-                  <li key={tx.id} className="rounded-lg border p-3">
+                  <li key={tx.id} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{tx.description}</p>

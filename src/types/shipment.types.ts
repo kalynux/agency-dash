@@ -1,5 +1,7 @@
 // Agency Shipments — see api-doc/agency/shipments.md
 
+import type { FileRef } from '@/types/file.types';
+
 export type ShipmentStatus =
   | 'pending'
   | 'assigned'
@@ -58,26 +60,45 @@ export interface ShipmentCustomerSummary {
 }
 
 /**
- * Pickup / drop-off summary carried on a list row (added 2026-07-29). The list
- * contract names these fields but not their members, so every part is optional
- * and read defensively — see {@link describeShipmentPlace}.
+ * Every address this API returns, everywhere — pickups, drop-offs, handover
+ * points. One uniform envelope: the two raw database shapes that used to leak
+ * through (snake_case for storage-based items, another for pickup-based) are
+ * gone, so nothing has to branch on fulfilment mode to read an address.
  */
-export interface ShipmentPlaceSummary {
-  label?: string | null;
-  addressLine1?: string | null;
-  addressLine2?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  formattedAddress?: string | null;
-  location?: GeoPoint | null;
+export interface AddressDetail {
+  label: string | null;
+  /**
+   * The geocoder's one-liner, or a readable line composed from the stored
+   * fields. Best for display; null only when the address is entirely empty.
+   */
+  formattedAddress: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  /** Null on legacy addresses that were never geocoded. */
+  coordinates: { lat: number; lng: number } | null;
 }
 
-/** Shortest useful description of a pickup/drop-off, or `null` if it says nothing. */
-export function describeShipmentPlace(place?: ShipmentPlaceSummary | null): string | null {
-  if (!place) return null;
-  const cityState = [place.city, place.state].filter(Boolean).join(', ');
-  return cityState || place.formattedAddress || place.label || place.addressLine1 || null;
+/**
+ * Where a shipment is collected, summarising `items[].pickupLocation`.
+ *
+ * A shipment can legitimately have several collection points — one vendor with
+ * two business addresses, or a mix of vendor-collected and agency-stored items —
+ * so `count` reports that and `mode: 'mixed'` flags it. `address` is the first.
+ */
+export interface ShipmentPickupSummary {
+  address: AddressDetail | null;
+  mode: 'pickup_based' | 'storage_based' | 'mixed' | null;
+  count: number;
+}
+
+/** Shortest useful description of an address, or `null` if it says nothing. */
+export function describeAddress(address?: AddressDetail | null): string | null {
+  if (!address) return null;
+  const cityState = [address.city, address.state].filter(Boolean).join(', ');
+  return cityState || address.formattedAddress || address.label || address.addressLine1 || null;
 }
 
 /** One row from GET /api/agency/shipments. */
@@ -93,25 +114,29 @@ export interface ShipmentListItem {
   orderNumber: string;
   vendor: ShipmentVendorSummary;
   customer: ShipmentCustomerSummary;
+  /** The true number of items — `itemImages` is capped well below it. */
   itemCount: number;
+  /**
+   * A thumbnail preview of what is in the parcel: **one picture per item**,
+   * deduplicated and capped at 3. Always an array; `[]` when nothing on the
+   * shipment has a picture. Read live from the variant (else the product), so a
+   * vendor who replaces their photo changes what you see.
+   */
+  itemImages: FileRef[];
   /** Where the parcel is collected. */
-  pickup?: ShipmentPlaceSummary | null;
-  /** The drop-off, geocoded at checkout. */
-  deliveryAddress?: ShipmentPlaceSummary | null;
-}
-
-export interface ShipmentPickupAddress {
-  label: string;
-  addressLine1?: string;
-  addressLine2?: string | null;
-  city: string;
-  state?: string | null;
+  pickup?: ShipmentPickupSummary | null;
+  /** The drop-off, geocoded and snapshotted at checkout. */
+  deliveryAddress?: AddressDetail | null;
 }
 
 export interface ShipmentPickupLocation {
+  /**
+   * Who holds the parcel, nothing more — `alreadyInYourStorage` says the same
+   * thing, and `address` reads identically either way.
+   */
   mode: 'storage_based' | 'pickup_based';
   alreadyInYourStorage: boolean;
-  address: ShipmentPickupAddress;
+  address: AddressDetail;
 }
 
 export interface ShipmentItem {
@@ -121,6 +146,11 @@ export interface ShipmentItem {
   title: string;
   sku: string;
   variantTitle: string | null;
+  /**
+   * Every picture of this item, thumbnail first. `images[0]` is exactly what the
+   * list row shows for it in `itemImages`, so one component serves both.
+   */
+  images: FileRef[];
   pickupLocation: ShipmentPickupLocation | null;
 }
 
@@ -128,18 +158,14 @@ export interface ShipmentVendorDetail extends ShipmentVendorSummary {
   email: string;
 }
 
-export interface ShipmentDeliveryAddress {
-  label: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  country: string;
-}
-
 export interface ShipmentCustomerDetail extends ShipmentCustomerSummary {
   email: string;
-  deliveryAddress: ShipmentDeliveryAddress;
+  /**
+   * The address geocoded and snapshotted **at checkout** — what they actually
+   * ordered to. It no longer follows the customer's saved default, so editing
+   * their profile mid-delivery cannot move the drop-off.
+   */
+  deliveryAddress: AddressDetail;
 }
 
 export interface ShipmentAgent {
@@ -187,22 +213,16 @@ export interface GeoPoint {
   coordinates: [number, number];
 }
 
-export interface HandoverPickupAddress {
-  line1: string | null;
-  line2: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-}
-
-/** The collection point a replacement agent uses after a reassignment. */
+/**
+ * The collection point a replacement agent uses after a reassignment. The label
+ * and coordinates live on `address` like every other address on this API.
+ */
 export interface HandoverPickup {
   source: HandoverPickupSource;
-  label: string;
-  address: HandoverPickupAddress | null;
-  location: GeoPoint | null;
+  address: AddressDetail | null;
   note: string | null;
-  is_fallback: boolean;
+  /** True when the chosen point is a fallback, not the intended handover spot. */
+  isFallback: boolean;
 }
 
 /** Non-null only for a reassigned shipment — see agency/assignment.md → reassign. */

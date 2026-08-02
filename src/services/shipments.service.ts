@@ -88,10 +88,9 @@ export const shipmentsService = {
     return api.post<ReassignResponse>(`/agency/shipments/${id}/reassign`, payload);
   },
 
-  /** PATCH /agency/shipments/:id/tracking-number — record or replace the carrier tracking number. */
-  updateTrackingNumber(id: string, trackingNumber: string): Promise<ShipmentMutationResponse> {
-    return api.patch<ShipmentMutationResponse>(`/agency/shipments/${id}/tracking-number`, { trackingNumber });
-  },
+  // There is no tracking-number endpoint. The platform stamps every shipment
+  // with one at creation (`ACR-YYMMDD-HHMMSS-XXXXX`), so it is never absent and
+  // never editable — read it off `trackingNumber` on any shipment payload.
 
   /** PATCH /agency/assignment-settings — toggle standing auto-assignment participation. */
   updateAssignmentSettings(autoAssignEnabled: boolean): Promise<AssignmentSettingsResponse> {

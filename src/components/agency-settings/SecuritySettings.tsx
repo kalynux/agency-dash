@@ -4,15 +4,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Loader2, Lock, Shield } from 'lucide-react';
+import { SectionHeading } from '@/components/common/InfoHint';
+import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { authService } from '@/services/auth.service';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
+import { cn } from '@/lib/utils';
 
 // Mirrors the backend policy for PATCH /me/password (api-doc/me/password.md).
 const passwordSchema = z
@@ -36,20 +39,22 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export function SecuritySettings() {
   return (
-    <div className="space-y-6">
+    <div className={sectionGroupClass}>
       <ChangePasswordCard />
 
       {/* Not-yet-implemented security features, greyed out (no agency API for these). */}
-      <Card className="opacity-60">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            Two-Factor Authentication
-            <Badge variant="outline" className="ml-1">Coming soon</Badge>
-          </CardTitle>
-          <CardDescription>Add an extra layer of security to your account.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={cn(sectionSurfaceClass, 'opacity-60')}>
+        <SectionHeading
+          icon={Shield}
+          title={
+            <>
+              Two-Factor Authentication
+              <Badge variant="outline" className="ml-1">Coming soon</Badge>
+            </>
+          }
+          description="Add an extra layer of security to your account."
+        />
+        <CardContent className="max-md:px-0">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Enable 2FA</p>
@@ -97,15 +102,13 @@ function ChangePasswordCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Lock className="w-4 h-4" />
-          Change Password
-        </CardTitle>
-        <CardDescription>Use a strong password you don't use anywhere else.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className={sectionSurfaceClass}>
+      <SectionHeading
+        icon={Lock}
+        title="Change Password"
+        description="Use a strong password you don't use anywhere else."
+      />
+      <CardContent className="max-md:px-0">
         {apiError && (
           <div role="alert" className="mb-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">
             {apiError}

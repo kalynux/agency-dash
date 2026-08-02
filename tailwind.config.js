@@ -61,21 +61,21 @@ module.exports = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Brand ramp — emerald centered on #0E9F6E. Use for gradients, tints and
+        // Brand ramp — cobalt centered on #2563EB. Use for gradients, tints and
         // large decorative fills; the semantic `primary` above owns AA-critical text.
         brand: {
-          50: "#ecfdf5",
-          100: "#d1fae5",
-          200: "#a7f3d0",
-          300: "#6ee7b7",
-          400: "#34d399",
-          500: "#0e9f6e",
-          600: "#0b8a5f",
-          700: "#0a6f4d",
-          800: "#0a563d",
-          900: "#0a4733",
-          950: "#03271c",
-          DEFAULT: "#0e9f6e",
+          50: "#eff4ff",
+          100: "#dbe6fe",
+          200: "#bfd3fe",
+          300: "#93b4fd",
+          400: "#608efa",
+          500: "#2563eb",
+          600: "#1d4ed8",
+          700: "#1e40af",
+          800: "#1e3a8a",
+          900: "#1c336f",
+          950: "#101f45",
+          DEFAULT: "#2563eb",
         },
         // Gold — value, attention, positive money highlights.
         gold: {
@@ -88,13 +88,14 @@ module.exports = {
           700: "#9a6a0e",
           DEFAULT: "#f4b740",
         },
-        // Signal blue — logistics / in-transit accents.
+        // Signal sky — logistics / in-transit accents, held distinct from the
+        // cobalt primary so an "in-transit" tile never reads as a primary tile.
         info: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
         },
       },
       borderRadius: {
@@ -106,19 +107,19 @@ module.exports = {
         xs: "calc(var(--radius) - 6px)",
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgb(6 36 26 / 0.06)",
-        sm: "0 1px 2px 0 rgb(6 36 26 / 0.06), 0 1px 3px 0 rgb(6 36 26 / 0.05)",
-        DEFAULT: "0 1px 3px 0 rgb(6 36 26 / 0.08), 0 1px 2px -1px rgb(6 36 26 / 0.06)",
-        md: "0 4px 8px -2px rgb(6 36 26 / 0.10), 0 2px 4px -2px rgb(6 36 26 / 0.06)",
-        lg: "0 12px 24px -8px rgb(6 36 26 / 0.14), 0 4px 8px -4px rgb(6 36 26 / 0.08)",
-        xl: "0 24px 48px -12px rgb(6 36 26 / 0.20), 0 8px 16px -8px rgb(6 36 26 / 0.10)",
-        // Emerald lift for the primary action / FAB / hero metric.
-        brand: "0 12px 28px -10px rgb(14 159 110 / 0.50), 0 4px 10px -6px rgb(14 159 110 / 0.40)",
-        "brand-sm": "0 6px 16px -8px rgb(14 159 110 / 0.45)",
+        xs: "0 1px 2px 0 rgb(15 23 42 / 0.06)",
+        sm: "0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.05)",
+        DEFAULT: "0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06)",
+        md: "0 4px 8px -2px rgb(15 23 42 / 0.10), 0 2px 4px -2px rgb(15 23 42 / 0.06)",
+        lg: "0 12px 24px -8px rgb(15 23 42 / 0.14), 0 4px 8px -4px rgb(15 23 42 / 0.08)",
+        xl: "0 24px 48px -12px rgb(15 23 42 / 0.20), 0 8px 16px -8px rgb(15 23 42 / 0.10)",
+        // Cobalt lift for the primary action / FAB / hero metric.
+        brand: "0 12px 28px -10px rgb(37 99 235 / 0.50), 0 4px 10px -6px rgb(37 99 235 / 0.40)",
+        "brand-sm": "0 6px 16px -8px rgb(37 99 235 / 0.45)",
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(135deg, hsl(158 84% 30%) 0%, hsl(150 80% 22%) 100%)",
-        "brand-sheen": "radial-gradient(120% 120% at 100% 0%, rgb(52 211 153 / 0.28) 0%, transparent 55%)",
+        "brand-gradient": "linear-gradient(135deg, hsl(222 84% 50%) 0%, hsl(224 76% 34%) 100%)",
+        "brand-sheen": "radial-gradient(120% 120% at 100% 0%, rgb(96 142 250 / 0.30) 0%, transparent 55%)",
       },
       keyframes: {
         "accordion-down": {

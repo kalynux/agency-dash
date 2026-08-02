@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, RefreshCw, Tag,
+  Plus, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, RefreshCw, Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/state-views';
+import {
+  FilterField, FilterOptionGroup, FilterSection, SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
 import { cn } from '@/lib/utils';
 import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -34,6 +36,17 @@ const SORT_OPTIONS: { value: SortKey; label: string; sortBy: ListTicketsParams['
   { value: 'updated', label: 'Recently updated', sortBy: 'updatedAt', sortOrder: 'desc' },
   { value: 'created', label: 'Recently created', sortBy: 'createdAt', sortOrder: 'desc' },
   { value: 'priority', label: 'Priority', sortBy: 'priority', sortOrder: 'desc' },
+];
+
+/** `STATUS_TABS` carries `null` for "all"; the filter pills need a string key. */
+const STATUS_OPTIONS = STATUS_TABS.map((tab) => ({
+  value: (tab.value ?? ALL) as TicketStatus | typeof ALL,
+  label: tab.label,
+}));
+
+const PRIORITY_OPTIONS = [
+  { value: ALL as TicketPriority | typeof ALL, label: 'All priorities' },
+  ...TICKET_PRIORITIES.map((p) => ({ value: p as TicketPriority | typeof ALL, label: PRIORITY_LABELS[p] })),
 ];
 
 export function Tickets() {
@@ -104,12 +117,21 @@ export function Tickets() {
 
   const hasActiveFilter = !!statusFilter || !!typeFilter || !!priorityFilter || searchQuery.trim().length > 0;
 
-  const clearFilters = () => {
+  /** Sort counts as a filter for the badge — it changes what the top of the list is. */
+  const activeFilterCount =
+    (statusFilter ? 1 : 0) + (typeFilter ? 1 : 0) + (priorityFilter ? 1 : 0) + (sort === 'updated' ? 0 : 1);
+
+  const resetFilters = () => {
     setStatusFilter(null);
     setTypeFilter('');
     setPriorityFilter('');
-    setSearchQuery('');
+    setSort('updated');
     setPage(1);
+  };
+
+  const clearFilters = () => {
+    resetFilters();
+    setSearchQuery('');
   };
 
   const rangeStart = tickets.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
@@ -138,84 +160,64 @@ export function Tickets() {
         </div>
       </div>
 
-      {/* Status tabs */}
-      <div className="-mx-1 overflow-x-auto">
-        <div className="flex min-w-max items-center gap-1 border-b px-1">
-          {STATUS_TABS.map((tab) => {
-            const active = statusFilter === tab.value;
-            return (
-              <button
-                key={tab.label}
-                onClick={() => { setStatusFilter(tab.value); setPage(1); }}
-                className={cn(
-                  'relative whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab.label}
-                {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3 lg:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search this page by subject or description…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+      {/* Search & filters */}
+      <SearchFilterBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search tickets…"
+        searchLabel="Search this page by subject or description"
+        activeCount={activeFilterCount}
+        onReset={resetFilters}
+        filterDescription="Status, type and priority filter every ticket; search looks at the page you're on."
+        resultCount={searchQuery.trim() ? filtered.length : pagination.total}
+        resultNoun="ticket"
+      >
+        <FilterSection label="Status">
+          <FilterOptionGroup
+            value={statusFilter ?? ALL}
+            onChange={(v) => { setStatusFilter(v === ALL ? null : (v as TicketStatus)); setPage(1); }}
+            options={STATUS_OPTIONS}
           />
-        </div>
-        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0">
-          {/* Type */}
-          <Select
-            value={typeFilter || ALL}
-            onValueChange={(v) => { setTypeFilter(v === ALL ? '' : (v as TicketType)); setPage(1); }}
-          >
-            <SelectTrigger className="w-40 shrink-0 lg:w-44"><SelectValue placeholder="All types" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All types</SelectItem>
-              {TICKET_TYPE_GROUPS.map((g) => (
-                <SelectGroup key={g.groupLabel}>
-                  <SelectLabel>{g.groupLabel}</SelectLabel>
-                  {g.values.map((v) => (
-                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-                  ))}
-                </SelectGroup>
-              ))}
-            </SelectContent>
-          </Select>
+        </FilterSection>
 
-          {/* Priority */}
-          <Select
+        <FilterSection label="Priority">
+          <FilterOptionGroup
             value={priorityFilter || ALL}
-            onValueChange={(v) => { setPriorityFilter(v === ALL ? '' : (v as TicketPriority)); setPage(1); }}
-          >
-            <SelectTrigger className="w-36 shrink-0 lg:w-40"><SelectValue placeholder="All priorities" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All priorities</SelectItem>
-              {TICKET_PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(v) => { setPriorityFilter(v === ALL ? '' : (v as TicketPriority)); setPage(1); }}
+            options={PRIORITY_OPTIONS}
+          />
+        </FilterSection>
 
-          {/* Sort */}
-          <Select value={sort} onValueChange={(v) => { setSort(v as SortKey); setPage(1); }}>
-            <SelectTrigger className="w-44 shrink-0 lg:w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>Sort: {o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        <FilterSection label="Type">
+          <FilterField label="Ticket type">
+            <Select
+              value={typeFilter || ALL}
+              onValueChange={(v) => { setTypeFilter(v === ALL ? '' : (v as TicketType)); setPage(1); }}
+            >
+              <SelectTrigger className="h-10 w-full"><SelectValue placeholder="All types" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All types</SelectItem>
+                {TICKET_TYPE_GROUPS.map((g) => (
+                  <SelectGroup key={g.groupLabel}>
+                    <SelectLabel>{g.groupLabel}</SelectLabel>
+                    {g.values.map((v) => (
+                      <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+        </FilterSection>
+
+        <FilterSection label="Sort by">
+          <FilterOptionGroup
+            value={sort}
+            onChange={(v) => { setSort(v); setPage(1); }}
+            options={SORT_OPTIONS}
+          />
+        </FilterSection>
+      </SearchFilterBar>
 
       {/* Content */}
       {isLoading ? (
@@ -279,13 +281,13 @@ export function Tickets() {
             </table>
           </div>
 
-          {/* Mobile: cards */}
-          <div className="space-y-3 md:hidden">
+          {/* Mobile: full-bleed rows, separated by a line rather than framed */}
+          <div className="-mx-4 divide-y border-y sm:-mx-6 md:hidden">
             {filtered.map((t) => (
               <button
                 key={t._id}
                 onClick={() => setSelectedId(t._id)}
-                className="flex w-full flex-col gap-3 rounded-lg border bg-card p-4 text-left"
+                className="flex w-full flex-col gap-3 p-4 text-left active:bg-muted/50"
               >
                 <TicketIdentity ticket={t} />
                 <div className="flex flex-wrap items-center gap-2">
@@ -396,7 +398,7 @@ function LockGlyph() {
 
 function TicketListSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="-mx-4 border-y sm:-mx-6 md:mx-0 md:overflow-hidden md:rounded-lg md:border">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 border-b p-4 last:border-0">
           <Skeleton className="h-9 w-9 rounded-lg" />

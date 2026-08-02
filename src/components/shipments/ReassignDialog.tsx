@@ -59,7 +59,7 @@ export function ReassignDialog({
 
   // Only offer eligible replacements: approved membership, and not the agent being replaced.
   const replacementOptions = useMemo(
-    () => agents.filter((a) => a.membershipStatus === 'approved' && a.id !== currentAgentId),
+    () => agents.filter((a) => a.membershipStatus === 'active' && a.id !== currentAgentId),
     [agents, currentAgentId],
   );
 

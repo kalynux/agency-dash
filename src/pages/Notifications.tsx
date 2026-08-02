@@ -4,9 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { useNotifications } from '@/store/notifications.store';
 import { notificationsService } from '@/services/notifications.service';
 import { notificationVisual, notificationHref } from '@/lib/notification-display';
@@ -17,6 +21,14 @@ import { ApiError } from '@/types/api';
 import type { AgencyNotification, NotificationListMeta } from '@/types/notification.types';
 
 const PAGE_LIMIT = 20;
+
+type ReadFilter = 'all' | 'unread' | 'read';
+
+const READ_FILTERS: { value: ReadFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'unread', label: 'Unread' },
+  { value: 'read', label: 'Read' },
+];
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -39,6 +51,8 @@ export function Notifications() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
+  const [readFilter, setReadFilter] = useState<ReadFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -76,10 +90,15 @@ export function Notifications() {
     setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
   };
 
-  // Read status has no server-side filter (the list endpoint only takes page/limit),
-  // so the tabs filter the current page's items.
-  const unreadItems = items.filter((n) => !n.isRead);
-  const readItems = items.filter((n) => n.isRead);
+  // Neither read status nor text has a server-side filter (the list endpoint only
+  // takes page/limit), so both narrow the current page's items.
+  const query = searchQuery.trim().toLowerCase();
+  const visibleItems = items.filter((n) => {
+    if (readFilter === 'unread' && n.isRead) return false;
+    if (readFilter === 'read' && !n.isRead) return false;
+    if (!query) return true;
+    return n.title.toLowerCase().includes(query) || n.message.toLowerCase().includes(query);
+  });
 
   const NotificationRow = ({ n }: { n: AgencyNotification }) => {
     const visual = notificationVisual(n.type);
@@ -142,20 +161,31 @@ export function Notifications() {
     );
   };
 
-  const renderTab = (list: AgencyNotification[], emptyTitle: string, emptyDescription: string) => (
-    <Card>
+  const isNarrowed = readFilter !== 'all' || query.length > 0;
+
+  const notificationList = (
+    <Card className={listSurfaceClass}>
       <CardContent className="p-0">
         <AsyncBoundary
           isLoading={isLoading && items.length === 0}
           error={items.length === 0 ? error : undefined}
           onRetry={load}
-          isEmpty={!isLoading && list.length === 0}
+          isEmpty={!isLoading && visibleItems.length === 0}
           emptyState={
-            <EmptyState icon={Bell} title={emptyTitle} description={emptyDescription} className="border-0" />
+            <EmptyState
+              icon={Bell}
+              title={isNarrowed ? 'Nothing matches' : 'No notifications yet'}
+              description={
+                isNarrowed
+                  ? 'Try a different search or filter — these only look at the page you are on.'
+                  : "You're all caught up."
+              }
+              className="border-0"
+            />
           }
         >
           <div className="divide-y">
-            {list.map((n) => (
+            {visibleItems.map((n) => (
               <NotificationRow key={n.id} n={n} />
             ))}
           </div>
@@ -233,29 +263,23 @@ export function Notifications() {
         </Card>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all" className="gap-2">
-            All
-            <Badge variant="secondary">{items.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="unread" className="gap-2">
-            Unread
-            {unreadItems.length > 0 && <Badge variant="destructive">{unreadItems.length}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="read">Read</TabsTrigger>
-        </TabsList>
+      <SearchFilterBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search notifications…"
+        searchLabel="Search notifications by title or message"
+        activeCount={readFilter === 'all' ? 0 : 1}
+        onReset={() => setReadFilter('all')}
+        filterDescription="Search and filters apply to the page you're on."
+        resultCount={visibleItems.length}
+        resultNoun="notification"
+      >
+        <FilterSection label="Read status">
+          <FilterOptionGroup value={readFilter} onChange={setReadFilter} options={READ_FILTERS} />
+        </FilterSection>
+      </SearchFilterBar>
 
-        <TabsContent value="all" className="mt-4">
-          {renderTab(items, 'No notifications yet', "You're all caught up.")}
-        </TabsContent>
-        <TabsContent value="unread" className="mt-4">
-          {renderTab(unreadItems, 'All caught up!', 'You have no unread notifications on this page.')}
-        </TabsContent>
-        <TabsContent value="read" className="mt-4">
-          {renderTab(readItems, 'No read notifications', 'Read notifications on this page will show here.')}
-        </TabsContent>
-      </Tabs>
+      {notificationList}
 
       {error && items.length > 0 && (
         <p className="text-sm text-destructive text-center">{getApiErrorMessage(error)}</p>

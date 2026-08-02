@@ -20,12 +20,14 @@ import type { GeoAddress } from '@/types/geo.types';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
+import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
+import { noteSurfaceClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -351,6 +353,10 @@ export function LocationsSettings() {
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
   if (!magazin || !form) return null;
 
+  // No `sectionGroupClass` here: the only two Cards are the coverage section and
+  // the trailing note, and the note keeps its own tinted panel on mobile — a
+  // rule above it as well would be one separator too many, and the group's
+  // `pt-6` would out-specify the note's own padding.
   return (
     <div className="space-y-6">
       {saveError && (
@@ -360,15 +366,13 @@ export function LocationsSettings() {
       )}
 
       {/* ─── Coverage regions ──────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Coverage & Locations</CardTitle>
-          <CardDescription>
-            The regions you serve and your headquarters addresses — the operational footprint
-            vendors see when choosing an agency.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <Card className={sectionSurfaceClass}>
+        <SectionHeading
+          title="Coverage & Locations"
+          description="The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency."
+          short="Where you operate"
+        />
+        <CardContent className="space-y-6 max-md:px-0">
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label>Coverage Regions</Label>
@@ -412,12 +416,19 @@ export function LocationsSettings() {
           {/* ─── HQ addresses ───────────────────────────────────────────── */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <Label>Headquarters & Pickup Locations</Label>
+              <Label className="flex items-center gap-1.5">
+                Headquarters & Pickup Locations
+                <InfoHint className="md:hidden" label="About headquarters and pickup locations">
+                  Search for each location and pick it from the results — we read the street, city
+                  and region straight off the map result. The first address is your primary
+                  headquarters.
+                </InfoHint>
+              </Label>
               <Button type="button" variant="outline" size="sm" onClick={addAddress} className="gap-1">
                 <Plus className="w-3.5 h-3.5" /> Add address
               </Button>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
+            <p className="mb-3 text-xs text-muted-foreground max-md:hidden">
               Search for each location and pick it from the results — we read the street, city and
               region straight off the map result. The first address is your primary headquarters.
             </p>
@@ -451,7 +462,13 @@ export function LocationsSettings() {
 
                   {/* Address search — fills everything below and pins the coordinates */}
                   <div className="space-y-1.5">
-                    <Label>Find address</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Find address
+                      <InfoHint className="md:hidden" label="About the address search">
+                        The pin is what lets vendors and drivers route to you. Pick a result from
+                        the list — we read the street, city and region straight off it.
+                      </InfoHint>
+                    </Label>
                     <AddressSearchInput
                       value={entry.geo}
                       country={geoBias}
@@ -468,7 +485,7 @@ export function LocationsSettings() {
                         on the map — you can still edit everything else without re-selecting.
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground max-md:hidden">
                         Required — the pin is what lets vendors and drivers route to you.
                       </p>
                     )}
@@ -502,8 +519,13 @@ export function LocationsSettings() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor={`hq-street-${entry.uid}`}>
-                      Street Address / Landmark <span className="text-destructive">*</span>
+                    <Label htmlFor={`hq-street-${entry.uid}`} className="flex items-center gap-1.5">
+                      <span>
+                        Street Address / Landmark <span className="text-destructive">*</span>
+                      </span>
+                      <InfoHint className="md:hidden" label="About the street address">
+                        Filled in from the map result — refine it with a floor, unit or landmark.
+                      </InfoHint>
                     </Label>
                     <Input
                       id={`hq-street-${entry.uid}`}
@@ -520,7 +542,7 @@ export function LocationsSettings() {
                         {fieldErrors[`${index}.address_description`]}
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground max-md:hidden">
                         Filled in from the map result — refine it with a floor, unit or landmark.
                       </p>
                     )}
@@ -610,8 +632,8 @@ export function LocationsSettings() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground">
+      <Card className={noteSurfaceClass}>
+        <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground max-md:px-3 max-md:text-xs">
           <Info className="mt-0.5 w-4 h-4 shrink-0" />
           <p>
             Your operating country was set during onboarding and can't be changed. Coverage regions

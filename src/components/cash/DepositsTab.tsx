@@ -15,6 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { CodDepositStatusBadge } from '@/components/cash/CodDepositStatusBadge';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useCodCashActions } from '@/hooks/useCodCashActions';
 import { codCashService } from '@/services/cod-cash.service';
@@ -42,6 +48,7 @@ export function DepositsTab() {
   const [meta, setMeta] = useState<CodListMeta>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<CodDepositStatus | 'all'>('all');
+  const [search, setSearch] = useState('');
   const [declaredCount, setDeclaredCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -113,11 +120,21 @@ export function DepositsTab() {
 
   const agentName = (id: string) => agents.find((a) => a.id === id)?.name ?? id;
 
+  // The endpoint filters by status only, so text search narrows the loaded page.
+  const query = search.trim().toLowerCase();
+  const visibleDeposits = query
+    ? deposits.filter((d) =>
+        [agentName(d.agentId), d.reference, d.note].some((field) =>
+          field?.toLowerCase().includes(query),
+        ),
+      )
+    : deposits;
+
   return (
     <div className="space-y-6">
       {/* Declarations alert */}
       {declaredCount > 0 && (
-        <Card className="border-amber-200 bg-amber-50/60">
+        <Card className="border-amber-200 bg-amber-50/60 py-0 md:py-6">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -147,7 +164,7 @@ export function DepositsTab() {
       )}
 
       {/* Record form */}
-      <Card>
+      <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium">Record cash received from an agent</p>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -185,31 +202,38 @@ export function DepositsTab() {
         </CardContent>
       </Card>
 
-      {/* Filter */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Search & filter */}
+      <div className="space-y-3">
         <p className="text-sm font-medium">Deposit history</p>
-        <Select
-          value={status}
-          onValueChange={(v) => {
-            setStatus(v as CodDepositStatus | 'all');
+        <SearchFilterBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search deposits…"
+          searchLabel="Search this page by agent, reference or note"
+          activeCount={status === 'all' ? 0 : 1}
+          onReset={() => {
+            setStatus('all');
             setPage(1);
           }}
+          filterDescription="Status filters every deposit; search looks at the page you're on."
+          resultCount={query ? visibleDeposits.length : meta.total}
+          resultNoun="deposit"
         >
-          <SelectTrigger className="w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTERS.map((f) => (
-              <SelectItem key={f.value} value={f.value}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <FilterSection label="Status">
+            <FilterOptionGroup
+              value={status}
+              onChange={(v) => {
+                setStatus(v);
+                setPage(1);
+              }}
+              options={STATUS_FILTERS}
+            />
+          </FilterSection>
+        </SearchFilterBar>
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -241,14 +265,14 @@ export function DepositsTab() {
                       </Button>
                     </td>
                   </tr>
-                ) : deposits.length === 0 ? (
+                ) : visibleDeposits.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                      No deposits in this view
+                      {query ? 'No deposits match your search' : 'No deposits in this view'}
                     </td>
                   </tr>
                 ) : (
-                  deposits.map((d) => {
+                  visibleDeposits.map((d) => {
                     const isDeclared = d.status === 'declared';
                     const isAgencyRecipient = (d.recipient ?? 'agency') === 'agency';
                     const actionable = isDeclared && isAgencyRecipient;

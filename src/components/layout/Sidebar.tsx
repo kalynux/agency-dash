@@ -4,6 +4,7 @@ import { useUI } from '@/App';
 import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
+import { useAgentsRoster } from '@/store/agents.store';
 import { useShipments } from '@/store/shipments.store';
 import {
   ChevronLeft,
@@ -48,6 +49,7 @@ export function Sidebar() {
   const { unreadCount } = useNotifications();
   const { activeCount: shipmentsActiveCount } = useShipments();
   const { pendingActionCount } = useVendorConnections();
+  const { pendingActionCount: agentActionCount } = useAgentsRoster();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -120,6 +122,7 @@ export function Sidebar() {
     if (badge === 'notifications') return unreadCount;
     if (badge === 'shipments') return shipmentsActiveCount;
     if (badge === 'vendorConnections') return pendingActionCount;
+    if (badge === 'agentContracts') return agentActionCount;
     return 0;
   };
 
@@ -232,7 +235,7 @@ export function Sidebar() {
       <div className="h-16 flex items-center gap-3 px-4 border-b flex-shrink-0">
         <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-gradient shadow-brand-sm flex items-center justify-center flex-shrink-0">
           {agencyLogo ? (
-            <img src={agencyLogo} alt={agencyName} className="w-full h-full object-cover" />
+            <img src={agencyLogo} alt={agencyName} crossOrigin="use-credentials" className="w-full h-full object-cover" />
           ) : (
             <Truck className="w-5 h-5 text-white" />
           )}

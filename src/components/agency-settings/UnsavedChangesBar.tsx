@@ -1,5 +1,6 @@
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface UnsavedChangesBarProps {
   /** Show the bar (typically `dirty || saving`). */
@@ -14,24 +15,37 @@ interface UnsavedChangesBarProps {
  * Floating "Unsaved changes" pill pinned to the bottom of the viewport, with
  * Discard / Save actions. One instance per settings tab — the tab tracks its
  * own dirty state and performs a single API call on save.
+ *
+ * Below `md` the app runs the bottom tab bar (App.tsx renders `MobileTabBar`
+ * under 768px, the same breakpoint as `md`), which is `fixed` at `bottom-0`,
+ * 4rem tall plus the safe-area inset, and whose FAB pokes a further 20px above
+ * its own row. A pill at `bottom-6` lands underneath all of that and is simply
+ * invisible on a phone, so the mobile offset clears the row, the inset and the
+ * FAB. It lines up with the `pb-[calc(6rem+…)]` the mobile shell already
+ * reserves under the content — keep the two in sync.
  */
 export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: UnsavedChangesBarProps) {
   if (!visible) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border bg-background/95 py-1.5 pl-4 pr-1.5 shadow-lg backdrop-blur animate-fade-in sm:gap-3">
-        <span className="relative flex h-2 w-2">
+    <div
+      className={cn(
+        'pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4',
+        'bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-6',
+      )}
+    >
+      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border bg-background/95 py-1.5 pl-3 pr-1.5 shadow-lg backdrop-blur animate-fade-in sm:gap-3 sm:pl-4">
+        <span className="relative flex h-2 w-2 flex-shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
         </span>
-        <p className="text-sm font-medium">Unsaved changes</p>
-        <div className="flex items-center gap-1.5">
+        <p className="whitespace-nowrap text-sm font-medium">Unsaved changes</p>
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-1.5">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="rounded-full"
+            className="rounded-full px-2.5 sm:px-3"
             onClick={onDiscard}
             disabled={saving}
           >
@@ -40,12 +54,14 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
           <Button
             type="button"
             size="sm"
-            className="gap-1.5 rounded-full"
+            className="gap-1.5 rounded-full px-3 sm:px-4"
             onClick={onSave}
             disabled={saving}
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Save changes
+            {/* "Save changes" costs ~50px the 360px pill can't spare. */}
+            <span className="sm:hidden">Save</span>
+            <span className="max-sm:hidden">Save changes</span>
           </Button>
         </div>
       </div>

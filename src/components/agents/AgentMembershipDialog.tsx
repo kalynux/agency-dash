@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   XCircle,
   MapPin,
+  User,
 } from 'lucide-react';
 import {
   Dialog,
@@ -31,7 +32,7 @@ import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge
 import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
 import { useAgentActions } from '@/hooks/useAgentActions';
 import { agentsService } from '@/services/agents.service';
-import { readContractTerms } from '@/types/agent.types';
+import { agentAvatarUrl, readContractTerms } from '@/types/agent.types';
 import type {
   RosterEntry,
   AgentMembership,
@@ -76,6 +77,8 @@ interface TermsForm {
   dayOfWeek: string;
   dayOfMonth: string;
   graceHours: string;
+  /** `coverage.regions`, comma-separated. The polygon `area` is not editable here. */
+  regions: string;
   ceiling: string;
 }
 
@@ -83,28 +86,34 @@ const EMPTY_TERMS: TermsForm = {
   empType: '', empRef: '', empStart: '', empEnd: '',
   feeModel: '', sharePercent: '', flatFee: '', currency: '',
   cadence: '', dayOfWeek: '', dayOfMonth: '', graceHours: '',
-  ceiling: '',
+  regions: '', ceiling: '',
 };
 
 function num(value: number | null | undefined): string {
   return value == null ? '' : String(value);
 }
 
+/** Split a comma-separated region list into trimmed, non-empty names. */
+function parseRegions(value: string): string[] {
+  return value.split(',').map((r) => r.trim()).filter(Boolean);
+}
+
 function seedTermsForm(membership: AgentMembership): TermsForm {
-  const { feeSplit, remittanceTerms, shipmentValueCeiling } = readContractTerms(membership);
+  const { feeSplit, remittanceTerms, coverage, shipmentValueCeiling } = readContractTerms(membership);
   return {
-    empType: membership.employment?.employmentType ?? '',
-    empRef: membership.employment?.employeeRef ?? '',
-    empStart: membership.employment?.startedAt?.slice(0, 10) ?? '',
-    empEnd: membership.employment?.endsAt?.slice(0, 10) ?? '',
-    feeModel: feeSplit?.model ?? '',
-    sharePercent: num(feeSplit?.agentSharePercent),
-    flatFee: num(feeSplit?.agentFlatFee),
-    currency: feeSplit?.currency ?? '',
-    cadence: remittanceTerms?.cadence ?? '',
-    dayOfWeek: num(remittanceTerms?.dayOfWeek),
-    dayOfMonth: num(remittanceTerms?.dayOfMonth),
-    graceHours: num(remittanceTerms?.graceHours),
+    empType: membership.employment.employmentType ?? '',
+    empRef: membership.employment.employeeRef ?? '',
+    empStart: membership.employment.startedAt?.slice(0, 10) ?? '',
+    empEnd: membership.employment.endsAt?.slice(0, 10) ?? '',
+    feeModel: feeSplit.model,
+    sharePercent: num(feeSplit.agentSharePercent),
+    flatFee: num(feeSplit.agentFlatFee),
+    currency: feeSplit.currency,
+    cadence: remittanceTerms.cadence,
+    dayOfWeek: num(remittanceTerms.dayOfWeek),
+    dayOfMonth: num(remittanceTerms.dayOfMonth),
+    graceHours: num(remittanceTerms.graceHours),
+    regions: coverage.regions.join(', '),
     ceiling: num(shipmentValueCeiling),
   };
 }
@@ -146,6 +155,12 @@ function buildTermsPayload(form: TermsForm, seed: TermsForm): UpdateTermsPayload
   }
   if (Object.keys(remittance).length > 0) payload.remittance_terms = remittance;
 
+  // `area` is deliberately left alone — a polygon is not something this text
+  // editor can express, and omitting the key keeps whatever is stored.
+  if (form.regions !== seed.regions) {
+    payload.coverage = { regions: parseRegions(form.regions) };
+  }
+
   // Nullable on purpose — an emptied ceiling means "no per-shipment cap".
   if (form.ceiling !== seed.ceiling) {
     payload.shipment_value_ceiling = form.ceiling.trim() === '' ? null : Number(form.ceiling);
@@ -177,6 +192,42 @@ function formatDate(iso: string | null | undefined) {
   return fmtDate(iso);
 }
 
+/**
+ * How a terminal contract ended, or null while it is still live.
+ *
+ * Each terminal status has its own stamp and reason field — `rejected` and
+ * `withdrawn` are the two halves of a refused handshake, `deactivated` an agreed
+ * departure — and the field names for the last one predate the status rename.
+ */
+function contractEnding(
+  membership: AgentMembership,
+): { label: string; at: string | null; reason: string | null } | null {
+  switch (membership.status) {
+    case 'rejected':
+      return {
+        label: 'The agent turned down your request',
+        at: membership.rejectedAt,
+        reason: membership.rejectionReason,
+      };
+    case 'withdrawn':
+      return {
+        label: 'The request was withdrawn before it was answered',
+        at: membership.withdrawnAt,
+        reason: membership.withdrawalReason,
+      };
+    case 'deactivated':
+      return {
+        label: membership.transferredToAgencyId
+          ? 'Ended — an admin transferred this agent to another agency'
+          : 'Contract ended',
+        at: membership.removedAt,
+        reason: membership.removalReason,
+      };
+    default:
+      return null;
+  }
+}
+
 export interface AgentMembershipDialogProps {
   entry: RosterEntry | null;
   open: boolean;
@@ -188,7 +239,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
   const actions = useAgentActions({ onRosterChanged: onChanged });
 
   // Inline "confirm with reason" modes
-  const [mode, setMode] = useState<'suspend' | 'pause' | 'remove' | 'decline' | null>(null);
+  const [mode, setMode] = useState<'suspend' | 'pause' | 'terminate' | 'reject' | null>(null);
   const [reason, setReason] = useState('');
 
   // COD threshold + contract terms editors
@@ -223,6 +274,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
   const { membership, agent, cashHeld } = entry;
   const mid = membership.id;
   const VehicleIcon = getVehicleIcon(agent.vehicleInfo?.vehicle_type);
+  const ending = contractEnding(membership);
 
   const resetInline = () => {
     setMode(null);
@@ -310,11 +362,11 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
     } else if (mode === 'pause') {
       const r = await actions.pause(mid, reason.trim() || undefined);
       if (r) { resetInline(); onOpenChange(false); }
-    } else if (mode === 'decline') {
-      const r = await actions.decline(mid, reason.trim() || undefined);
+    } else if (mode === 'reject') {
+      const r = await actions.reject(mid, reason.trim() || undefined);
       if (r) { resetInline(); onOpenChange(false); }
-    } else if (mode === 'remove') {
-      const r = await actions.remove(mid, reason.trim() || undefined);
+    } else if (mode === 'terminate') {
+      const r = await actions.terminate(mid, reason.trim() || undefined);
       if (r) { resetInline(); onOpenChange(false); }
     }
   };
@@ -326,11 +378,13 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-5 pt-5">
           <div className="flex items-center gap-3">
-            <img
-              src={agent.avatarUrl || `https://i.pravatar.cc/150?u=${agent.id}`}
-              alt={agent.name}
-              className="w-10 h-10 rounded-full"
-            />
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {agentAvatarUrl(agent) ? (
+                <img src={agentAvatarUrl(agent)!} crossOrigin="use-credentials" alt={agent.name} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-muted-foreground" />
+              )}
+            </div>
             <div className="min-w-0">
               <DialogTitle className="truncate">{agent.name}</DialogTitle>
               <div className="flex items-center gap-2 mt-1">
@@ -344,10 +398,29 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
 
         <ScrollArea className="flex-1 px-5">
           <div className="py-4 space-y-5">
+            {/* How a terminal contract ended. Terminal is terminal — the row
+                survives only as history, so the reason is the whole story. */}
+            {ending && (
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-sm font-medium">{ending.label}</p>
+                {ending.at && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatDate(ending.at)}</p>
+                )}
+                {ending.reason ? (
+                  <p className="text-sm mt-1.5">“{ending.reason}”</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1.5">No reason was given.</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Contracting with this agent again starts a new contract; this one stays as history.
+                </p>
+              </div>
+            )}
+
             {/* Contact + vehicle + stats */}
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4" />{agent.email}</div>
-              <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4" />{agent.phone}</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4" />{agent.email ?? '—'}</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4" />{agent.phone ?? '—'}</div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <VehicleIcon className="w-4 h-4" />
                 {agent.vehicleInfo ? formatVehicleType(agent.vehicleInfo.vehicle_type) : '—'}
@@ -364,7 +437,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
               <p className="text-sm font-medium">COD cash</p>
               <p className="text-sm text-muted-foreground">
                 Holds <span className="font-medium text-foreground">{formatNumber(cashHeld)}</span> · current cap{' '}
-                {membership.codMaxExposureOverride != null ? formatNumber(membership.codMaxExposureOverride) : '0'}
+                {formatNumber(membership.codThreshold)}
               </p>
               <div className="flex items-center gap-2">
                 <Input
@@ -530,6 +603,20 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                   </div>
                 </div>
 
+                {/* Coverage regions */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Coverage regions</Label>
+                  <Input
+                    value={terms.regions}
+                    onChange={(e) => setTerm('regions', e.target.value)}
+                    placeholder="Douala, Bonabéri"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated. Where this agent works for you — it cannot exceed the area they
+                    agreed to cover. Leave empty for no restriction.
+                  </p>
+                </div>
+
                 {/* Per-shipment value ceiling */}
                 <div className="space-y-1">
                   <Label className="text-xs">Shipment value ceiling</Label>
@@ -671,8 +758,8 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                 <p className="text-sm font-medium">
                   {mode === 'suspend' && 'Reason for suspension'}
                   {mode === 'pause' && 'Reason for pausing (optional)'}
-                  {mode === 'decline' && 'Reason for declining (optional)'}
-                  {mode === 'remove' && 'Reason for removal (optional)'}
+                  {mode === 'reject' && 'Reason for declining (optional)'}
+                  {mode === 'terminate' && 'Reason for removal (optional)'}
                 </p>
                 <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Add a reason…" />
                 {mode === 'pause' && (
@@ -681,7 +768,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                     Reinstate whenever you both want to restart.
                   </p>
                 )}
-                {mode === 'remove' && (
+                {mode === 'terminate' && (
                   <p className="text-xs text-muted-foreground">
                     This proposes termination — the contract ends once the agent agrees and any outstanding cash
                     and unpaid earnings are settled.
@@ -691,7 +778,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                   <Button variant="outline" size="sm" className="flex-1" onClick={resetInline}>Cancel</Button>
                   <Button
                     size="sm"
-                    variant={mode === 'suspend' || mode === 'remove' ? 'destructive' : 'default'}
+                    variant={mode === 'suspend' || mode === 'terminate' ? 'destructive' : 'default'}
                     className="flex-1"
                     disabled={(mode === 'suspend' && !reason.trim()) || pk === `${mode}:${mid}`}
                     onClick={confirmInline}
@@ -707,15 +794,33 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
         {/* Action footer */}
         {!mode && (
           <div className="px-5 py-4 border-t flex flex-wrap gap-2">
-            {membership.status === 'pending' && (
+            {/* Whoever raised the contract cannot answer it — the server picks the
+                valid pair from `initiatedBy`, and the wrong one is a 403. */}
+            {membership.status === 'pending' && membership.initiatedBy === 'agent' && (
               <>
-                <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid).then((r) => r && onOpenChange(false))}>
+                <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
                   {pk === `approve:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Approve'}
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('decline')}>Decline</Button>
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>Decline</Button>
               </>
             )}
-            {membership.status === 'approved' && (
+            {membership.status === 'pending' && membership.initiatedBy === 'agency' && (
+              <>
+                <p className="w-full text-xs text-muted-foreground">
+                  Waiting on the agent to accept your request.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={pk === `withdraw:${mid}`}
+                  onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
+                >
+                  {pk === `withdraw:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Withdraw request'}
+                </Button>
+              </>
+            )}
+            {membership.status === 'active' && (
               <>
                 <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('pause')}>
                   <PauseCircle className="w-4 h-4" /> Pause
@@ -723,7 +828,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                 <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('suspend')}>
                   <ShieldAlert className="w-4 h-4" /> Suspend
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('remove')}>Remove</Button>
+                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
               </>
             )}
             {(membership.status === 'paused' || membership.status === 'suspended') && (
@@ -731,7 +836,7 @@ export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: 
                 <Button size="sm" className="flex-1" disabled={pk === `reinstate:${mid}`} onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}>
                   {pk === `reinstate:${mid}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reinstate'}
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('remove')}>Remove</Button>
+                <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
               </>
             )}
           </div>

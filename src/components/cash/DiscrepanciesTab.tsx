@@ -9,10 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAgentsRoster } from '@/store/agents.store';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodDiscrepancyStatusBadge } from '@/components/cash/CodDiscrepancyStatusBadge';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { ApiError } from '@/types/api';
-import type { CodDiscrepancy, CodDiscrepancyType, CodListMeta } from '@/types/cod-cash.types';
+import type {
+  CodDiscrepancy,
+  CodDiscrepancyStatus,
+  CodDiscrepancyType,
+  CodListMeta,
+} from '@/types/cod-cash.types';
 
 const PAGE_LIMIT = 20;
+
+const STATUS_FILTERS: { value: CodDiscrepancyStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'open', label: 'Open' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'written_off', label: 'Written off' },
+];
+
+const TYPE_FILTERS: { value: CodDiscrepancyType | 'all'; label: string }[] = [
+  { value: 'all', label: 'All types' },
+  { value: 'cash_shortfall', label: 'Cash shortfall' },
+  { value: 'other', label: 'Other' },
+];
 
 function formatDateTime(iso: string): string {
   return fmtDateTime(iso);
@@ -25,6 +49,10 @@ export function DiscrepanciesTab() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CodDiscrepancyStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<CodDiscrepancyType | 'all'>('all');
 
   const [agentId, setAgentId] = useState('');
   const [type, setType] = useState<CodDiscrepancyType>('cash_shortfall');
@@ -69,9 +97,23 @@ export function DiscrepanciesTab() {
 
   const agentName = (id: string) => agents.find((a) => a.id === id)?.name ?? id;
 
+  // The list endpoint takes page/limit only, so search and filters narrow the
+  // page already loaded.
+  const query = search.trim().toLowerCase();
+  const visibleDiscrepancies = discrepancies.filter((d) => {
+    if (statusFilter !== 'all' && d.status !== statusFilter) return false;
+    if (typeFilter !== 'all' && d.type !== typeFilter) return false;
+    if (!query) return true;
+    return [agentName(d.agentId), d.note, d.resolutionNote].some((field) =>
+      field?.toLowerCase().includes(query),
+    );
+  });
+
+  const activeFilterCount = (statusFilter === 'all' ? 0 : 1) + (typeFilter === 'all' ? 0 : 1);
+
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium">Flag a cash problem with an agent</p>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -101,7 +143,30 @@ export function DiscrepanciesTab() {
         </CardContent>
       </Card>
 
-      <Card>
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Discrepancy history</p>
+        <SearchFilterBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search discrepancies…"
+          searchLabel="Search this page by agent or note"
+          activeCount={activeFilterCount}
+          onReset={() => { setStatusFilter('all'); setTypeFilter('all'); }}
+          filterDescription="Search and filters apply to the page you're on."
+          resultCount={visibleDiscrepancies.length}
+          resultNoun="discrepancy"
+          resultNounPlural="discrepancies"
+        >
+          <FilterSection label="Status">
+            <FilterOptionGroup value={statusFilter} onChange={setStatusFilter} options={STATUS_FILTERS} />
+          </FilterSection>
+          <FilterSection label="Type">
+            <FilterOptionGroup value={typeFilter} onChange={setTypeFilter} options={TYPE_FILTERS} />
+          </FilterSection>
+        </SearchFilterBar>
+      </div>
+
+      <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -121,10 +186,14 @@ export function DiscrepanciesTab() {
                   ))
                 ) : loadError ? (
                   <tr><td colSpan={5} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>Retry</Button></td></tr>
-                ) : discrepancies.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No discrepancies raised yet</td></tr>
+                ) : visibleDiscrepancies.length === 0 ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    {discrepancies.length === 0
+                      ? 'No discrepancies raised yet'
+                      : 'No discrepancies match your search or filters'}
+                  </td></tr>
                 ) : (
-                  discrepancies.map((d) => (
+                  visibleDiscrepancies.map((d) => (
                     <tr key={d.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
                       <td className="p-4 text-sm capitalize">{d.type.replace(/_/g, ' ')}</td>

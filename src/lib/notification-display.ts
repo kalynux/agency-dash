@@ -1,4 +1,4 @@
-import { Bell, Truck, Wallet, Handshake, Banknote, CalendarClock, HardDrive, type LucideIcon } from 'lucide-react';
+import { Bell, Truck, Wallet, Handshake, UserCheck, Banknote, CalendarClock, HardDrive, type LucideIcon } from 'lucide-react';
 import type { AgencyNotificationAction } from '@/types/notification.types';
 
 export interface NotificationVisual {
@@ -16,6 +16,10 @@ export function notificationVisual(type: string): NotificationVisual {
   if (type.startsWith('storage'))
     return { icon: HardDrive, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };
   if (type.startsWith('shipment')) return { icon: Truck, dot: 'bg-blue-500', chip: 'bg-blue-100 text-blue-600' };
+  // `agent_contract.*` before `connection`: both are handshakes, but one is with
+  // a courier and the other with a vendor, and they read as separate streams.
+  if (type.startsWith('agent_contract'))
+    return { icon: UserCheck, dot: 'bg-teal-500', chip: 'bg-teal-100 text-teal-600' };
   if (type.startsWith('connection')) return { icon: Handshake, dot: 'bg-indigo-500', chip: 'bg-indigo-100 text-indigo-600' };
   if (type.startsWith('payout')) return { icon: Wallet, dot: 'bg-green-500', chip: 'bg-green-100 text-green-600' };
   if (type.startsWith('cod')) return { icon: Banknote, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };

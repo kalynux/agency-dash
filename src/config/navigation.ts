@@ -4,7 +4,6 @@ import {
   Bell,
   Ticket,
   Users,
-  Mail,
   Banknote,
   UserCog,
   User,
@@ -25,7 +24,6 @@ import {
   CreditCard,
   Receipt,
   Image,
-  Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,7 +34,7 @@ import {
  * Consumed by the desktop Sidebar, MobileTabBar and MobileMoreDrawer.
  */
 
-export type NavBadge = 'shipments' | 'notifications' | 'vendorConnections';
+export type NavBadge = 'shipments' | 'notifications' | 'vendorConnections' | 'agentContracts';
 
 export interface NavChild {
   name: string;
@@ -81,10 +79,10 @@ export const PRIMARY_NAV: NavItem[] = [
     name: 'Agents',
     path: '/dashboard/agents',
     icon: Users,
+    badge: 'agentContracts',
     children: [
-      { name: 'Roster', path: '/dashboard/agents/roster', icon: Users },
-      { name: 'Invites', path: '/dashboard/agents/invites', icon: Mail },
-      { name: 'Requests', path: '/dashboard/agents/requests', icon: Inbox },
+      { name: 'Connections', path: '/dashboard/agents/connections', icon: Handshake },
+      { name: 'Browse', path: '/dashboard/agents/browse', icon: Search },
     ],
   },
   {

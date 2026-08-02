@@ -1,5 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -11,7 +10,6 @@ import {
     RotateCcw,
     AlertTriangle,
     Banknote,
-    Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
@@ -20,69 +18,9 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { InfoHint } from '@/components/common/InfoHint';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
-
-// ─── Info tooltip ─────────────────────────────────────────────────────────────
-// Uses a portal so parent overflow:hidden / stacking contexts never clip it.
-// Positions below the icon by default; flips above when near the bottom edge.
-// Clamps horizontally so it never leaves the viewport.
-// onClick lets mobile users tap-to-toggle (no hover on touch screens).
-
-function InfoTooltip({ text }: { text: string }) {
-    const [open, setOpen] = useState(false);
-    const [style, setStyle] = useState<React.CSSProperties>({});
-    const triggerRef = useRef<HTMLDivElement>(null);
-
-    const compute = () => {
-        if (!triggerRef.current) return;
-        const r = triggerRef.current.getBoundingClientRect();
-        const tooltipW = Math.min(256, window.innerWidth - 16);
-        // Center tooltip on icon, then clamp to keep 8 px from each edge
-        const idealLeft = r.left + r.width / 2;
-        const clampedLeft = Math.max(
-            tooltipW / 2 + 8,
-            Math.min(idealLeft, window.innerWidth - tooltipW / 2 - 8),
-        );
-        // Prefer below; flip above when less than 120 px of space remains
-        const spaceBelow = window.innerHeight - r.bottom;
-        const above = spaceBelow < 120;
-        setStyle({
-            position: 'fixed',
-            top: above ? r.top - 6 : r.bottom + 6,
-            left: clampedLeft,
-            width: tooltipW,
-            transform: above ? 'translate(-50%, -100%)' : 'translateX(-50%)',
-        });
-    };
-
-    const show = () => { compute(); setOpen(true); };
-    const hide = () => setOpen(false);
-    const toggle = () => (open ? hide() : show());
-
-    return (
-        <>
-            <div
-                ref={triggerRef}
-                className="inline-flex items-center shrink-0 cursor-help"
-                onMouseEnter={show}
-                onMouseLeave={hide}
-                onClick={toggle}
-            >
-                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-primary transition-colors" />
-            </div>
-            {open && createPortal(
-                <div
-                    style={style}
-                    className="z-[9999] rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2.5 shadow-lg text-xs text-slate-600 dark:text-slate-300 leading-relaxed pointer-events-none"
-                >
-                    {text}
-                </div>,
-                document.body,
-            )}
-        </>
-    );
-}
 
 // ─── Reusable field row ───────────────────────────────────────────────────────
 
@@ -105,7 +43,7 @@ function FieldRow({
                 <label className="block text-xs font-semibold text-slate-500 tracking-wide">
                     {label}
                 </label>
-                {info && <InfoTooltip text={info} />}
+                {info && <InfoHint>{info}</InfoHint>}
             </div>
             {children}
             {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
@@ -574,7 +512,11 @@ export function Step4Policies() {
                                 <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                                     COD Handling Fee
                                 </p>
-                                <InfoTooltip text="Cash on Delivery fee — charged when a customer pays cash upon delivery. Covers the cost of collecting, handling, and remitting cash payments." />
+                                <InfoHint>
+                                    Cash on Delivery fee — charged when a customer pays cash upon
+                                    delivery. Covers the cost of collecting, handling, and
+                                    remitting cash payments.
+                                </InfoHint>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <FieldRow
@@ -668,7 +610,7 @@ export function Step4Policies() {
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                                         Accept cash-on-delivery orders
                                     </p>
-                                    <InfoTooltip text={INFO.cod_enabled} />
+                                    <InfoHint>{INFO.cod_enabled}</InfoHint>
                                 </div>
                                 <Switch
                                     checked={field.value}

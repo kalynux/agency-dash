@@ -30,9 +30,6 @@ import { OnboardingGuard } from '@/onboarding/OnboardingGuard';
 import { OnboardingRouter } from '@/onboarding/OnboardingRouter';
 import { OnboardingErrorBoundary } from '@/onboarding/OnboardingErrorBoundary';
 
-// UIStore (kept for sidebar + theme)
-import { useUIStore } from '@/store';
-
 // Vendor connections (real API — polls for the pending-action badge)
 import { VendorConnectionsProvider } from '@/store/vendorConnections.store';
 
@@ -127,7 +124,11 @@ function DashboardShell() {
                   <Route path="transactions" element={<Transactions />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="tickets" element={<Tickets />} />
-                  <Route path="agents" element={<Navigate to="/dashboard/agents/roster" replace />} />
+                  <Route path="agents" element={<Navigate to="/dashboard/agents/connections" replace />} />
+                  {/* Legacy aliases — the roster/invites/requests tabs are now one Connections tab. */}
+                  <Route path="agents/roster" element={<Navigate to="/dashboard/agents/connections" replace />} />
+                  <Route path="agents/invites" element={<Navigate to="/dashboard/agents/browse" replace />} />
+                  <Route path="agents/requests" element={<Navigate to="/dashboard/agents/connections" replace />} />
                   <Route path="agents/:tab" element={<Agents />} />
                   <Route path="cash" element={<Navigate to="/dashboard/cash/summary" replace />} />
                   <Route path="cash/:tab" element={<CashManagement />} />
@@ -158,7 +159,6 @@ function DashboardShell() {
 
 function AppContent() {
   const [manualCollapsed, setManualCollapsed] = useState(false);
-  const { theme } = useUIStore();
   const reactNavigate = useNavigate();
 
   // Tablet band (768–1023px): force the sidebar to its icon rail so a fixed
@@ -201,7 +201,9 @@ function AppContent() {
       }}
     >
       <UIContext.Provider value={{ sidebarCollapsed, toggleSidebar, autoCollapsed }}>
-        <div className={theme === 'dark' ? 'dark' : ''}>
+        {/* Theme lives on <html> (see lib/theme.ts + StoreProvider) so the body
+            and every Radix portal see it too — never on a wrapper in here. */}
+        <>
           <OnboardingErrorBoundary>
             <OnboardingProvider>
               <Routes>
@@ -209,7 +211,7 @@ function AppContent() {
                 <Route
                   path="/login"
                   element={
-                    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+                    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
                       <div className="text-center space-y-4 max-w-sm">
                         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
                           <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -262,7 +264,7 @@ function AppContent() {
             </OnboardingProvider>
           </OnboardingErrorBoundary>
           <Toaster richColors position="top-right" />
-        </div>
+        </>
       </UIContext.Provider>
     </LegacyAuthContext.Provider>
   );

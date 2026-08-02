@@ -1,5 +1,6 @@
 import { CalendarClock, Truck, Sparkles, Radio, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import type { CurrentPlanData } from '@/types/billing.types';
@@ -29,8 +30,8 @@ export function CurrentPlanCard({ data }: CurrentPlanCardProps) {
   const atCapacity = cap !== null && remaining === 0;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={sectionSurfaceClass}>
+      <CardHeader className="max-md:px-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
@@ -45,7 +46,7 @@ export function CurrentPlanCard({ data }: CurrentPlanCardProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 max-md:px-0">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Stat
             icon={<CalendarClock className="h-4 w-4" />}

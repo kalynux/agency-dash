@@ -1,6 +1,8 @@
 import { Wallet, Plus, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/common/InfoHint';
+import { sectionRuleClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 import type { CreditPack } from '@/types/billing.types';
 import { formatMoney, formatCredits } from './billing.constants';
@@ -15,17 +17,22 @@ export function CreditWalletCard({ balance, packs, onBuyPack }: CreditWalletCard
   // A chargeback/refund claw-back on a top-up can drive the wallet below zero.
   const negative = balance < 0;
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
+      <CardHeader className="max-md:px-0">
         <CardTitle className="flex items-center gap-2">
           <Wallet className="h-5 w-5" /> Credit wallet
+          <InfoHint className="md:hidden" label="About the credit wallet">
+            Top up your agency credit balance. Credits never expire and power upcoming
+            credit-metered features.
+          </InfoHint>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="max-md:hidden">
           Top up your agency credit balance. Credits never expire and power upcoming
           credit-metered features.
         </CardDescription>
+        <CardDescription className="md:hidden">Credits never expire</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 max-md:px-0">
         <div className={cn('rounded-lg border p-4', negative ? 'border-red-200 bg-red-50' : 'bg-muted/30')}>
           <p className="text-xs text-muted-foreground">Current balance</p>
           <p className={cn('text-3xl font-bold', negative && 'text-red-600')}>{formatCredits(balance)}</p>

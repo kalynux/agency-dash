@@ -35,13 +35,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
+import { SectionHeading } from '@/components/common/InfoHint';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+  noteSurfaceClass,
+  sectionGroupClass,
+  sectionRuleClass,
+  sectionSurfaceClass,
+} from '@/components/layout/PageContainer';
 
 // The editable string fields, in payload key order. `name` is required (2–100);
 // the rest are nullable/clearable. The magazin carries no address, slug, or
@@ -215,8 +216,10 @@ export function MagazinSettings() {
   return (
     <div className="space-y-6">
       {/* ─── Identity hero ────────────────────────────────────────────────── */}
-      <Card>
-        <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
+      {/* Keeps a surface on mobile: it has no heading, so de-carded it would
+          read as stray text at the top of the page rather than as a block. */}
+      <Card className={noteSurfaceClass}>
+        <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center max-md:px-4">
           {/* The logo box itself is the click target — it opens the media library. */}
           <div className="relative shrink-0">
             <MediaPickerTrigger
@@ -252,7 +255,7 @@ export function MagazinSettings() {
 
           <div className="min-w-0 flex-1 space-y-1">
             <h2 className="truncate text-xl font-bold leading-tight">{previewName}</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground max-md:hidden">
               Your agency's business identity — the name, logo and contacts vendors and customers see.
             </p>
             <p className="text-xs text-muted-foreground">Click the logo to pick one from your media library.</p>
@@ -267,19 +270,20 @@ export function MagazinSettings() {
       )}
 
       {/* ─── Forms + side rail ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      {/* The grid stops `sectionGroupClass`'s `>` combinator, so each column
+          opens its own group and the boundaries are ruled off by hand. */}
+      <div className={cn('grid grid-cols-1 items-start gap-6 lg:grid-cols-3', sectionRuleClass)}>
         {/* Main column */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className={cn(sectionGroupClass, 'lg:col-span-2')}>
           {/* Identity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <StoreIcon className="w-4 h-4 text-muted-foreground" />
-                Business identity
-              </CardTitle>
-              <CardDescription>The name and description that represent your agency.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
+          <Card className={sectionSurfaceClass}>
+            <SectionHeading
+              icon={StoreIcon}
+              title="Business identity"
+              description="The name and description that represent your agency."
+              short="Name and description"
+            />
+            <CardContent className="space-y-5 max-md:px-0">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="magazin-name">Business name</Label>
@@ -322,15 +326,14 @@ export function MagazinSettings() {
           </Card>
 
           {/* Support contacts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LifeBuoy className="w-4 h-4 text-muted-foreground" />
-                Support & contact
-              </CardTitle>
-              <CardDescription>How vendors and customers reach your agency about deliveries.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className={sectionSurfaceClass}>
+            <SectionHeading
+              icon={LifeBuoy}
+              title="Support & contact"
+              description="How vendors and customers reach your agency about deliveries."
+              short="How people reach you"
+            />
+            <CardContent className="max-md:px-0">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="magazin-email">Support email</Label>
@@ -377,16 +380,11 @@ export function MagazinSettings() {
         </div>
 
         {/* Side rail */}
-        <div className="space-y-6">
+        <div className={cn(sectionGroupClass, sectionRuleClass)}>
           {/* Profile vs. Store explainer */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-muted-foreground" />
-                Business vs. personal
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <Card className={sectionSurfaceClass}>
+            <SectionHeading icon={Info} title="Business vs. personal" />
+            <CardContent className="space-y-3 text-sm text-muted-foreground max-md:px-0">
               <p>
                 This tab is your agency's <span className="font-medium text-foreground">business identity</span> —
                 the public name, logo and support contacts.
@@ -402,12 +400,9 @@ export function MagazinSettings() {
           </Card>
 
           {/* Read-only details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-              <CardDescription>Fixed properties of your business profile.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <Card className={sectionSurfaceClass}>
+            <SectionHeading title="Details" description="Fixed properties of your business profile." />
+            <CardContent className="space-y-4 max-md:px-0">
               <DetailRow icon={CalendarDays} label="Last updated">
                 <span className="text-sm">{formatDate(magazin.updatedAt)}</span>
               </DetailRow>

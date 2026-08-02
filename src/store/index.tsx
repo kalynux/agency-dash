@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type {
   User, Order,
   Notification, AnalyticsMetrics, DateRange,
@@ -12,6 +12,15 @@ import {
   mockTransactions, mockTickets,
   mockStorageItems,
 } from '@/data/mockData';
+import {
+  applyDocumentTheme,
+  readStoredTheme,
+  resolveTheme,
+  storeTheme,
+  watchSystemTheme,
+  type ResolvedTheme,
+  type Theme,
+} from '@/lib/theme';
 
 // Auth Store Context
 interface AuthState {
@@ -28,9 +37,16 @@ const AuthStoreContext = createContext<AuthState | null>(null);
 // UI Store Context
 interface UIState {
   sidebarCollapsed: boolean;
-  theme: 'light' | 'dark' | 'system';
+  /** The user's preference, including `system`. Bind theme *pickers* to this. */
+  theme: Theme;
+  /**
+   * What the DOM is actually showing. Components that branch on the theme
+   * (e.g. the tracking map's basemap) must read this — `theme === 'dark'`
+   * is false under `system` even when the OS is dark.
+   */
+  resolvedTheme: ResolvedTheme;
   toggleSidebar: () => void;
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const UIStoreContext = createContext<UIState | null>(null);
@@ -142,7 +158,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // UI State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const [theme, setTheme] = useState<Theme>(readStoredTheme);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => resolveTheme(readStoredTheme()));
+
+  // The `.dark` class belongs on <html>, not on a wrapper inside the tree — the
+  // body's own `text-foreground`/`bg-background` and every Radix portal live
+  // outside any in-tree wrapper. See lib/theme.ts.
+  useEffect(() => {
+    setResolvedTheme(applyDocumentTheme(theme));
+    storeTheme(theme);
+    // Only `system` follows the OS; nothing to watch for an explicit choice.
+    if (theme !== 'system') return;
+    return watchSystemTheme(() => setResolvedTheme(applyDocumentTheme('system')));
+  }, [theme]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
@@ -342,6 +370,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       <UIStoreContext.Provider value={{
         sidebarCollapsed,
         theme,
+        resolvedTheme,
         toggleSidebar,
         setTheme,
       }}>

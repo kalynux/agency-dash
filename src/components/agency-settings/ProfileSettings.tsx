@@ -20,18 +20,14 @@ import type {
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
+import { SectionHeading } from '@/components/common/InfoHint';
+import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -191,7 +187,7 @@ export function ProfileSettings() {
   const displayName = form.displayName || 'My Agency';
 
   return (
-    <div className="space-y-6">
+    <div className={sectionGroupClass}>
       {saveError && (
         <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
           {saveError}
@@ -199,12 +195,13 @@ export function ProfileSettings() {
       )}
 
       {/* ─── Personal details ─────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-          <CardDescription>Your personal contact details — separate from your business identity.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <Card className={sectionSurfaceClass}>
+        <SectionHeading
+          title="Profile Information"
+          description="Your personal contact details — separate from your business identity."
+          short="Your contact details"
+        />
+        <CardContent className="space-y-6 max-md:px-0">
           {/* Avatar — the picture itself opens the media library. */}
           <div className="flex items-center gap-6">
             <MediaPickerTrigger
@@ -287,15 +284,14 @@ export function ProfileSettings() {
       </Card>
 
       {/* ─── Localization ─────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-muted-foreground" />
-            Localization
-          </CardTitle>
-          <CardDescription>Your operating country, timezone, and notification language.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={sectionSurfaceClass}>
+        <SectionHeading
+          icon={Globe}
+          title="Localization"
+          description="Your operating country, timezone, and notification language."
+          short="Country, timezone, language"
+        />
+        <CardContent className="max-md:px-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-muted-foreground">
@@ -342,18 +338,15 @@ export function ProfileSettings() {
       </Card>
 
       {/* ─── KYC / Verification ───────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-              KYC / Verification
-            </CardTitle>
-            <KycBadge verified={profile.kycVerified} />
-          </div>
-          <CardDescription>Business registration details reviewed by our team.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={sectionSurfaceClass}>
+        <SectionHeading
+          icon={ShieldCheck}
+          title="KYC / Verification"
+          description="Business registration details reviewed by our team."
+          short="Business registration"
+          action={<KycBadge verified={profile.kycVerified} />}
+        />
+        <CardContent className="max-md:px-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="reg-number">Business registration number</Label>

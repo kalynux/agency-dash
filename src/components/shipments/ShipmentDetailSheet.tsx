@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { AssignmentPanel } from '@/components/shipments/AssignmentPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
@@ -17,6 +16,7 @@ import { useAgentsRoster } from '@/store/agents.store';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
+import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentActionableStatus, ShipmentDetail } from '@/types/shipment.types';
 
 function formatDateTime(iso: string): string {
@@ -40,7 +40,6 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const [detail, setDetail] = useState<ShipmentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [trackingDraft, setTrackingDraft] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const { agents } = useAgentsRoster();
   const actions = useShipmentActions();
@@ -51,7 +50,6 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
     try {
       const { data } = await shipmentsService.getById(id);
       setDetail(data);
-      setTrackingDraft(data.trackingNumber ?? '');
     } catch (err) {
       setLoadError(getApiErrorMessage(err));
     } finally {
@@ -85,11 +83,6 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
     const result = await actions.updateStatus(detail!.id, status, `Shipment marked “${label}”.`);
     if (result) refresh();
   };
-  const runTracking = async () => {
-    const result = await actions.updateTrackingNumber(detail!.id, trackingDraft.trim());
-    if (result) refresh();
-  };
-
   const TitleComp = isMobile ? SheetTitle : DialogTitle;
 
   const body = isLoading ? (
@@ -143,7 +136,18 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               {detail.items.map((item) => (
                 <div key={item.orderItemId} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    {/* The picture is what lets someone identify a parcel by
+                        sight instead of reading labels. `images[0]` is the same
+                        thumbnail the list row shows for this item. */}
+                    {item.images.length > 0 && (
+                      <img
+                        src={item.images[0].url}
+                        alt=""
+                        crossOrigin="use-credentials"
+                        className="w-12 h-12 rounded-md object-cover border flex-shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{item.title}</p>
                       {item.variantTitle && (
                         <p className="text-xs text-muted-foreground">{item.variantTitle}</p>
@@ -154,13 +158,17 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                       ×{item.quantity}
                     </Badge>
                   </div>
-                  {item.pickupLocation && (
+                  {/* `mode` says only who holds the parcel — the address reads
+                      the same either way, so there is nothing to branch on but
+                      the wording. */}
+                  {item.pickupLocation && describeAddress(item.pickupLocation.address) && (
                     <div className="mt-2 pt-2 border-t flex items-start gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                       <span>
-                        {item.pickupLocation.alreadyInYourStorage
-                          ? `In your storage — ${item.pickupLocation.address.label}, ${item.pickupLocation.address.city}`
-                          : `Pick up from ${item.pickupLocation.address.label}, ${item.pickupLocation.address.city}`}
+                        {item.pickupLocation.alreadyInYourStorage ? 'In your storage — ' : 'Pick up from '}
+                        {item.pickupLocation.address.label
+                          ? `${item.pickupLocation.address.label}, ${describeAddress(item.pickupLocation.address)}`
+                          : describeAddress(item.pickupLocation.address)}
                       </span>
                     </div>
                   )}
@@ -220,9 +228,12 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                 </p>
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  {/* Snapshotted at checkout, so this is where they actually
+                      ordered to — it no longer drifts with their saved default. */}
                   <span>
-                    {detail.customer.deliveryAddress.addressLine1}, {detail.customer.deliveryAddress.city},{' '}
-                    {detail.customer.deliveryAddress.state}
+                    {detail.customer.deliveryAddress.formattedAddress ??
+                      describeAddress(detail.customer.deliveryAddress) ??
+                      '—'}
                   </span>
                 </p>
               </div>
@@ -232,35 +243,14 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           {/* Agent assignment (offer / acceptance workflow) */}
           {!isTerminal && <AssignmentPanel detail={detail} agents={agents} onChanged={refresh} />}
 
-          {/* Tracking number */}
+          {/* Tracking number — generated at creation, read-only everywhere. The
+              agency acronym prefix is snapshotted then, so renaming your magazin
+              only changes future shipments. */}
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Tracking Number
             </h3>
-            <div className="flex items-center gap-2">
-              <Input
-                value={trackingDraft}
-                onChange={(e) => setTrackingDraft(e.target.value)}
-                placeholder="e.g. FS-1234567890"
-                className="flex-1"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={
-                  !trackingDraft.trim() ||
-                  trackingDraft.trim() === detail.trackingNumber ||
-                  actions.pendingKey === `tracking:${detail.id}`
-                }
-                onClick={runTracking}
-              >
-                {actions.pendingKey === `tracking:${detail.id}` ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  'Save'
-                )}
-              </Button>
-            </div>
+            <p className="font-mono text-sm">{detail.trackingNumber ?? '—'}</p>
           </section>
 
           {/* Status history */}

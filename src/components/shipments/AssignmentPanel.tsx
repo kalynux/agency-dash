@@ -10,6 +10,7 @@ import { shipmentsService } from '@/services/shipments.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ReassignDialog } from '@/components/shipments/ReassignDialog';
 import type { AgentSummary } from '@/types/agent.types';
+import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentDetail, ShipmentOffer, AssignmentCandidate } from '@/types/shipment.types';
 
 function initials(name: string): string {
@@ -41,7 +42,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
 
-  const activeAgents = agents.filter((a) => a.membershipStatus === 'approved');
+  const activeAgents = agents.filter((a) => a.membershipStatus === 'active');
   const hasBoundAgent = !!detail.agentId;
   const canOffer = detail.status === 'assigned' && !hasBoundAgent && !pendingOffer;
   const nameFor = (id: string | null) => (id ? agents.find((a) => a.id === id)?.name ?? 'agent' : null);
@@ -109,7 +110,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0 overflow-hidden">
               {detail.agent.avatarUrl ? (
-                <img src={detail.agent.avatarUrl} alt={detail.agent.name} className="w-full h-full object-cover" />
+                <img src={detail.agent.avatarUrl} crossOrigin="use-credentials" alt={detail.agent.name} className="w-full h-full object-cover" />
               ) : (
                 initials(detail.agent.name)
               )}
@@ -285,20 +286,17 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
       {detail.handover && (
         <div className="mt-3 rounded-lg border border-dashed p-3 text-xs text-muted-foreground space-y-1">
           <p className="font-medium text-foreground">Handover pickup</p>
-          <p>{detail.handover.pickup.label}</p>
-          {detail.handover.pickup.address && (
+          {detail.handover.pickup.address?.label && <p>{detail.handover.pickup.address.label}</p>}
+          {/* `formattedAddress` is the geocoder's own one-liner where there is
+              one, so prefer it over recomposing the parts. */}
+          {describeAddress(detail.handover.pickup.address) && (
             <p>
-              {[
-                detail.handover.pickup.address.line1,
-                detail.handover.pickup.address.city,
-                detail.handover.pickup.address.state,
-              ]
-                .filter(Boolean)
-                .join(', ')}
+              {detail.handover.pickup.address?.formattedAddress ??
+                describeAddress(detail.handover.pickup.address)}
             </p>
           )}
           {detail.handover.pickup.note && <p>Note: {detail.handover.pickup.note}</p>}
-          {detail.handover.pickup.is_fallback && (
+          {detail.handover.pickup.isFallback && (
             <p className="text-amber-600">Fallback location — original point could not be resolved.</p>
           )}
         </div>

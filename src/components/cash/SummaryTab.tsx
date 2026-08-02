@@ -3,13 +3,27 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Wallet, Users, PackageOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { codCashService } from '@/services/cod-cash.service';
 import { ApiError } from '@/types/api';
 import type { CodSummary } from '@/types/cod-cash.types';
 
+type HoldingFilter = 'all' | 'holding' | 'settled';
+
+const HOLDING_FILTERS: { value: HoldingFilter; label: string }[] = [
+  { value: 'all', label: 'All agents' },
+  { value: 'holding', label: 'Holding cash' },
+  { value: 'settled', label: 'Settled up' },
+];
+
 function StatCard({ icon: Icon, label, value, hint }: { icon: React.ElementType; label: string; value: string; hint?: string }) {
   return (
-    <Card>
+    <Card className="py-0 md:py-6">
       <CardContent className="p-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
@@ -28,6 +42,8 @@ export function SummaryTab() {
   const [summary, setSummary] = useState<CodSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [holding, setHolding] = useState<HoldingFilter>('all');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -63,6 +79,13 @@ export function SummaryTab() {
     );
   }
 
+  const query = search.trim().toLowerCase();
+  const visibleAgents = summary.agents.filter((a) => {
+    if (holding === 'holding' && a.cashHeld <= 0) return false;
+    if (holding === 'settled' && a.cashHeld > 0) return false;
+    return !query || a.name.toLowerCase().includes(query);
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -86,7 +109,23 @@ export function SummaryTab() {
         />
       </div>
 
-      <Card>
+      <SearchFilterBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Search agents…"
+        searchLabel="Search agents by name"
+        activeCount={holding === 'all' ? 0 : 1}
+        onReset={() => setHolding('all')}
+        filterDescription="Who on your roster is still sitting on collected cash."
+        resultCount={visibleAgents.length}
+        resultNoun="agent"
+      >
+        <FilterSection label="Cash position">
+          <FilterOptionGroup value={holding} onChange={setHolding} options={HOLDING_FILTERS} />
+        </FilterSection>
+      </SearchFilterBar>
+
+      <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -97,14 +136,16 @@ export function SummaryTab() {
                 </tr>
               </thead>
               <tbody>
-                {summary.agents.length === 0 ? (
+                {visibleAgents.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="p-8 text-center text-muted-foreground">
-                      No agents on your roster yet
+                      {summary.agents.length === 0
+                        ? 'No agents on your roster yet'
+                        : 'No agents match your search or filter'}
                     </td>
                   </tr>
                 ) : (
-                  summary.agents.map((a) => (
+                  visibleAgents.map((a) => (
                     <tr key={a.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={a.name}>{a.name}</span></td>
                       <td className="p-4">

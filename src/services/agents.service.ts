@@ -1,8 +1,8 @@
 import { api } from './api';
 import type {
   ListAgentsResponse,
-  ListAgentInvitesResponse,
-  AgentInviteResponse,
+  AgentBrowseQueryParams,
+  AgentBrowseResponse,
   AgentMembershipResponse,
   MembershipMutationResponse,
   RemoveMembershipResponse,
@@ -10,8 +10,7 @@ import type {
   EligibleAgentsResponse,
   AgentEligibilityResponse,
   AgentHistoryResponse,
-  AgentInviteStatus,
-  MembershipStatus,
+  ListRosterParams,
   UpdateEmploymentPayload,
   UpdateTermsPayload,
   ContractSettlementsResponse,
@@ -20,42 +19,73 @@ import type {
   ContractStatusRequestDecision,
 } from '@/types/agent.types';
 
+function buildQueryString(params: Record<string, unknown>): string {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== '' && v !== false,
+  );
+  if (entries.length === 0) return '';
+  return (
+    '?' +
+    entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')
+  );
+}
+
 export const agentsService = {
-  // ── Invites ────────────────────────────────────────────────────────────────
-  /** GET /agency/agents/invites — this agency's invite history. */
-  listInvites(status?: AgentInviteStatus): Promise<ListAgentInvitesResponse> {
-    return api.get<ListAgentInvitesResponse>(
-      `/agency/agents/invites${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+  // ── Directory ──────────────────────────────────────────────────────────────
+  /**
+   * GET /agency/agents/browse — the platform-wide agent directory.
+   *
+   * Only agents who could actually accept are listed (active, KYC verified, not
+   * banned, onboarding complete), so a listed agent is always a requestable one.
+   * Agents you already contract with stay in the list; read `contract` to tell.
+   */
+  browse(params: AgentBrowseQueryParams = {}): Promise<AgentBrowseResponse> {
+    return api.get<AgentBrowseResponse>(
+      `/agency/agents/browse${buildQueryString(params as Record<string, unknown>)}`,
     );
   },
-  /** POST /agency/agents/invites — invite a delivery agent by email. */
-  invite(email: string): Promise<AgentInviteResponse> {
-    return api.post<AgentInviteResponse>('/agency/agents/invites', { email });
+  /** POST /agency/agents/requests — ask a specific agent to contract. Lands `pending`; the AGENT accepts. */
+  requestAgent(agentId: string): Promise<MembershipMutationResponse> {
+    return api.post<MembershipMutationResponse>('/agency/agents/requests', { agentId });
   },
-  /** DELETE /agency/agents/invites/:id — revoke a still-pending invite. */
-  revokeInvite(id: string): Promise<AgentInviteResponse> {
-    return api.delete<AgentInviteResponse>(`/agency/agents/invites/${id}`);
+  /**
+   * POST /agency/agents/:membershipId/withdraw — pull back a request **you** raised.
+   * Refusing an agent's application is `reject`; the server enforces which
+   * applies from `initiatedBy`, so offering the wrong one is a 403.
+   */
+  withdraw(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
+    return api.post<MembershipMutationResponse>(
+      `/agency/agents/${membershipId}/withdraw`,
+      reason ? { reason } : undefined,
+    );
   },
 
   // ── Roster (membership model) ────────────────────────────────────────────────
-  /** GET /agency/agents — the roster (membership + agent + cash held). */
-  listRoster(status?: MembershipStatus): Promise<ListAgentsResponse> {
+  /**
+   * GET /agency/agents — the roster (membership + agent + cash held).
+   *
+   * Returns **every** status unless you name one, terminal rows included, and is
+   * paginated at 20 a page by default. Read `meta.totalPages`: a roster that has
+   * accumulated history will not fit on one page, and the missing rows would be
+   * live agents.
+   */
+  listRoster(params: ListRosterParams = {}): Promise<ListAgentsResponse> {
     return api.get<ListAgentsResponse>(
-      `/agency/agents${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+      `/agency/agents${buildQueryString(params as Record<string, unknown>)}`,
     );
   },
   /** GET /agency/agents/:membershipId — full membership + agent profile. */
   getMembership(membershipId: string): Promise<AgentMembershipResponse> {
     return api.get<AgentMembershipResponse>(`/agency/agents/${membershipId}`);
   },
-  /** POST /agency/agents/:membershipId/approve — approve a pending join request. */
+  /** POST /agency/agents/:membershipId/approve — approve a join request the AGENT raised. */
   approve(membershipId: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/approve`);
   },
-  /** POST /agency/agents/:membershipId/decline — decline a pending join request. */
-  decline(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
+  /** POST /agency/agents/:membershipId/reject — refuse a join request the AGENT raised. */
+  reject(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(
-      `/agency/agents/${membershipId}/decline`,
+      `/agency/agents/${membershipId}/reject`,
       reason ? { reason } : undefined,
     );
   },
@@ -79,10 +109,18 @@ export const agentsService = {
   reinstate(membershipId: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/reinstate`);
   },
-  /** DELETE /agency/agents/:membershipId — propose termination (raises a status request). */
-  remove(membershipId: string, reason?: string): Promise<RemoveMembershipResponse> {
-    return api.delete<RemoveMembershipResponse>(
-      `/agency/agents/${membershipId}`,
+  /**
+   * POST /agency/agents/:membershipId/terminate — **propose** ending the contract.
+   *
+   * It does not perform it: ending a contract needs the agent's consent, so this
+   * raises a `ContractStatusRequest` and the contract stays live meanwhile —
+   * `membership` is null while it is pending, which on this first call it always
+   * is. `DELETE /agency/agents/:membershipId` is the same handler under its
+   * original spelling; this POST form is the canonical one.
+   */
+  terminate(membershipId: string, reason?: string): Promise<RemoveMembershipResponse> {
+    return api.post<RemoveMembershipResponse>(
+      `/agency/agents/${membershipId}/terminate`,
       reason ? { reason } : undefined,
     );
   },

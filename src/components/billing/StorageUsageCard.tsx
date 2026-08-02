@@ -11,7 +11,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { formatFileSize, storageBarColor, storagePercent } from '@/lib/utils';
+import { sectionRuleClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
+import { cn, formatFileSize, storageBarColor, storagePercent } from '@/lib/utils';
 import type { MediaCategory, StorageUsage } from '@/types/file.types';
 
 interface StorageUsageCardProps {
@@ -48,8 +49,8 @@ export function StorageUsageCard({ storage, onViewPlans }: StorageUsageCardProps
   const categories = CATEGORY_ORDER.filter((c) => (storage.byCategory?.[c]?.bytes ?? 0) > 0);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
+      <CardHeader className="max-md:px-0">
         <CardTitle className="flex items-center gap-2">
           <HardDrive className="h-5 w-5" /> Media storage
         </CardTitle>
@@ -59,7 +60,7 @@ export function StorageUsageCard({ storage, onViewPlans }: StorageUsageCardProps
             : `${formatFileSize(usedBytes)} used · no limit`}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 max-md:px-0">
         {/* Usage bar */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-sm">

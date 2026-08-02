@@ -5,9 +5,14 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodRemittanceStatusBadge } from '@/components/cash/CodRemittanceStatusBadge';
+import {
+  FilterOptionGroup,
+  FilterSection,
+  SearchFilterBar,
+} from '@/components/common/SearchFilterBar';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { ApiError } from '@/types/api';
 import type { CodListMeta, CodRemittance, CodRemittanceStatus } from '@/types/cod-cash.types';
 
@@ -29,6 +34,7 @@ export function RemittancesTab() {
   const [meta, setMeta] = useState<CodListMeta>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<CodRemittanceStatus | 'all'>('all');
+  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -78,9 +84,17 @@ export function RemittancesTab() {
     }
   };
 
+  // The endpoint filters by status only, so text search narrows the loaded page.
+  const query = search.trim().toLowerCase();
+  const visibleRemittances = query
+    ? remittances.filter((r) =>
+        [r.reference, r.note].some((field) => field?.toLowerCase().includes(query)),
+      )
+    : remittances;
+
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium">Declare a cash transfer to the platform</p>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -98,18 +112,27 @@ export function RemittancesTab() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-4">
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as CodRemittanceStatus | 'all'); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {STATUS_FILTERS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <SearchFilterBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Search remittances…"
+        searchLabel="Search this page by reference or note"
+        activeCount={statusFilter === 'all' ? 0 : 1}
+        onReset={() => { setStatusFilter('all'); setPage(1); }}
+        filterDescription="Status filters every remittance; search looks at the page you're on."
+        resultCount={query ? visibleRemittances.length : meta.total}
+        resultNoun="remittance"
+      >
+        <FilterSection label="Status">
+          <FilterOptionGroup
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+            options={STATUS_FILTERS}
+          />
+        </FilterSection>
+      </SearchFilterBar>
 
-      <Card>
+      <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -129,10 +152,12 @@ export function RemittancesTab() {
                   ))
                 ) : loadError ? (
                   <tr><td colSpan={5} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>Retry</Button></td></tr>
-                ) : remittances.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No remittances in this category yet</td></tr>
+                ) : visibleRemittances.length === 0 ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    {query ? 'No remittances match your search' : 'No remittances in this category yet'}
+                  </td></tr>
                 ) : (
-                  remittances.map((r) => (
+                  visibleRemittances.map((r) => (
                     <tr key={r.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={r.reference}>{r.reference}</span></td>
                       <td className="p-4">{formatCurrency(r.amount, r.currency)}</td>

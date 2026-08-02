@@ -6,6 +6,8 @@ import { SecuritySettings } from '@/components/agency-settings/SecuritySettings'
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
 import { BillingTab } from '@/components/billing/BillingTab';
+import { InfoHint } from '@/components/common/InfoHint';
+import { sectionGroupClass } from '@/components/layout/PageContainer';
 
 const VALID_TABS = ['profile', 'store', 'locations', 'security', 'billing', 'payout'] as const;
 type AccountTab = typeof VALID_TABS[number];
@@ -25,10 +27,16 @@ export function Account() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Account</h1>
-        <p className="text-muted-foreground">
+        <h1 className="flex items-center gap-1.5 text-2xl font-bold">
+          Account
+          <InfoHint className="md:hidden" label="About the Account section">
+            Manage your personal profile, business identity, and payouts.
+          </InfoHint>
+        </h1>
+        <p className="text-muted-foreground max-md:hidden">
           Manage your personal profile, business identity, and payouts
         </p>
+        <p className="text-muted-foreground md:hidden">Profile, business and payouts</p>
       </div>
 
       {activeTab === 'profile' && <ProfileSettings />}
@@ -37,7 +45,7 @@ export function Account() {
       {activeTab === 'security' && <SecuritySettings />}
       {activeTab === 'billing' && <BillingTab />}
       {activeTab === 'payout' && (
-        <div className="space-y-6">
+        <div className={sectionGroupClass}>
           <EarningsPayoutCard />
           <PayoutSettings />
         </div>
