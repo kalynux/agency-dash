@@ -1,5 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
+import { txStatic } from '@/i18n/tx';
 import {
   getStripe,
   type StripeInstance,
@@ -40,6 +42,7 @@ interface StripePaymentElementProps {
  */
 export const StripePaymentElement = forwardRef<StripePaymentElementHandle, StripePaymentElementProps>(
   function StripePaymentElement({ clientSecret, disabled, onReady }, ref) {
+    const { t } = useTranslation('billing');
     const mountRef = useRef<HTMLDivElement>(null);
     const stripeRef = useRef<StripeInstance | null>(null);
     const elementsRef = useRef<StripeElements | null>(null);
@@ -54,7 +57,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
           const stripe = await getStripe();
           if (cancelled) return;
           if (!stripe || !mountRef.current) {
-            setLoadError('Card payments are unavailable right now.');
+            setLoadError(txStatic('billing:card.unavailable'));
             setLoading(false);
             return;
           }
@@ -74,7 +77,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
           paymentElRef.current = paymentEl;
         } catch {
           if (!cancelled) {
-            setLoadError('Could not load the card form. Please try again.');
+            setLoadError(txStatic('billing:card.loadFailed'));
             setLoading(false);
           }
         }
@@ -92,7 +95,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
     useImperativeHandle(ref, () => ({
       async confirm(returnUrl: string): Promise<StripeConfirmOutcome> {
         if (!stripeRef.current || !elementsRef.current) {
-          throw new Error('Card form is not ready yet.');
+          throw new Error(txStatic('billing:card.notReady'));
         }
         const { error, paymentIntent } = await stripeRef.current.confirmPayment({
           elements: elementsRef.current,
@@ -102,7 +105,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
         });
 
         if (error) {
-          throw new Error(error.message ?? 'Your card could not be charged. Please try again.');
+          throw new Error(error.message ?? txStatic('billing:card.chargeFailed'));
         }
         // No error and no paymentIntent → Stripe is navigating to return_url (3-D Secure).
         if (!paymentIntent) return { status: 'redirecting' };
@@ -116,7 +119,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
             // A redirect-based action took over.
             return { status: 'redirecting' };
           default:
-            throw new Error('The card payment was not completed. Please try again.');
+            throw new Error(txStatic('billing:card.notCompleted'));
         }
       },
     }));
@@ -133,7 +136,7 @@ export const StripePaymentElement = forwardRef<StripePaymentElementHandle, Strip
         >
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading secure card form…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t('card.loadingSecureForm')}
             </div>
           )}
           <div ref={mountRef} className={loading ? 'hidden' : ''} />

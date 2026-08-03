@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useUI } from '@/App';
 import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlatformStatus } from '@/components/layout/PlatformStatus';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 /** Left accent bar marking the active row (solid) or a parent-of-active (faded). */
@@ -46,6 +48,7 @@ const FOOTER_PAD_Y = 24; // py-3 top + bottom
 const ROW_GAP = 4; // space-y-1
 
 export function Sidebar() {
+  const { t } = useTranslation('nav');
   const { sidebarCollapsed, toggleSidebar, autoCollapsed } = useUI();
   const { unreadCount } = useNotifications();
   const { activeCount: shipmentsActiveCount } = useShipments();
@@ -59,7 +62,8 @@ export function Sidebar() {
 
   // The magazin is authoritative for the business identity; the session is only
   // the first-paint fallback for the name (it carries no magazin logo at all).
-  const agencyName = magazin?.name?.trim() || roleEntity?.agency_name || 'My Agency';
+  const agencyName =
+    magazin?.name?.trim() || roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
   const agencyLogo = magazin?.logo?.url ?? roleEntity?.logo_url ?? null;
 
   // Per-item manual expand overrides; otherwise a group auto-opens when a child
@@ -136,10 +140,12 @@ export function Sidebar() {
 
   const hasActiveChild = (item: NavItem) =>
     item.children?.some((c) => isLeafActive(c, item)) ?? false;
+  // Keyed by `path`, not by label — the label is a translation key now, and the
+  // expand state has to survive a language switch.
   const isExpanded = (item: NavItem) =>
-    manualExpanded[item.name] ?? hasActiveChild(item);
+    manualExpanded[item.path] ?? hasActiveChild(item);
   const toggleExpanded = (item: NavItem) =>
-    setManualExpanded((m) => ({ ...m, [item.name]: !(m[item.name] ?? hasActiveChild(item)) }));
+    setManualExpanded((m) => ({ ...m, [item.path]: !(m[item.path] ?? hasActiveChild(item)) }));
 
   const selectChild = (child: NavChild) => {
     if (child.disabled) return;
@@ -164,7 +170,7 @@ export function Sidebar() {
     const showBar = parentActive || childActive;
 
     return (
-      <div key={item.name} className="space-y-1">
+      <div key={item.path} className="space-y-1">
         <button
           onClick={onClick}
           disabled={item.disabled}
@@ -187,7 +193,7 @@ export function Sidebar() {
           </div>
           {!sidebarCollapsed && (
             <span className="flex-1 text-left whitespace-nowrap overflow-hidden">
-              {item.name}
+              {tx(t, item.labelKey)}
             </span>
           )}
           {!sidebarCollapsed && hasChildren && (
@@ -204,7 +210,7 @@ export function Sidebar() {
               const cActive = isLeafActive(child, item);
               return (
                 <button
-                  key={child.name}
+                  key={child.path}
                   onClick={() => selectChild(child)}
                   disabled={child.disabled}
                   className={cn(
@@ -217,7 +223,7 @@ export function Sidebar() {
                 >
                   <ActiveBar show={cActive} />
                   <ChildIcon className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap overflow-hidden">{child.name}</span>
+                  <span className="whitespace-nowrap overflow-hidden">{tx(t, child.labelKey)}</span>
                 </button>
               );
             })}
@@ -267,7 +273,7 @@ export function Sidebar() {
             role="separator"
             aria-orientation="horizontal"
             onPointerDown={startFooterResize}
-            title="Drag to resize"
+            title={t('sidebar.resizeHandle')}
             className="group absolute -top-1.5 left-0 right-0 z-10 flex h-3 cursor-row-resize items-center justify-center"
           >
             <span className="h-2 w-12 rounded-full bg-border transition-colors group-hover:bg-primary/50" />
@@ -297,7 +303,9 @@ export function Sidebar() {
               <Truck className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-display font-bold leading-tight tracking-tight">Wi Mall</p>
+              <p className="text-sm font-display font-bold leading-tight tracking-tight">
+                {t('sidebar.platform')}
+              </p>
               <PlatformStatus />
             </div>
           </div>
@@ -307,6 +315,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             className={cn(
               'w-full h-10 rounded-none border-t text-xs text-muted-foreground gap-2 font-medium',
               sidebarCollapsed && 'px-0'
@@ -317,7 +326,7 @@ export function Sidebar() {
             ) : (
               <>
                 <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" />
-                Collapse
+                {t('sidebar.collapse')}
               </>
             )}
           </Button>

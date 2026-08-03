@@ -1,6 +1,7 @@
 import { formatDate as fmtDate } from '@/lib/format';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Navigation, Package, RefreshCw, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,17 +23,22 @@ import { cn } from '@/lib/utils';
 import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
 
-const STATUS_FILTERS: { value: ShipmentStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'handing_over', label: 'Handing Over' },
-  { value: 'picked_up', label: 'Picked Up' },
-  { value: 'in_transit', label: 'In Transit' },
-  { value: 'agent_delivered', label: 'Awaiting Confirmation' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'rejected', label: 'Rejected' },
+/**
+ * Statuses offered in the filter sheet, in display order. Labels come from
+ * `shipments:status.*` — the same table the badge reads, so a filter pill and
+ * the badge it matches can never disagree.
+ */
+const STATUS_FILTER_VALUES: (ShipmentStatus | 'all')[] = [
+  'all',
+  'assigned',
+  'handing_over',
+  'picked_up',
+  'in_transit',
+  'agent_delivered',
+  'delivered',
+  'failed',
+  'returned',
+  'rejected',
 ];
 
 const PAGE_LIMIT = 20;
@@ -56,6 +62,7 @@ function formatDate(iso: string): string {
 }
 
 export function Shipments() {
+  const { t } = useTranslation(['shipments', 'common']);
   const { refetch: refetchBadge } = useShipments();
   const { agents } = useAgentsRoster();
   const [shipments, setShipments] = useState<ShipmentListItem[]>([]);
@@ -108,6 +115,18 @@ export function Shipments() {
     return () => clearTimeout(timer);
   }, [searchQuery, appliedQuery]);
 
+  const statusOptions = useMemo(
+    () =>
+      STATUS_FILTER_VALUES.map((value) => ({
+        value,
+        label:
+          value === 'all'
+            ? t('filters.allStatuses')
+            : t(`status.${value}` as 'status.pending'),
+      })),
+    [t],
+  );
+
   const handleStatusFilterChange = (value: ShipmentStatus | 'all') => {
     setStatusFilter(value);
     setPage(1);
@@ -118,7 +137,7 @@ export function Shipments() {
     setDetailOpen(true);
   };
 
-  const agentNameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? 'Assigned';
+  const agentNameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? t('status.assigned');
 
   /**
    * "Douala → Yaoundé" from the row's own pickup/drop-off. Both are optional on
@@ -133,8 +152,13 @@ export function Shipments() {
     const to = describeAddress(shipment.deliveryAddress);
     if (!from && !to) return null;
     const stops = shipment.pickup?.count ?? 0;
-    const fromLabel = from ? (stops > 1 ? `${from} +${stops - 1}` : from) : 'Unknown';
-    return `${fromLabel} → ${to ?? 'Unknown'}`;
+    const unknown = t('table.unknownPlace');
+    const fromLabel = from
+      ? stops > 1
+        ? t('table.extraStops', { place: from, count: stops - 1 })
+        : from
+      : unknown;
+    return t('table.route', { from: fromLabel, to: to ?? unknown });
   };
 
   const handleChanged = () => {
@@ -153,7 +177,7 @@ export function Shipments() {
         to={`/dashboard/tracking?agent=${shipment.agentId}`}
         onClick={(e) => e.stopPropagation()}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-        title="Track this agent on the live map"
+        title={t('table.trackAgent')}
       >
         <Navigation className="w-3.5 h-3.5 flex-shrink-0" />
         {agentNameFor(shipment.agentId)}
@@ -161,7 +185,7 @@ export function Shipments() {
     ) : shipment.trackingNumber ? (
       <span className="text-sm text-muted-foreground">{shipment.trackingNumber}</span>
     ) : (
-      <span className="text-sm text-muted-foreground">Unassigned</span>
+      <span className="text-sm text-muted-foreground">{t('table.unassigned')}</span>
     );
 
   return (
@@ -169,16 +193,20 @@ export function Shipments() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Shipments</h1>
-          <p className="text-muted-foreground">
-            Shipments assigned to your agency for pickup and delivery
-          </p>
+          <h1 className="text-2xl font-bold">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <AutoAssignToggle />
-          <Button variant="outline" className="gap-2" onClick={load} disabled={isLoading}>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={load}
+            disabled={isLoading}
+            aria-label={t('page.refresh')}
+          >
             <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('page.refresh')}</span>
           </Button>
         </div>
       </div>
@@ -187,24 +215,24 @@ export function Shipments() {
       <SearchFilterBar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search shipments…"
-        searchLabel="Search by order #, customer, product, or tracking #"
+        placeholder={t('page.searchPlaceholder')}
+        searchLabel={t('page.searchLabel')}
         activeCount={statusFilter === 'all' ? 0 : 1}
         onReset={() => handleStatusFilterChange('all')}
-        filterDescription="Filters apply across every page of your shipments."
+        filterDescription={t('page.filterDescription')}
         resultCount={meta.total}
-        resultNoun="shipment"
+        resultNounKey="common:nouns.shipment"
         hint={
           searchQuery.trim().length === 1
-            ? `Keep typing — search needs at least ${MIN_SEARCH_CHARS} characters.`
+            ? t('page.searchHint', { count: MIN_SEARCH_CHARS })
             : undefined
         }
       >
-        <FilterSection label="Status">
+        <FilterSection label={t('filters.status')}>
           <FilterOptionGroup
             value={statusFilter}
             onChange={handleStatusFilterChange}
-            options={STATUS_FILTERS}
+            options={statusOptions}
           />
         </FilterSection>
       </SearchFilterBar>
@@ -222,7 +250,7 @@ export function Shipments() {
             <div className="p-8 text-center">
               <p className="text-muted-foreground mb-4">{loadError}</p>
               <Button variant="outline" onClick={load}>
-                Retry
+                {t('common:actions.retry')}
               </Button>
             </div>
           ) : shipments.length === 0 ? (
@@ -230,11 +258,11 @@ export function Shipments() {
               <div className="flex flex-col items-center gap-3">
                 <Package className="w-12 h-12 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  {appliedQuery ? 'No shipments match your search' : 'No shipments in this category yet'}
+                  {appliedQuery ? t('page.emptyNoMatch') : t('page.emptyNoShipments')}
                 </p>
                 {searchQuery && (
                   <Button variant="outline" onClick={() => setSearchQuery('')}>
-                    Clear search
+                    {t('page.clearSearch')}
                   </Button>
                 )}
               </div>
@@ -246,12 +274,12 @@ export function Shipments() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="text-left p-4 text-sm font-medium">Shipment</th>
-                      <th className="text-left p-4 text-sm font-medium">Vendor</th>
-                      <th className="text-left p-4 text-sm font-medium">Customer</th>
-                      <th className="text-left p-4 text-sm font-medium">Date</th>
-                      <th className="text-left p-4 text-sm font-medium">Status</th>
-                      <th className="text-left p-4 text-sm font-medium">Agent</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.shipment')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.vendor')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.customer')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.date')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.status')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.agent')}</th>
                       <th className="w-12 p-4"></th>
                     </tr>
                   </thead>
@@ -265,7 +293,7 @@ export function Shipments() {
                         <td className="p-4">
                           <div className="font-medium">{shipment.orderNumber}</div>
                           <div className="text-sm text-muted-foreground">
-                            {shipment.itemCount} item{shipment.itemCount === 1 ? '' : 's'}
+                            {t('table.itemCount', { count: shipment.itemCount })}
                           </div>
                           {routeLabel(shipment) && (
                             <div className="mt-0.5 max-w-[16rem] truncate text-xs text-muted-foreground" title={routeLabel(shipment) ?? undefined}>
@@ -296,7 +324,7 @@ export function Shipments() {
                             portals but are React descendants of this <tr>, so their clicks
                             (including the dialog overlay/close) bubble back to the row's
                             onClick through the React tree and would otherwise open the detail. */}
-                        <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-4 text-end" onClick={(e) => e.stopPropagation()}>
                           <ShipmentRowActions
                             shipment={shipment}
                             onView={() => openDetail(shipment.id)}
@@ -324,7 +352,7 @@ export function Shipments() {
                         <span className="flex-shrink-0 text-muted-foreground">·</span>
                         <ShipmentStatusBadge status={shipment.status} className="flex-shrink-0" />
                       </div>
-                      <div className="flex-shrink-0 -mr-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex-shrink-0 -me-2" onClick={(e) => e.stopPropagation()}>
                         <ShipmentRowActions
                           shipment={shipment}
                           onView={() => openDetail(shipment.id)}
@@ -350,7 +378,9 @@ export function Shipments() {
                           <span className="truncate">{agentNameFor(shipment.agentId)}</span>
                         </Link>
                       ) : (
-                        <span className="flex-shrink-0 text-muted-foreground">Unassigned</span>
+                        <span className="flex-shrink-0 text-muted-foreground">
+                          {t('table.unassigned')}
+                        </span>
                       )}
                     </div>
 
@@ -367,22 +397,33 @@ export function Shipments() {
           {!isLoading && !loadError && (
             <div className="flex items-center justify-between gap-2 p-4 border-t">
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Showing {rangeStart}–{rangeEnd} of {meta.total}
+                {t('common:pagination.showingRange', {
+                  from: rangeStart,
+                  to: rangeEnd,
+                  total: meta.total,
+                })}
               </p>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  <ChevronLeft className="w-4 h-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={meta.page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  aria-label={t('common:pagination.previous')}
+                >
+                  <ChevronLeft className="w-4 h-4 rtl:-scale-x-100" />
                 </Button>
                 <span className="text-xs sm:text-sm text-muted-foreground px-1 sm:px-2 whitespace-nowrap">
-                  Page {meta.page} of {meta.pages || 1}
+                  {t('common:pagination.pageOf', { page: meta.page, total: meta.pages || 1 })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={meta.page >= meta.pages}
                   onClick={() => setPage((p) => p + 1)}
+                  aria-label={t('common:pagination.next')}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 rtl:-scale-x-100" />
                 </Button>
               </div>
             </div>

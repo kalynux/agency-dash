@@ -1,4 +1,5 @@
 import type { ReactNode, ElementType } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, Inbox } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,12 +23,14 @@ import { cn } from '@/lib/utils';
 // ─── Loading ────────────────────────────────────────────────────────────────
 
 export function LoadingState({
-  label = 'Loading…',
+  label,
   className,
 }: {
+  /** Defaults to the generic "Loading…" from the `common` bundle. */
   label?: string;
   className?: string;
 }) {
+  const { t } = useTranslation(['common', 'errors']);
   return (
     <div
       className={cn(
@@ -38,7 +41,7 @@ export function LoadingState({
       aria-live="polite"
     >
       <Spinner className="size-6" />
-      <p className="text-sm">{label}</p>
+      <p className="text-sm">{label ?? t('states.loading')}</p>
     </div>
   );
 }
@@ -66,7 +69,7 @@ export function ListSkeleton({ rows = 5, className }: { rows?: number; className
 export function ErrorState({
   error,
   onRetry,
-  title = 'Something went wrong',
+  title,
   className,
 }: {
   error: unknown;
@@ -74,6 +77,9 @@ export function ErrorState({
   title?: string;
   className?: string;
 }) {
+  const { t } = useTranslation(['common', 'errors']);
+  // Resolved here rather than in a default parameter so it re-renders on a
+  // language switch, and so the backend code maps through the `errors` bundle.
   const message = getApiErrorMessage(error);
   const requestId = getRequestId(error);
   return (
@@ -82,13 +88,15 @@ export function ErrorState({
         <EmptyMedia variant="icon" className="bg-destructive/10">
           <AlertCircle className="text-destructive" />
         </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyTitle>{title ?? t('states.errorTitle')}</EmptyTitle>
         <EmptyDescription>
           {message}
           {requestId && (
             <>
               <br />
-              <span className="text-xs opacity-70">Reference: {requestId}</span>
+              <span className="text-xs opacity-70">
+                {t('errors:requestId', { requestId })}
+              </span>
             </>
           )}
         </EmptyDescription>
@@ -96,7 +104,7 @@ export function ErrorState({
       {onRetry && (
         <EmptyContent>
           <Button variant="outline" onClick={onRetry}>
-            Try again
+            {t('actions.retry')}
           </Button>
         </EmptyContent>
       )}
@@ -158,6 +166,11 @@ export function AsyncBoundary({
 }) {
   if (isLoading) return <>{loadingState ?? <LoadingState />}</>;
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
-  if (isEmpty) return <>{emptyState ?? <EmptyState title="Nothing here yet" />}</>;
+  if (isEmpty) return <>{emptyState ?? <DefaultEmptyState />}</>;
   return <>{children}</>;
+}
+
+function DefaultEmptyState() {
+  const { t } = useTranslation(['common', 'errors']);
+  return <EmptyState title={t('states.emptyTitle')} />;
 }

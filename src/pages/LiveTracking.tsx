@@ -1,63 +1,121 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MapPin, RefreshCw, Navigation, Gauge, Clock, Wifi, WifiOff, ExternalLink, Radio } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
+import {
+  Clock,
+  MapPin,
+  PanelRightClose,
+  PanelRightOpen,
+  Radio,
+  RefreshCw,
+  Route,
+  Users,
+  Wifi,
+  WifiOff,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
-import {
-  FilterOptionGroup,
-  FilterSection,
-  SearchFilterBar,
-} from '@/components/common/SearchFilterBar';
+import { PageHeader } from '@/components/layout/PageContainer';
 import { useResource } from '@/hooks/useResource';
 import { useGeoTrackerSocket } from '@/hooks/useGeoTrackerSocket';
-import { useAgentsRoster } from '@/store/agents.store';
+import { useIsBelowDesktop } from '@/hooks/use-mobile';
 import { useUIStore } from '@/store';
 import { trackingService } from '@/services/tracking.service';
-import { LiveTrackingMap } from '@/components/tracking/LiveTrackingMap';
+import { geoTrackerService, toPath } from '@/services/geo-tracker.service';
+import { LiveTrackingMap, type ShipmentPin } from '@/components/tracking/LiveTrackingMap';
+import { PinMark } from '@/components/tracking/PinMark';
+import { TrackingPanel, type SignalFilter } from '@/components/tracking/TrackingPanel';
+import { formatDistance } from '@/components/tracking/format';
+import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { cn } from '@/lib/utils';
-import type { TrackingSocketStatus } from '@/types/tracking.types';
+import type { GeoPosition, TrackingSocketStatus } from '@/types/tracking.types';
 
-const STATUS_META: Record<TrackingSocketStatus, { label: string; className: string; icon: React.ElementType }> = {
-  idle: { label: 'Idle', className: 'text-muted-foreground', icon: WifiOff },
-  connecting: { label: 'Connecting…', className: 'text-amber-600', icon: Radio },
-  open: { label: 'Live', className: 'text-green-600', icon: Wifi },
-  closed: { label: 'Disconnected', className: 'text-muted-foreground', icon: WifiOff },
-  error: { label: 'Connection error', className: 'text-destructive', icon: WifiOff },
+const STATUS_META: Record<
+  TrackingSocketStatus,
+  {
+    labelKey: `connection.${TrackingSocketStatus}`;
+    className: string;
+    icon: React.ElementType;
+  }
+> = {
+  idle: {
+    labelKey: 'connection.idle',
+    className: 'text-muted-foreground',
+    icon: WifiOff,
+  },
+  connecting: {
+    labelKey: 'connection.connecting',
+    className: 'text-amber-600',
+    icon: Radio,
+  },
+  open: {
+    labelKey: 'connection.open',
+    className: 'text-green-600',
+    icon: Wifi,
+  },
+  closed: {
+    labelKey: 'connection.closed',
+    className: 'text-muted-foreground',
+    icon: WifiOff,
+  },
+  error: {
+    labelKey: 'connection.error',
+    className: 'text-destructive',
+    icon: WifiOff,
+  },
 };
 
-type SignalFilter = 'all' | 'live' | 'no_signal' | 'ended';
+/**
+ * The board is a snapshot of *assignments*, which change on the order of
+ * minutes; positions change on the order of seconds and arrive on the socket.
+ * Re-fetching the board per position update would be pure waste.
+ */
+const BOARD_POLL_MS = 60_000;
+/** Enough checkpoints for a long delivery — the trail is downsampled, not per-fix. */
+const TRAIL_LIMIT = 500;
 
-const SIGNAL_FILTERS: { value: SignalFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'live', label: 'Live' },
-  { value: 'no_signal', label: 'No signal' },
-  { value: 'ended', label: 'Ended' },
-];
-
-function secondsAgo(ts: number): string {
-  const s = Math.round((Date.now() - ts) / 1000);
-  if (s < 5) return 'just now';
-  if (s < 60) return `${s}s ago`;
-  return `${Math.round(s / 60)}m ago`;
-}
+/**
+ * The map is the page, so it takes the viewport rather than a fixed box.
+ *
+ * The subtracted height is the chrome around it: on phones the page gutter, the
+ * two-line `PageHeader` (its actions sit beside the title, so they cost no
+ * height), the roster trigger below the map and the fixed tab bar's `pb-24`; on
+ * desktop the app header and gutter. Both are approximations with slack — an
+ * error banner pushing the stage down makes the page scroll, which is the
+ * graceful outcome.
+ */
+const STAGE_HEIGHT =
+  'h-[calc(100dvh-15rem)] min-h-[300px] lg:h-[calc(100dvh-13rem)] lg:min-h-[520px] lg:max-h-[900px]';
 
 export function LiveTracking() {
-  const { agents } = useAgentsRoster();
+  const { t } = useTranslation(['tracking', 'common']);
   const { resolvedTheme } = useUIStore();
+  const isBelowDesktop = useIsBelowDesktop();
   const [searchParams] = useSearchParams();
   const focusAgentId = searchParams.get('agent');
-  const visible = useResource(() => trackingService.getVisibleAgents().then((r) => r.data), []);
+  const focusShipmentId = searchParams.get('shipment');
 
-  const agentIds = useMemo(() => visible.data?.agents ?? [], [visible.data]);
-  const socket = useGeoTrackerSocket(agentIds);
+  // One call draws the whole map: the agents this agency may watch and, per
+  // agent, their active shipments with a start and an end pin. It never carries
+  // a position — those arrive only on the socket.
+  const board = useResource(() => trackingService.getBoard(), []);
+  const agents = useMemo(() => board.data?.agents ?? [], [board.data]);
+  const agentIds = useMemo(() => agents.map((a) => a.agentId), [agents]);
 
-  // The agent the map is centered/highlighted on — seeded from the ?agent= deep link,
-  // then driven by clicking a card or a marker.
+  // The agent the map is centered/highlighted on — seeded from the ?agent= deep
+  // link, then driven by clicking a card or a marker.
   const [selected, setSelected] = useState<string | null>(focusAgentId);
+  const [selectedShipment, setSelectedShipment] = useState<string | null>(focusShipmentId);
   const [search, setSearch] = useState('');
   const [signalFilter, setSignalFilter] = useState<SignalFilter>('all');
+  /** Desktop: the sidebar, open by default and closable to give the map the width. */
+  const [panelOpen, setPanelOpen] = useState(true);
+  /** Phones: the same panel as a bottom sheet. */
+  const [sheetOpen, setSheetOpen] = useState(false);
+
   // Follow the deep link if it changes in-place (adjusting state during render — the
   // React-recommended alternative to a setState-in-effect).
   const [prevFocus, setPrevFocus] = useState<string | null>(focusAgentId);
@@ -66,11 +124,140 @@ export function LiveTracking() {
     if (focusAgentId) setSelected(focusAgentId);
   }
 
-  const nameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? `Agent ${id.slice(-6)}`;
+  const selectedAgent = agents.find((a) => a.agentId === selected) ?? null;
+  const shipment = selectedAgent?.shipments.find((s) => s.shipmentId === selectedShipment) ?? null;
 
-  const focusPresent = !!focusAgentId && agentIds.includes(focusAgentId);
+  // A live ETA is opt-in per subscription: hand the socket the selected
+  // shipment's drop-off and every broadcast for that agent comes back enriched
+  // with `etaSeconds` / `distanceMeters`.
+  const destinations = useMemo<Record<string, GeoPosition>>(() => {
+    const coords = shipment?.destination?.coordinates;
+    if (!selected || !coords) return {};
+    return { [selected]: { latitude: coords.lat, longitude: coords.lng } };
+  }, [selected, shipment]);
 
-  // Keep the selected agent's card in view (deep-link or marker click).
+  const socket = useGeoTrackerSocket(agentIds, destinations);
+
+  // A revocation means the board itself changed — a shipment finished, or a
+  // reassignment released the agent. It is the one frame worth refetching on.
+  useEffect(() => {
+    if (socket.revokedAt) board.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket.revokedAt]);
+
+  // …otherwise a slow poll keeps the assignments honest.
+  useEffect(() => {
+    const id = setInterval(() => board.refetch(), BOARD_POLL_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The sheet is the phone shell for the panel; growing past the breakpoint
+  // hands the roster back to the sidebar, so a stale sheet must not survive it.
+  useEffect(() => {
+    if (!isBelowDesktop) setSheetOpen(false);
+  }, [isBelowDesktop]);
+
+  // Drop a selection the board no longer carries (delivery finished mid-view).
+  useEffect(() => {
+    if (!board.data) return;
+    if (selected && !agentIds.includes(selected)) {
+      setSelected(null);
+      setSelectedShipment(null);
+    } else if (selectedShipment && selectedAgent && !shipment) {
+      setSelectedShipment(null);
+    }
+  }, [board.data, agentIds, selected, selectedShipment, selectedAgent, shipment]);
+
+  // Selecting an agent who is running exactly one delivery selects it too —
+  // that is the delivery they meant to look at.
+  const selectAgent = (agentId: string) => {
+    if (agentId === selected) {
+      // A second tap on the open row collapses it back to the roster.
+      setSelected(null);
+      setSelectedShipment(null);
+      return;
+    }
+    setSelected(agentId);
+    const shipments = agents.find((a) => a.agentId === agentId)?.shipments;
+    setSelectedShipment(shipments?.length === 1 ? shipments[0].shipmentId : null);
+  };
+
+  const selectShipment = (agentId: string, shipmentId: string) => {
+    const clearing = agentId === selected && shipmentId === selectedShipment;
+    setSelected(agentId);
+    setSelectedShipment(clearing ? null : shipmentId);
+    // On a phone the sheet covers the map it just re-drew — get out of the way.
+    if (!clearing) setSheetOpen(false);
+  };
+
+  // ── The selected agent's already-travelled path ───────────────────────────
+  // geo-tracker's durable checkpoint trail. Scoped to the selected shipment it
+  // is that delivery's whole path, continuous across every reconnect; without
+  // one it is the agent's recent movement across everything they carry.
+  const trail = useResource(async () => {
+    if (!selected) return [];
+    try {
+      const checkpoints = await geoTrackerService.getCheckpoints(selected, {
+        limit: TRAIL_LIMIT,
+        ...(selectedShipment ? { shipment: selectedShipment } : {}),
+      });
+      return toPath(checkpoints);
+    } catch {
+      // geo-tracker being unreachable costs the drawn path and nothing else.
+      return [];
+    }
+  }, [selected, selectedShipment]);
+
+  // ── The road line between the two pins ────────────────────────────────────
+  const originCoords = shipment?.origin?.address?.coordinates ?? null;
+  const destCoords = shipment?.destination?.coordinates ?? null;
+  const route = useResource(async () => {
+    if (!originCoords || !destCoords) return null;
+    try {
+      const result = await geoTrackerService.getRoute(
+        { latitude: originCoords.lat, longitude: originCoords.lng },
+        { latitude: destCoords.lat, longitude: destCoords.lng },
+      );
+      return result.geometry.length >= 2 ? result.geometry : null;
+    } catch {
+      // Optional by design — the map falls back to a straight line between the pins.
+      return null;
+    }
+  }, [originCoords?.lat, originCoords?.lng, destCoords?.lat, destCoords?.lng]);
+
+  const startPin = useMemo<ShipmentPin | null>(() => {
+    const address = shipment?.origin?.address;
+    if (!address?.coordinates) return null;
+    return {
+      position: {
+        latitude: address.coordinates.lat,
+        longitude: address.coordinates.lng,
+      },
+      glyph: 'store',
+      label: t('map.pinStart'),
+      title: address.label || address.formattedAddress || t('map.pinStart'),
+      address: address.formattedAddress,
+    };
+  }, [shipment, t]);
+
+  const endPin = useMemo<ShipmentPin | null>(() => {
+    const address = shipment?.destination;
+    if (!address?.coordinates) return null;
+    return {
+      position: {
+        latitude: address.coordinates.lat,
+        longitude: address.coordinates.lng,
+      },
+      glyph: 'person',
+      label: t('map.pinEnd'),
+      title: address.label || address.formattedAddress || t('map.pinEnd'),
+      address: address.formattedAddress,
+    };
+  }, [shipment, t]);
+
+  // Keep the selected agent's row in view (deep-link or marker click). No-ops
+  // while the panel is closed, which is the right answer.
   useEffect(() => {
     if (!selected) return;
     document
@@ -78,185 +265,294 @@ export function LiveTracking() {
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [selected]);
 
-  // The card list narrows; the map keeps every agent so a filtered view never
+  const nameFor = (id: string) =>
+    agents.find((a) => a.agentId === id)?.name ?? t('agent.fallbackName', { code: id.slice(-6) });
+
+  const focusPresent = !!focusAgentId && agentIds.includes(focusAgentId);
+
+  // The roster narrows; the map keeps every agent so a filtered view never
   // hides someone who is actually moving.
   const query = search.trim().toLowerCase();
-  const visibleAgentIds = agentIds.filter((id) => {
-    const live = !!socket.fixes[id];
-    const ended = socket.revoked.has(id);
+  const visibleAgents = agents.filter((a) => {
+    const live = !!socket.fixes[a.agentId];
+    const ended = socket.revoked.has(a.agentId);
     if (signalFilter === 'live' && !live) return false;
     if (signalFilter === 'ended' && !ended) return false;
     if (signalFilter === 'no_signal' && (live || ended)) return false;
-    return !query || nameFor(id).toLowerCase().includes(query);
+    if (!query) return true;
+    return (
+      a.name.toLowerCase().includes(query) ||
+      a.shipments.some((s) =>
+        [s.trackingNumber, s.orderNumber].some((v) => v?.toLowerCase().includes(query)),
+      )
+    );
   });
 
   const statusMeta = STATUS_META[socket.status];
   const StatusIcon = statusMeta.icon;
   const isDark = resolvedTheme === 'dark';
-  const emptyHint = socket.status === 'open' ? 'Waiting for the first position…' : 'No live positions yet.';
+  const emptyHint = socket.status === 'open' ? t('empty.waiting') : t('empty.noPositions');
+  const selectedFix = selected ? socket.fixes[selected] : undefined;
+  const showSidebar = panelOpen && !isBelowDesktop;
+
+  const panel = (
+    <TrackingPanel
+      agents={visibleAgents}
+      search={search}
+      onSearchChange={setSearch}
+      signalFilter={signalFilter}
+      onSignalFilterChange={setSignalFilter}
+      fixes={socket.fixes}
+      revoked={socket.revoked}
+      selectedAgentId={selected}
+      selectedShipmentId={selectedShipment}
+      isDark={isDark}
+      onSelectAgent={selectAgent}
+      onSelectShipment={selectShipment}
+      className="h-full"
+    />
+  );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Live Tracking</h1>
-          <p className="text-muted-foreground">Real-time positions of agents on your active shipments</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={cn('flex items-center gap-1.5 text-sm font-medium', statusMeta.className)}>
-            <StatusIcon className="w-4 h-4" />
-            {statusMeta.label}
-          </span>
-          <Button variant="outline" size="icon" onClick={() => { visible.refetch(); socket.reconnect(); }} title="Refresh">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4 animate-fade-in">
+      {/* `PageHeader` stacks its actions under the title below `sm`. Here they
+          are two icons, not a row of labelled buttons, so they ride beside the
+          title at every width instead of costing the map a whole line — the
+          unprefixed `flex-row` out-merges the primitive's `flex-col` and leaves
+          its `sm:` rules alone. */}
+      <PageHeader
+        className="flex-row items-start justify-between gap-2"
+        title={t('page.title')}
+        description={t('page.description')}
+        shortDescription={t('page.shortDescription')}
+        actions={
+          <>
+            <span
+              className={cn('flex items-center gap-1.5 text-sm font-medium', statusMeta.className)}
+            >
+              <StatusIcon className="h-4 w-4" />
+              <span className="max-sm:sr-only">{t(statusMeta.labelKey)}</span>
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                board.refetch();
+                socket.reconnect();
+              }}
+              title={t('common:actions.refresh')}
+              aria-label={t('common:actions.refresh')}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="hidden lg:inline-flex"
+              onClick={() => setPanelOpen((v) => !v)}
+              title={panelOpen ? t('panel.hide') : t('panel.show')}
+              aria-label={panelOpen ? t('panel.hide') : t('panel.show')}
+              aria-pressed={panelOpen}
+            >
+              {panelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+            </Button>
+          </>
+        }
+      />
 
       {socket.status === 'error' && (
         <Card className="border-amber-200 bg-amber-50/60">
-          <CardContent className="p-4 flex items-center justify-between gap-3 text-sm text-amber-800">
-            <span>
-              Couldn't reach the live-tracking service. It authenticates on your session cookie (same-site) — if
-              geo-tracker runs on a different domain, a bearer token is required (see env/README.md).
-            </span>
-            <Button variant="outline" size="sm" onClick={socket.reconnect}>Retry</Button>
+          <CardContent className="flex items-center justify-between gap-3 p-3 text-xs text-amber-800">
+            <span>{t('connection.errorBanner')}</span>
+            <Button variant="outline" size="sm" onClick={socket.reconnect}>
+              {t('common:actions.retry')}
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {focusAgentId && !focusPresent && !visible.isLoading && !visible.error && (
+      {board.data?.meta.truncated && (
+        <Card className="border-amber-200 bg-amber-50/60">
+          <CardContent className="p-3 text-xs text-amber-800">{t('board.truncated')}</CardContent>
+        </Card>
+      )}
+
+      {focusAgentId && !focusPresent && !board.isLoading && !board.error && (
         <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{nameFor(focusAgentId)}</span> isn't broadcasting a
-            live position right now. They'll appear here once they're out on an active shipment.
+          <CardContent className="p-3 text-xs text-muted-foreground">
+            <Trans
+              ns="tracking"
+              i18nKey="focus.notBroadcasting"
+              values={{ name: nameFor(focusAgentId) }}
+              components={{
+                strong: <span className="font-medium text-foreground" />,
+              }}
+            />
           </CardContent>
         </Card>
       )}
 
+      {/* Only the FIRST load may show a skeleton: the 60s poll re-enters
+          `isLoading`, and honouring it there would tear the Leaflet map down
+          and back up every minute. A failed poll keeps the stale board. */}
       <AsyncBoundary
-        isLoading={visible.isLoading}
-        error={visible.error}
-        onRetry={visible.refetch}
-        isEmpty={agentIds.length === 0}
+        isLoading={board.isLoading && !board.data}
+        error={board.data ? null : board.error}
+        onRetry={board.refetch}
+        isEmpty={agents.length === 0}
         emptyState={
-          <EmptyState
-            icon={MapPin}
-            title="No agents to track right now"
-            description="Agents appear here while they're delivering an active shipment for your agency."
-          />
+          <EmptyState icon={MapPin} title={t('empty.title')} description={t('empty.description')} />
         }
       >
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-[420px] lg:h-[600px]">
-            <LiveTrackingMap
-              fixes={socket.fixes}
-              trails={socket.trails}
-              nameFor={nameFor}
-              focusAgentId={focusAgentId}
-              selectedAgentId={selected}
-              onSelectAgent={setSelected}
-              isDark={isDark}
-              emptyHint={emptyHint}
-            />
-          </div>
+        <div
+          className={cn(
+            'grid grid-cols-1 gap-3',
+            showSidebar && 'lg:grid-cols-[minmax(0,1fr)_21rem]',
+          )}
+        >
+          <div className="flex flex-col gap-2">
+            {/* `isolate` is load-bearing: Leaflet's controls sit at z-index 1000
+                and this stage's overlays above them, so without a stacking
+                context of their own they paint straight through the mobile
+                sheet (a portal at z-50). */}
+            <div className={cn('relative isolate', STAGE_HEIGHT)}>
+              <LiveTrackingMap
+                fixes={socket.fixes}
+                trails={socket.trails}
+                nameFor={nameFor}
+                focusAgentId={focusAgentId}
+                selectedAgentId={selected}
+                onSelectAgent={selectAgent}
+                historyPath={trail.data}
+                startPin={startPin}
+                endPin={endPin}
+                routeLine={route.data}
+                sceneKey={selected && selectedShipment ? `${selected}:${selectedShipment}` : null}
+                isDark={isDark}
+                emptyHint={emptyHint}
+              />
 
-          <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
-            <SearchFilterBar
-              value={search}
-              onChange={setSearch}
-              placeholder="Search agents…"
-              searchLabel="Search tracked agents by name"
-              activeCount={signalFilter === 'all' ? 0 : 1}
-              onReset={() => setSignalFilter('all')}
-              filterDescription="Narrows the agent cards. The map always shows everyone."
-              resultCount={visibleAgentIds.length}
-              resultNoun="agent"
-            >
-              <FilterSection label="Signal">
-                <FilterOptionGroup
-                  value={signalFilter}
-                  onChange={setSignalFilter}
-                  options={SIGNAL_FILTERS}
-                />
-              </FilterSection>
-            </SearchFilterBar>
-
-            {visibleAgentIds.length === 0 && (
-              <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No agents match your search or filter.
-              </p>
-            )}
-
-            {visibleAgentIds.map((id) => {
-              const fix = socket.fixes[id];
-              const isRevoked = socket.revoked.has(id);
-              const isSelected = id === selected;
-              return (
-                <Card
-                  key={id}
-                  id={`track-agent-${id}`}
-                  onClick={() => setSelected(id)}
-                  className={cn(
-                    'cursor-pointer transition-shadow hover:shadow-md',
-                    isRevoked && 'opacity-60',
-                    isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
-                  )}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate">{nameFor(id)}</p>
-                      {fix ? (
-                        <Badge variant="outline" className="text-green-600 border-green-200 gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live
-                        </Badge>
-                      ) : isRevoked ? (
-                        <Badge variant="outline" className="text-muted-foreground">Ended</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">No signal</Badge>
-                      )}
-                    </div>
-                    {fix ? (
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <p className="flex items-center gap-1.5">
-                          <MapPin className="w-3 h-3" />
-                          {fix.position.latitude.toFixed(5)}, {fix.position.longitude.toFixed(5)}
-                        </p>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                          {typeof fix.speedMps === 'number' && (
-                            <span className="flex items-center gap-1"><Gauge className="w-3 h-3" />{(fix.speedMps * 3.6).toFixed(0)} km/h</span>
-                          )}
-                          {typeof fix.headingDegrees === 'number' && (
-                            <span className="flex items-center gap-1"><Navigation className="w-3 h-3" />{fix.headingDegrees.toFixed(0)}°</span>
-                          )}
-                          {typeof fix.etaSeconds === 'number' && (
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />ETA {Math.round(fix.etaSeconds / 60)}m</span>
-                          )}
+              {/* The selected delivery rides on the map's bottom edge — over the
+                map, directly above the roster trigger below it. */}
+              {shipment && selectedAgent && (
+                <div className="absolute inset-x-2 bottom-2 z-[1200]">
+                  <div className="rounded-lg border bg-background/95 px-2.5 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-mono text-[11px] leading-4 text-muted-foreground">
+                            {shipment.trackingNumber ??
+                              shipment.orderNumber ??
+                              shipment.shipmentId.slice(-8)}
+                          </span>
+                          <ShipmentStatusBadge
+                            status={shipment.status}
+                            className="px-1.5 py-0 text-[10px]"
+                          />
+                          <span className="truncate text-[11px] leading-4 text-muted-foreground">
+                            {t('board.carriedBy', { name: selectedAgent.name })}
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>Updated {secondsAgo(fix.receivedAt)}</span>
-                          <a
-                            href={`https://www.google.com/maps?q=${fix.position.latitude},${fix.position.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            Open in Maps <ExternalLink className="w-3 h-3" />
-                          </a>
+
+                        {/* Two different places, so a rule between them — run
+                          together they read as one wrapped address. */}
+                        <div className="flex items-stretch gap-1.5 text-[11px] leading-4">
+                          <span className="flex min-w-0 flex-1 items-center gap-1">
+                            <PinMark glyph="store" isDark={isDark} height={14} />
+                            <span className="min-w-0 flex-1 truncate">
+                              {shipment.origin?.address?.label ||
+                                shipment.origin?.address?.formattedAddress ||
+                                t('shipment.originUnknown')}
+                            </span>
+                          </span>
+                          <span className="w-px shrink-0 bg-border" aria-hidden="true" />
+                          <span className="flex min-w-0 flex-1 items-center gap-1">
+                            <PinMark glyph="person" isDark={isDark} height={14} />
+                            <span className="min-w-0 flex-1 truncate">
+                              {shipment.destination?.label ||
+                                shipment.destination?.formattedAddress ||
+                                t('shipment.destinationUnknown')}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] leading-4">
+                          {typeof selectedFix?.etaSeconds === 'number' ? (
+                            <span className="flex items-center gap-1 font-medium text-primary">
+                              <Clock className="h-3 w-3" />
+                              {t('agent.eta', {
+                                minutes: Math.round(selectedFix.etaSeconds / 60),
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {selectedFix ? t('board.etaPending') : t('board.etaNoSignal')}
+                            </span>
+                          )}
+                          {typeof selectedFix?.distanceMeters === 'number' && (
+                            <span className="flex items-center gap-1 font-medium text-primary">
+                              <Route className="h-3 w-3" />
+                              {formatDistance(selectedFix.distanceMeters)}
+                            </span>
+                          )}
+                          {!shipment.mappable && (
+                            <span className="text-amber-600 dark:text-amber-500">
+                              {t('shipment.notMappable')}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        {isRevoked ? 'Tracking ended (shipment finished).' : 'Awaiting a position from this agent.'}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => setSelectedShipment(null)}
+                        title={t('board.clearShipment')}
+                        aria-label={t('board.clearShipment')}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* The roster trigger sits BELOW the map, in the flow — the page's
+                own `pb-24` lands it just above the fixed tab bar, and the map
+                keeps every pixel above it. */}
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full shadow-sm lg:hidden"
+              onClick={() => setSheetOpen(true)}
+            >
+              <Users className="h-4 w-4" />
+              {t('panel.openMobile', { count: agents.length })}
+            </Button>
           </div>
+
+          {showSidebar && (
+            <aside className={cn('hidden lg:flex lg:flex-col', STAGE_HEIGHT)}>{panel}</aside>
+          )}
         </div>
+
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent side="bottom" className="flex h-[85dvh] flex-col gap-0 rounded-t-2xl p-0">
+            <div className="mx-auto mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-muted" />
+            <SheetHeader className="flex-shrink-0 px-3 pb-1 pt-2">
+              <SheetTitle className="text-sm font-semibold">
+                {t('panel.title', { count: agents.length })}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 px-3 pb-[env(safe-area-inset-bottom)]">{panel}</div>
+          </SheetContent>
+        </Sheet>
       </AsyncBoundary>
     </div>
   );

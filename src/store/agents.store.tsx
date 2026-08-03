@@ -13,8 +13,10 @@ import { toApiError } from '@/hooks/useResource';
 import { ApiError } from '@/types/api';
 import {
   toAgentSummary,
+  contractOffer,
   LIVE_MEMBERSHIP_STATUSES,
   type ContractStatusRequest,
+  type ContractTermsProposal,
   type RosterEntry,
   type AgentSummary,
 } from '@/types/agent.types';
@@ -55,9 +57,21 @@ export interface AgentsRosterState {
    * `awaitingMyDecision` / `availableActions`; the list itself is not an inbox.
    */
   statusRequests: ContractStatusRequest[];
-  /** Pending contracts the AGENT raised — the ones you can approve or decline. */
+  /**
+   * Every **open** terms proposal across the roster, both directions — changes
+   * an agent proposed to a live contract awaiting our answer, and ours awaiting
+   * theirs. Ours are kept for the same reason as status requests: this endpoint
+   * is the only place a `proposalId` is exposed, and `cancel` needs it.
+   */
+  termsProposals: ContractTermsProposal[];
+  /** Pending contracts whose standing offer is ours to answer. */
   pendingRequestsCount: number;
-  /** Everything waiting on you: agent-raised join requests + agent-raised contract changes. */
+  /**
+   * Everything waiting on us: contracts whose terms we must answer, plus
+   * agent-raised status requests and terms proposals. Never a row count — the
+   * lists carry our own proposals too, and badging those would tell the agency
+   * to go answer itself.
+   */
   pendingActionCount: number;
   isLoading: boolean;
   error: ApiError | null;
@@ -91,6 +105,7 @@ async function fetchWholeRoster(): Promise<RosterEntry[]> {
 export function AgentsRosterProvider({ children }: { children: ReactNode }) {
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [statusRequests, setStatusRequests] = useState<ContractStatusRequest[]>([]);
+  const [termsProposals, setTermsProposals] = useState<ContractTermsProposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
   const inFlight = useRef(false);
@@ -101,17 +116,21 @@ export function AgentsRosterProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const [rosterEntries, requestsRes] = await Promise.all([
+      const [rosterEntries, requestsRes, proposalsRes] = await Promise.all([
         fetchWholeRoster(),
         agentsService.listStatusRequests(),
+        agentsService.listOpenTermsProposals(),
       ]);
       setRoster(rosterEntries);
-      // The endpoint only returns pending rows; the state check is belt and
-      // braces (and case-insensitive, since it is a free-form string here).
+      // Both endpoints only return open rows; the state checks are belt and
+      // braces (and case-insensitive, since these are free-form strings here).
       // Rows we raised ourselves are KEPT — they are what `cancel` acts on, and
       // `awaitingMyDecision` is what keeps them out of the badge.
       setStatusRequests(
         requestsRes.data.filter((r) => (r.state ?? 'pending').toLowerCase() === 'pending'),
+      );
+      setTermsProposals(
+        proposalsRes.data.filter((p) => (p.state ?? 'pending').toLowerCase() === 'pending'),
       );
     } catch (err) {
       setError(toApiError(err, 'AGENTS_FETCH_FAILED', 'Failed to load agents'));
@@ -139,18 +158,22 @@ export function AgentsRosterProvider({ children }: { children: ReactNode }) {
         .map(toAgentSummary),
     [roster],
   );
-  // Only contracts the AGENT raised are ours to answer — one we raised is
-  // pending on *them*, and approving it would be a 403.
+  // Whose move it is comes from `awaitingDecisionFrom`, NOT from who opened the
+  // contract: terms are negotiable, so an agency that raised a request ends up
+  // as the answering party the moment the agent counters — and a bare agent
+  // join request with no terms on it is nobody's to approve until we make an
+  // offer, which is why `contractOffer` distinguishes the two.
   const pendingRequestsCount = useMemo(
-    () =>
-      roster.filter((e) => e.membership.status === 'pending' && e.membership.initiatedBy === 'agent')
-        .length,
+    () => roster.filter((e) => contractOffer(e.membership) === 'ours-to-answer').length,
     [roster],
   );
-  // `awaitingMyDecision`, never `statusRequests.length`: the list carries our own
-  // proposals too, and badging those would tell the agency to go answer itself.
+  // `awaitingMyDecision`, never a row count: both lists carry the things we
+  // raised ourselves, and badging those would tell the agency to go answer
+  // itself.
   const pendingActionCount =
-    pendingRequestsCount + statusRequests.filter((r) => r.awaitingMyDecision).length;
+    pendingRequestsCount +
+    statusRequests.filter((r) => r.awaitingMyDecision).length +
+    termsProposals.filter((p) => p.awaitingMyDecision).length;
 
   return (
     <AgentsRosterContext.Provider
@@ -158,6 +181,7 @@ export function AgentsRosterProvider({ children }: { children: ReactNode }) {
         roster,
         agents,
         statusRequests,
+        termsProposals,
         pendingRequestsCount,
         pendingActionCount,
         isLoading,

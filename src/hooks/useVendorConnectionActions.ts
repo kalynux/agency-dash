@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/errors';
 import { vendorConnectionsService } from '@/services/vendor-connections.service';
@@ -6,12 +7,13 @@ import type { ConnectionDto } from '@/types/vendor-connection.types';
 
 // ─── Error mapping ────────────────────────────────────────────────────────────
 // Screen-specific phrasing layered over the central registry (@/lib/errors).
+// Values are translation keys, not copy — `getApiErrorMessage` resolves them.
 
 const VENDOR_CONNECTION_ERROR_OVERRIDES: Record<string, string> = {
-  CONNECTION_ALREADY_EXISTS: 'You already have a connection request with this vendor.',
-  CONNECTION_NOT_APPROVER: "You can't approve or reject a request you sent yourself.",
-  CONNECTION_NOT_REQUESTER: "You can't withdraw a request you didn't send.",
-  CONNECTION_WRONG_REAPPROVAL_PARTY: "It's the vendor's turn to reapprove this connection, not yours.",
+  CONNECTION_ALREADY_EXISTS: 'vendors:errors.alreadyExists',
+  CONNECTION_NOT_APPROVER: 'vendors:errors.notApprover',
+  CONNECTION_NOT_REQUESTER: 'vendors:errors.notRequester',
+  CONNECTION_WRONG_REAPPROVAL_PARTY: 'vendors:errors.wrongReapprovalParty',
 };
 
 export function getVendorConnectionErrorMessage(err: unknown): string {
@@ -31,6 +33,7 @@ export interface UseVendorConnectionActionsOptions {
  * the connections list so the flow isn't duplicated.
  */
 export function useVendorConnectionActions({ onChanged }: UseVendorConnectionActionsOptions = {}) {
+  const { t } = useTranslation('vendors');
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
   const run = useCallback(
@@ -58,32 +61,32 @@ export function useVendorConnectionActions({ onChanged }: UseVendorConnectionAct
 
   const request = useCallback(
     (vendorId: string) =>
-      run(`request:${vendorId}`, vendorId, () => vendorConnectionsService.request(vendorId), 'Connection request sent.'),
-    [run],
+      run(`request:${vendorId}`, vendorId, () => vendorConnectionsService.request(vendorId), t('toasts.requested')),
+    [run, t],
   );
 
   const approve = useCallback(
     (vendorId: string, connectionId: string) =>
-      run(`approve:${connectionId}`, vendorId, () => vendorConnectionsService.approve(connectionId), 'Connection approved.'),
-    [run],
+      run(`approve:${connectionId}`, vendorId, () => vendorConnectionsService.approve(connectionId), t('toasts.approved')),
+    [run, t],
   );
 
   const reject = useCallback(
     (vendorId: string, connectionId: string, reason?: string) =>
-      run(`reject:${connectionId}`, vendorId, () => vendorConnectionsService.reject(connectionId, reason), 'Request rejected.'),
-    [run],
+      run(`reject:${connectionId}`, vendorId, () => vendorConnectionsService.reject(connectionId, reason), t('toasts.rejected')),
+    [run, t],
   );
 
   const withdraw = useCallback(
     (vendorId: string, connectionId: string) =>
-      run(`withdraw:${connectionId}`, vendorId, () => vendorConnectionsService.withdraw(connectionId), 'Request withdrawn.'),
-    [run],
+      run(`withdraw:${connectionId}`, vendorId, () => vendorConnectionsService.withdraw(connectionId), t('toasts.withdrawn')),
+    [run, t],
   );
 
   const terminate = useCallback(
     (vendorId: string, connectionId: string, note?: string) =>
-      run(`terminate:${connectionId}`, vendorId, () => vendorConnectionsService.terminate(connectionId, note), 'Connection terminated.'),
-    [run],
+      run(`terminate:${connectionId}`, vendorId, () => vendorConnectionsService.terminate(connectionId, note), t('toasts.terminated')),
+    [run, t],
   );
 
   return { pendingKey, request, approve, reject, withdraw, terminate };

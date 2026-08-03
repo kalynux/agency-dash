@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,7 @@ import { countActiveVendorFilters, INITIAL_VENDOR_FILTERS, type VendorFilters } 
 import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { vendorConnectionsService } from '@/services/vendor-connections.service';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import type { ConnectionDto, VendorBrowseItemDto, VendorConnectionListMeta } from '@/types/vendor-connection.types';
 
 // ─── Per-card action slot ───────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ function ConnectionActionSlot({
   actions: ReturnType<typeof useVendorConnectionActions>;
   onConnectionChange?: (vendorId: string, dto: ConnectionDto) => void;
 }) {
+  const { t } = useTranslation('vendors');
   const [detail, setDetail] = useState<ConnectionDto | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -76,7 +78,7 @@ function ConnectionActionSlot({
         disabled={actions.pendingKey === key}
         onClick={() => actions.request(vendor.id).then(handleChange)}
       >
-        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Request'}
+        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.request')}
       </Button>
     );
   }
@@ -84,7 +86,7 @@ function ConnectionActionSlot({
   if (connection.status === 'active') {
     return (
       <Badge variant="secondary" className="text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
-        Connected
+        {t('actions.connected')}
       </Badge>
     );
   }
@@ -99,7 +101,7 @@ function ConnectionActionSlot({
         disabled={actions.pendingKey === key}
         onClick={() => actions.request(vendor.id).then(handleChange)}
       >
-        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Request Again'}
+        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.requestAgain')}
       </Button>
     );
   }
@@ -111,9 +113,9 @@ function ConnectionActionSlot({
         {loadingDetail ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : connection.status === 'pending' ? (
-          'Pending…'
+          t('actions.pendingEllipsis')
         ) : (
-          'Reapproval needed'
+          t('actions.reapprovalNeeded')
         )}
       </Button>
     );
@@ -130,7 +132,7 @@ function ConnectionActionSlot({
           disabled={actions.pendingKey === key}
           onClick={() => actions.withdraw(vendor.id, connection.id).then(handleChange)}
         >
-          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Withdraw'}
+          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.withdraw')}
         </Button>
       );
     }
@@ -144,16 +146,16 @@ function ConnectionActionSlot({
           disabled={actions.pendingKey === approveKey}
           onClick={() => actions.approve(vendor.id, connection.id).then(handleChange)}
         >
-          {actions.pendingKey === approveKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Approve'}
+          {actions.pendingKey === approveKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.approve')}
         </Button>
         <Popover open={rejectOpen} onOpenChange={setRejectOpen}>
           <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className={ACTION_BUTTON}>Reject</Button>
+            <Button size="sm" variant="outline" className={ACTION_BUTTON}>{t('actions.reject')}</Button>
           </PopoverTrigger>
           <PopoverContent className="w-64 space-y-2" align="end">
-            <p className="text-xs font-medium">Reject this request?</p>
+            <p className="text-xs font-medium">{t('actions.rejectConfirmTitle')}</p>
             <Textarea
-              placeholder="Reason (optional)"
+              placeholder={t('actions.reasonOptional')}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className="text-xs min-h-16"
@@ -170,7 +172,7 @@ function ConnectionActionSlot({
                 })
               }
             >
-              {actions.pendingKey === rejectKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Confirm Reject'}
+              {actions.pendingKey === rejectKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.confirmReject')}
             </Button>
           </PopoverContent>
         </Popover>
@@ -187,11 +189,11 @@ function ConnectionActionSlot({
         disabled={actions.pendingKey === key}
         onClick={() => actions.approve(vendor.id, connection.id).then(handleChange)}
       >
-        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Reapprove'}
+        {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.reapprove')}
       </Button>
     );
   }
-  return <Badge variant="secondary">Awaiting vendor</Badge>;
+  return <Badge variant="secondary">{t('actions.awaitingVendor')}</Badge>;
 }
 
 // ─── Browser ────────────────────────────────────────────────────────────────────
@@ -203,6 +205,7 @@ export interface BrowseTabProps {
 
 /** Vendors → Browse tab: search + filter + paginated vendor list, each card driven by its connection state. */
 export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
+  const { t } = useTranslation(['vendors', 'common']);
   const isMobile = useIsMobile();
   const [vendors, setVendors] = useState<VendorBrowseItemDto[]>([]);
   const [meta, setMeta] = useState<VendorConnectionListMeta | null>(null);
@@ -248,9 +251,7 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
       setVendors(res.data ?? []);
       setMeta(res.meta ?? null);
     } catch (err) {
-      setFetchError(
-        err instanceof ApiError ? err.message : 'Failed to load vendors. Please try again.',
-      );
+      setFetchError(getApiErrorMessage(err));
     } finally {
       setLoadingVendors(false);
     }
@@ -312,12 +313,12 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
       <SearchFilterBar
         value={search}
         onChange={handleSearchChange}
-        placeholder="Search vendors…"
+        placeholder={t('browse.searchPlaceholder')}
         activeCount={activeFilterCount}
         onReset={handleClearFilters}
-        filterDescription="Find vendors you can request a connection with."
+        filterDescription={t('browse.filterDescription')}
         resultCount={meta?.total}
-        resultNoun="vendor"
+        resultNounKey="common:nouns.vendor"
       >
         <VendorFiltersPanel filters={filters} onChange={handleFilterChange} />
       </SearchFilterBar>
@@ -325,7 +326,7 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
       <div className="flex items-center justify-between h-5">
         {!loadingVendors && meta && (
           <p className="text-xs text-muted-foreground">
-            {meta.total} {meta.total === 1 ? 'vendor' : 'vendors'} found
+            {t('browse.found', { count: meta.total })}
           </p>
         )}
         {loadingVendors && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
@@ -335,7 +336,7 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground mb-4">{fetchError}</p>
           <Button variant="outline" onClick={() => loadVendors(appliedFilters, appliedSearch, page)}>
-            Retry
+            {t('common:actions.retry')}
           </Button>
         </div>
       ) : loadingVendors && vendors.length === 0 ? (
@@ -347,8 +348,8 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
           <Store className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
             {activeFilterCount > 0 || appliedSearch
-              ? 'No vendors match your search or filters.'
-              : 'No vendors are available to connect with yet.'}
+              ? t('browse.emptyFiltered')
+              : t('browse.empty')}
           </p>
           {(activeFilterCount > 0 || appliedSearch) && (
             <button
@@ -356,7 +357,7 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
               onClick={() => { handleSearchChange(''); handleClearFilters(); }}
               className="mt-2 text-xs text-primary hover:underline"
             >
-              Clear all filters
+              {t('browse.clearFilters')}
             </button>
           )}
         </div>
@@ -384,10 +385,10 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
             disabled={page <= 1 || loadingVendors}
             onClick={() => setPage((p) => p - 1)}
           >
-            Previous
+            {t('common:actions.previous')}
           </Button>
           <span className="text-xs text-muted-foreground">
-            Page {page} of {meta.totalPages}
+            {t('common:pagination.pageOf', { page, total: meta.totalPages })}
           </span>
           <Button
             type="button"
@@ -396,7 +397,7 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
             disabled={page >= meta.totalPages || loadingVendors}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next
+            {t('common:actions.next')}
           </Button>
         </div>
       )}

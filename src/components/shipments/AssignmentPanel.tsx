@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Sparkles, ListOrdered, UserCheck, XCircle, Repeat, Clock, Navigation, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ export interface AssignmentPanelProps {
 }
 
 export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelProps) {
+  const { t } = useTranslation(['shipments', 'common']);
   const { assignAgent, autoAssign, cancelOffer, pendingKey } = useShipmentActions();
   const [agentDraft, setAgentDraft] = useState('');
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -45,7 +47,8 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   const activeAgents = agents.filter((a) => a.membershipStatus === 'active');
   const hasBoundAgent = !!detail.agentId;
   const canOffer = detail.status === 'assigned' && !hasBoundAgent && !pendingOffer;
-  const nameFor = (id: string | null) => (id ? agents.find((a) => a.id === id)?.name ?? 'agent' : null);
+  const nameFor = (id: string | null) =>
+    id ? agents.find((a) => a.id === id)?.name ?? t('assignment.unnamedAgent') : null;
 
   const afterOffer = (result: { offer: ShipmentOffer; autoAccepted: boolean } | null, agentId: string | null) => {
     if (!result) return;
@@ -93,15 +96,12 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   return (
     <section>
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        Agent Assignment
+        {t('assignment.title')}
       </h3>
 
       {/* COD gating hint */}
       {detail.paymentMethod === 'cash_on_delivery' && !hasBoundAgent && (
-        <p className="text-xs text-amber-600 mb-2">
-          Cash-on-delivery shipments need an agent to accept before pickup — they hold the cash and
-          the offer is gated on their cash-risk profile.
-        </p>
+        <p className="text-xs text-amber-600 mb-2">{t('assignment.codHint')}</p>
       )}
 
       {/* Bound agent + reassign */}
@@ -120,17 +120,17 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               <p className="text-xs text-muted-foreground">{detail.agent.phone}</p>
             </div>
             <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-200">
-              <UserCheck className="w-3 h-3" /> Accepted
+              <UserCheck className="w-3 h-3" /> {t('assignment.accepted')}
             </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button asChild variant="outline" size="sm" className="gap-2">
               <Link to={`/dashboard/tracking?agent=${detail.agentId}`}>
-                <Navigation className="w-3.5 h-3.5" /> Track on map
+                <Navigation className="w-3.5 h-3.5" /> {t('assignment.trackOnMap')}
               </Link>
             </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setReassignOpen(true)}>
-              <Repeat className="w-3.5 h-3.5" /> Reassign
+              <Repeat className="w-3.5 h-3.5" /> {t('assignment.reassign')}
             </Button>
           </div>
         </div>
@@ -148,8 +148,8 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               )}
               <span>
                 {isBroadcasting
-                  ? 'Searching for an agent…'
-                  : `Offer pending to ${nameFor(pendingOffer.agentId)} — awaiting acceptance.`}
+                  ? t('assignment.searching')
+                  : t('assignment.offerPending', { name: nameFor(pendingOffer.agentId) })}
               </span>
             </div>
             <Button
@@ -163,18 +163,14 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <>
-                  <XCircle className="w-3.5 h-3.5" /> {isBroadcasting ? 'Stop' : 'Cancel'}
+                  <XCircle className="w-3.5 h-3.5" />{' '}
+                  {isBroadcasting ? t('assignment.stop') : t('assignment.cancel')}
                 </>
               )}
             </Button>
           </div>
           {isBroadcasting && (
-            <p className="text-xs text-amber-800">
-              Agents are being offered this shipment nearest-first, one every couple of minutes, with
-              earlier offers left standing — the first to accept gets it. If nobody accepts after two
-              rounds you'll be notified so you can assign manually. Stopping withdraws every live
-              offer.
-            </p>
+            <p className="text-xs text-amber-800">{t('assignment.broadcastExplainer')}</p>
           )}
         </div>
       )}
@@ -185,11 +181,13 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
           <div className="flex items-center gap-2">
             <Select value={agentDraft} onValueChange={setAgentDraft}>
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Choose an agent to offer…" />
+                <SelectValue placeholder={t('assignment.choosePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {activeAgents.length === 0 ? (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">No active agents</div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    {t('assignment.noActiveAgents')}
+                  </div>
                 ) : (
                   activeAgents.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
@@ -200,7 +198,11 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               </SelectContent>
             </Select>
             <Button size="sm" disabled={!agentDraft || pendingKey === `assign:${detail.id}`} onClick={handleAssign}>
-              {pendingKey === `assign:${detail.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Offer'}
+              {pendingKey === `assign:${detail.id}` ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                t('assignment.offer')
+              )}
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -216,56 +218,68 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               ) : (
                 <Sparkles className="w-3.5 h-3.5" />
               )}
-              Auto-assign
+              {t('assignment.autoAssign')}
             </Button>
             <Popover onOpenChange={(o) => o && candidates === null && loadCandidates()}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 gap-1.5">
-                  <ListOrdered className="w-3.5 h-3.5" /> Preview candidates
+                  <ListOrdered className="w-3.5 h-3.5" /> {t('assignment.previewCandidates')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-72 p-0">
                 <div className="p-3 border-b flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Candidates, nearest first</p>
+                    <p className="text-sm font-medium">{t('assignment.candidatesTitle')}</p>
                     {/* Proximity is the sort; the weighted score is tie-break context. */}
-                    <p className="text-xs text-muted-foreground">The order auto-assign would walk.</p>
+                    <p className="text-xs text-muted-foreground">{t('assignment.candidatesSubtitle')}</p>
                   </div>
                   <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={loadCandidates}>
-                    Refresh
+                    {t('assignment.candidatesRefresh')}
                   </Button>
                 </div>
                 <div className="max-h-64 overflow-y-auto p-2 space-y-1">
                   {candidatesLoading ? (
                     <div className="flex items-center gap-2 justify-center py-6 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Ranking…
+                      <Loader2 className="w-4 h-4 animate-spin" /> {t('assignment.candidatesRanking')}
                     </div>
                   ) : candidatesError ? (
                     <p className="text-sm text-muted-foreground py-6 text-center">{candidatesError}</p>
                   ) : !candidates || candidates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-6 text-center">No eligible agents.</p>
+                    <p className="text-sm text-muted-foreground py-6 text-center">
+                      {t('assignment.candidatesEmpty')}
+                    </p>
                   ) : (
                     candidates.map((c) => (
                       <button
                         key={c.agentId}
                         onClick={() => setAgentDraft(c.agentId)}
-                        className="w-full text-left rounded-md p-2 hover:bg-muted transition-colors"
+                        className="w-full text-start rounded-md p-2 hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium">
-                            #{c.rank + 1} {nameFor(c.agentId) ?? c.agentId.slice(-6)}
+                            {t('assignment.candidateRank', {
+                              rank: c.rank + 1,
+                              name: nameFor(c.agentId) ?? c.agentId.slice(-6),
+                            })}
                           </span>
-                          <Badge variant="secondary">{(c.score * 100).toFixed(0)}%</Badge>
+                          <Badge variant="secondary">
+                            {t('common:units.percent', { value: (c.score * 100).toFixed(0) })}
+                          </Badge>
                         </div>
                         {/* `distance_km` is null whenever the pickup point or the
                             agent's position could not be resolved — the rest of
                             the breakdown still stands, so only the distance drops. */}
                         <p className="text-xs text-muted-foreground">
-                          {typeof c.breakdown?.distance_km === 'number'
-                            ? `${c.breakdown.distance_km.toFixed(1)} km`
-                            : 'distance n/a'}{' '}
-                          · capacity {c.breakdown?.free_capacity ?? '—'} · trust{' '}
-                          {c.breakdown?.trust_score ?? '—'}
+                          {t('assignment.candidateBreakdown', {
+                            distance:
+                              typeof c.breakdown?.distance_km === 'number'
+                                ? t('assignment.candidateDistance', {
+                                    km: c.breakdown.distance_km.toFixed(1),
+                                  })
+                                : t('assignment.candidateDistanceUnknown'),
+                            capacity: c.breakdown?.free_capacity ?? t('common:values.notAvailable'),
+                            trust: c.breakdown?.trust_score ?? t('common:values.notAvailable'),
+                          })}
                         </p>
                       </button>
                     ))
@@ -281,15 +295,15 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
       {!hasBoundAgent && !canOffer && !pendingOffer && (
         <p className="text-xs text-muted-foreground">
           {detail.status === 'handing_over'
-            ? 'A handover is in progress — the replacement agent has been offered the shipment.'
-            : 'No agent can be offered in this shipment’s current state.'}
+            ? t('assignment.handoverInProgress')
+            : t('assignment.notOfferable')}
         </p>
       )}
 
       {/* Handover pickup info */}
       {detail.handover && (
         <div className="mt-3 rounded-lg border border-dashed p-3 text-xs text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">Handover pickup</p>
+          <p className="font-medium text-foreground">{t('assignment.handoverTitle')}</p>
           {detail.handover.pickup.address?.label && <p>{detail.handover.pickup.address.label}</p>}
           {/* `formattedAddress` is the geocoder's own one-liner where there is
               one, so prefer it over recomposing the parts. */}
@@ -299,9 +313,11 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                 describeAddress(detail.handover.pickup.address)}
             </p>
           )}
-          {detail.handover.pickup.note && <p>Note: {detail.handover.pickup.note}</p>}
+          {detail.handover.pickup.note && (
+            <p>{t('assignment.handoverNote', { note: detail.handover.pickup.note })}</p>
+          )}
           {detail.handover.pickup.isFallback && (
-            <p className="text-amber-600">Fallback location — original point could not be resolved.</p>
+            <p className="text-amber-600">{t('assignment.handoverFallback')}</p>
           )}
         </div>
       )}

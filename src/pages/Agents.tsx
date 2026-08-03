@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAgentsRoster } from '@/store/agents.store';
 import { ConnectionsTab } from '@/components/agents/ConnectionsTab';
 import { BrowseTab } from '@/components/agents/BrowseTab';
@@ -11,6 +12,7 @@ type AgentsTab = typeof VALID_TABS[number];
 const CONTRACT_ID = /^[a-f\d]{24}$/i;
 
 export function Agents() {
+  const { t } = useTranslation('agents');
   const { tab } = useParams<{ tab: string }>();
   const { refetch } = useAgentsRoster();
   const isTab = (VALID_TABS as readonly string[]).includes(tab ?? '');
@@ -25,16 +27,13 @@ export function Agents() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-          Agents
-          <InfoHint className="md:hidden" label="About agent contracts">
-            Manage the delivery agents contracted to your agency — only contracted agents can take
-            your shipments.
+          {t('page.title')}
+          <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
+            {t('page.description')}
           </InfoHint>
         </h1>
-        <p className="text-muted-foreground max-md:hidden">
-          Manage the delivery agents contracted to your agency — only contracted agents can take your shipments
-        </p>
-        <p className="text-muted-foreground md:hidden">Manage your agent contracts</p>
+        <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
+        <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
       </div>
 
       {activeTab === 'connections' && (

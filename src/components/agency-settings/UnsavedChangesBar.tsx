@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ interface UnsavedChangesBarProps {
  * reserves under the content — keep the two in sync.
  */
 export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: UnsavedChangesBarProps) {
+  const { t } = useTranslation('common');
   if (!visible) return null;
 
   return (
@@ -39,7 +41,7 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
         </span>
-        <p className="whitespace-nowrap text-sm font-medium">Unsaved changes</p>
+        <p className="whitespace-nowrap text-sm font-medium">{t('states.unsavedChanges')}</p>
         <div className="flex flex-shrink-0 items-center gap-1 sm:gap-1.5">
           <Button
             type="button"
@@ -49,7 +51,7 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
             onClick={onDiscard}
             disabled={saving}
           >
-            Discard
+            {t('actions.discard')}
           </Button>
           <Button
             type="button"
@@ -60,8 +62,8 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {/* "Save changes" costs ~50px the 360px pill can't spare. */}
-            <span className="sm:hidden">Save</span>
-            <span className="max-sm:hidden">Save changes</span>
+            <span className="sm:hidden">{t('actions.save')}</span>
+            <span className="max-sm:hidden">{t('actions.saveChanges')}</span>
           </Button>
         </div>
       </div>

@@ -14,6 +14,7 @@
 
 import { formatDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
   Check,
@@ -59,6 +60,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn, formatFileSize } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
 import { getUploadErrorMessage } from '@/lib/uploadErrors';
+import { tx, txStatic, type AnyTFunction } from '@/i18n/tx';
 import {
   kindFromMime,
   listFiles,
@@ -103,13 +105,6 @@ const KIND_TINTS: Record<FileKind, string> = {
   audio: 'bg-emerald-500/10 text-emerald-600',
 };
 
-const KIND_LABELS: Record<FileKind, string> = {
-  image: 'Images',
-  video: 'Video',
-  document: 'Documents',
-  audio: 'Audio',
-};
-
 const ALL_KINDS: FileKind[] = ['image', 'video', 'document', 'audio'];
 
 const PICKER_LIMIT = 24;
@@ -117,13 +112,14 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 type SortValue = `${FileSortField}:${'asc' | 'desc'}`;
 
-const SORT_OPTIONS: { value: SortValue; label: string }[] = [
-  { value: 'createdAt:desc', label: 'Newest first' },
-  { value: 'createdAt:asc', label: 'Oldest first' },
-  { value: 'originalName:asc', label: 'Name A–Z' },
-  { value: 'originalName:desc', label: 'Name Z–A' },
-  { value: 'size:desc', label: 'Largest first' },
-  { value: 'size:asc', label: 'Smallest first' },
+/** Sort choices, with their copy as keys — this table is module-scope data. */
+const SORT_OPTIONS: { value: SortValue; labelKey: string }[] = [
+  { value: 'createdAt:desc', labelKey: 'media:sort.newest' },
+  { value: 'createdAt:asc', labelKey: 'media:sort.oldest' },
+  { value: 'originalName:asc', labelKey: 'media:sort.nameAsc' },
+  { value: 'originalName:desc', labelKey: 'media:sort.nameDesc' },
+  { value: 'size:desc', labelKey: 'media:sort.largest' },
+  { value: 'size:asc', labelKey: 'media:sort.smallest' },
 ];
 
 interface FilterState {
@@ -150,8 +146,8 @@ function mbToBytes(mb: string): number | undefined {
 }
 
 /** Human label for the kinds a slot accepts, e.g. "image" or "image / video". */
-function describeAccepted(types: FileKind[]): string {
-  return types.map((t) => KIND_LABELS[t].toLowerCase()).join(' / ');
+function describeAccepted(types: FileKind[], t: AnyTFunction): string {
+  return types.map((k) => tx(t, `media:kindsSingular.${k}`)).join(' / ');
 }
 
 // Module-level so its identity is stable across renders — defining it inside the
@@ -165,7 +161,7 @@ function FileThumb({ file }: { file: ApiFile }) {
     return (
       <img
         src={url}
-        alt={file.originalName ?? 'File'}
+        alt={file.originalName ?? txStatic('media:preview.fileAlt')}
         crossOrigin="use-credentials"
         loading="lazy"
         className="h-full w-full object-cover"
@@ -226,6 +222,7 @@ export function MediaPicker({
   maxFiles,
   alreadySelectedIds = [],
 }: MediaPickerProps) {
+  const { t } = useTranslation(['media', 'common']);
   const isMobile = useIsMobile();
 
   const alreadySelected = useMemo(() => new Set(alreadySelectedIds), [alreadySelectedIds]);
@@ -338,7 +335,7 @@ export function MediaPicker({
       setUploadPercent(0);
       try {
         const uploaded = await uploadMediaWithProgress(arr, setUploadPercent);
-        toast.success(`Uploaded ${arr.length} file${arr.length > 1 ? 's' : ''}.`);
+        toast.success(t('upload.succeeded', { count: arr.length }));
         // Uploading from inside the picker means "I want *this* file here", so
         // pre-select what just landed — the user only has to confirm.
         const eligible = uploaded.filter((f) => acceptedTypes.includes(kindFromMime(f.mimeType)));
@@ -364,7 +361,7 @@ export function MediaPicker({
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    [page, fetchFiles, acceptedTypes, multiple, maxFiles],
+    [page, fetchFiles, acceptedTypes, multiple, maxFiles, t],
   );
 
   const onDrop = (e: React.DragEvent) => {
@@ -383,7 +380,10 @@ export function MediaPicker({
     const kind = kindFromMime(file.mimeType);
     if (!selected[file.id] && !acceptedTypes.includes(kind)) {
       setSelectError(
-        `${KIND_LABELS[kind]} can't be used here — only ${describeAccepted(acceptedTypes)} files are allowed.`,
+        t('picker.wrongKind', {
+          kind: t(`kinds.${kind}` as const),
+          accepted: describeAccepted(acceptedTypes, t),
+        }),
       );
       return;
     }
@@ -420,7 +420,7 @@ export function MediaPicker({
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search files…"
+          placeholder={t('picker.searchPlaceholder')}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="h-9 pl-10"
@@ -437,7 +437,7 @@ export function MediaPicker({
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="gap-2">
           <SlidersHorizontal className="h-4 w-4" />
-          Filters
+          {t('picker.filters')}
           {hasActiveFilters && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
         </Button>
         <Button
@@ -448,7 +448,7 @@ export function MediaPicker({
           className="gap-2"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          Upload
+          {t('upload.button')}
         </Button>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'grid' | 'list')}>
           <TabsList className="h-9">
@@ -489,16 +489,20 @@ export function MediaPicker({
               </div>
               <div className="absolute bottom-2 left-2">
                 {added ? (
-                  <Badge className="bg-primary text-xs text-primary-foreground">Added</Badge>
+                  <Badge className="bg-primary text-xs text-primary-foreground">
+                    {t('picker.added')}
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-xs capitalize">
-                    {kindFromMime(file.mimeType)}
+                  <Badge variant="secondary" className="text-xs">
+                    {t(`kinds.${kindFromMime(file.mimeType)}` as const)}
                   </Badge>
                 )}
               </div>
             </div>
             <div className="p-3">
-              <p className="truncate text-sm font-medium">{file.originalName ?? 'Untitled'}</p>
+              <p className="truncate text-sm font-medium">
+                {file.originalName ?? t('list.untitled')}
+              </p>
             </div>
           </div>
         );
@@ -528,12 +532,19 @@ export function MediaPicker({
               <FileThumb file={file} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{file.originalName ?? 'Untitled'}</p>
+              <p className="truncate font-medium">{file.originalName ?? t('list.untitled')}</p>
               <p className="text-xs text-muted-foreground">
-                {formatFileSize(file.size)} · {formatDate(file.createdAt)}
+                {t('list.meta', {
+                  size: formatFileSize(file.size),
+                  date: formatDate(file.createdAt),
+                })}
               </p>
             </div>
-            {added && <Badge className="bg-primary text-xs text-primary-foreground">Added</Badge>}
+            {added && (
+              <Badge className="bg-primary text-xs text-primary-foreground">
+                {t('picker.added')}
+              </Badge>
+            )}
             <SelectionBox checked={isSelected} />
           </div>
         );
@@ -556,8 +567,8 @@ export function MediaPicker({
       {uploading && (
         <div className="border-b bg-muted/30 px-4 py-3 sm:px-6">
           <div className="mb-1 flex justify-between text-xs">
-            <span className="text-muted-foreground">Uploading…</span>
-            <span>{uploadPercent}%</span>
+            <span className="text-muted-foreground">{t('upload.uploading')}</span>
+            <span>{t('common:units.percent', { value: uploadPercent })}</span>
           </div>
           <Progress value={uploadPercent} className="h-1.5" />
         </div>
@@ -574,7 +585,7 @@ export function MediaPicker({
             type="button"
             onClick={() => setSelectError(null)}
             className="shrink-0 rounded-sm p-0.5 hover:bg-destructive/15"
-            aria-label="Dismiss"
+            aria-label={t('picker.dismiss')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -599,7 +610,7 @@ export function MediaPicker({
         ) : files.length === 0 ? (
           <div className="py-12 text-center">
             <ImageIcon className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">No files found</p>
+            <p className="text-muted-foreground">{t('picker.noFiles')}</p>
             {hasActiveFilters && (
               <Button
                 variant="outline"
@@ -610,7 +621,7 @@ export function MediaPicker({
                 }}
                 className="mt-3"
               >
-                Clear filters
+                {t('picker.clearFilters')}
               </Button>
             )}
           </div>
@@ -624,7 +635,11 @@ export function MediaPicker({
         {pagination && pagination.pages > 1 && (
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Page {pagination.page} of {pagination.pages} · {pagination.total} total
+              {t('picker.pageOf', {
+                page: pagination.page,
+                pages: pagination.pages,
+                total: pagination.total,
+              })}
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -653,9 +668,12 @@ export function MediaPicker({
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm">
           <div className="rounded-2xl border-2 border-dashed border-primary bg-background px-10 py-8 text-center shadow-lg">
             <Upload className="mx-auto mb-3 h-10 w-10 text-primary" />
-            <p className="text-lg font-semibold">Drop to upload</p>
+            <p className="text-lg font-semibold">{t('upload.dropTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              Up to {MAX_FILES_PER_UPLOAD} files or {MAX_VIDEOS_PER_UPLOAD} videos (70 MB each)
+              {t('upload.dropHint', {
+                files: MAX_FILES_PER_UPLOAD,
+                videos: MAX_VIDEOS_PER_UPLOAD,
+              })}
             </p>
           </div>
         </div>
@@ -666,20 +684,24 @@ export function MediaPicker({
   const footer = (
     <div className="flex flex-shrink-0 items-center justify-between border-t px-4 py-4 sm:px-6">
       <Button variant="outline" onClick={onClose}>
-        Cancel
+        {t('common:actions.cancel')}
       </Button>
       <Button onClick={handleConfirm} disabled={selectedCount === 0}>
-        Select {selectedCount > 0 && `(${selectedCount})`}
+        {selectedCount > 0
+          ? t('picker.confirmWithCount', { count: selectedCount })
+          : t('picker.confirm')}
       </Button>
     </div>
   );
 
   const titleNode = (
     <div className="flex items-center justify-between pr-6">
-      <span>Select media</span>
+      <span>{t('picker.title')}</span>
       {multiple && (
         <span className="text-sm font-normal text-muted-foreground">
-          {selectedCount} selected{maxFiles ? ` / ${maxFiles} max` : ''}
+          {maxFiles
+            ? t('picker.selectedOfMax', { count: selectedCount, max: maxFiles })
+            : t('picker.selectedOf', { count: selectedCount })}
         </span>
       )}
     </div>
@@ -725,7 +747,7 @@ export function MediaPicker({
           )}
         >
           <SheetHeader className="border-b px-5 py-4 text-left">
-            <SheetTitle>Filters</SheetTitle>
+            <SheetTitle>{t('picker.filters')}</SheetTitle>
           </SheetHeader>
           <MediaPickerFilters
             filters={filters}
@@ -752,6 +774,7 @@ function MediaPickerFilters({
   onReset: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['media', 'common']);
   const set = <K extends keyof FilterState>(key: K, value: FilterState[K]) =>
     onChange({ ...filters, [key]: value });
 
@@ -759,7 +782,7 @@ function MediaPickerFilters({
     <>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
         <div className="space-y-1.5">
-          <Label className="text-xs">File type</Label>
+          <Label className="text-xs">{t('filters.fileType')}</Label>
           <Select
             value={filters.category}
             onValueChange={(v) => set('category', v as MediaCategory | 'all')}
@@ -768,10 +791,10 @@ function MediaPickerFilters({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="all">{t('filters.allTypes')}</SelectItem>
               {ALL_KINDS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {KIND_LABELS[k]}
+                  {t(`kinds.${k}` as const)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -779,12 +802,12 @@ function MediaPickerFilters({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Size (MB)</Label>
+          <Label className="text-xs">{t('picker.filterPanel.size')}</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               min={0}
-              placeholder="Min"
+              placeholder={t('picker.filterPanel.min')}
               value={filters.minMB}
               onChange={(e) => set('minMB', e.target.value)}
               className="h-9"
@@ -793,7 +816,7 @@ function MediaPickerFilters({
             <Input
               type="number"
               min={0}
-              placeholder="Max"
+              placeholder={t('picker.filterPanel.max')}
               value={filters.maxMB}
               onChange={(e) => set('maxMB', e.target.value)}
               className="h-9"
@@ -802,10 +825,12 @@ function MediaPickerFilters({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Uploaded</Label>
+          <Label className="text-xs">{t('picker.filterPanel.uploaded')}</Label>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <span className="text-[11px] text-muted-foreground">After</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t('picker.filterPanel.after')}
+              </span>
               <Input
                 type="date"
                 value={filters.createdAfter}
@@ -814,7 +839,9 @@ function MediaPickerFilters({
               />
             </div>
             <div>
-              <span className="text-[11px] text-muted-foreground">Before</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t('picker.filterPanel.before')}
+              </span>
               <Input
                 type="date"
                 value={filters.createdBefore}
@@ -826,7 +853,7 @@ function MediaPickerFilters({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Sort by</Label>
+          <Label className="text-xs">{t('filters.sortBy')}</Label>
           <Select value={filters.sort} onValueChange={(v) => set('sort', v as SortValue)}>
             <SelectTrigger>
               <SelectValue />
@@ -834,7 +861,7 @@ function MediaPickerFilters({
             <SelectContent>
               {SORT_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
-                  {o.label}
+                  {tx(t, o.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -845,10 +872,10 @@ function MediaPickerFilters({
       <SheetFooter className="flex-row gap-2 border-t px-5 py-4">
         <Button variant="outline" className="flex-1 gap-1.5" onClick={onReset}>
           <X className="h-4 w-4" />
-          Reset
+          {t('common:actions.reset')}
         </Button>
         <Button className="flex-1" onClick={onClose}>
-          Done
+          {t('common:actions.done')}
         </Button>
       </SheetFooter>
     </>

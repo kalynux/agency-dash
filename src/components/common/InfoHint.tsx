@@ -1,4 +1,5 @@
 import type { ElementType, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ import { cn } from '@/lib/utils';
  */
 export function InfoHint({
   children,
-  label = 'More information',
+  label,
   align = 'start',
   className,
 }: {
@@ -29,12 +30,13 @@ export function InfoHint({
   align?: 'start' | 'center' | 'end';
   className?: string;
 }) {
+  const { t } = useTranslation('common');
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={label}
+          aria-label={label ?? t('form.moreInformation')}
           // 32px hit area on a 24px footprint: the negative margin keeps the
           // icon from opening a gap in the label's rhythm while still clearing
           // the touch-target minimum.
@@ -90,6 +92,7 @@ export function SectionHeading({
   action?: ReactNode;
   className?: string;
 }) {
+  const { t } = useTranslation('common');
   return (
     <CardHeader className={cn('max-md:px-0', className)}>
       <div className="flex items-center justify-between gap-2">
@@ -97,7 +100,14 @@ export function SectionHeading({
           {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
           {title}
           {description && short && (
-            <InfoHint className="md:hidden" label={`About ${typeof title === 'string' ? title : 'this section'}`}>
+            <InfoHint
+              className="md:hidden"
+              label={
+                typeof title === 'string'
+                  ? t('form.aboutSection', { title })
+                  : t('form.moreInformation')
+              }
+            >
               {description}
             </InfoHint>
           )}

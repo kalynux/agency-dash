@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Smartphone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { tx, txStatic } from '@/i18n/tx';
 import type { PaymentGateway, PhoneOperator } from '@/types/billing.types';
 import type { AddPaymentMethodPayload, SavedPaymentMethod } from '@/types/payment-method.types';
 import { isStripeConfigured } from '@/lib/stripe';
@@ -49,6 +51,7 @@ export function AddPaymentMethodDialog({
   forceDefault = false,
   onAdded,
 }: AddPaymentMethodDialogProps) {
+  const { t } = useTranslation(['billing', 'common']);
   const gateways = gatewayOptions();
 
   const [gateway, setGateway] = useState<PaymentGateway>(gateways[0]?.value ?? 'NOTCHPAY');
@@ -106,7 +109,7 @@ export function AddPaymentMethodDialog({
     // The phone reference stands in for the gateway token ids until real tokenisation
     // is wired (charging a saved method is a future backend step per the docs).
     if (!PHONE_RE.test(phone.trim())) {
-      throw new Error('Enter a valid phone number (e.g. +237650000000).');
+      throw new Error(txStatic('billing:methods.add.invalidPhone'));
     }
     const provider = gateway.toLowerCase();
     const last4 = phone.trim().slice(-4);
@@ -130,7 +133,7 @@ export function AddPaymentMethodDialog({
     try {
       const payload = await buildPayload();
       const created = await addPaymentMethod(payload);
-      toast.success('Payment method added');
+      toast.success(t('methods.add.added'));
       onAdded(created);
       onOpenChange(false);
     } catch (err) {
@@ -144,16 +147,14 @@ export function AddPaymentMethodDialog({
     <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add payment method</DialogTitle>
-          <DialogDescription>
-            Save a method to speed up checkout. We never store full card numbers or CVV.
-          </DialogDescription>
+          <DialogTitle>{t('methods.add.title')}</DialogTitle>
+          <DialogDescription>{t('methods.add.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Gateway / method selection */}
           <div className="space-y-1.5">
-            <Label>Type</Label>
+            <Label>{t('methods.add.type')}</Label>
             <div className="grid grid-cols-3 gap-2">
               {gateways.map((g) => (
                 <button
@@ -175,7 +176,7 @@ export function AddPaymentMethodDialog({
                   ) : (
                     <Smartphone className="h-4 w-4" />
                   )}
-                  {g.label}
+                  {tx(t, g.labelKey)}
                 </button>
               ))}
             </div>
@@ -184,18 +185,18 @@ export function AddPaymentMethodDialog({
           {methodType === 'mobile_money' ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="add-phone">Mobile money number</Label>
+                <Label htmlFor="add-phone">{t('methods.add.phone')}</Label>
                 <Input
                   id="add-phone"
                   inputMode="tel"
-                  placeholder="+237650000000"
+                  placeholder={t('methods.add.phonePlaceholder')}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   aria-invalid={!!error}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="add-operator">Operator</Label>
+                <Label htmlFor="add-operator">{t('methods.add.operator')}</Label>
                 <Select value={operator} onValueChange={(v) => setOperator(v as PhoneOperator)}>
                   <SelectTrigger id="add-operator">
                     <SelectValue />
@@ -210,10 +211,10 @@ export function AddPaymentMethodDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="add-holder-mm">Account holder name (optional)</Label>
+                <Label htmlFor="add-holder-mm">{t('methods.add.holderNameMobile')}</Label>
                 <Input
                   id="add-holder-mm"
-                  placeholder="Account holder"
+                  placeholder={t('methods.add.holderNameMobilePlaceholder')}
                   value={holderName}
                   onChange={(e) => setHolderName(e.target.value)}
                 />
@@ -223,16 +224,16 @@ export function AddPaymentMethodDialog({
             <div className="space-y-3">
               <CardPreview holderName={holderName} />
               <div className="space-y-1.5">
-                <Label htmlFor="add-holder">Card holder name</Label>
+                <Label htmlFor="add-holder">{t('methods.add.holderNameCard')}</Label>
                 <Input
                   id="add-holder"
-                  placeholder="Name on card"
+                  placeholder={t('methods.add.holderNameCardPlaceholder')}
                   value={holderName}
                   onChange={(e) => setHolderName(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Card details</Label>
+                <Label>{t('methods.add.cardDetails')}</Label>
                 <StripeCardField ref={cardRef} disabled={submitting} />
               </div>
             </div>
@@ -241,8 +242,8 @@ export function AddPaymentMethodDialog({
           {!forceDefault && (
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium">Set as default</p>
-                <p className="text-xs text-muted-foreground">Pre-selected at checkout.</p>
+                <p className="text-sm font-medium">{t('methods.add.setAsDefault')}</p>
+                <p className="text-xs text-muted-foreground">{t('methods.add.setAsDefaultHint')}</p>
               </div>
               <Switch checked={makeDefault} onCheckedChange={setMakeDefault} />
             </div>
@@ -252,11 +253,11 @@ export function AddPaymentMethodDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save method
+              {t('methods.add.submit')}
             </Button>
           </DialogFooter>
         </div>

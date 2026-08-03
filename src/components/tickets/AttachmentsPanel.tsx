@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Upload, FileText, ImageIcon, Download, Globe, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ type VisibilityInput = 'PUBLIC' | 'PRIVATE';
 export function AttachmentsPanel({
   ticketId, followers, readOnly = false,
 }: { ticketId: string; followers: TicketActor[]; readOnly?: boolean }) {
+  const { t } = useTranslation('tickets');
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -56,7 +58,7 @@ export function AttachmentsPanel({
         );
         setAttachments((prev) => [...prev, res.data]);
       }
-      toast.success(`Attached ${toAttach.length} file${toAttach.length !== 1 ? 's' : ''}`);
+      toast.success(t('attachments.attached', { count: toAttach.length }));
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -69,9 +71,11 @@ export function AttachmentsPanel({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold">Attachments</h3>
+        <h3 className="text-sm font-semibold">{t('attachments.title')}</h3>
         {!loading && (
-          <span className="text-xs text-muted-foreground">{attachments.length}/{MAX_ATTACHMENTS}</span>
+          <span className="text-xs text-muted-foreground">
+            {t('attachments.counter', { current: attachments.length, max: MAX_ATTACHMENTS })}
+          </span>
         )}
       </div>
 
@@ -97,7 +101,10 @@ export function AttachmentsPanel({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{att.fileName}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {formatFileSize(att.fileSize)} · uploaded by {uploader}
+                    {t('attachments.uploadedBy', {
+                      size: formatFileSize(att.fileSize),
+                      name: uploader,
+                    })}
                   </p>
                 </div>
                 <a
@@ -106,7 +113,7 @@ export function AttachmentsPanel({
                   rel="noreferrer"
                   download={att.fileName}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label={`Download ${att.fileName}`}
+                  aria-label={t('attachments.download', { name: att.fileName })}
                 >
                   <Download className="h-4 w-4" />
                 </a>
@@ -119,7 +126,7 @@ export function AttachmentsPanel({
       {!loading && readOnly && attachments.length === 0 && (
         <p className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm text-muted-foreground/70">
           <Lock className="h-3.5 w-3.5" />
-          This ticket is closed.
+          {t('attachments.closed')}
         </p>
       )}
 
@@ -131,13 +138,13 @@ export function AttachmentsPanel({
                 active={visibility === 'PUBLIC'}
                 onClick={() => { setVisibility('PUBLIC'); setViewerIds([]); }}
                 icon={<Globe className="h-3.5 w-3.5" />}
-                label="Public"
+                label={t('attachments.public')}
               />
               <VisibilityToggle
                 active={visibility === 'PRIVATE'}
                 onClick={() => setVisibility('PRIVATE')}
                 icon={<Lock className="h-3.5 w-3.5" />}
-                label="Private"
+                label={t('attachments.private')}
               />
             </div>
             {visibility === 'PRIVATE' && (
@@ -155,7 +162,7 @@ export function AttachmentsPanel({
             )}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? 'Attaching…' : 'Add attachment'}
+            {uploading ? t('attachments.attaching') : t('attachments.add')}
           </button>
 
           <MediaPicker
@@ -171,7 +178,7 @@ export function AttachmentsPanel({
       {!loading && !readOnly && atLimit && (
         <p className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm text-muted-foreground/70">
           <ImageIcon className="h-4 w-4" />
-          Maximum of {MAX_ATTACHMENTS} attachments reached
+          {t('attachments.atLimit', { max: MAX_ATTACHMENTS })}
         </p>
       )}
     </section>

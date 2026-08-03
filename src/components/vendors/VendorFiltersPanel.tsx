@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RotateCcw, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { FilterField, FilterSection, FilterToggle } from '@/components/common/SearchFilterBar';
@@ -10,23 +11,24 @@ export interface VendorFiltersPanelProps {
 
 /** Body of the vendor-browse filter sheet — see `SearchFilterBar`. */
 export function VendorFiltersPanel({ filters, onChange }: VendorFiltersPanelProps) {
+  const { t } = useTranslation('vendors');
   return (
     <>
-      <FilterSection label="Location" description="Matches the vendor's registered pickup area.">
+      <FilterSection label={t('filters.location')} description={t('filters.locationDescription')}>
         <div className="grid grid-cols-2 gap-3">
-          <FilterField label="City" htmlFor="filter-city">
+          <FilterField label={t('filters.city')} htmlFor="filter-city">
             <Input
               id="filter-city"
-              placeholder="e.g. Douala"
+              placeholder={t('filters.cityPlaceholder')}
               value={filters.city}
               onChange={(e) => onChange('city', e.target.value)}
               className="h-10"
             />
           </FilterField>
-          <FilterField label="State" htmlFor="filter-state">
+          <FilterField label={t('filters.state')} htmlFor="filter-state">
             <Input
               id="filter-state"
-              placeholder="e.g. Littoral"
+              placeholder={t('filters.statePlaceholder')}
               value={filters.state}
               onChange={(e) => onChange('state', e.target.value)}
               className="h-10"
@@ -35,19 +37,19 @@ export function VendorFiltersPanel({ filters, onChange }: VendorFiltersPanelProp
         </div>
       </FilterSection>
 
-      <FilterSection label="Order policy">
+      <FilterSection label={t('filters.orderPolicy')}>
         <div className="space-y-2">
           <FilterToggle
             icon={RotateCcw}
-            label="Returns accepted"
-            description="The vendor takes goods back after delivery."
+            label={t('filters.returnsAccepted')}
+            description={t('filters.returnsAcceptedDescription')}
             checked={filters.returnEligible}
             onCheckedChange={(v) => onChange('returnEligible', v)}
           />
           <FilterToggle
             icon={XCircle}
-            label="Cancellable"
-            description="Orders can still be called off before pickup."
+            label={t('filters.cancellable')}
+            description={t('filters.cancellableDescription')}
             checked={filters.cancellable}
             onCheckedChange={(v) => onChange('cancellable', v)}
           />

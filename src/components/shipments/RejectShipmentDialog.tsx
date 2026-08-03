@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -39,6 +40,7 @@ export function RejectShipmentDialog({
   onOpenChange,
   onRejected,
 }: RejectShipmentDialogProps) {
+  const { t } = useTranslation(['shipments', 'common']);
   const { reject, pendingKey } = useShipmentActions();
   const [reason, setReason] = useState<ShipmentRejectionReason | ''>('');
   const [note, setNote] = useState('');
@@ -73,26 +75,25 @@ export function RejectShipmentDialog({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Reject shipment{orderNumber ? ` · ${orderNumber}` : ''}</DialogTitle>
-          <DialogDescription>
-            Decline this assignment before pickup. The vendor is notified with your reason so they can
-            reroute it to another agency.
-          </DialogDescription>
+          <DialogTitle>
+            {orderNumber ? t('reject.titleWithOrder', { orderNumber }) : t('reject.title')}
+          </DialogTitle>
+          <DialogDescription>{t('reject.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           <div className="space-y-2">
             <Label>
-              Reason <span className="text-destructive">*</span>
+              {t('reject.reason')} <span className="text-destructive">*</span>
             </Label>
             <Select value={reason} onValueChange={(v) => setReason(v as ShipmentRejectionReason)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a reason…" />
+                <SelectValue placeholder={t('reject.reasonPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                {REJECTION_REASONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
+                {REJECTION_REASONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`reject.reasons.${value}` as 'reject.reasons.other')}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -102,11 +103,13 @@ export function RejectShipmentDialog({
           {reason && (
             <div className="space-y-2">
               <Label htmlFor="reject-note">
-                Message{' '}
+                {t('reject.message')}{' '}
                 {noteRequired ? (
                   <span className="text-destructive">*</span>
                 ) : (
-                  <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                  <span className="text-muted-foreground text-xs font-normal">
+                    {t('reject.messageOptional')}
+                  </span>
                 )}
               </Label>
               <Textarea
@@ -117,12 +120,12 @@ export function RejectShipmentDialog({
                 rows={3}
                 placeholder={
                   noteRequired
-                    ? 'Explain why you’re rejecting this shipment…'
-                    : 'Add any details for the vendor…'
+                    ? t('reject.messagePlaceholderRequired')
+                    : t('reject.messagePlaceholderOptional')
                 }
               />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{noteRequired ? 'Required when the reason is “Other”.' : ''}</span>
+                <span>{noteRequired ? t('reject.messageRequiredHint') : ''}</span>
                 <span className={cn(note.length >= REJECTION_NOTE_MAX && 'text-destructive')}>
                   {note.length}/{REJECTION_NOTE_MAX}
                 </span>
@@ -133,10 +136,10 @@ export function RejectShipmentDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
+            {t('common:actions.cancel')}
           </Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={!canSubmit}>
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reject shipment'}
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('reject.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

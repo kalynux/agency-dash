@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { codCashService } from '@/services/cod-cash.service';
 import type { CodDiscrepancyType } from '@/types/cod-cash.types';
@@ -9,46 +10,47 @@ import type { CodDiscrepancyType } from '@/types/cod-cash.types';
  * per-action loading key. Each call resolves to its typed result or `null`.
  */
 export function useCodCashActions() {
+  const { t } = useTranslation('cash');
   const { pendingKey, run, isPending } = useActionRunner();
 
   const recordDeposit = useCallback(
     (agentId: string, amount: number, note?: string) =>
       run('record-deposit', async () => (await codCashService.recordDeposit(agentId, amount, note)).data, {
-        success: "Deposit recorded — the agent's outstanding cash was reduced.",
+        success: t('deposits.recorded'),
       }),
-    [run],
+    [run, t],
   );
 
   const confirmDeposit = useCallback(
     (id: string) =>
       run(`confirm:${id}`, async () => (await codCashService.confirmDeposit(id)).data, {
-        success: 'Deposit confirmed — the money has moved.',
+        success: t('deposits.confirmed'),
       }),
-    [run],
+    [run, t],
   );
 
   const rejectDeposit = useCallback(
     (id: string, reason: string) =>
       run(`reject:${id}`, async () => (await codCashService.rejectDeposit(id, reason)).data, {
-        success: 'Declaration rejected — no money moved.',
+        success: t('deposits.rejected'),
       }),
-    [run],
+    [run, t],
   );
 
   const declareRemittance = useCallback(
     (amount: number, reference: string, note?: string) =>
       run('declare-remittance', async () => (await codCashService.declareRemittance(amount, reference, note)).data, {
-        success: 'Remittance declared — awaiting platform confirmation.',
+        success: t('remittances.declared'),
       }),
-    [run],
+    [run, t],
   );
 
   const raiseDiscrepancy = useCallback(
     (agentId: string, type: CodDiscrepancyType, amount?: number, note?: string) =>
       run('raise-discrepancy', async () => (await codCashService.raiseDiscrepancy(agentId, type, amount, note)).data, {
-        success: 'Discrepancy raised — an admin will review it.',
+        success: t('discrepancies.raised'),
       }),
-    [run],
+    [run, t],
   );
 
   return { pendingKey, isPending, recordDeposit, confirmDeposit, rejectDeposit, declareRemittance, raiseDiscrepancy };

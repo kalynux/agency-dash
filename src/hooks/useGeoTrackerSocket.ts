@@ -1,41 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { GEO_TRACKER_WS_URL, resolveGeoTrackerToken } from '@/services/geo-tracker.service';
 import type { AgentLiveFix, GeoPosition, LocationBroadcast, TrackingSocketStatus } from '@/types/tracking.types';
 
 /**
  * Auth for the geo-tracker WS mirrors the HTTP side's `credentials: 'include'`:
  * the browser automatically forwards the httpOnly `access_token` cookie on the
- * WebSocket handshake whenever the target is same-site (e.g. localhost:8080 from
+ * WebSocket handshake whenever the target is same-site (e.g. localhost:8090 from
  * localhost:5174 — cookies ignore port, and the cookie is SameSite=Lax). So by
  * default we connect WITHOUT a token and let the cookie authenticate us.
  *
  * The `bearer` subprotocol token is only an OVERRIDE for cases where the cookie
- * won't be sent — a genuinely cross-site geo-tracker in production. It is read
- * from `VITE_GEO_TRACKER_TOKEN` or an injected `window.joviGetAccessToken()`.
+ * won't be sent — a genuinely cross-site geo-tracker in production.
  */
-declare global {
-  interface Window {
-    joviGetAccessToken?: () => string | null | Promise<string | null>;
-  }
-}
-
-const WS_URL = (import.meta.env.VITE_GEO_TRACKER_WS_URL as string | undefined) ?? 'ws://localhost:8090/ws/track';
-const ENV_TOKEN = import.meta.env.VITE_GEO_TRACKER_TOKEN as string | undefined;
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 /** Max recent positions kept per agent for the map trail (older ones are dropped). */
 const MAX_TRAIL = 60;
-
-async function resolveToken(): Promise<string | null> {
-  if (typeof window !== 'undefined' && typeof window.joviGetAccessToken === 'function') {
-    try {
-      return (await window.joviGetAccessToken()) ?? null;
-    } catch {
-      return null;
-    }
-  }
-  return ENV_TOKEN ?? null;
-}
 
 interface Frame {
   type: string;
@@ -50,29 +31,53 @@ export interface GeoTrackerSocket {
   trails: Record<string, GeoPosition[]>;
   /** Agents whose subscription the server revoked (shipment finished, etc.). */
   revoked: Set<string>;
+  /**
+   * Timestamp of the last `permission_revoked` frame, or `null`. A revocation
+   * means the *board* changed (a shipment finished, or a reassignment released
+   * the agent), so it is the one signal worth refetching it on.
+   */
+  revokedAt: number | null;
   reconnect: () => void;
+}
+
+/** Stable key for a destination, so a re-subscribe fires only on a real change. */
+function destKey(dest?: GeoPosition | null): string {
+  return dest ? `${dest.latitude},${dest.longitude}` : '';
 }
 
 /**
  * Connects to geo-tracker as a viewer and subscribes to `agentIds`, exposing the
  * latest live fix per agent. Handles ack/error/permission_revoked, resubscribes
  * when `agentIds` changes, and reconnects with capped backoff.
+ *
+ * `destinations` opts an agent's broadcasts into live ETA/distance: supply the
+ * selected shipment's drop-off and every `location_broadcast` for that agent is
+ * enriched with `etaSeconds`/`distanceMeters`. The destination is per
+ * (connection, agent) and is not persisted server-side, so it is re-sent on
+ * every reconnect — which this hook does automatically.
  */
-export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
+export function useGeoTrackerSocket(
+  agentIds: string[],
+  destinations: Record<string, GeoPosition> = {},
+): GeoTrackerSocket {
   const [status, setStatus] = useState<TrackingSocketStatus>('idle');
   const [fixes, setFixes] = useState<Record<string, AgentLiveFix>>({});
   const [trails, setTrails] = useState<Record<string, GeoPosition[]>>({});
   const [revoked, setRevoked] = useState<Set<string>>(new Set());
+  const [revokedAt, setRevokedAt] = useState<number | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
-  const subscribedRef = useRef<Set<string>>(new Set());
+  /** agentId → the destination key currently subscribed with. */
+  const subscribedRef = useRef<Map<string, string>>(new Map());
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
   const manualCloseRef = useRef(false);
-  // Latest desired agent set, read by onopen without re-triggering connect.
+  // Latest desired agent set / destinations, read by onopen without re-triggering connect.
   const desiredRef = useRef<string[]>(agentIds);
   desiredRef.current = agentIds;
+  const destinationsRef = useRef<Record<string, GeoPosition>>(destinations);
+  destinationsRef.current = destinations;
 
   const send = (frame: Frame) => {
     const s = socketRef.current;
@@ -83,15 +88,23 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
     const s = socketRef.current;
     if (!s || s.readyState !== WebSocket.OPEN) return;
     const desired = new Set(desiredRef.current);
-    // subscribe new
+    const dests = destinationsRef.current;
+
     for (const id of desired) {
-      if (!subscribedRef.current.has(id)) {
-        send({ type: 'subscribe', payload: { agentId: id } });
-        subscribedRef.current.add(id);
-      }
+      const wanted = destKey(dests[id]);
+      const current = subscribedRef.current.get(id);
+      if (current === wanted) continue;
+      // A `subscribe` carrying no destination does NOT clear one already stored
+      // for this (connection, agent), so any change goes through unsubscribe.
+      if (current !== undefined) send({ type: 'unsubscribe', payload: { agentId: id } });
+      send({
+        type: 'subscribe',
+        payload: { agentId: id, ...(dests[id] ? { destination: dests[id] } : {}) },
+      });
+      subscribedRef.current.set(id, wanted);
     }
-    // unsubscribe removed
-    for (const id of [...subscribedRef.current]) {
+
+    for (const id of [...subscribedRef.current.keys()]) {
       if (!desired.has(id)) {
         send({ type: 'unsubscribe', payload: { agentId: id } });
         subscribedRef.current.delete(id);
@@ -117,14 +130,14 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
     // Prefer an explicit token (works cross-origin); otherwise connect on the
     // cookie the browser forwards automatically (same-site), like fetch's
     // credentials: 'include'.
-    const token = await resolveToken();
+    const token = await resolveGeoTrackerToken();
     if (!mountedRef.current) return;
 
     setStatus('connecting');
     manualCloseRef.current = false;
     let ws: WebSocket;
     try {
-      ws = token ? new WebSocket(WS_URL, ['bearer', token]) : new WebSocket(WS_URL);
+      ws = token ? new WebSocket(GEO_TRACKER_WS_URL, ['bearer', token]) : new WebSocket(GEO_TRACKER_WS_URL);
     } catch {
       setStatus('error');
       scheduleReconnect(() => void connect());
@@ -136,7 +149,8 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
       if (!mountedRef.current) return;
       attemptRef.current = 0;
       setStatus('open');
-      subscribedRef.current = new Set();
+      // A fresh connection holds no subscriptions and no destinations.
+      subscribedRef.current = new Map();
       syncSubscriptions();
     };
 
@@ -178,6 +192,7 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
           return next;
         });
         setRevoked((prev) => new Set(prev).add(p.agentId));
+        setRevokedAt(Date.now());
       }
       // ack / error frames are non-fatal; nothing to do.
     };
@@ -188,7 +203,7 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
 
     ws.onclose = () => {
       socketRef.current = null;
-      subscribedRef.current = new Set();
+      subscribedRef.current = new Map();
       if (!mountedRef.current || manualCloseRef.current) {
         setStatus('closed');
         return;
@@ -222,7 +237,11 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resubscribe when the desired agent set changes (while open).
+  // Resubscribe when the desired agent set — or a selected shipment's
+  // destination — changes (while open).
+  const subscriptionKey = agentIds
+    .map((id) => `${id}:${destKey(destinations[id])}`)
+    .join(',');
   useEffect(() => {
     syncSubscriptions();
     // If we had no agents before and now do, (re)connect.
@@ -230,7 +249,7 @@ export function useGeoTrackerSocket(agentIds: string[]): GeoTrackerSocket {
       void connect();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentIds.join(',')]);
+  }, [subscriptionKey]);
 
-  return { status, fixes, trails, revoked, reconnect };
+  return { status, fixes, trails, revoked, revokedAt, reconnect };
 }

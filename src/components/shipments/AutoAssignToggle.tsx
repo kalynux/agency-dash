@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,7 @@ const STORAGE_KEY = 'agency:autoAssignEnabled';
  * truth is always the last successful PATCH.
  */
 export function AutoAssignToggle() {
+  const { t } = useTranslation('shipments');
   const [enabled, setEnabled] = useState<boolean>(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) === 'true';
@@ -28,7 +30,7 @@ export function AutoAssignToggle() {
     const result = await run(
       'assignment-settings',
       () => shipmentsService.updateAssignmentSettings(next),
-      { success: next ? 'Auto-assignment enabled.' : 'Auto-assignment disabled.' },
+      { success: next ? t('autoAssign.enabled') : t('autoAssign.disabled') },
     );
     if (result) {
       setEnabled(result.data.autoAssignEnabled);
@@ -46,15 +48,10 @@ export function AutoAssignToggle() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Label htmlFor="auto-assign" className="text-sm cursor-help">
-            Auto-assign
+            {t('autoAssign.label')}
           </Label>
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          When on, each newly-dispatched shipment starts an auto-assignment broadcast: the nearest
-          eligible agent is offered it, then the next-nearest every couple of minutes while earlier
-          offers still stand. First to accept wins. If nobody takes it after two rounds, you're told
-          and can assign manually.
-        </TooltipContent>
+        <TooltipContent className="max-w-xs">{t('autoAssign.tooltip')}</TooltipContent>
       </Tooltip>
       <Switch id="auto-assign" checked={enabled} disabled={isBusy} onCheckedChange={handleChange} />
     </div>

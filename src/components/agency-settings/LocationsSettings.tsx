@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Building, Info, Lock, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -6,6 +7,7 @@ import { useResource } from '@/hooks/useResource';
 import { magazinService } from '@/services/magazin.service';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
+import type { AnyTFunction } from '@/i18n/tx';
 import { regionsFor } from '@/lib/regions';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
@@ -171,14 +173,15 @@ function sameCoverage(a: string[], b: string[]): boolean {
 
 type FieldErrors = Record<string, string>;
 
-function validate(form: FormState): FieldErrors {
+function validate(form: FormState, t: AnyTFunction): FieldErrors {
   const errors: FieldErrors = {};
+  const v = (key: string) => t(`settings:locations.validation.${key}` as never) as unknown as string;
 
   if (form.coverageAreas.length === 0) {
-    errors.coverage = 'Select at least one coverage region.';
+    errors.coverage = v('coverageRequired');
   }
   if (form.addresses.length === 0) {
-    errors.addresses = 'At least one headquarters address is required.';
+    errors.addresses = v('addressRequired');
   }
 
   // Every row is validated, touched or not — the array is a full replace, so an
@@ -186,25 +189,25 @@ function validate(form: FormState): FieldErrors {
   // the `geo` requirement is relaxed for rows that haven't moved.
   form.addresses.forEach((entry, index) => {
     const label = entry.label.trim();
-    if (!label) errors[`${index}.label`] = 'Label is required.';
-    else if (label.length > 50) errors[`${index}.label`] = 'Max 50 characters.';
+    if (!label) errors[`${index}.label`] = v('labelRequired');
+    else if (label.length > 50) errors[`${index}.label`] = v('labelMax');
     if (!entry.geo && requiresGeo(entry)) {
-      errors[`${index}.geo`] = 'Search for and select this location’s address.';
+      errors[`${index}.geo`] = v('geoRequired');
     }
     // `region` / `city` are derived from `geo` and may legitimately end up null —
     // nothing to validate.
     const desc = entry.address_description.trim();
-    if (!desc) errors[`${index}.address_description`] = 'Street address is required.';
-    else if (desc.length > 200) errors[`${index}.address_description`] = 'Max 200 characters.';
+    if (!desc) errors[`${index}.address_description`] = v('streetRequired');
+    else if (desc.length > 200) errors[`${index}.address_description`] = v('streetMax');
     const phone = entry.phone.trim();
     if (phone.length < 6 || phone.length > 20) {
-      errors[`${index}.phone`] = 'Phone must be between 6 and 20 characters.';
+      errors[`${index}.phone`] = v('phoneLength');
     } else if (!/^\+?[0-9\s\-()]+$/.test(phone)) {
-      errors[`${index}.phone`] = 'Use digits, +, spaces, hyphens or parentheses.';
+      errors[`${index}.phone`] = v('phoneFormat');
     }
     const email = entry.email.trim();
     if (email && !/^\S+@\S+\.\S+$/.test(email)) {
-      errors[`${index}.email`] = 'Enter a valid email address.';
+      errors[`${index}.email`] = v('email');
     }
   });
 
@@ -212,6 +215,7 @@ function validate(form: FormState): FieldErrors {
 }
 
 export function LocationsSettings() {
+  const { t, i18n } = useTranslation(['settings', 'common']);
   const {
     data: magazin,
     isLoading,
@@ -235,7 +239,8 @@ export function LocationsSettings() {
   // referenced by assignments, so it's worth a deliberate click.
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
 
-  const regions = useMemo(() => regionsFor(country), [country]);
+  // Region labels come out of locations.json in the active language.
+  const regions = useMemo(() => regionsFor(country, i18n.language), [country, i18n.language]);
   const geoBias = (country ?? '').toLowerCase() || undefined;
 
   // (Re)seed the form whenever the underlying magazin changes (load / save).
@@ -316,10 +321,10 @@ export function LocationsSettings() {
   const handleSave = useCallback(async () => {
     if (!magazin || !form) return;
 
-    const errors = validate(form);
+    const errors = validate(form, t);
     if (Object.values(errors).some(Boolean)) {
       setFieldErrors(errors);
-      setSaveError('Please fix the highlighted fields before saving.');
+      setSaveError(t('common.fixHighlighted'));
       return;
     }
 
@@ -335,11 +340,11 @@ export function LocationsSettings() {
     try {
       const updated = await magazinService.updateMagazin(payload);
       setData(updated);
-      toast.success('Coverage & locations saved');
+      toast.success(t('locations.saved'));
     } catch (err) {
       if (err instanceof ApiError && err.isConflict) {
         // Optimistic-locking clash — refresh so the agency edits the latest.
-        toast.error('Your locations were updated elsewhere. Refreshed — please re-apply your changes.');
+        toast.error(t('locations.conflict'));
         await refetch();
       } else {
         setSaveError(getApiErrorMessage(err));
@@ -347,9 +352,9 @@ export function LocationsSettings() {
     } finally {
       setSaving(false);
     }
-  }, [magazin, form, setData, refetch]);
+  }, [magazin, form, setData, refetch, t]);
 
-  if (isLoading && !magazin) return <LoadingState label="Loading coverage & locations…" />;
+  if (isLoading && !magazin) return <LoadingState label={t('locations.loading')} />;
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
   if (!magazin || !form) return null;
 
@@ -368,22 +373,20 @@ export function LocationsSettings() {
       {/* ─── Coverage regions ──────────────────────────────────────────────── */}
       <Card className={sectionSurfaceClass}>
         <SectionHeading
-          title="Coverage & Locations"
-          description="The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency."
-          short="Where you operate"
+          title={t('locations.title')}
+          description={t('locations.description')}
+          short={t('locations.short')}
         />
         <CardContent className="space-y-6 max-md:px-0">
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <Label>Coverage Regions</Label>
+              <Label>{t('locations.coverageLabel')}</Label>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Lock className="w-3 h-3" /> {country ?? '—'}
+                <Lock className="w-3 h-3" /> {country ?? t('common:values.notAvailable')}
               </span>
             </div>
             {regions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No region data is available for your operating country yet.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('locations.noRegions')}</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                 {regions.map(({ key, label }) => {
@@ -406,9 +409,7 @@ export function LocationsSettings() {
             {fieldErrors.coverage && (
               <p className="mt-2 text-xs text-destructive">{fieldErrors.coverage}</p>
             )}
-            <p className="mt-2 text-xs text-muted-foreground">
-              Only regions of your operating country can be selected.
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{t('locations.coverageHint')}</p>
           </div>
 
           <Separator />
@@ -417,20 +418,17 @@ export function LocationsSettings() {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <Label className="flex items-center gap-1.5">
-                Headquarters & Pickup Locations
-                <InfoHint className="md:hidden" label="About headquarters and pickup locations">
-                  Search for each location and pick it from the results — we read the street, city
-                  and region straight off the map result. The first address is your primary
-                  headquarters.
+                {t('locations.addressesLabel')}
+                <InfoHint className="md:hidden" label={t('locations.addressesAboutLabel')}>
+                  {t('locations.addressesHint')}
                 </InfoHint>
               </Label>
               <Button type="button" variant="outline" size="sm" onClick={addAddress} className="gap-1">
-                <Plus className="w-3.5 h-3.5" /> Add address
+                <Plus className="w-3.5 h-3.5" /> {t('locations.addAddress')}
               </Button>
             </div>
             <p className="mb-3 text-xs text-muted-foreground max-md:hidden">
-              Search for each location and pick it from the results — we read the street, city and
-              region straight off the map result. The first address is your primary headquarters.
+              {t('locations.addressesHint')}
             </p>
             {fieldErrors.addresses && (
               <p className="mb-2 text-xs text-destructive">{fieldErrors.addresses}</p>
@@ -444,12 +442,14 @@ export function LocationsSettings() {
                       <Building className="w-3.5 h-3.5" />
                       {/* Entries saved before labels existed read back null. */}
                       {entry.label.trim() ||
-                        (index === 0 ? 'Primary Headquarters' : `Branch Address ${index + 1}`)}
+                        (index === 0
+                          ? t('locations.primaryHeadquarters')
+                          : t('locations.branchAddress', { number: index + 1 }))}
                     </span>
                     {form.addresses.length > 1 && (
                       <button
                         type="button"
-                        aria-label="Remove address"
+                        aria-label={t('locations.removeAddress')}
                         onClick={() =>
                           entry.original ? setConfirmRemove(index) : removeAddress(index)
                         }
@@ -463,43 +463,39 @@ export function LocationsSettings() {
                   {/* Address search — fills everything below and pins the coordinates */}
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">
-                      Find address
-                      <InfoHint className="md:hidden" label="About the address search">
-                        The pin is what lets vendors and drivers route to you. Pick a result from
-                        the list — we read the street, city and region straight off it.
+                      {t('locations.findAddress')}
+                      <InfoHint className="md:hidden" label={t('locations.findAddressAboutLabel')}>
+                        {t('locations.findAddressHint')}
                       </InfoHint>
                     </Label>
                     <AddressSearchInput
                       value={entry.geo}
                       country={geoBias}
                       hasError={!!fieldErrors[`${index}.geo`]}
-                      placeholder="Search a street, area, or city…"
+                      placeholder={t('locations.searchPlaceholder')}
                       onSelect={(address) => handleGeoSelect(index, address)}
                       onClear={() => patchEntry(index, { geo: null })}
                     />
                     {fieldErrors[`${index}.geo`] ? (
                       <p className="text-xs text-destructive">{fieldErrors[`${index}.geo`]}</p>
                     ) : entry.geo ? null : entry.original ? (
-                      <p className="text-xs text-amber-600">
-                        This address predates map search, so it has no pin. Search for it to place it
-                        on the map — you can still edit everything else without re-selecting.
-                      </p>
+                      <p className="text-xs text-amber-600">{t('locations.legacyNoPin')}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground max-md:hidden">
-                        Required — the pin is what lets vendors and drivers route to you.
+                        {t('locations.pinRequired')}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor={`hq-label-${entry.uid}`}>
-                      Label <span className="text-destructive">*</span>
+                      {t('locations.label')} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={`hq-label-${entry.uid}`}
                       value={entry.label}
                       maxLength={50}
-                      placeholder="e.g. Main Warehouse, Douala Hub"
+                      placeholder={t('locations.labelPlaceholder')}
                       className={cn(fieldErrors[`${index}.label`] && 'border-destructive')}
                       onChange={(e) => patchEntry(index, { label: e.target.value })}
                     />
@@ -510,10 +506,7 @@ export function LocationsSettings() {
                       // blocks the save — say so before they hit the button.
                       entry.original &&
                       !entry.original.label && (
-                        <p className="text-xs text-amber-600">
-                          This location was saved before labels existed — name it to save any change
-                          on this page.
-                        </p>
+                        <p className="text-xs text-amber-600">{t('locations.legacyNoLabel')}</p>
                       )
                     )}
                   </div>
@@ -521,17 +514,17 @@ export function LocationsSettings() {
                   <div className="space-y-1.5">
                     <Label htmlFor={`hq-street-${entry.uid}`} className="flex items-center gap-1.5">
                       <span>
-                        Street Address / Landmark <span className="text-destructive">*</span>
+                        {t('locations.street')} <span className="text-destructive">*</span>
                       </span>
-                      <InfoHint className="md:hidden" label="About the street address">
-                        Filled in from the map result — refine it with a floor, unit or landmark.
+                      <InfoHint className="md:hidden" label={t('locations.streetAboutLabel')}>
+                        {t('locations.streetHint')}
                       </InfoHint>
                     </Label>
                     <Input
                       id={`hq-street-${entry.uid}`}
                       value={entry.address_description}
                       maxLength={200}
-                      placeholder="e.g. Akwa, Rue Sylvani, 3rd floor"
+                      placeholder={t('locations.streetPlaceholder')}
                       className={cn(
                         fieldErrors[`${index}.address_description`] && 'border-destructive',
                       )}
@@ -543,7 +536,7 @@ export function LocationsSettings() {
                       </p>
                     ) : (
                       <p className="text-xs text-muted-foreground max-md:hidden">
-                        Filled in from the map result — refine it with a floor, unit or landmark.
+                        {t('locations.streetHint')}
                       </p>
                     )}
                   </div>
@@ -554,7 +547,7 @@ export function LocationsSettings() {
                   {entry.geo && (entry.city || entry.region) && (
                     <p className="text-xs text-muted-foreground">
                       {[entry.city, entry.region].filter(Boolean).join(', ')}
-                      <span className="ml-1 opacity-70">· from the map result</span>
+                      <span className="ml-1 opacity-70">{t('locations.fromMapResult')}</span>
                     </p>
                   )}
 
@@ -562,31 +555,31 @@ export function LocationsSettings() {
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       {!entry.city && (
                         <div className="space-y-1.5">
-                          <Label htmlFor={`hq-city-${entry.uid}`}>City (optional)</Label>
+                          <Label htmlFor={`hq-city-${entry.uid}`}>{t('locations.cityOptional')}</Label>
                           <Input
                             id={`hq-city-${entry.uid}`}
                             value={entry.city}
                             maxLength={100}
-                            placeholder="Douala"
+                            placeholder={t('locations.cityPlaceholder')}
                             onChange={(e) => patchEntry(index, { city: e.target.value })}
                           />
-                          <p className="text-xs text-muted-foreground">
-                            The map result named no city — add one if it helps.
-                          </p>
+                          <p className="text-xs text-muted-foreground">{t('locations.cityNotNamed')}</p>
                         </div>
                       )}
                       {!entry.region && (
                         <div className="space-y-1.5">
-                          <Label htmlFor={`hq-region-${entry.uid}`}>Region (optional)</Label>
+                          <Label htmlFor={`hq-region-${entry.uid}`}>
+                            {t('locations.regionOptional')}
+                          </Label>
                           <Input
                             id={`hq-region-${entry.uid}`}
                             value={entry.region}
                             maxLength={100}
-                            placeholder="Littoral"
+                            placeholder={t('locations.regionPlaceholder')}
                             onChange={(e) => patchEntry(index, { region: e.target.value })}
                           />
                           <p className="text-xs text-muted-foreground">
-                            The map result named no region — add one if it helps.
+                            {t('locations.regionNotNamed')}
                           </p>
                         </div>
                       )}
@@ -596,13 +589,13 @@ export function LocationsSettings() {
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor={`hq-phone-${entry.uid}`}>
-                        Support Phone <span className="text-destructive">*</span>
+                        {t('locations.supportPhone')} <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id={`hq-phone-${entry.uid}`}
                         value={entry.phone}
                         maxLength={20}
-                        placeholder="+237 6XX XXX XXX"
+                        placeholder={t('locations.supportPhonePlaceholder')}
                         className={cn(fieldErrors[`${index}.phone`] && 'border-destructive')}
                         onChange={(e) => patchEntry(index, { phone: e.target.value })}
                       />
@@ -611,12 +604,12 @@ export function LocationsSettings() {
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor={`hq-email-${entry.uid}`}>Support Email (optional)</Label>
+                      <Label htmlFor={`hq-email-${entry.uid}`}>{t('locations.supportEmail')}</Label>
                       <Input
                         id={`hq-email-${entry.uid}`}
                         value={entry.email}
                         type="email"
-                        placeholder="support@youragency.com"
+                        placeholder={t('locations.supportEmailPlaceholder')}
                         className={cn(fieldErrors[`${index}.email`] && 'border-destructive')}
                         onChange={(e) => patchEntry(index, { email: e.target.value })}
                       />
@@ -635,10 +628,7 @@ export function LocationsSettings() {
       <Card className={noteSurfaceClass}>
         <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground max-md:px-3 max-md:text-xs">
           <Info className="mt-0.5 w-4 h-4 shrink-0" />
-          <p>
-            Your operating country was set during onboarding and can't be changed. Coverage regions
-            and addresses must both fall inside it.
-          </p>
+          <p>{t('locations.countryNote')}</p>
         </CardContent>
       </Card>
 
@@ -648,14 +638,11 @@ export function LocationsSettings() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this location?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vendors and drivers routing to this address will lose it once you save. Deliveries
-              already assigned to it aren't affected.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('locations.removeTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('locations.removeDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+            <AlertDialogCancel type="button">{t('common:actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               type="button"
               onClick={() => {
@@ -663,7 +650,7 @@ export function LocationsSettings() {
                 setConfirmRemove(null);
               }}
             >
-              Remove
+              {t('common:actions.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

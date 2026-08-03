@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, LocateFixed, MapPin, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -49,11 +50,12 @@ export function AddressSearchInput({
   onSelect,
   onClear,
   country,
-  placeholder = 'Search a street, area, or city…',
+  placeholder,
   hasError,
   disabled,
   id,
 }: AddressSearchInputProps) {
+  const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoCandidate[]>([]);
   const [open, setOpen] = useState(false);
@@ -121,7 +123,7 @@ export function AddressSearchInput({
 
   const useMyLocation = useCallback(() => {
     if (!('geolocation' in navigator)) {
-      toast.error('Location is not available in this browser.');
+      toast.error(t('addressSearch.unsupported'));
       return;
     }
     setLocating(true);
@@ -131,9 +133,9 @@ export function AddressSearchInput({
           const candidate = await geoService.reverse(pos.coords.latitude, pos.coords.longitude);
           if (candidate) {
             onSelect({ ...candidate, raw_input: candidate.formatted_address });
-            toast.success('Address filled from your location');
+            toast.success(t('addressSearch.filledFromLocation'));
           } else {
-            toast.error('Could not resolve your location to an address.');
+            toast.error(t('addressSearch.couldNotResolve'));
           }
         } catch (err) {
           toast.error(getApiErrorMessage(err));
@@ -142,12 +144,12 @@ export function AddressSearchInput({
         }
       },
       () => {
-        toast.error('Location permission denied.');
+        toast.error(t('addressSearch.permissionDenied'));
         setLocating(false);
       },
       { timeout: 10000 },
     );
-  }, [onSelect]);
+  }, [onSelect, t]);
 
   return (
     <div ref={containerRef} className="relative space-y-2">
@@ -159,7 +161,7 @@ export function AddressSearchInput({
           ) : query ? (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={t('addressSearch.clearSearch')}
               onClick={() => {
                 setQuery('');
                 setResults([]);
@@ -177,7 +179,7 @@ export function AddressSearchInput({
             autoComplete="off"
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setOpen(true)}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('addressSearch.placeholder')}
             className={cn('h-10 pl-10 pr-9', hasError && 'border-destructive')}
             aria-invalid={hasError}
           />
@@ -188,11 +190,11 @@ export function AddressSearchInput({
           size="sm"
           onClick={useMyLocation}
           disabled={disabled || locating}
-          title="Use my current location"
+          title={t('addressSearch.myLocationTitle')}
           className="h-10 shrink-0 gap-1.5"
         >
           {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-          <span className="hidden sm:inline">My location</span>
+          <span className="hidden sm:inline">{t('addressSearch.myLocation')}</span>
         </Button>
       </div>
 
@@ -225,7 +227,7 @@ export function AddressSearchInput({
       )}
 
       {open && !isSearching && !hint && query.trim().length >= MIN_QUERY_LENGTH && results.length === 0 && (
-        <p className="text-xs text-muted-foreground">No matches — try a nearby street or landmark.</p>
+        <p className="text-xs text-muted-foreground">{t('addressSearch.noMatches')}</p>
       )}
 
       {value && (
@@ -234,14 +236,16 @@ export function AddressSearchInput({
           <div className="min-w-0 flex-1">
             <p className="text-sm">{value.formatted_address}</p>
             <p className="text-[11px] text-muted-foreground">
-              Pinned at {value.coordinates.coordinates[1].toFixed(4)},{' '}
-              {value.coordinates.coordinates[0].toFixed(4)}
+              {t('addressSearch.pinnedAt', {
+                lat: value.coordinates.coordinates[1].toFixed(4),
+                lng: value.coordinates.coordinates[0].toFixed(4),
+              })}
             </p>
           </div>
           {onClear && (
             <button
               type="button"
-              aria-label="Clear address"
+              aria-label={t('addressSearch.clearAddress')}
               disabled={disabled}
               onClick={onClear}
               className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"

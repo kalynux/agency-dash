@@ -10,12 +10,20 @@
  * never leak raw junk into the UI.
  */
 
+import { intlLocaleFor } from '@/i18n/config';
+
 const DASH = '—';
 
+/**
+ * The `Intl` locale to format in. Derived from the active UI language rather
+ * than the browser's, so switching the dashboard to French also moves dates and
+ * currency to French conventions. `<html lang>` is kept in step by
+ * `applyDocumentDirection`, which every language change goes through.
+ */
 function activeLocale(explicit?: string): string | undefined {
-  if (explicit) return explicit;
+  if (explicit) return intlLocaleFor(explicit);
   if (typeof document !== 'undefined' && document.documentElement.lang) {
-    return document.documentElement.lang;
+    return intlLocaleFor(document.documentElement.lang);
   }
   return undefined; // Intl falls back to the runtime default
 }
@@ -80,6 +88,33 @@ export function formatDateTime(
   const d = toDate(value);
   if (!d) return DASH;
   return new Intl.DateTimeFormat(activeLocale(locale), options).format(d);
+}
+
+/**
+ * "just now" / "5 min ago" / "3 days ago", in the active language.
+ *
+ * Uses `Intl.RelativeTimeFormat` rather than a translation key per unit: it
+ * already knows every language's plural rules and its own wording for each
+ * unit, so there is nothing for a translator to get wrong. Beyond `maxDays`
+ * a relative phrase stops being useful ("47 days ago"), so it falls back to an
+ * absolute date.
+ */
+export function formatRelativeTime(
+  value: string | number | Date | null | undefined,
+  { maxDays = 7, locale }: { maxDays?: number; locale?: string } = {},
+): string {
+  const d = toDate(value);
+  if (!d) return DASH;
+
+  const seconds = Math.round((d.getTime() - Date.now()) / 1000);
+  const absSeconds = Math.abs(seconds);
+  if (absSeconds >= maxDays * 86_400) return formatDate(d, DATE_MEDIUM, locale);
+
+  const rtf = new Intl.RelativeTimeFormat(activeLocale(locale), { numeric: 'auto' });
+  if (absSeconds < 60) return rtf.format(0, 'second'); // → "now"
+  if (absSeconds < 3_600) return rtf.format(Math.round(seconds / 60), 'minute');
+  if (absSeconds < 86_400) return rtf.format(Math.round(seconds / 3_600), 'hour');
+  return rtf.format(Math.round(seconds / 86_400), 'day');
 }
 
 /** Locale-aware time only, e.g. "4:30 PM" / "16:30". */

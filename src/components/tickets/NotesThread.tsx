@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Lock, Globe, Send, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ type NoteVisibility = 'public' | 'private';
 export function NotesThread({
   ticketId, followers, readOnly = false,
 }: { ticketId: string; followers: TicketActor[]; readOnly?: boolean }) {
+  const { t } = useTranslation('tickets');
   const [notes, setNotes] = useState<TicketNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -45,7 +47,7 @@ export function NotesThread({
     const trimmed = message.trim();
     if (!trimmed) return;
     if (trimmed.length > NOTE_MAX_LENGTH) {
-      toast.error(`Note must be ${NOTE_MAX_LENGTH} characters or less`);
+      toast.error(t('notes.tooLong', { max: NOTE_MAX_LENGTH }));
       return;
     }
     setSubmitting(true);
@@ -69,10 +71,10 @@ export function NotesThread({
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold">Conversation</h3>
+        <h3 className="text-sm font-semibold">{t('notes.title')}</h3>
         {!loading && notes.length > 0 && (
           <span className="text-xs text-muted-foreground">
-            {notes.length} note{notes.length !== 1 ? 's' : ''}
+            {t('notes.count', { count: notes.length })}
           </span>
         )}
       </div>
@@ -84,7 +86,7 @@ export function NotesThread({
         </div>
       ) : notes.length === 0 ? (
         <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          No messages yet. Start the conversation below.
+          {t('notes.empty')}
         </p>
       ) : (
         <ul className="space-y-4">
@@ -114,11 +116,11 @@ export function NotesThread({
                       variant="outline"
                       className="gap-1 border-amber-300 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400"
                     >
-                      <Lock className="h-2.5 w-2.5" /> private
+                      <Lock className="h-2.5 w-2.5" /> {t('notes.private')}
                     </Badge>
                   )}
                 </div>
-                <div className="rounded-lg rounded-tl-sm bg-muted/60 px-3 py-2 text-sm">
+                <div className="rounded-lg rounded-ss-sm bg-muted/60 px-3 py-2 text-sm">
                   <p className="whitespace-pre-wrap">{note.content}</p>
                 </div>
                 <span className="text-xs text-muted-foreground">{relativeTime(note.created_at)}</span>
@@ -133,13 +135,13 @@ export function NotesThread({
       {readOnly ? (
         <p className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm text-muted-foreground/70">
           <Lock className="h-3.5 w-3.5" />
-          This ticket is closed. No new messages can be added.
+          {t('notes.closed')}
         </p>
       ) : (
         <div className="space-y-2 rounded-lg border p-3">
           <Textarea
             rows={3}
-            placeholder="Write a note…"
+            placeholder={t('notes.placeholder')}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             maxLength={NOTE_MAX_LENGTH}
@@ -152,28 +154,28 @@ export function NotesThread({
                   active={visibility === 'public'}
                   onClick={() => { setVisibility('public'); setViewerIds([]); }}
                   icon={<Globe className="h-3.5 w-3.5" />}
-                  label="public"
+                  label={t('notes.public')}
                 />
                 <VisibilityToggle
                   active={visibility === 'private'}
                   onClick={() => setVisibility('private')}
                   icon={<Lock className="h-3.5 w-3.5" />}
-                  label="private"
+                  label={t('notes.private')}
                 />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs tabular-nums text-muted-foreground">
-                  {message.length}/{NOTE_MAX_LENGTH}
+                  {t('notes.charCount', { current: message.length, max: NOTE_MAX_LENGTH })}
                 </span>
                 <Button size="sm" onClick={handleSend} disabled={submitting || !message.trim()}>
-                  {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  Send
+                  {submitting ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4 rtl:-scale-x-100" />}
+                  {t('notes.send')}
                 </Button>
               </div>
             </div>
             {visibility === 'private' && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground">Visible to:</span>
+                <span className="text-xs text-muted-foreground">{t('notes.visibleTo')}</span>
                 <FollowerSelect followers={followers} value={viewerIds} onChange={setViewerIds} />
               </div>
             )}

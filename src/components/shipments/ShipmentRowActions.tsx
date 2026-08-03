@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Ban, Eye, Loader2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +15,7 @@ import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialo
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { canRejectStatus, getNextActions, type ShipmentNextAction } from '@/components/shipments/shipment-actions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 import type { ShipmentListItem } from '@/types/shipment.types';
 
@@ -32,6 +34,7 @@ export interface ShipmentRowActionsProps {
  * sheet of tappable rows on mobile.
  */
 export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowActionsProps) {
+  const { t } = useTranslation('shipments');
   const isMobile = useIsMobile();
   const { updateStatus, pendingKey } = useShipmentActions();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -45,7 +48,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
   const isBlocked = (action: ShipmentNextAction) => pickupBlocked && action.status === 'picked_up';
 
   const runStatus = async (action: ShipmentNextAction) => {
-    const result = await updateStatus(shipment.id, action.status, `Shipment marked “${action.label}”.`);
+    const result = await updateStatus(shipment.id, action.status, tx(t, action.labelKey));
     if (result) onChanged();
   };
 
@@ -54,7 +57,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
       variant="ghost"
       size="icon"
       className="h-8 w-8"
-      aria-label="Shipment actions"
+      aria-label={t('actions.menuLabel')}
       onClick={(e) => {
         e.stopPropagation();
         if (isMobile) setSheetOpen(true);
@@ -71,13 +74,13 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
           {trigger}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetContent side="bottom" className="gap-0 rounded-t-2xl p-0">
-              <SheetHeader className="border-b pr-10 text-left">
+              <SheetHeader className="border-b pe-10 text-start">
                 <SheetTitle className="truncate text-base">{shipment.orderNumber}</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <SheetActionRow
                   icon={<Eye className="w-5 h-5" />}
-                  label="View details"
+                  label={t('actions.viewDetails')}
                   onClick={() => {
                     setSheetOpen(false);
                     onView();
@@ -89,8 +92,8 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                     <SheetActionRow
                       key={action.status}
                       icon={<action.icon className="w-5 h-5" />}
-                      label={action.label}
-                      hint={blocked ? 'Needs an assigned agent' : undefined}
+                      label={tx(t, action.labelKey)}
+                      hint={blocked ? t('actions.needsAgentHint') : undefined}
                       disabled={blocked}
                       destructive={action.variant === 'destructive'}
                       onClick={() => {
@@ -103,7 +106,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                 {canReject && (
                   <SheetActionRow
                     icon={<Ban className="w-5 h-5" />}
-                    label="Reject shipment"
+                    label={t('reject.trigger')}
                     destructive
                     onClick={() => {
                       setSheetOpen(false);
@@ -120,14 +123,14 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onSelect={onView}>
-              <Eye className="w-4 h-4" /> View details
+              <Eye className="w-4 h-4" /> {t('actions.viewDetails')}
             </DropdownMenuItem>
 
             {nextActions.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                  Update status
+                  {t('actions.updateStatus')}
                 </DropdownMenuLabel>
                 {nextActions.map((action) => {
                   const blocked = isBlocked(action);
@@ -139,8 +142,12 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                       className={cn(action.variant === 'destructive' && 'text-destructive focus:text-destructive')}
                     >
                       <action.icon className="w-4 h-4" />
-                      {action.label}
-                      {blocked && <span className="ml-auto text-[10px] text-muted-foreground">needs agent</span>}
+                      {tx(t, action.labelKey)}
+                      {blocked && (
+                        <span className="ms-auto text-[10px] text-muted-foreground">
+                          {t('actions.needsAgent')}
+                        </span>
+                      )}
                     </DropdownMenuItem>
                   );
                 })}
@@ -154,7 +161,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                   className="text-destructive focus:text-destructive"
                   onSelect={() => setRejectOpen(true)}
                 >
-                  <Ban className="w-4 h-4" /> Reject shipment
+                  <Ban className="w-4 h-4" /> {t('reject.trigger')}
                 </DropdownMenuItem>
               </>
             )}
@@ -194,7 +201,7 @@ function SheetActionRow({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center gap-3 px-5 py-3.5 text-left text-sm transition-colors hover:bg-muted active:bg-muted disabled:opacity-50 disabled:pointer-events-none',
+        'flex items-center gap-3 px-5 py-3.5 text-start text-sm transition-colors hover:bg-muted active:bg-muted disabled:opacity-50 disabled:pointer-events-none',
         destructive && 'text-destructive',
       )}
     >

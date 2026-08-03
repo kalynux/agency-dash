@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+// Aliased: `tx` is already the row variable in this file's map callbacks.
+import { tx as txKey } from '@/i18n/tx';
 import { fetchTransactions } from '@/services/transactions.service';
 import type {
   Transaction,
   TransactionCategory,
   TransactionsListMeta,
 } from '@/types/transactions.types';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { listSurfaceClass } from '@/components/layout/PageContainer';
 import {
   FilterOptionGroup,
@@ -37,6 +40,7 @@ type CategoryFilter = TransactionCategory | 'all';
  * `refreshKey` bumps to force a reload after a successful purchase elsewhere.
  */
 export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
+  const { t } = useTranslation(['billing', 'common']);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [rows, setRows] = useState<Transaction[]>([]);
   const [meta, setMeta] = useState<TransactionsListMeta | null>(null);
@@ -58,7 +62,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
         setRows(res.data);
         setMeta(res.meta);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Failed to load transactions.');
+        setError(getApiErrorMessage(err));
         setRows([]);
         setMeta(null);
       } finally {
@@ -66,6 +70,11 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
       }
     },
     [],
+  );
+
+  const categoryOptions = useMemo(
+    () => TRANSACTION_CATEGORY_TABS.map((c) => ({ value: c.value, label: txKey(t, c.labelKey) })),
+    [t],
   );
 
   // Reset to page 1 when the category changes or a purchase succeeds.
@@ -93,30 +102,23 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
           the same thing — two near-identical paragraphs stacked. Only the
           heading survives there; the page header's ⓘ carries the detail. */}
       <CardHeader className="px-4 pt-4 md:px-6 md:pt-0">
-        <CardTitle>Transactions</CardTitle>
-        <CardDescription className="max-md:hidden">
-          Every money and credit movement on your account — plan purchases, credit top-ups and
-          usage, and delivery-fee earnings.
-        </CardDescription>
+        <CardTitle>{t('transactions.title')}</CardTitle>
+        <CardDescription className="max-md:hidden">{t('transactions.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4 md:px-6 md:pb-0">
         <SearchFilterBar
           value={search}
           onChange={setSearch}
-          placeholder="Search transactions…"
-          searchLabel="Search this page by description or category"
+          placeholder={t('transactions.searchPlaceholder')}
+          searchLabel={t('transactions.searchLabel')}
           activeCount={category === 'all' ? 0 : 1}
           onReset={() => setCategory('all')}
-          filterDescription="Category filters the whole ledger; search looks at the page you're on."
+          filterDescription={t('transactions.filterDescription')}
           resultCount={query ? visibleRows.length : meta?.total}
-          resultNoun="transaction"
+          resultNounKey="common:nouns.transaction"
         >
-          <FilterSection label="Category">
-            <FilterOptionGroup
-              value={category}
-              onChange={setCategory}
-              options={TRANSACTION_CATEGORY_TABS}
-            />
+          <FilterSection label={t('transactions.category')}>
+            <FilterOptionGroup value={category} onChange={setCategory} options={categoryOptions} />
           </FilterSection>
         </SearchFilterBar>
 
@@ -126,12 +128,12 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {error}{' '}
             <button className="underline" onClick={() => load(page, category)}>
-              Retry
+              {t('common:actions.retry')}
             </button>
           </div>
         ) : visibleRows.length === 0 ? (
           <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            {query ? 'No transactions match your search.' : 'No transactions yet.'}
+            {query ? t('transactions.emptyFiltered') : t('transactions.empty')}
           </p>
         ) : (
           <>
@@ -140,10 +142,10 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
               <table className="w-full text-sm">
                 <thead className="border-b bg-muted/40 text-left">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">Activity</th>
-                    <th className="px-4 py-2.5 font-medium">Date</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Status</th>
+                    <th className="px-4 py-2.5 font-medium">{t('transactions.table.activity')}</th>
+                    <th className="px-4 py-2.5 font-medium">{t('transactions.table.date')}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t('transactions.table.amount')}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t('transactions.table.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -158,12 +160,12 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                           </div>
                           {tx.gateway && (
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              via {gatewayLabel(tx.gateway)}
+                              {t('transactions.via', { gateway: gatewayLabel(tx.gateway) })}
                             </p>
                           )}
                           {isReversalTransaction(tx) && (
                             <p className="mt-0.5 text-xs text-orange-600">
-                              Chargeback/refund — this charge was unwound.
+                              {t('transactions.reversalNote')}
                             </p>
                           )}
                         </td>
@@ -201,9 +203,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                       </div>
                     </div>
                     {isReversalTransaction(tx) && (
-                      <p className="mt-2 text-xs text-orange-600">
-                        Chargeback/refund — this charge was unwound.
-                      </p>
+                      <p className="mt-2 text-xs text-orange-600">{t('transactions.reversalNote')}</p>
                     )}
                   </li>
                 );
@@ -213,7 +213,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
             {meta && (
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  Page {meta.page} of {meta.totalPages || 1}
+                  {t('common:pagination.pageOf', { page: meta.page, total: meta.totalPages || 1 })}
                 </span>
                 {meta.totalPages > 1 && (
                   <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                       disabled={meta.page <= 1}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                     >
-                      Previous
+                      {t('common:actions.previous')}
                     </Button>
                     <Button
                       variant="outline"
@@ -231,7 +231,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                       disabled={meta.page >= meta.totalPages}
                       onClick={() => setPage((p) => p + 1)}
                     >
-                      Next
+                      {t('common:actions.next')}
                     </Button>
                   </div>
                 )}

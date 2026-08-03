@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Loader2,
   Smartphone,
@@ -30,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { tx } from '@/i18n/tx';
 import type {
   PaymentChannel,
   PaymentGateway,
@@ -126,9 +128,12 @@ export function PaymentDialog({
   initiate,
   verify,
   onPaid,
-  successLabel = 'Payment confirmed',
+  successLabel,
 }: PaymentDialogProps) {
+  const { t } = useTranslation(['billing', 'common']);
   const gateways = availableGateways();
+  // Callers name what succeeded ("Plan purchased"); fall back to the generic line.
+  const successText = successLabel ?? t('checkout.successTitle');
 
   const [gateway, setGateway] = useState<PaymentGateway>(gateways[0]?.value ?? 'NOTCHPAY');
   const [phone, setPhone] = useState('');
@@ -216,7 +221,7 @@ export function PaymentDialog({
           stopPolling();
           setPhase('success');
           onPaid();
-          toast.success(successLabel);
+          toast.success(successText);
         } else if (status === 'failed' || status === 'reversed') {
           stopPolling();
           setPhase('failed');
@@ -252,7 +257,7 @@ export function PaymentDialog({
     if (isStripe) {
       // Stripe collects the card client-side — send only identification fields.
       if (email.trim() && !EMAIL_RE.test(email.trim())) {
-        setFormError('Enter a valid email, or leave it blank.');
+        setFormError(t('checkout.invalidEmail'));
         return null;
       }
       const channel: PaymentChannel = {};
@@ -262,7 +267,7 @@ export function PaymentDialog({
     }
     // Mobile money — phone + operator are required.
     if (!PHONE_RE.test(phone.trim())) {
-      setFormError('Enter a valid phone number (e.g. +237650000000).');
+      setFormError(t('checkout.invalidPhone'));
       return null;
     }
     return { phoneNumber: phone.trim(), phoneOperator: operator };
@@ -281,7 +286,7 @@ export function PaymentDialog({
       if (result.status === 'paid') {
         setPhase('success');
         onPaid();
-        toast.success(successLabel);
+        toast.success(successText);
         return;
       }
       if (result.status === 'failed' || result.status === 'reversed') {
@@ -305,9 +310,9 @@ export function PaymentDialog({
 
       // Mobile money (or a gateway that already confirmed): show instructions + poll.
       setUssd(result.instructions?.ussdCode ?? null);
-      setInstructionMsg(
-        result.instructions?.message ?? 'Confirm the payment prompt on your phone.',
-      );
+      // The gateway's own instruction text arrives already localised for the
+      // agency's country; ours is the fallback when it sends none.
+      setInstructionMsg(result.instructions?.message ?? t('checkout.phonePrompt'));
       setPhase('processing');
       startPolling(result.id);
     } catch (err) {
@@ -334,22 +339,20 @@ export function PaymentDialog({
 
       if (outcome.status === 'redirecting') {
         // Stripe is navigating to the bank — leave the marker, the page will unload.
-        setInstructionMsg('Redirecting you to your bank to confirm the payment…');
+        setInstructionMsg(t('checkout.redirecting'));
         return;
       }
 
       // Confirmed in-page (succeeded / processing) — finalize via the verify poll.
       clearStripeResume();
       setInstructionMsg(
-        outcome.status === 'succeeded'
-          ? 'Card confirmed — applying your purchase…'
-          : 'Confirming your payment…',
+        outcome.status === 'succeeded' ? t('checkout.cardConfirmed') : t('checkout.confirming'),
       );
       setPhase('processing');
       startPolling(stripeInit.id);
     } catch (err) {
       clearStripeResume();
-      setCardError(err instanceof Error ? err.message : 'The card payment failed. Please try again.');
+      setCardError(err instanceof Error ? err.message : t('checkout.cardFailed'));
       setSubmitting(false);
     }
   }
@@ -388,7 +391,7 @@ export function PaymentDialog({
             {/* Saved-method quick-select row */}
             {savedMethods.length > 0 && (
               <div className="space-y-1.5">
-                <Label>Payment method</Label>
+                <Label>{t('checkout.savedMethod')}</Label>
                 <div className="flex flex-wrap gap-2">
                   {savedMethods.map((m) => (
                     <SavedChip
@@ -408,7 +411,7 @@ export function PaymentDialog({
                         : 'border-border text-muted-foreground hover:bg-muted',
                     )}
                   >
-                    <Plus className="h-4 w-4" /> New
+                    <Plus className="h-4 w-4" /> {t('checkout.newMethod')}
                   </button>
                 </div>
               </div>
@@ -416,7 +419,7 @@ export function PaymentDialog({
 
             {/* Gateway-first selection */}
             <div className="space-y-1.5">
-              <Label>Pay with</Label>
+              <Label>{t('checkout.payWith')}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {gateways.map((g) => (
                   <button
@@ -438,7 +441,7 @@ export function PaymentDialog({
                     ) : (
                       <Smartphone className="h-4 w-4" />
                     )}
-                    {g.label}
+                    {tx(t, g.labelKey)}
                     <span className="text-[10px] font-normal text-muted-foreground">
                       {g.chargeCurrency}
                     </span>
@@ -450,18 +453,18 @@ export function PaymentDialog({
             {methodType === 'mobile_money' ? (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="pay-phone">Mobile money number</Label>
+                  <Label htmlFor="pay-phone">{t('checkout.phone')}</Label>
                   <Input
                     id="pay-phone"
                     inputMode="tel"
-                    placeholder="+237650000000"
+                    placeholder={t('checkout.phonePlaceholder')}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     aria-invalid={!!formError}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="pay-operator">Operator</Label>
+                  <Label htmlFor="pay-operator">{t('checkout.operator')}</Label>
                   <Select value={operator} onValueChange={(v) => setOperator(v as PhoneOperator)}>
                     <SelectTrigger id="pay-operator">
                       <SelectValue />
@@ -482,27 +485,29 @@ export function PaymentDialog({
                 <div className="flex gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-muted-foreground">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
                   <span>
-                    Card payments are processed in <span className="font-medium text-foreground">USD</span>;
-                    your bank may apply its own conversion. We'll show the exact dollar amount on the
-                    next step.
+                    <Trans
+                      ns="billing"
+                      i18nKey="checkout.usdNotice"
+                      components={{ strong: <span className="font-medium text-foreground" /> }}
+                    />
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="pay-name">Name on card (optional)</Label>
+                  <Label htmlFor="pay-name">{t('checkout.nameOnCard')}</Label>
                   <Input
                     id="pay-name"
-                    placeholder="Agency name"
+                    placeholder={t('checkout.nameOnCardPlaceholder')}
                     value={holderName}
                     onChange={(e) => setHolderName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="pay-email">Email for receipt (optional)</Label>
+                  <Label htmlFor="pay-email">{t('checkout.receiptEmail')}</Label>
                   <Input
                     id="pay-email"
                     type="email"
                     inputMode="email"
-                    placeholder="agency@example.com"
+                    placeholder={t('checkout.receiptEmailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     aria-invalid={!!formError}
@@ -515,11 +520,13 @@ export function PaymentDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => handleClose(false)} disabled={submitting}>
-                Cancel
+                {t('common:actions.cancel')}
               </Button>
               <Button onClick={handleInitiate} disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isStripe ? 'Continue to card' : `Confirm Payment · ${formatMoney(amount, currency)}`}
+                {isStripe
+                  ? t('checkout.continueToCard')
+                  : t('checkout.confirmPayment', { amount: formatMoney(amount, currency) })}
               </Button>
             </DialogFooter>
           </div>
@@ -533,26 +540,32 @@ export function PaymentDialog({
             <div className="rounded-lg border bg-muted/30 p-3 text-center">
               {chargedLine ? (
                 <>
-                  <p className="text-sm text-muted-foreground">You'll be charged</p>
+                  <p className="text-sm text-muted-foreground">{t('checkout.youWillBeCharged')}</p>
                   <p className="text-2xl font-bold">{chargedLine}</p>
                   <p className="text-xs text-muted-foreground">
-                    for {summary} ({formatMoney(amount, currency)})
+                    {t('checkout.chargedFor', {
+                      summary,
+                      amount: formatMoney(amount, currency),
+                    })}
                   </p>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Completing payment for {summary} ({formatMoney(amount, currency)})
+                  {t('checkout.completingFor', {
+                    summary,
+                    amount: formatMoney(amount, currency),
+                  })}
                 </p>
               )}
             </div>
 
             <div className="flex gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-              <span>Charged in USD; your bank may apply its own currency conversion.</span>
+              <span>{t('checkout.usdNoticeShort')}</span>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Card details</Label>
+              <Label>{t('checkout.cardDetails')}</Label>
               <StripePaymentElement
                 ref={cardRef}
                 clientSecret={stripeInit.clientSecret}
@@ -565,11 +578,11 @@ export function PaymentDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={backToForm} disabled={submitting}>
-                <ArrowLeft className="mr-1 h-4 w-4" /> Back
+                <ArrowLeft className="mr-1 h-4 w-4" /> {t('common:actions.back')}
               </Button>
               <Button onClick={handleCardConfirm} disabled={submitting || !cardReady}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {chargedLine ? `Pay ${chargedLine}` : 'Pay now'}
+                {chargedLine ? t('checkout.pay', { amount: chargedLine }) : t('checkout.payNow')}
               </Button>
             </DialogFooter>
           </div>
@@ -579,19 +592,22 @@ export function PaymentDialog({
           <div className="space-y-4 py-2 text-center">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
             <div className="space-y-1">
-              <p className="font-medium">Waiting for payment…</p>
+              <p className="font-medium">{t('checkout.waiting')}</p>
               {instructionMsg && <p className="text-sm text-muted-foreground">{instructionMsg}</p>}
               {ussd && (
                 <p className="text-sm">
-                  Dial <span className="font-mono font-semibold">{ussd}</span> to approve.
+                  <Trans
+                    ns="billing"
+                    i18nKey="checkout.dialUssd"
+                    values={{ code: ussd }}
+                    components={{ code: <span className="font-mono font-semibold" /> }}
+                  />
                 </p>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              This can take up to a couple of minutes. Keep this window open.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('checkout.keepOpen')}</p>
             <Button variant="ghost" size="sm" onClick={() => handleClose(false)}>
-              Close (we'll keep processing)
+              {t('checkout.closeKeepProcessing')}
             </Button>
           </div>
         )}
@@ -599,23 +615,23 @@ export function PaymentDialog({
         {phase === 'success' && (
           <ResultState
             icon={<CheckCircle2 className="mx-auto h-10 w-10 text-green-600" />}
-            title={successLabel}
-            description="Your account has been updated."
-            action={<Button onClick={() => handleClose(false)}>Done</Button>}
+            title={successText}
+            description={t('checkout.successDescription')}
+            action={<Button onClick={() => handleClose(false)}>{t('common:actions.done')}</Button>}
           />
         )}
 
         {phase === 'failed' && (
           <ResultState
             icon={<XCircle className="mx-auto h-10 w-10 text-destructive" />}
-            title="Payment failed"
-            description="The payment was not completed. No charge was made — you can try again."
+            title={t('checkout.failedTitle')}
+            description={t('checkout.failedDescription')}
             action={
               <>
                 <Button variant="outline" onClick={() => handleClose(false)}>
-                  Close
+                  {t('common:actions.close')}
                 </Button>
-                <Button onClick={backToForm}>Try again</Button>
+                <Button onClick={backToForm}>{t('common:actions.retry')}</Button>
               </>
             }
           />
@@ -624,14 +640,14 @@ export function PaymentDialog({
         {phase === 'timeout' && (
           <ResultState
             icon={<Clock className="mx-auto h-10 w-10 text-amber-500" />}
-            title="Still processing"
-            description="We couldn't confirm the payment in time. If you completed it, your balance will update shortly — check your history."
+            title={t('checkout.timeoutTitle')}
+            description={t('checkout.timeoutDescription')}
             action={
               <>
                 <Button variant="outline" onClick={() => handleClose(false)}>
-                  Close
+                  {t('common:actions.close')}
                 </Button>
-                <Button onClick={backToForm}>Start over</Button>
+                <Button onClick={backToForm}>{t('checkout.startOver')}</Button>
               </>
             }
           />

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Store } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,21 +12,13 @@ import {
 } from '@/components/common/SearchFilterBar';
 import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
 import type { ConnectionDto, ConnectionStatus, VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
 type StatusChip = 'all' | 'pending' | 'active' | 'paused_reapproval' | 'history';
 
 const HISTORY_STATUSES: ConnectionStatus[] = ['rejected', 'withdrawn', 'terminated'];
-
-const STATUS_FILTERS: { value: StatusChip; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'active', label: 'Active' },
-  { value: 'paused_reapproval', label: 'Paused' },
-  { value: 'history', label: 'History' },
-];
 
 function matchesChip(status: ConnectionStatus, chip: StatusChip): boolean {
   if (chip === 'all') return true;
@@ -50,6 +43,8 @@ function ReasonPopover({
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
+  // `triggerLabel` / `confirmLabel` / `placeholder` arrive already translated
+  // from the caller, which knows whether this is a rejection or a termination.
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -84,6 +79,7 @@ function ConnectionRowActions({
   connection: ConnectionDto;
   actions: ReturnType<typeof useVendorConnectionActions>;
 }) {
+  const { t } = useTranslation('vendors');
   const vendorId = connection.vendorId;
 
   if (connection.status === 'pending') {
@@ -96,7 +92,7 @@ function ConnectionRowActions({
           disabled={actions.pendingKey === key}
           onClick={() => actions.withdraw(vendorId, connection.id)}
         >
-          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Withdraw'}
+          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.withdraw')}
         </Button>
       );
     }
@@ -109,12 +105,12 @@ function ConnectionRowActions({
           disabled={actions.pendingKey === approveKey}
           onClick={() => actions.approve(vendorId, connection.id)}
         >
-          {actions.pendingKey === approveKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Approve'}
+          {actions.pendingKey === approveKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.approve')}
         </Button>
         <ReasonPopover
-          triggerLabel="Reject"
-          confirmLabel="Confirm Reject"
-          placeholder="Reason (optional)"
+          triggerLabel={t('actions.reject')}
+          confirmLabel={t('actions.confirmReject')}
+          placeholder={t('actions.reasonOptional')}
           variant="destructive"
           disabled={actions.pendingKey === rejectKey}
           onConfirm={(reason) => actions.reject(vendorId, connection.id, reason || undefined)}
@@ -127,9 +123,9 @@ function ConnectionRowActions({
     const key = `terminate:${connection.id}`;
     return (
       <ReasonPopover
-        triggerLabel="Terminate"
-        confirmLabel="Confirm Terminate"
-        placeholder="Note (optional)"
+        triggerLabel={t('actions.terminate')}
+        confirmLabel={t('actions.confirmTerminate')}
+        placeholder={t('actions.noteOptional')}
         variant="destructive"
         disabled={actions.pendingKey === key}
         onConfirm={(note) => actions.terminate(vendorId, connection.id, note || undefined)}
@@ -146,11 +142,11 @@ function ConnectionRowActions({
           disabled={actions.pendingKey === key}
           onClick={() => actions.approve(vendorId, connection.id)}
         >
-          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Reapprove'}
+          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.reapprove')}
         </Button>
       );
     }
-    return <Badge variant="secondary">Awaiting vendor</Badge>;
+    return <Badge variant="secondary">{t('actions.awaitingVendor')}</Badge>;
   }
 
   // rejected / withdrawn / terminated
@@ -162,7 +158,7 @@ function ConnectionRowActions({
       disabled={actions.pendingKey === key}
       onClick={() => actions.request(vendorId)}
     >
-      {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Request Again'}
+      {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('actions.requestAgain')}
     </Button>
   );
 }
@@ -174,12 +170,24 @@ export interface ConnectionsTabProps {
 
 /** Vendors → Connections tab: status-filtered history of all the agency's vendor connections. */
 export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
+  const { t } = useTranslation(['vendors', 'common']);
   const [connections, setConnections] = useState<ConnectionDto[]>([]);
   const [vendorDisplay, setVendorDisplay] = useState<Map<string, VendorBrowseItemDto>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [chip, setChip] = useState<StatusChip>('all');
   const [search, setSearch] = useState('');
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('connections.all') },
+      { value: 'pending' as const, label: t('status.pending') },
+      { value: 'active' as const, label: t('status.active') },
+      { value: 'paused_reapproval' as const, label: t('connections.paused') },
+      { value: 'history' as const, label: t('connections.history') },
+    ],
+    [t],
+  );
 
   const actions = useVendorConnectionActions({
     onChanged: (_vendorId, dto) => {
@@ -212,7 +220,7 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
       const { resolved } = await resolveVendorDisplayForConnections(all);
       setVendorDisplay(resolved);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Could not load your connections.');
+      setLoadError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +233,11 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
   /** The name shown on a row — also what the search box matches against. */
   const nameFor = (connection: ConnectionDto): string => {
     const vendor = vendorDisplay.get(connection.vendorId);
-    return vendor?.displayName ?? vendor?.businessName ?? `Vendor ${connection.vendorId.slice(-6)}`;
+    return (
+      vendor?.displayName ??
+      vendor?.businessName ??
+      t('connections.fallbackName', { suffix: connection.vendorId.slice(-6) })
+    );
   };
 
   const query = search.trim().toLowerCase();
@@ -238,33 +250,33 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
       <SearchFilterBar
         value={search}
         onChange={setSearch}
-        placeholder="Search connections…"
-        searchLabel="Search your connections by vendor name"
+        placeholder={t('connections.searchPlaceholder')}
+        searchLabel={t('connections.searchLabel')}
         activeCount={chip === 'all' ? 0 : 1}
         onReset={() => setChip('all')}
-        filterDescription="Every vendor relationship your agency has, past and present."
+        filterDescription={t('connections.filterDescription')}
         resultCount={filtered.length}
-        resultNoun="connection"
+        resultNounKey="common:nouns.connection"
       >
-        <FilterSection label="Connection status">
-          <FilterOptionGroup value={chip} onChange={setChip} options={STATUS_FILTERS} />
+        <FilterSection label={t('connections.statusFilter')}>
+          <FilterOptionGroup value={chip} onChange={setChip} options={statusOptions} />
         </FilterSection>
       </SearchFilterBar>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading connections…
+          <Loader2 className="w-4 h-4 animate-spin" /> {t('connections.loading')}
         </div>
       ) : loadError ? (
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
-          <Button variant="outline" onClick={load}>Retry</Button>
+          <Button variant="outline" onClick={load}>{t('common:actions.retry')}</Button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-10 border border-dashed rounded-xl">
           <Store className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
-            {query ? 'No connections match your search.' : 'No connections in this category yet.'}
+            {query ? t('connections.emptyFiltered') : t('connections.empty')}
           </p>
         </div>
       ) : (

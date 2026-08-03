@@ -59,12 +59,19 @@ export interface NotificationEventPreferences {
   /** **Vendor** connections — the agency-side mirror of the vendor's own switch. */
   connectionUpdated: boolean;
   /**
-   * **Agent** contracts (`agent_contract.*`): an agent applied to deliver for
-   * you, answered a request you raised, or proposed a change to a contract they
-   * already hold — `status_request_raised` / `status_request_resolved`, most
-   * often asking to leave. A separate switch from `connectionUpdated` on purpose
-   * — recruiting couriers and taking on vendors are different jobs, often
-   * different people.
+   * **Agent** contracts (`agent_contract.*`) — eight situations behind one
+   * switch, deep-linking to `agents/{contractId}`:
+   *
+   * - the handshake: `request_received`, `approved`, `rejected`;
+   * - changes to a contract that exists: `status_request_raised` /
+   *   `status_request_resolved`, most often asking to leave;
+   * - changes to the **terms**: `terms_countered` (they countered a pending
+   *   offer — the right to accept is now yours), `terms_proposed` (a change to a
+   *   live contract, whose current terms stay in force until you answer) and
+   *   `terms_resolved`.
+   *
+   * A separate switch from `connectionUpdated` on purpose — recruiting couriers
+   * and taking on vendors are different jobs, often different people.
    */
   contractUpdated: boolean;
   shipmentAssigned: boolean;

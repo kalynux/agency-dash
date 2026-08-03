@@ -2,6 +2,10 @@
 // reasons the agency can trigger. Kept framework-free so both the list-row
 // actions menu and the detail view render the same options for a given status.
 // See api-doc/agency/shipments.md → status lifecycle.
+//
+// Labels are translation keys, not copy: these tables are module-scope data
+// evaluated once at import, so a translated string here would freeze in the
+// language that was active at boot. Consumers resolve with `tx(t, labelKey)`.
 
 import { CircleCheck, PackageCheck, RotateCcw, Truck, XCircle, type LucideIcon } from 'lucide-react';
 import type {
@@ -12,7 +16,8 @@ import type {
 
 export interface ShipmentNextAction {
   status: ShipmentActionableStatus;
-  label: string;
+  /** `shipments:actions.*` key. */
+  labelKey: string;
   icon: LucideIcon;
   variant?: 'default' | 'destructive';
 }
@@ -23,31 +28,36 @@ export interface ShipmentNextAction {
  * agency-triggerable transitions are listed.
  */
 export const NEXT_ACTIONS: Partial<Record<ShipmentStatus, ShipmentNextAction[]>> = {
-  assigned: [{ status: 'picked_up', label: 'Mark Picked Up', icon: PackageCheck }],
-  picked_up: [{ status: 'in_transit', label: 'Mark In Transit', icon: Truck }],
+  assigned: [{ status: 'picked_up', labelKey: 'shipments:actions.markPickedUp', icon: PackageCheck }],
+  picked_up: [{ status: 'in_transit', labelKey: 'shipments:actions.markInTransit', icon: Truck }],
   in_transit: [
-    { status: 'agent_delivered', label: 'Mark Delivered', icon: CircleCheck },
-    { status: 'failed', label: 'Mark Failed', icon: XCircle, variant: 'destructive' },
+    { status: 'agent_delivered', labelKey: 'shipments:actions.markDelivered', icon: CircleCheck },
+    { status: 'failed', labelKey: 'shipments:actions.markFailed', icon: XCircle, variant: 'destructive' },
   ],
   // A claim of arrival is not proof of one — the customer may be out, refuse the
   // parcel, or (COD) refuse to pay, so agent_delivered may still fall to failed.
-  agent_delivered: [{ status: 'failed', label: 'Mark Failed', icon: XCircle, variant: 'destructive' }],
+  agent_delivered: [
+    { status: 'failed', labelKey: 'shipments:actions.markFailed', icon: XCircle, variant: 'destructive' },
+  ],
   failed: [
-    { status: 'in_transit', label: 'Retry Delivery', icon: Truck },
-    { status: 'returned', label: 'Mark Returned', icon: RotateCcw, variant: 'destructive' },
+    { status: 'in_transit', labelKey: 'shipments:actions.retryDelivery', icon: Truck },
+    { status: 'returned', labelKey: 'shipments:actions.markReturned', icon: RotateCcw, variant: 'destructive' },
   ],
 };
 
 /** Terminal statuses — nothing left to advance. */
 export const TERMINAL_STATUSES: ShipmentStatus[] = ['delivered', 'returned', 'rejected'];
 
-/** Fixed rejection reason set (POST .../reject). `other` requires a note. */
-export const REJECTION_REASONS: { value: ShipmentRejectionReason; label: string }[] = [
-  { value: 'out_of_coverage_area', label: 'Out of coverage area' },
-  { value: 'capacity_exceeded', label: 'Capacity exceeded' },
-  { value: 'invalid_address', label: 'Invalid address' },
-  { value: 'vendor_item_not_ready', label: 'Vendor item not ready' },
-  { value: 'other', label: 'Other' },
+/**
+ * Fixed rejection reason set (POST .../reject). `other` requires a note.
+ * The array fixes the display order; the copy lives in `shipments:reject.reasons`.
+ */
+export const REJECTION_REASONS: ShipmentRejectionReason[] = [
+  'out_of_coverage_area',
+  'capacity_exceeded',
+  'invalid_address',
+  'vendor_item_not_ready',
+  'other',
 ];
 
 /** Max length of a rejection note, per the API. */

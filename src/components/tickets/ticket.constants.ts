@@ -1,8 +1,12 @@
 // ─── Agency Tickets — display constants ───────────────────────────────────────
-// Label + colour maps, the grouped ticket-type list, and small display helpers.
+// Colour maps, the grouped ticket-type list, and small display helpers.
 // Enums/limits follow api-doc/agency/tickets.md (authoritative). Priority has no
 // "medium" (that's importance); note content caps at 300 and create description
 // at 700, matching the agency endpoints.
+//
+// No copy lives here. This module is imported at boot, so a label baked into a
+// module constant would freeze in whichever language happened to be active then
+// — every label is a lookup into `tickets:*` performed at call time instead.
 
 import { formatDate as fmtDate } from '@/lib/format';
 import type { LucideIcon } from 'lucide-react';
@@ -11,6 +15,7 @@ import {
   ShieldCheck, Scale, HelpCircle, LifeBuoy, User, Building2,
 } from 'lucide-react';
 import { formatFileSize } from '@/lib/utils';
+import { txStatic } from '@/i18n/tx';
 import type {
   TicketStatus,
   TicketPriority,
@@ -33,11 +38,17 @@ export function humanizeEnum(value: string): string {
     .join(' ');
 }
 
-/** Format any ticket type enum into a human label, e.g. DELIVERY_DELAY → "Delivery delay". */
-export function formatTicketType(type: string): string {
-  const words = type.split('_').map((w) => w.toLowerCase());
-  if (words.length === 0) return type;
-  return words.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join(' ');
+/**
+ * Copy for a backend token, falling back to its humanized form.
+ *
+ * Every enum the ticket API returns is typed as a bare `string` on the wire, so
+ * a value we have no copy for still has to read as something. `txStatic` hands
+ * back the key unchanged when there is no entry, which is how that is detected.
+ */
+function tokenLabel(group: string, token: string): string {
+  const key = `tickets:${group}.${token}`;
+  const translated = txStatic(key);
+  return translated === key ? humanizeEnum(token) : translated;
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -62,17 +73,9 @@ export const AGENCY_SETTABLE_STATUSES: TicketStatus[] = [
   'resolved',
 ];
 
-export const STATUS_LABELS: Record<TicketStatus, string> = {
-  open: 'Open',
-  in_progress: 'In Progress',
-  waiting_on_admin: 'Waiting on Support',
-  waiting_on_vendor: 'Waiting on Vendor',
-  waiting_on_customer: 'Waiting on Customer',
-  waiting_on_agency: 'Waiting on You',
-  waiting_on_agent: 'Waiting on Agent',
-  resolved: 'Resolved',
-  closed: 'Closed',
-};
+export function statusLabel(status: string): string {
+  return tokenLabel('status', status);
+}
 
 export const STATUS_BADGE_CLASSES: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -109,21 +112,22 @@ export const WAITING_STATUS_ROLE: Partial<Record<TicketStatus, TicketRole>> = {
 };
 
 /**
- * Status filter tabs for the list view. From the agency's seat, "Waiting on you"
- * maps to `waiting_on_agency` and "Waiting on support" to `waiting_on_admin`.
- * `null` = All.
+ * Status filter tabs for the list view, in display order — the agency cares
+ * about its own turn first, so `waiting_on_agency` sits above `waiting_on_admin`
+ * rather than following {@link TICKET_STATUSES}. `null` = All, and the copy for
+ * every entry comes from `tickets:status.*` via {@link statusLabel}.
  */
-export const STATUS_TABS: { label: string; value: TicketStatus | null }[] = [
-  { label: 'All', value: null },
-  { label: 'Open', value: 'open' },
-  { label: 'In progress', value: 'in_progress' },
-  { label: 'Waiting on you', value: 'waiting_on_agency' },
-  { label: 'Waiting on support', value: 'waiting_on_admin' },
-  { label: 'Waiting on customer', value: 'waiting_on_customer' },
-  { label: 'Waiting on vendor', value: 'waiting_on_vendor' },
-  { label: 'Waiting on agent', value: 'waiting_on_agent' },
-  { label: 'Resolved', value: 'resolved' },
-  { label: 'Closed', value: 'closed' },
+export const STATUS_TAB_VALUES: (TicketStatus | null)[] = [
+  null,
+  'open',
+  'in_progress',
+  'waiting_on_agency',
+  'waiting_on_admin',
+  'waiting_on_customer',
+  'waiting_on_vendor',
+  'waiting_on_agent',
+  'resolved',
+  'closed',
 ];
 
 // ─── Priority ─────────────────────────────────────────────────────────────────
@@ -131,12 +135,9 @@ export const STATUS_TABS: { label: string; value: TicketStatus | null }[] = [
 /** Priorities an agency may set (api-doc/agency/tickets.md PATCH /priority). */
 export const TICKET_PRIORITIES: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
 
-export const PRIORITY_LABELS: Record<TicketPriority, string> = {
-  low: 'Low',
-  normal: 'Normal',
-  high: 'High',
-  urgent: 'Urgent',
-};
+export function priorityLabel(priority: string): string {
+  return tokenLabel('priority', priority);
+}
 
 export const PRIORITY_BADGE_CLASSES: Record<TicketPriority, string> = {
   low: 'bg-muted text-muted-foreground',
@@ -157,12 +158,9 @@ export const PRIORITY_DOT_CLASSES: Record<TicketPriority, string> = {
 
 export const IMPORTANCE_OPTIONS: TicketImportance[] = ['low', 'medium', 'high', 'critical'];
 
-export const IMPORTANCE_LABELS: Record<TicketImportance, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  critical: 'Critical',
-};
+export function importanceLabel(importance: string): string {
+  return tokenLabel('importance', importance);
+}
 
 export const IMPORTANCE_BADGE_CLASSES: Record<TicketImportance, string> = {
   low: 'bg-muted text-muted-foreground',
@@ -181,19 +179,9 @@ export const AGENCY_ENTITY_TYPES: TicketEntityType[] = [
   'OTHER', 'SHIPMENT', 'DELIVERY', 'ORDER', 'PRODUCT', 'AGENCY',
 ];
 
-export const ENTITY_TYPE_LABELS: Record<string, string> = {
-  OTHER: 'General (no specific item)',
-  SHIPMENT: 'A shipment',
-  DELIVERY: 'A delivery',
-  ORDER: 'An order',
-  PRODUCT: 'A product',
-  AGENCY: 'My agency',
-  BOOKING: 'A booking',
-  USER: 'A user',
-  VENDOR: 'A vendor',
-  CUSTOMER: 'A customer',
-  AGENT: 'An agent',
-};
+export function entityTypeLabel(entityType: string): string {
+  return tokenLabel('entityTypes', entityType);
+}
 
 /** Entity types that are picked from a searchable reference list rather than typed. */
 export const SEARCHABLE_ENTITY_TYPES: TicketEntityType[] = ['ORDER', 'PRODUCT', 'SHIPMENT', 'DELIVERY'];
@@ -201,12 +189,9 @@ export const SEARCHABLE_ENTITY_TYPES: TicketEntityType[] = ['ORDER', 'PRODUCT', 
 // ─── Ticket types (grouped) ────────────────────────────────────────────────────
 
 export interface TicketTypeGroup {
-  groupLabel: string;
-  values: { value: TicketType; label: string }[];
-}
-
-function group(groupLabel: string, values: TicketType[]): TicketTypeGroup {
-  return { groupLabel, values: values.map((value) => ({ value, label: humanizeEnum(value) })) };
+  /** Key under `tickets:typeGroups.*`. */
+  key: string;
+  values: TicketType[];
 }
 
 /**
@@ -215,46 +200,64 @@ function group(groupLabel: string, values: TicketType[]): TicketTypeGroup {
  * offered (api-doc/agency/tickets.md §Ticket Types).
  */
 export const TICKET_TYPE_GROUPS: TicketTypeGroup[] = [
-  group('Shipping & Delivery', [
-    'SHIPPING_ISSUE', 'DELIVERY_DELAY', 'DELIVERY_CONFIRMATION', 'ADDRESS_CHANGE',
-  ]),
-  group('Payouts', [
-    'PAYOUT_REQUEST', 'PAYOUT_DELAY', 'PAYOUT_DISPUTE', 'COMMISSION_QUESTION',
-  ]),
-  group('General & Account', [
-    'GENERAL_SUPPORT', 'ACCOUNT_ACCESS', 'ACCOUNT_VERIFICATION', 'PROFILE_UPDATE', 'SECURITY_ISSUE',
-  ]),
-  group('Orders', [
-    'ORDER_ISSUE', 'ORDER_CANCELLATION', 'ORDER_REFUND', 'ORDER_DISPUTE', 'ORDER_FULFILLMENT',
-  ]),
-  group('Payments', [
-    'PAYMENT_ISSUE', 'PAYMENT_FAILED', 'PAYMENT_CONFIRMATION', 'CHARGEBACK', 'INVOICE_REQUEST',
-  ]),
-  group('Products', [
-    'PRODUCT_ISSUE', 'INVENTORY_PROBLEM', 'PRICING_ISSUE', 'VARIANT_ISSUE',
-  ]),
-  group('Bookings', [
-    'BOOKING_ISSUE', 'BOOKING_CANCELLATION', 'BOOKING_RESCHEDULE', 'AVAILABILITY_PROBLEM',
-  ]),
-  group('Technical', [
-    'TECHNICAL_ISSUE', 'BUG_REPORT', 'INTEGRATION_ISSUE', 'API_ACCESS',
-  ]),
-  group('Policy & Legal', [
-    'POLICY_QUESTION', 'COMPLIANCE', 'LEGAL_REQUEST',
-  ]),
-  group('Other', ['OTHER']),
+  {
+    key: 'shipping',
+    values: ['SHIPPING_ISSUE', 'DELIVERY_DELAY', 'DELIVERY_CONFIRMATION', 'ADDRESS_CHANGE'],
+  },
+  {
+    key: 'payouts',
+    values: ['PAYOUT_REQUEST', 'PAYOUT_DELAY', 'PAYOUT_DISPUTE', 'COMMISSION_QUESTION'],
+  },
+  {
+    key: 'general',
+    values: ['GENERAL_SUPPORT', 'ACCOUNT_ACCESS', 'ACCOUNT_VERIFICATION', 'PROFILE_UPDATE', 'SECURITY_ISSUE'],
+  },
+  {
+    key: 'orders',
+    values: ['ORDER_ISSUE', 'ORDER_CANCELLATION', 'ORDER_REFUND', 'ORDER_DISPUTE', 'ORDER_FULFILLMENT'],
+  },
+  {
+    key: 'payments',
+    values: ['PAYMENT_ISSUE', 'PAYMENT_FAILED', 'PAYMENT_CONFIRMATION', 'CHARGEBACK', 'INVOICE_REQUEST'],
+  },
+  {
+    key: 'products',
+    values: ['PRODUCT_ISSUE', 'INVENTORY_PROBLEM', 'PRICING_ISSUE', 'VARIANT_ISSUE'],
+  },
+  {
+    key: 'bookings',
+    values: ['BOOKING_ISSUE', 'BOOKING_CANCELLATION', 'BOOKING_RESCHEDULE', 'AVAILABILITY_PROBLEM'],
+  },
+  {
+    key: 'technical',
+    values: ['TECHNICAL_ISSUE', 'BUG_REPORT', 'INTEGRATION_ISSUE', 'API_ACCESS'],
+  },
+  {
+    key: 'policy',
+    values: ['POLICY_QUESTION', 'COMPLIANCE', 'LEGAL_REQUEST'],
+  },
+  { key: 'other', values: ['OTHER'] },
 ];
 
-/** Flat label lookup for any ticket type value. */
-export const TICKET_TYPE_LABELS: Record<string, string> = TICKET_TYPE_GROUPS.reduce(
-  (acc, g) => {
-    g.values.forEach(({ value, label }) => {
-      acc[value] = label;
-    });
-    return acc;
-  },
-  {} as Record<string, string>,
-);
+export function ticketTypeGroupLabel(key: string): string {
+  return tokenLabel('typeGroups', key);
+}
+
+export function ticketTypeLabel(type: string): string {
+  return tokenLabel('types', type);
+}
+
+/** The parent order's fulfillment status, as shown on entity-picker order rows. */
+export function fulfillmentStatusLabel(status: string): string {
+  return tokenLabel('fulfillmentStatus', status);
+}
+
+/** A shipment's delivery status — shared with the Shipments screen's table. */
+export function shipmentStatusLabel(status: string): string {
+  const key = `shipments:status.${status}`;
+  const translated = txStatic(key);
+  return translated === key ? humanizeEnum(status) : translated;
+}
 
 // ─── Limits (api-doc/agency/tickets.md) ────────────────────────────────────────
 
@@ -322,16 +325,8 @@ export const ENTITY_ICONS: Record<string, LucideIcon> = {
 
 // ─── Actor helpers ────────────────────────────────────────────────────────────
 
-export const ROLE_LABELS: Record<string, string> = {
-  admin: 'Support',
-  agent: 'Delivery Agent',
-  vendor: 'Vendor',
-  customer: 'Customer',
-  agency: 'Agency',
-};
-
 export function roleLabel(role: string): string {
-  return ROLE_LABELS[role] ?? humanizeEnum(role);
+  return tokenLabel('roles', role);
 }
 
 /** Avatar fallback tint per role. */
@@ -368,13 +363,13 @@ export function relativeTime(iso: string): string {
   if (Number.isNaN(then)) return '';
   const diff = Date.now() - then;
   const sec = Math.round(diff / 1000);
-  if (sec < 45) return 'just now';
+  if (sec < 45) return txStatic('tickets:time.justNow');
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return txStatic('tickets:time.minutesAgo', { value: min });
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return txStatic('tickets:time.hoursAgo', { value: hr });
   const day = Math.round(hr / 24);
-  if (day < 30) return `${day}d ago`;
+  if (day < 30) return txStatic('tickets:time.daysAgo', { value: day });
   return fmtDate(iso);
 }
 

@@ -7,7 +7,9 @@
     "dev": "vite --port 5174",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "i18n:audit": "node scripts/i18n-audit.mjs",
+    "i18n:check": "node scripts/i18n-audit.mjs --strict"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -44,6 +46,7 @@
     "embla-carousel-react": "^8.6.0",
     "firebase": "^12.16.0",
     "framer-motion": "^11.0.0",
+    "i18next": "^25.10.10",
     "input-otp": "^1.4.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",
@@ -52,6 +55,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.70.0",
+    "react-i18next": "^16.6.6",
     "react-resizable-panels": "^4.2.2",
     "react-router-dom": "^6.22.0",
     "recharts": "^2.15.4",

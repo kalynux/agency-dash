@@ -33,12 +33,7 @@ export const HISTORY_MEMBERSHIP_STATUSES: MembershipStatus[] = ['rejected', 'wit
 
 export type MembershipOrigin = 'invitation' | 'join_request' | 'transfer' | 'admin' | 'migration' | (string & {});
 
-/**
- * Which side raised the contract. Derived server-side from `origin` (only
- * `join_request` is agent-raised) and the same rule the API enforces, so read
- * this rather than re-deriving it: the initiator gets **Withdraw**, the
- * counterparty gets **Approve / Decline**. Asking for the wrong one is a 403.
- */
+/** One of the two sides of a contract. */
 export type ContractParty = 'agent' | 'agency';
 
 export type EmploymentType = 'employee' | 'contractor' | 'freelancer';
@@ -115,8 +110,37 @@ export interface AgentMembership {
   agencyId: string;
   status: MembershipStatus;
   origin: MembershipOrigin;
-  /** Who raised it — drives Withdraw vs Approve/Decline. See {@link ContractParty}. */
+  /**
+   * Which side opened the contract, derived from `origin` (only `join_request`
+   * is agent-raised). **Audit only — no longer the button rule.** Terms are
+   * negotiable now, so the party who may approve is whoever the *standing
+   * offer* was not made by; read {@link AgentMembership.awaitingDecisionFrom}.
+   */
   initiatedBy: ContractParty;
+  /**
+   * Whose terms are currently on the table. `null` means **nobody has proposed
+   * any** — a bare agent join request, or a legacy contract whose fee split was
+   * never configured. Approving one of those is `422
+   * CONTRACT_TERMS_NOT_PROPOSED`; the agency owes an offer first.
+   */
+  termsProposedBy: ContractParty | null;
+  /** Bumps on every counter, revision and accepted proposal. `0` = never stated. */
+  termsVersion: number;
+  /**
+   * **The button rule.** Who must answer the standing offer; the other party
+   * sees Withdraw. `null` in two cases a client must tell apart — the contract
+   * is not `pending` (no offer on the table), or `termsProposedBy` is `null`
+   * (nobody may approve, so our control reads "Propose terms"). Use
+   * {@link contractOffer} rather than branching on this by hand.
+   */
+  awaitingDecisionFrom: ContractParty | null;
+  /**
+   * The open proposal on a **live** contract, when the endpoint resolved one.
+   * Most endpoints return `null` here regardless — the `/terms-proposals`
+   * endpoints are authoritative, so treat this as a hint, never as the absence
+   * of a proposal.
+   */
+  openTermsProposalId: string | null;
   isPrimary: boolean;
 
   // ── Negotiated terms ───────────────────────────────────────────────────────
@@ -183,6 +207,52 @@ export function readContractTerms(membership: AgentMembership): ContractTerms {
     coverage: membership.coverage,
     shipmentValueCeiling: membership.shipmentValueCeiling,
   };
+}
+
+// ─── Where a contract's negotiation stands ──────────────────────────────────────
+// Terms are agreed, not assigned, so which control belongs on a contract depends
+// on whose offer is standing — never on who opened it. The mechanism itself
+// switches on status: a `pending` contract carries its offer on the contract
+// document (countered in place), while a live one stages changes as separate
+// proposals that only apply on acceptance.
+
+export type ContractOffer =
+  /** Their offer is on the table: Approve / Decline / Counter are ours. */
+  | 'ours-to-answer'
+  /** Ours is: we may Withdraw the contract, or revise the figures. */
+  | 'theirs-to-answer'
+  /** Nobody has proposed terms — our control is "Propose terms", not "Approve". */
+  | 'needs-terms'
+  /** Not pending: nothing is on the table. Live changes go through proposals. */
+  | 'settled';
+
+/**
+ * Which negotiation control a pending contract should render.
+ *
+ * Reads `awaitingDecisionFrom`, which the server computes from the same guards
+ * it enforces — so a control this returns is one the API will accept.
+ * `initiatedBy` is deliberately not consulted: an agency that opened a contract
+ * can still end up as the party who must answer, once the agent counters.
+ */
+export function contractOffer(
+  membership: Pick<AgentMembership, 'status' | 'awaitingDecisionFrom' | 'termsProposedBy'>,
+): ContractOffer {
+  if (membership.status !== 'pending') return 'settled';
+  if (membership.awaitingDecisionFrom === 'agency') return 'ours-to-answer';
+  if (membership.awaitingDecisionFrom === 'agent') return 'theirs-to-answer';
+  return 'needs-terms';
+}
+
+/** Contracts whose terms are staged through proposals rather than written directly. */
+export const LIVE_CONTRACT_STATUSES: MembershipStatus[] = ['active', 'paused', 'suspended'];
+
+/**
+ * True when `PATCH .../terms` would be refused with `409
+ * CONTRACT_TERMS_LIVE_EDIT_NOT_ALLOWED` — the contract is pricing deliveries by
+ * its agreed split right now, so a change has to go through the agent.
+ */
+export function needsTermsProposal(membership: Pick<AgentMembership, 'status'>): boolean {
+  return LIVE_CONTRACT_STATUSES.includes(membership.status);
 }
 
 export interface AgentProfile {
@@ -289,10 +359,19 @@ export interface AgentRating {
   count: number;
 }
 
-/** The caller's standing with a directory agent — the live contract, else the most recent terminal one. */
+/**
+ * The caller's standing with a directory agent — the live contract, else the most
+ * recent terminal one.
+ *
+ * Deliberately thinner than {@link AgentMembership}: it carries no
+ * `awaitingDecisionFrom`, so a `pending` row here cannot say whose move it is.
+ * The directory can only report *that* a contract exists; answering it belongs
+ * to the roster, where the whole DTO is loaded.
+ */
 export interface AgentContractRef {
   id: string;
   status: MembershipStatus;
+  /** Audit only — see {@link AgentMembership.initiatedBy}. */
   initiatedBy: ContractParty;
   isPrimary: boolean;
 }
@@ -477,15 +556,21 @@ export interface UpdateEmploymentPayload {
 }
 
 /**
- * `PATCH /agency/agents/:membershipId/terms` — all groups optional, at least one
- * required. Send only the fields you changed: each group is merged over the
- * stored one, so an omitted key keeps its value.
+ * The four **negotiated** term groups, as every write body spells them —
+ * snake_case, mirroring the stored document, while the DTO reads back camelCase.
+ * Crossing that asymmetry is what {@link ContractTerms} and the terms form are
+ * for; don't assume a round trip of the same keys.
  *
- * `cod.threshold` is deliberately absent — it is bounded by the agent's shared
- * COD pool and has its own endpoint (`PATCH .../cod-limit`).
+ * All groups optional, at least one required. Each is merged field-by-field over
+ * the stored one, so an omitted key keeps its value — which is also why a
+ * partial `fee_split` patch is coherent: the model check runs on the merge.
+ *
+ * `employment` is absent on purpose (it is the agency's own HR record, written
+ * unilaterally through `PATCH .../employment`), as is `cod.threshold` (a
+ * sub-allocation of the agent's shared pool, with its own `/cod-limit`
+ * endpoint). Sending either here is `403 CONTRACT_TERMS_NOT_NEGOTIABLE`.
  */
-export interface UpdateTermsPayload {
-  employment?: UpdateEmploymentPayload;
+export interface NegotiableTermsPayload {
   fee_split?: {
     model?: FeeSplitModel;
     /** 0–100. */
@@ -507,6 +592,117 @@ export interface UpdateTermsPayload {
   };
   /** Minor units, or `null` for no per-shipment cap. */
   shipment_value_ceiling?: number | null;
+}
+
+/**
+ * `PATCH /agency/agents/:membershipId/terms` — the negotiable groups plus
+ * `employment`.
+ *
+ * ⚠️ **Status-aware.** This endpoint only applies to a `pending` contract, where
+ * it behaves exactly like `POST .../counter`. On an `active`, `paused` or
+ * `suspended` one it is `409 CONTRACT_TERMS_LIVE_EDIT_NOT_ALLOWED`: that
+ * contract is pricing deliveries by its agreed split right now, so a change has
+ * to be staged as a proposal the agent answers. Use {@link needsTermsProposal}
+ * to pick the route before writing anything.
+ */
+export interface UpdateTermsPayload extends NegotiableTermsPayload {
+  employment?: UpdateEmploymentPayload;
+}
+
+/** `POST /agency/agents/requests` — an offer, not a bare introduction. */
+export interface RequestAgentPayload {
+  agentId: string;
+  /**
+   * **Required, and must contain `fee_split`.** A request with no numbers in it
+   * would land the agent on the schema default, whose null `agent_share_percent`
+   * pays them zero — so a bare `{ agentId }` is a `400`.
+   */
+  terms: NegotiableTermsPayload;
+}
+
+// ─── Terms proposals (changes to a LIVE contract) ───────────────────────────────
+// A pending contract carries its offer on the contract itself and produces no
+// proposal rows. Once it is live there is an agreed set that deliveries are
+// priced by, and it must keep applying until the other side agrees to replace
+// it — so a change becomes a proposal, and the contract is untouched until it is
+// accepted. At most one may be open per contract.
+
+export type TermsProposalState =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn'
+  /** The other side countered it; the negotiation continued rather than ending. */
+  | 'superseded'
+  | (string & {});
+
+/** The verbs the server will accept on a proposal, as it names them itself. */
+export type TermsProposalAction = 'approve' | 'reject' | 'counter' | 'cancel';
+
+/** One changed leaf of a proposal, `termsBefore` → `proposedTerms`. */
+export interface TermsDiffEntry {
+  /** Dotted within the term groups, e.g. `fee_split.agent_share_percent`. */
+  path: string;
+  before: unknown;
+  after: unknown;
+}
+
+export interface ContractTermsProposal {
+  id: string;
+  contractId: string;
+  agentId: string;
+  agencyId: string;
+  /** Who raised it — and therefore whether `/resolve` or `/cancel` is our verb. */
+  proposedByRole: ContractParty;
+  state: TermsProposalState;
+  /**
+   * Pending **and** raised by the agent, i.e. ours to answer. **The** predicate
+   * for a badge — a raw row count over-counts by every proposal we raised.
+   */
+  awaitingMyDecision: boolean;
+  /**
+   * Exactly the verbs the server accepts from us, in render order; empty once
+   * resolved. Viewer-dependent, so drive the buttons from it: an agent reading a
+   * `remittance_terms` change gets approve/reject but not counter, because that
+   * group is not theirs to author.
+   */
+  availableActions: TermsProposalAction[];
+  /**
+   * The agreed terms **as they stood when this was raised** — snapshotted, not
+   * re-derived, so the diff stays honest after the contract moves on.
+   */
+  termsBefore: Record<string, unknown>;
+  /** The patch being proposed. Only the groups it names are changing. */
+  proposedTerms: Record<string, unknown>;
+  /** One entry per changed leaf. An unchanged restatement yields `[]`. */
+  diff: TermsDiffEntry[];
+  /** The proposal this one counters — walk it to rebuild the chain. */
+  supersedesId: string | null;
+  note: string | null;
+  resolvedByRole: ContractParty | null;
+  resolvedAt: string | null;
+  /** The `note` from whichever verb closed it. */
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TermsProposalListResponse {
+  success: true;
+  data: ContractTermsProposal[];
+}
+
+export interface TermsProposalResponse {
+  success: true;
+  data: ContractTermsProposal;
+  message?: string;
+}
+
+/** `/terms-proposals/:id/resolve` — the proposal, plus the contract it did or didn't move. */
+export interface TermsProposalResolveResponse {
+  success: true;
+  data: { proposal: ContractTermsProposal; contract: AgentMembership };
+  message?: string;
 }
 
 // ─── Response envelopes ─────────────────────────────────────────────────────────

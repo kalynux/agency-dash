@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Users, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,6 +21,7 @@ interface FollowerSelectProps {
  * offered as explicit viewers.
  */
 export function FollowerSelect({ followers, value, onChange, disabled }: FollowerSelectProps) {
+  const { t } = useTranslation('tickets');
   const options = useMemo(() => followers.filter((f) => f.role !== 'admin'), [followers]);
   const selected = useMemo(() => new Set(value), [value]);
 
@@ -31,8 +33,8 @@ export function FollowerSelect({ followers, value, onChange, disabled }: Followe
   }
 
   const label = value.length === 0
-    ? 'Everyone (admins only)'
-    : `${value.length} follower${value.length !== 1 ? 's' : ''}`;
+    ? t('followerSelect.everyone')
+    : t('followerSelect.selected', { count: value.length });
 
   return (
     <Popover>
@@ -46,15 +48,13 @@ export function FollowerSelect({ followers, value, onChange, disabled }: Followe
         >
           <span className="inline-flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5" />
-            {options.length === 0 ? 'No followers to add' : label}
+            {options.length === 0 ? t('followerSelect.none') : label}
           </span>
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-1">
-        <p className="px-2 py-1.5 text-xs text-muted-foreground">
-          Who can see this private item? Support can always see it.
-        </p>
+        <p className="px-2 py-1.5 text-xs text-muted-foreground">{t('followerSelect.hint')}</p>
         <ul className="max-h-56 overflow-y-auto">
           {options.map((f) => {
             const checked = selected.has(f.user_id);
@@ -63,7 +63,7 @@ export function FollowerSelect({ followers, value, onChange, disabled }: Followe
                 <button
                   type="button"
                   onClick={() => toggle(f.user_id)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm hover:bg-accent"
                 >
                   <ActorAvatar actor={f} className="h-6 w-6" />
                   <span className="min-w-0 flex-1">

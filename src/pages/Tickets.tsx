@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, RefreshCw, Tag,
@@ -20,9 +21,10 @@ import { CreateTicketSheet } from '@/components/tickets/CreateTicketSheet';
 import { TicketDetailSheet } from '@/components/tickets/TicketDetailSheet';
 import { FaqSheet } from '@/components/tickets/FaqSheet';
 import {
-  STATUS_LABELS, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, STATUS_TABS,
-  PRIORITY_LABELS, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
-  TICKET_TYPE_GROUPS, getTypeVisual, shortTicketRef, relativeTime, ENTITY_ICONS,
+  statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, STATUS_TAB_VALUES,
+  priorityLabel, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
+  TICKET_TYPE_GROUPS, ticketTypeGroupLabel, ticketTypeLabel,
+  getTypeVisual, shortTicketRef, relativeTime, ENTITY_ICONS,
 } from '@/components/tickets/ticket.constants';
 import type {
   Ticket, TicketPagination, TicketStatus, TicketPriority, TicketType, ListTicketsParams,
@@ -32,26 +34,50 @@ const PAGE_LIMIT = 20;
 const ALL = '__all__';
 
 type SortKey = 'updated' | 'created' | 'priority';
-const SORT_OPTIONS: { value: SortKey; label: string; sortBy: ListTicketsParams['sortBy']; sortOrder: 'asc' | 'desc' }[] = [
-  { value: 'updated', label: 'Recently updated', sortBy: 'updatedAt', sortOrder: 'desc' },
-  { value: 'created', label: 'Recently created', sortBy: 'createdAt', sortOrder: 'desc' },
-  { value: 'priority', label: 'Priority', sortBy: 'priority', sortOrder: 'desc' },
-];
 
-/** `STATUS_TABS` carries `null` for "all"; the filter pills need a string key. */
-const STATUS_OPTIONS = STATUS_TABS.map((tab) => ({
-  value: (tab.value ?? ALL) as TicketStatus | typeof ALL,
-  label: tab.label,
-}));
+/** Sort order per key. The copy lives in `tickets:page.sort.*`. */
+const SORT_CONFIG: Record<SortKey, { sortBy: ListTicketsParams['sortBy']; sortOrder: 'asc' | 'desc' }> = {
+  updated: { sortBy: 'updatedAt', sortOrder: 'desc' },
+  created: { sortBy: 'createdAt', sortOrder: 'desc' },
+  priority: { sortBy: 'priority', sortOrder: 'desc' },
+};
 
-const PRIORITY_OPTIONS = [
-  { value: ALL as TicketPriority | typeof ALL, label: 'All priorities' },
-  ...TICKET_PRIORITIES.map((p) => ({ value: p as TicketPriority | typeof ALL, label: PRIORITY_LABELS[p] })),
-];
+const SORT_KEYS: SortKey[] = ['updated', 'created', 'priority'];
 
 export function Tickets() {
+  const { t } = useTranslation(['tickets', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
+
+  /** `STATUS_TAB_VALUES` carries `null` for "all"; the filter pills need a string key. */
+  const statusOptions = useMemo(
+    () =>
+      STATUS_TAB_VALUES.map((value) => ({
+        value: (value ?? ALL) as TicketStatus | typeof ALL,
+        label: value === null ? t('status.all') : statusLabel(value),
+      })),
+    [t],
+  );
+
+  const priorityOptions = useMemo(
+    () => [
+      { value: ALL as TicketPriority | typeof ALL, label: t('page.filters.allPriorities') },
+      ...TICKET_PRIORITIES.map((p) => ({
+        value: p as TicketPriority | typeof ALL,
+        label: priorityLabel(p),
+      })),
+    ],
+    [t],
+  );
+
+  const sortOptions = useMemo(
+    () =>
+      SORT_KEYS.map((value) => ({
+        value,
+        label: t(`page.sort.${value}` as 'page.sort.updated'),
+      })),
+    [t],
+  );
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<TicketPagination>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
@@ -84,7 +110,7 @@ export function Tickets() {
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const sortConfig = SORT_OPTIONS.find((s) => s.value === sort)!;
+    const sortConfig = SORT_CONFIG[sort];
     try {
       const res = await ticketsService.list({
         status: statusFilter ?? undefined,
@@ -109,10 +135,10 @@ export function Tickets() {
   }, [load]);
 
   // The agency list endpoint has no text search, so search filters the loaded page.
-  const filtered = tickets.filter((t) => {
+  const filtered = tickets.filter((ticket) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    return t.subject.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
+    return ticket.subject.toLowerCase().includes(q) || ticket.description.toLowerCase().includes(q);
   });
 
   const hasActiveFilter = !!statusFilter || !!typeFilter || !!priorityFilter || searchQuery.trim().length > 0;
@@ -142,20 +168,20 @@ export function Tickets() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tickets</h1>
-          <p className="text-muted-foreground">Get help from the Jovi Mall support team</p>
+          <h1 className="text-2xl font-bold">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.description')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={load} title="Refresh" disabled={isLoading}>
+          <Button variant="outline" size="icon" onClick={load} title={t('page.refresh')} disabled={isLoading}>
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setFaqOpen(true)}>
             <HelpCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">FAQ</span>
+            <span className="hidden sm:inline">{t('page.faq')}</span>
           </Button>
           <Button className="gap-2" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
-            New ticket
+            {t('page.newTicket')}
           </Button>
         </div>
       </div>
@@ -164,44 +190,46 @@ export function Tickets() {
       <SearchFilterBar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search tickets…"
-        searchLabel="Search this page by subject or description"
+        placeholder={t('page.searchPlaceholder')}
+        searchLabel={t('page.searchLabel')}
         activeCount={activeFilterCount}
         onReset={resetFilters}
-        filterDescription="Status, type and priority filter every ticket; search looks at the page you're on."
+        filterDescription={t('page.filterDescription')}
         resultCount={searchQuery.trim() ? filtered.length : pagination.total}
-        resultNoun="ticket"
+        resultNounKey="common:nouns.ticket"
       >
-        <FilterSection label="Status">
+        <FilterSection label={t('page.filters.status')}>
           <FilterOptionGroup
             value={statusFilter ?? ALL}
             onChange={(v) => { setStatusFilter(v === ALL ? null : (v as TicketStatus)); setPage(1); }}
-            options={STATUS_OPTIONS}
+            options={statusOptions}
           />
         </FilterSection>
 
-        <FilterSection label="Priority">
+        <FilterSection label={t('page.filters.priority')}>
           <FilterOptionGroup
             value={priorityFilter || ALL}
             onChange={(v) => { setPriorityFilter(v === ALL ? '' : (v as TicketPriority)); setPage(1); }}
-            options={PRIORITY_OPTIONS}
+            options={priorityOptions}
           />
         </FilterSection>
 
-        <FilterSection label="Type">
-          <FilterField label="Ticket type">
+        <FilterSection label={t('page.filters.type')}>
+          <FilterField label={t('page.filters.ticketType')}>
             <Select
               value={typeFilter || ALL}
               onValueChange={(v) => { setTypeFilter(v === ALL ? '' : (v as TicketType)); setPage(1); }}
             >
-              <SelectTrigger className="h-10 w-full"><SelectValue placeholder="All types" /></SelectTrigger>
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue placeholder={t('page.filters.allTypes')} />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>All types</SelectItem>
+                <SelectItem value={ALL}>{t('page.filters.allTypes')}</SelectItem>
                 {TICKET_TYPE_GROUPS.map((g) => (
-                  <SelectGroup key={g.groupLabel}>
-                    <SelectLabel>{g.groupLabel}</SelectLabel>
+                  <SelectGroup key={g.key}>
+                    <SelectLabel>{ticketTypeGroupLabel(g.key)}</SelectLabel>
                     {g.values.map((v) => (
-                      <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                      <SelectItem key={v} value={v}>{ticketTypeLabel(v)}</SelectItem>
                     ))}
                   </SelectGroup>
                 ))}
@@ -210,11 +238,11 @@ export function Tickets() {
           </FilterField>
         </FilterSection>
 
-        <FilterSection label="Sort by">
+        <FilterSection label={t('page.filters.sortBy')}>
           <FilterOptionGroup
             value={sort}
             onChange={(v) => { setSort(v); setPage(1); }}
-            options={SORT_OPTIONS}
+            options={sortOptions}
           />
         </FilterSection>
       </SearchFilterBar>
@@ -226,23 +254,21 @@ export function Tickets() {
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
           <TicketIcon className="h-10 w-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+          <Button variant="outline" size="sm" onClick={load}>{t('common:actions.retry')}</Button>
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={TicketIcon}
-          title={hasActiveFilter ? 'No matching tickets' : 'No tickets yet'}
+          title={hasActiveFilter ? t('page.empty.titleFiltered') : t('page.empty.title')}
           description={
-            hasActiveFilter
-              ? 'Try adjusting your search or filters.'
-              : 'Create your first ticket to get help from support.'
+            hasActiveFilter ? t('page.empty.descriptionFiltered') : t('page.empty.description')
           }
           action={
             hasActiveFilter ? (
-              <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+              <Button variant="outline" onClick={clearFilters}>{t('page.empty.clearFilters')}</Button>
             ) : (
               <Button onClick={() => setCreateOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" /> New ticket
+                <Plus className="h-4 w-4" /> {t('page.newTicket')}
               </Button>
             )
           }
@@ -252,28 +278,28 @@ export function Tickets() {
           {/* Desktop / tablet: table */}
           <div className="hidden overflow-hidden rounded-lg border md:block">
             <table className="w-full text-sm">
-              <thead className="border-b bg-muted/40 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <thead className="border-b bg-muted/40 text-start text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">Ticket</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Priority</th>
-                  <th className="px-4 py-3">Updated</th>
+                  <th className="px-4 py-3">{t('page.table.ticket')}</th>
+                  <th className="px-4 py-3">{t('page.table.status')}</th>
+                  <th className="px-4 py-3">{t('page.table.priority')}</th>
+                  <th className="px-4 py-3">{t('page.table.updated')}</th>
                   <th className="w-8 px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => (
+                {filtered.map((ticket) => (
                   <tr
-                    key={t._id}
-                    onClick={() => setSelectedId(t._id)}
+                    key={ticket._id}
+                    onClick={() => setSelectedId(ticket._id)}
                     className="group cursor-pointer border-b last:border-0 hover:bg-muted/40"
                   >
-                    <td className="px-4 py-3"><TicketIdentity ticket={t} /></td>
-                    <td className="px-4 py-3"><StatusPill status={t.status} /></td>
-                    <td className="px-4 py-3"><PriorityPill priority={t.priority} locked={t.priority_locked} /></td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{relativeTime(t.updatedAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    <td className="px-4 py-3"><TicketIdentity ticket={ticket} /></td>
+                    <td className="px-4 py-3"><StatusPill status={ticket.status} /></td>
+                    <td className="px-4 py-3"><PriorityPill priority={ticket.priority} locked={ticket.priority_locked} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{relativeTime(ticket.updatedAt)}</td>
+                    <td className="px-4 py-3 text-end">
+                      <ChevronRight className="ms-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100" />
                     </td>
                   </tr>
                 ))}
@@ -283,17 +309,17 @@ export function Tickets() {
 
           {/* Mobile: full-bleed rows, separated by a line rather than framed */}
           <div className="-mx-4 divide-y border-y sm:-mx-6 md:hidden">
-            {filtered.map((t) => (
+            {filtered.map((ticket) => (
               <button
-                key={t._id}
-                onClick={() => setSelectedId(t._id)}
-                className="flex w-full flex-col gap-3 p-4 text-left active:bg-muted/50"
+                key={ticket._id}
+                onClick={() => setSelectedId(ticket._id)}
+                className="flex w-full flex-col gap-3 p-4 text-start active:bg-muted/50"
               >
-                <TicketIdentity ticket={t} />
+                <TicketIdentity ticket={ticket} />
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill status={t.status} />
-                  <PriorityPill priority={t.priority} locked={t.priority_locked} />
-                  <span className="ml-auto text-xs text-muted-foreground">{relativeTime(t.updatedAt)}</span>
+                  <StatusPill status={ticket.status} />
+                  <PriorityPill priority={ticket.priority} locked={ticket.priority_locked} />
+                  <span className="ms-auto text-xs text-muted-foreground">{relativeTime(ticket.updatedAt)}</span>
                 </div>
               </button>
             ))}
@@ -303,17 +329,35 @@ export function Tickets() {
           <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
             <span>
               {searchQuery.trim()
-                ? `${filtered.length} match${filtered.length !== 1 ? 'es' : ''} on this page`
-                : `Showing ${rangeStart}–${rangeEnd} of ${pagination.total}`}
+                ? t('page.matchesOnPage', { count: filtered.length })
+                : t('common:pagination.showingRange', {
+                    from: rangeStart,
+                    to: rangeEnd,
+                    total: pagination.total,
+                  })}
             </span>
             {pagination.pages > 1 && (
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  <ChevronLeft className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label={t('common:pagination.previous')}
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" />
                 </Button>
-                <span>Page {pagination.page} of {pagination.pages}</span>
-                <Button variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => setPage((p) => p + 1)}>
-                  <ChevronRight className="h-4 w-4" />
+                <span>
+                  {t('common:pagination.pageOf', { page: pagination.page, total: pagination.pages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label={t('common:pagination.next')}
+                  disabled={pagination.page >= pagination.pages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4 rtl:-scale-x-100" />
                 </Button>
               </div>
             )}
@@ -372,7 +416,7 @@ function StatusPill({ status }: { status: TicketStatus }) {
   return (
     <Badge className={cn('gap-1.5 border-0 font-medium', STATUS_BADGE_CLASSES[status])}>
       <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASSES[status])} />
-      {STATUS_LABELS[status]}
+      {statusLabel(status)}
     </Badge>
   );
 }
@@ -381,7 +425,7 @@ function PriorityPill({ priority, locked }: { priority: TicketPriority; locked?:
   return (
     <Badge className={cn('gap-1.5 border-0 font-medium', PRIORITY_BADGE_CLASSES[priority])}>
       <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_CLASSES[priority])} />
-      {PRIORITY_LABELS[priority]}
+      {priorityLabel(priority)}
       {locked && <LockGlyph />}
     </Badge>
   );

@@ -1,18 +1,46 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, Smartphone, Building2, Star, CreditCard, Phone, User, Hash, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
-import { payoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
+import { buildPayoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 
+// Operator brands — the same in every language.
 const MOBILE_MONEY_PROVIDERS = ['MTN Mobile Money', 'Orange Money', 'Wave', 'Moov Money', 'Airtel Money'];
-const COUNTRIES = ['Cameroon', "Côte d'Ivoire", 'Senegal', 'Nigeria', 'Ghana', 'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'South Africa', 'France', 'United Kingdom', 'United States'];
+
+/**
+ * Bank countries. The VALUE is what the backend stores, so it stays the English
+ * name; the label is localised through `Intl.DisplayNames`, which already knows
+ * every country in every language.
+ */
+const COUNTRY_CODES = ['CM', 'CI', 'SN', 'NG', 'GH', 'KE', 'TZ', 'UG', 'RW', 'ZA', 'FR', 'GB', 'US'];
+
+const COUNTRY_VALUES: Record<string, string> = {
+    CM: 'Cameroon', CI: "Côte d'Ivoire", SN: 'Senegal', NG: 'Nigeria', GH: 'Ghana',
+    KE: 'Kenya', TZ: 'Tanzania', UG: 'Uganda', RW: 'Rwanda', ZA: 'South Africa',
+    FR: 'France', GB: 'United Kingdom', US: 'United States',
+};
+
+function countryOptions(language: string): { value: string; label: string }[] {
+    let display: Intl.DisplayNames | null = null;
+    try {
+        display = new Intl.DisplayNames([language], { type: 'region' });
+    } catch {
+        // A runtime without DisplayNames falls back to the stored English name.
+    }
+    return COUNTRY_CODES.map((code) => ({
+        value: COUNTRY_VALUES[code],
+        label: display?.of(code) ?? COUNTRY_VALUES[code],
+    }));
+}
 
 const EMPTY_MOBILE_MONEY = { method: 'mobile_money' as const, mobile_money: { provider: '', phone_number: '', account_name: '' }, bank: null };
 const EMPTY_BANK = { method: 'bank' as const, bank: { bank_name: '', account_number: '', account_name: '', country: '' }, mobile_money: null };
@@ -69,8 +97,12 @@ function MethodTypeTab({ selected, icon: Icon, label, description, disabled, onC
 }
 
 export function Step2Payout() {
+    const { t, i18n } = useTranslation(['onboarding', 'common']);
     const { submitPayout, isSubmitting, session, goBack, drafts, saveDraft } = useOnboarding();
     const [apiError, setApiError] = useState<string | null>(null);
+    // Rebuilt on a language switch so validation messages follow the UI.
+    const schema = useMemo(() => buildPayoutSchema(t), [t]);
+    const countries = useMemo(() => countryOptions(i18n.language), [i18n.language]);
 
     const roleEntity = session?.role_entity;
     // Draft takes precedence — it contains the exact values the user entered last time.
@@ -79,7 +111,7 @@ export function Step2Payout() {
     // Pre-populate from previously saved session data
     const savedPayout = roleEntity?.payout_details;
     const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PayoutFormValues>({
-        resolver: zodResolver(payoutSchema),
+        resolver: zodResolver(schema),
         defaultValues: {
             payout_details: draft?.payout_details ?? (
                 savedPayout?.length
@@ -122,25 +154,29 @@ export function Step2Payout() {
         saveDraft(2, values);
         try {
             await submitPayout({ payout_details: values.payout_details, version: roleEntity?.version });
-            toast.success('Payout setup saved!');
+            toast.success(t('payout.saved'));
         } catch (err) {
             if (err instanceof ApiError) {
-                if (err.isConcurrentModification) setApiError('Profile was modified elsewhere. Please refresh.');
-                else if (err.isValidation) setApiError(err.firstFieldError() ?? err.message);
-                else setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
+                // Field errors are the one place raw server text is allowed through:
+                // they name a specific field and carry no code to resolve.
+                if (err.isConcurrentModification) setApiError(t('errors.concurrentShort'));
+                else if (err.isValidation) setApiError(err.firstFieldError() ?? getApiErrorMessage(err));
+                else setApiError(err.isServer ? t('errors.server') : getApiErrorMessage(err));
             }
         }
-    }, [submitPayout, roleEntity]);
+    }, [submitPayout, roleEntity, t]);
 
     return (
         <OnboardingLayout stepKey={2} viewingStepOverride={2}
             ctaSlot={
                 <div className="px-6 pb-6 pt-2 flex gap-3">
                     <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-slate-300 text-slate-600 dark:border-zinc-600 dark:text-slate-300">
-                        <ChevronLeft className="w-4 h-4" /> Back
+                        <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
                     </Button>
                     <Button type="submit" form="step2-payout-form" disabled={isSubmitting} className="flex-1 h-12 rounded-xl font-semibold gap-2">
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>Continue <ChevronRight className="w-4 h-4" /></>}
+                        {isSubmitting
+                            ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('actions.saving')}</>
+                            : <>{t('actions.continue')} <ChevronRight className="w-4 h-4" /></>}
                     </Button>
                 </div>
             }
@@ -148,9 +184,9 @@ export function Step2Payout() {
             <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-zinc-800">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="w-4 h-4 text-primary" /></div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">Payout Setup</h1>
+                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('payout.title')}</h1>
                 </div>
-                <p className="text-sm text-slate-500">Add at least one payout method. The first entry is your preferred method.</p>
+                <p className="text-sm text-slate-500">{t('payout.description')}</p>
             </div>
 
             {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}
@@ -169,11 +205,11 @@ export function Step2Payout() {
                                 <div className="flex items-center gap-2">
                                     <Star className={cn('w-3.5 h-3.5', isPreferred ? 'text-primary fill-primary' : 'text-slate-300')} />
                                     <span className={cn('text-xs font-semibold', isPreferred ? 'text-primary' : 'text-slate-500')}>
-                                        {isPreferred ? 'Preferred Method' : 'Fallback Method'}
+                                        {isPreferred ? t('payout.preferredMethod') : t('payout.fallbackMethod')}
                                     </span>
                                 </div>
                                 {fields.length > 1 && (
-                                    <button type="button" onClick={() => remove(index)} aria-label="Remove" className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <button type="button" onClick={() => remove(index)} aria-label={t('common:actions.remove')} className="text-slate-400 hover:text-red-500 transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 )}
@@ -181,24 +217,26 @@ export function Step2Payout() {
 
                             <div className="p-4 bg-white dark:bg-zinc-900 space-y-4">
                                 <div className="space-y-1.5">
-                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Payment Method</p>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('payout.paymentMethod')}</p>
                                     <div className="flex gap-2">
-                                        <MethodTypeTab selected={currentMethod === 'mobile_money'} icon={Smartphone} label="Mobile Money" description="MTN, Orange, Wave…"
+                                        <MethodTypeTab selected={currentMethod === 'mobile_money'} icon={Smartphone}
+                                            label={t('payout.mobileMoney')} description={t('payout.mobileMoneyDescription')}
                                             onClick={() => switchMethod(index, 'mobile_money')} />
-                                        <MethodTypeTab selected={currentMethod === 'bank'} icon={Building2} label="Bank Transfer" description="Direct bank payout"
+                                        <MethodTypeTab selected={currentMethod === 'bank'} icon={Building2}
+                                            label={t('payout.bankTransfer')} description={t('payout.bankTransferDescription')}
                                             onClick={() => switchMethod(index, 'bank')} />
                                     </div>
                                 </div>
 
                                 {currentMethod === 'mobile_money' && (
                                     <div className="space-y-3 border-t border-slate-100 dark:border-zinc-800 pt-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mobile Money Details</p>
-                                        <FieldRow label="Provider" required>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('payout.mobileMoneyDetails')}</p>
+                                        <FieldRow label={t('payout.provider')} required>
                                             <Controller control={control} name={`payout_details.${index}.mobile_money.provider` as `payout_details.${number}.mobile_money.provider`}
                                                 render={({ field: f }) => (
                                                     <Select value={f.value ?? ''} onValueChange={f.onChange}>
                                                         <SelectTrigger className={selectTriggerClass()}>
-                                                            <SelectValue placeholder="Select provider" />
+                                                            <SelectValue placeholder={t('payout.providerPlaceholder')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {MOBILE_MONEY_PROVIDERS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -206,12 +244,12 @@ export function Step2Payout() {
                                                     </Select>
                                                 )} />
                                         </FieldRow>
-                                        <FieldRow label="Phone Number" required>
-                                            <IconInput icon={Phone} type="tel" inputMode="tel" placeholder="+237 6XX XXX XXX"
+                                        <FieldRow label={t('payout.phoneNumber')} required>
+                                            <IconInput icon={Phone} type="tel" inputMode="tel" placeholder={t('payout.phonePlaceholder')}
                                                 {...register(`payout_details.${index}.mobile_money.phone_number` as never)} />
                                         </FieldRow>
-                                        <FieldRow label="Account Name" required>
-                                            <IconInput icon={User} type="text" placeholder="Name on the mobile money account"
+                                        <FieldRow label={t('payout.accountName')} required>
+                                            <IconInput icon={User} type="text" placeholder={t('payout.mobileAccountNamePlaceholder')}
                                                 {...register(`payout_details.${index}.mobile_money.account_name` as never)} />
                                         </FieldRow>
                                     </div>
@@ -219,31 +257,31 @@ export function Step2Payout() {
 
                                 {currentMethod === 'bank' && (
                                     <div className="space-y-3 border-t border-slate-100 dark:border-zinc-800 pt-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Bank Account Details</p>
-                                        <FieldRow label="Bank Name" required>
-                                            <IconInput icon={Building2} type="text" placeholder="e.g. Afriland First Bank"
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('payout.bankDetails')}</p>
+                                        <FieldRow label={t('payout.bankName')} required>
+                                            <IconInput icon={Building2} type="text" placeholder={t('payout.bankNamePlaceholder')}
                                                 {...register(`payout_details.${index}.bank.bank_name` as never)} />
                                         </FieldRow>
-                                        <FieldRow label="Account Number" required>
-                                            <IconInput icon={Hash} type="text" inputMode="numeric" placeholder="IBAN or local account number"
+                                        <FieldRow label={t('payout.accountNumber')} required>
+                                            <IconInput icon={Hash} type="text" inputMode="numeric" placeholder={t('payout.accountNumberPlaceholder')}
                                                 {...register(`payout_details.${index}.bank.account_number` as never)} />
                                         </FieldRow>
-                                        <FieldRow label="Account Name" required>
-                                            <IconInput icon={User} type="text" placeholder="Name on the bank account"
+                                        <FieldRow label={t('payout.accountName')} required>
+                                            <IconInput icon={User} type="text" placeholder={t('payout.bankAccountNamePlaceholder')}
                                                 {...register(`payout_details.${index}.bank.account_name` as never)} />
                                         </FieldRow>
-                                        <FieldRow label="Bank Country" required>
+                                        <FieldRow label={t('payout.bankCountry')} required>
                                             <Controller control={control} name={`payout_details.${index}.bank.country` as `payout_details.${number}.bank.country`}
                                                 render={({ field: f }) => (
                                                     <Select value={f.value ?? ''} onValueChange={f.onChange}>
                                                         <SelectTrigger className={selectTriggerClass()}>
                                                             <div className="flex items-center gap-2 text-sm">
                                                                 <Globe2 className="w-4 h-4 text-slate-400" />
-                                                                <SelectValue placeholder="Country where the bank operates" />
+                                                                <SelectValue placeholder={t('payout.bankCountryPlaceholder')} />
                                                             </div>
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                            {countries.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
                                                 )} />
@@ -259,18 +297,18 @@ export function Step2Payout() {
                     <div className="flex gap-2 pt-1">
                         {canAddMobileMoney && (
                             <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
-                                <Plus className="w-3.5 h-3.5" /> Add Mobile Money
+                                <Plus className="w-3.5 h-3.5" /> {t('payout.addMobileMoney')}
                             </Button>
                         )}
                         {canAddBank && (
                             <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 h-9 text-xs gap-1.5 border-dashed border-slate-300 text-slate-500">
-                                <Plus className="w-3.5 h-3.5" /> Add Bank Account
+                                <Plus className="w-3.5 h-3.5" /> {t('payout.addBankAccount')}
                             </Button>
                         )}
                     </div>
                 )}
 
-                <p className="text-xs text-slate-400 text-center">You can manage payout methods anytime in Settings.</p>
+                <p className="text-xs text-slate-400 text-center">{t('payout.footnote')}</p>
             </form>
         </OnboardingLayout>
     );

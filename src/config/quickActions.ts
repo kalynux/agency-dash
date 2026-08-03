@@ -11,8 +11,9 @@ export type QuickActionRoute = 'tickets' | 'shipments' | 'account/payout' | 'cas
 
 export interface QuickAction {
   id: string;
-  label: string;
-  description: string;
+  /** `nav:quickActions.*` key, resolved at render (see config/navigation.ts). */
+  labelKey: string;
+  descriptionKey: string;
   icon: LucideIcon;
   /** Route (relative to /dashboard) to navigate to. */
   route: QuickActionRoute;
@@ -30,37 +31,37 @@ export interface QuickAction {
 export const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'new-ticket',
-    label: 'New Ticket',
-    description: 'Get help from the team',
+    labelKey: 'nav:quickActions.newTicket.label',
+    descriptionKey: 'nav:quickActions.newTicket.description',
     icon: Ticket,
     route: 'tickets',
     intent: 'create',
   },
   {
     id: 'view-shipments',
-    label: 'View Shipments',
-    description: 'Track and manage shipments',
+    labelKey: 'nav:quickActions.viewShipments.label',
+    descriptionKey: 'nav:quickActions.viewShipments.description',
     icon: Truck,
     route: 'shipments',
   },
   {
     id: 'view-earnings',
-    label: 'View Earnings',
-    description: 'Balance & payout requests',
+    labelKey: 'nav:quickActions.viewEarnings.label',
+    descriptionKey: 'nav:quickActions.viewEarnings.description',
     icon: Wallet,
     route: 'account/payout',
   },
   {
     id: 'view-cash',
-    label: 'Cash Management',
-    description: 'COD deposits & remittances',
+    labelKey: 'nav:quickActions.viewCash.label',
+    descriptionKey: 'nav:quickActions.viewCash.description',
     icon: Banknote,
     route: 'cash/summary',
   },
   {
     id: 'update-coverage',
-    label: 'Update Coverage Areas',
-    description: 'Edit the regions you deliver to',
+    labelKey: 'nav:quickActions.updateCoverage.label',
+    descriptionKey: 'nav:quickActions.updateCoverage.description',
     icon: MapPin,
     route: 'account/locations',
   },

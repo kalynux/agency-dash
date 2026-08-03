@@ -1,4 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ProfileSettings } from '@/components/agency-settings/ProfileSettings';
 import { MagazinSettings } from '@/components/agency-settings/MagazinSettings';
 import { LocationsSettings } from '@/components/agency-settings/LocationsSettings';
@@ -13,6 +14,7 @@ const VALID_TABS = ['profile', 'store', 'locations', 'security', 'billing', 'pay
 type AccountTab = typeof VALID_TABS[number];
 
 export function Account() {
+  const { t } = useTranslation('account');
   const { tab } = useParams<{ tab: string }>();
 
   // Legacy aliases — the business identity moved to the Store (magazin) tab and
@@ -28,15 +30,13 @@ export function Account() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-          Account
-          <InfoHint className="md:hidden" label="About the Account section">
-            Manage your personal profile, business identity, and payouts.
+          {t('page.title')}
+          <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
+            {t('page.description')}
           </InfoHint>
         </h1>
-        <p className="text-muted-foreground max-md:hidden">
-          Manage your personal profile, business identity, and payouts
-        </p>
-        <p className="text-muted-foreground md:hidden">Profile, business and payouts</p>
+        <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
+        <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
       </div>
 
       {activeTab === 'profile' && <ProfileSettings />}

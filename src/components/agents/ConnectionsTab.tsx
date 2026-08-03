@@ -1,5 +1,6 @@
 import { formatNumber } from '@/lib/format';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, Loader2, Star, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,15 +10,19 @@ import {
 } from '@/components/common/SearchFilterBar';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useAgentActions } from '@/hooks/useAgentActions';
+import { getApiErrorMessage } from '@/lib/errors';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
 import { AgentMembershipDialog } from '@/components/agents/AgentMembershipDialog';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
+import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
 import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
 import {
   agentAvatarUrl,
+  contractOffer,
   HISTORY_MEMBERSHIP_STATUSES,
   type ContractStatusRequest,
   type ContractStatusRequestDecision,
+  type ContractTermsProposal,
   type MembershipStatus,
   type RosterEntry,
 } from '@/types/agent.types';
@@ -27,30 +32,46 @@ import {
  * and every decision waiting on you — the direct counterpart of the vendor
  * Connections tab.
  *
- * Two kinds of decision land here, and they are deliberately on the same row as
- * the agent they concern rather than in a separate inbox:
+ * Three kinds of decision land here, deliberately on the same row as the agent
+ * they concern rather than in a separate inbox:
  *
- * 1. **Join requests** — a `pending` contract. Whoever raised it cannot answer
- *    it, so the buttons come from `initiatedBy`: the agent applied → Approve /
- *    Reject; we approached them → Withdraw. Offering the wrong pair is a 403.
- * 2. **Contract changes** — a pause, a resume or a departure someone proposed
- *    (`GET /agency/agents/status-requests`). Ending or pausing a contract is a
- *    two-party transition: whoever moves raises a request and the other side
- *    clears it. The endpoint returns BOTH directions, so a row is either ours to
- *    answer (Approve / Reject) or ours to pull back (Cancel) — never both, and
- *    never inferred: `availableActions` names the verbs the server will accept.
+ * 1. **Offers** — a `pending` contract, whose terms one side has put on the
+ *    table. The party who made the standing offer may only withdraw it; the
+ *    other may approve, decline or counter. That is `awaitingDecisionFrom`, not
+ *    `initiatedBy` — an agency that opened the contract becomes the answering
+ *    party the moment the agent counters. `contractOffer` reads the rule.
+ * 2. **Terms changes on a live contract** (`GET /agency/agents/terms-proposals`)
+ *    — staged, never applied: the agreed split goes on pricing deliveries until
+ *    the proposal is accepted.
+ * 3. **Status changes** — a pause, a resume or a departure someone proposed
+ *    (`GET /agency/agents/status-requests`). Two-party transitions: whoever
+ *    moves raises a request and the other side clears it.
+ *
+ * Both list endpoints return BOTH directions, so a row is either ours to answer
+ * or ours to pull back — never both, and never inferred: `availableActions`
+ * names the verbs the server will accept.
  */
 
-type StatusChip = 'all' | 'requests' | 'active' | 'change_requested' | 'paused' | 'suspended' | 'history';
+type StatusChip =
+  | 'all'
+  | 'requests'
+  | 'active'
+  | 'change_requested'
+  | 'terms_proposed'
+  | 'paused'
+  | 'suspended'
+  | 'history';
 
-const STATUS_FILTERS: { value: StatusChip; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'requests', label: 'Join requests' },
-  { value: 'active', label: 'Active' },
-  { value: 'change_requested', label: 'Change requested' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'suspended', label: 'Suspended' },
-  { value: 'history', label: 'History' },
+/** Chip order. The copy lives in `agents:connections.chips.*`, keyed by value. */
+const STATUS_CHIPS: StatusChip[] = [
+  'all',
+  'requests',
+  'active',
+  'change_requested',
+  'terms_proposed',
+  'paused',
+  'suspended',
+  'history',
 ];
 
 // ─── Tab ────────────────────────────────────────────────────────────────────────
@@ -66,7 +87,17 @@ export interface ConnectionsTabProps {
 }
 
 export function ConnectionsTab({ onContractChange, openContractId }: ConnectionsTabProps) {
-  const { roster, statusRequests, isLoading, error, refetch } = useAgentsRoster();
+  const { t } = useTranslation(['agents', 'common']);
+  const { roster, statusRequests, termsProposals, isLoading, error, refetch } = useAgentsRoster();
+
+  const statusFilters = useMemo(
+    () =>
+      STATUS_CHIPS.map((value) => ({
+        value,
+        label: t(`connections.chips.${value}` as 'connections.chips.all'),
+      })),
+    [t],
+  );
 
   const [chip, setChip] = useState<StatusChip>('all');
   const [search, setSearch] = useState('');
@@ -96,12 +127,19 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
       : null;
   const activeEntry = selected ?? deepLinked;
 
-  /** The pending change an agent raised on this contract, if any. */
+  /** The pending status change on this contract, in either direction. */
   const requestByContract = useMemo(() => {
     const map = new Map<string, ContractStatusRequest>();
     for (const request of statusRequests) map.set(request.contractId, request);
     return map;
   }, [statusRequests]);
+
+  /** The open terms proposal on this contract — at most one, by unique index. */
+  const proposalByContract = useMemo(() => {
+    const map = new Map<string, ContractTermsProposal>();
+    for (const proposal of termsProposals) map.set(proposal.contractId, proposal);
+    return map;
+  }, [termsProposals]);
 
   const clearNote = (result: unknown) => {
     if (result) {
@@ -125,6 +163,8 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
         return status === 'pending';
       case 'change_requested':
         return requestByContract.has(entry.membership.id);
+      case 'terms_proposed':
+        return proposalByContract.has(entry.membership.id);
       case 'history':
         return HISTORY_MEMBERSHIP_STATUSES.includes(status);
       default:
@@ -148,37 +188,37 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
       <SearchFilterBar
         value={search}
         onChange={setSearch}
-        placeholder="Search agents…"
-        searchLabel="Search your agents by name, email, or phone"
+        placeholder={t('connections.searchPlaceholder')}
+        searchLabel={t('connections.searchLabel')}
         activeCount={chip === 'all' ? 0 : 1}
         onReset={() => setChip('all')}
-        filterDescription="Every agent contract your agency has, past and present."
+        filterDescription={t('connections.filterDescription')}
         resultCount={filtered.length}
-        resultNoun="contract"
+        resultNounKey="common:nouns.contract"
       >
-        <FilterSection label="Contract status">
-          <FilterOptionGroup value={chip} onChange={setChip} options={STATUS_FILTERS} />
+        <FilterSection label={t('connections.statusFilter')}>
+          <FilterOptionGroup value={chip} onChange={setChip} options={statusFilters} />
         </FilterSection>
       </SearchFilterBar>
 
       {listLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading contracts…
+          <Loader2 className="w-4 h-4 animate-spin" /> {t('connections.loading')}
         </div>
       ) : error && roster.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
-          <Button variant="outline" onClick={refetch}>Retry</Button>
+          <p className="text-sm text-muted-foreground mb-4">{getApiErrorMessage(error)}</p>
+          <Button variant="outline" onClick={refetch}>{t('common:actions.retry')}</Button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-10 border border-dashed rounded-xl">
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
             {query
-              ? 'No agents match your search.'
+              ? t('connections.emptyFiltered')
               : chip === 'all'
-                ? 'No agent contracts yet — find an agent in the Browse tab.'
-                : 'Nothing in this category yet.'}
+                ? t('connections.empty')
+                : t('connections.emptyCategory')}
           </p>
         </div>
       ) : (
@@ -188,6 +228,8 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
             const VehicleIcon = getVehicleIcon(agent.vehicleInfo?.vehicle_type);
             const avatar = agentAvatarUrl(agent);
             const request = requestByContract.get(membership.id);
+            const proposal = proposalByContract.get(membership.id);
+            const offer = contractOffer(membership);
             const pendingApprove = actions.pendingKey === `approve:${membership.id}`;
             const pendingReject = actions.pendingKey === `reject:${membership.id}`;
             const pendingWithdraw = actions.pendingKey === `withdraw:${membership.id}`;
@@ -200,7 +242,7 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    className="flex items-center gap-3 min-w-0 text-left"
+                    className="flex items-center gap-3 min-w-0 text-start"
                     onClick={() => setSelected(entry)}
                   >
                     <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -218,59 +260,72 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span className="flex items-center gap-1">
                           <VehicleIcon className="w-3 h-3" />
-                          {agent.vehicleInfo ? formatVehicleType(agent.vehicleInfo.vehicle_type) : '—'}
+                          {agent.vehicleInfo
+                            ? formatVehicleType(agent.vehicleInfo.vehicle_type)
+                            : t('common:values.notAvailable')}
                         </span>
                         <span className="flex items-center gap-1">
                           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                           {agent.trustScore}
                         </span>
-                        {cashHeld > 0 && <span className="text-amber-600">Holds {formatNumber(cashHeld)}</span>}
+                        {cashHeld > 0 && (
+                          <span className="text-amber-600">
+                            {t('connections.holdsCash', { amount: formatNumber(cashHeld) })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
 
                   <div className="flex-shrink-0">
-                    {membership.status === 'pending' ? (
-                      membership.initiatedBy === 'agent' ? (
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            className="gap-1"
-                            disabled={pendingApprove}
-                            onClick={() => actions.approve(membership.id, agent.id)}
-                          >
-                            {pendingApprove ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            disabled={pendingReject}
-                            onClick={() => actions.reject(membership.id, undefined, agent.id)}
-                          >
-                            {pendingReject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-                            Decline
-                          </Button>
-                        </div>
-                      ) : (
-                        // We approached them — it is theirs to answer, ours to pull back.
+                    {/* The standing offer is theirs → we answer it. Countering
+                        needs the terms editor, so that one lives in the sheet. */}
+                    {offer === 'ours-to-answer' ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          className="gap-1"
+                          disabled={pendingApprove}
+                          onClick={() => actions.approve(membership.id, agent.id)}
+                        >
+                          {pendingApprove ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          {t('connections.accept')}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={pendingWithdraw}
-                          onClick={() => actions.withdraw(agent.id, membership.id)}
+                          className="gap-1"
+                          disabled={pendingReject}
+                          onClick={() => actions.reject(membership.id, undefined, agent.id)}
                         >
-                          {pendingWithdraw ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Withdraw'}
+                          {pendingReject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                          {t('connections.decline')}
                         </Button>
-                      )
+                      </div>
+                    ) : offer === 'theirs-to-answer' ? (
+                      // Ours is the standing offer — it is theirs to answer, ours to pull back.
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pendingWithdraw}
+                        onClick={() => actions.withdraw(agent.id, membership.id)}
+                      >
+                        {pendingWithdraw ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('connections.withdraw')}
+                      </Button>
+                    ) : offer === 'needs-terms' ? (
+                      // A bare join request: nobody has stated terms, so there is
+                      // nothing to approve. Approving would be 422
+                      // CONTRACT_TERMS_NOT_PROPOSED — we owe the first offer.
+                      <Button size="sm" onClick={() => setSelected(entry)}>
+                        {t('connections.proposeTerms')}
+                      </Button>
                     ) : HISTORY_MEMBERSHIP_STATUSES.includes(membership.status) ? (
                       <Button size="sm" variant="ghost" onClick={() => setSelected(entry)}>
-                        View
+                        {t('connections.view')}
                       </Button>
                     ) : (
                       <Button size="sm" variant="ghost" onClick={() => setSelected(entry)}>
-                        Manage
+                        {t('connections.manage')}
                       </Button>
                     )}
                   </div>
@@ -289,6 +344,32 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                     onOpenNote={() => { setNoteFor(request.id); setNote(''); }}
                     onResolve={(decision) => resolve(request, decision)}
                     onCancel={() => cancel(request)}
+                  />
+                )}
+
+                {proposal && (
+                  <TermsProposalPanel
+                    proposal={proposal}
+                    busy={
+                      actions.pendingKey === `proposal-resolve:${proposal.id}` ||
+                      actions.pendingKey === `proposal-cancel:${proposal.id}`
+                    }
+                    note={note}
+                    noteOpen={noteFor === proposal.id}
+                    onNoteChange={setNote}
+                    onOpenNote={() => { setNoteFor(proposal.id); setNote(''); }}
+                    onResolve={async (decision) =>
+                      clearNote(
+                        await actions.resolveTermsProposal(proposal.id, decision, note.trim() || undefined),
+                      )
+                    }
+                    onCancel={async () =>
+                      clearNote(
+                        await actions.cancelTermsProposal(proposal.id, note.trim() || undefined),
+                      )
+                    }
+                    // Countering means writing figures, which needs the editor.
+                    onCounter={() => setSelected(entry)}
                   />
                 )}
               </div>

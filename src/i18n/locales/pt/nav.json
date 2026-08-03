@@ -1,0 +1,100 @@
+{
+  "primary": {
+    "overview": "Visão geral",
+    "shipments": "Envios",
+    "tracking": "Rastreio em direto",
+    "media": "Multimédia",
+    "transactions": "Transações",
+    "cash": "Gestão de numerário",
+    "cashSummary": "Resumo",
+    "cashDeposits": "Depósitos",
+    "cashRemittances": "Remessas",
+    "cashDiscrepancies": "Divergências",
+    "notifications": "Notificações",
+    "tickets": "Tickets",
+    "agents": "Estafetas",
+    "agentsConnections": "Contratos",
+    "agentsBrowse": "Diretório",
+    "vendors": "Vendedores",
+    "vendorsConnections": "Ligações",
+    "vendorsBrowse": "Diretório"
+  },
+  "footer": {
+    "account": "Conta",
+    "accountProfile": "Perfil",
+    "accountStore": "Loja",
+    "accountLocations": "Locais",
+    "accountSecurity": "Segurança",
+    "accountBilling": "Faturação",
+    "accountPayout": "Pagamentos",
+    "settings": "Definições",
+    "settingsPolicies": "Políticas",
+    "settingsNotifications": "Notificações",
+    "settingsPreferences": "Preferências"
+  },
+  "sidebar": {
+    "fallbackAgencyName": "A minha agência",
+    "collapse": "Recolher",
+    "expand": "Expandir a barra lateral",
+    "resizeHandle": "Arraste para redimensionar",
+    "platform": "Wi Mall"
+  },
+  "mobile": {
+    "more": "Mais",
+    "roleLabel": "Agência",
+    "openSettings": "Abrir as definições da conta",
+    "quickCreate": "Criar",
+    "back": "Voltar"
+  },
+  "header": {
+    "searchPlaceholderShort": "Pesquisar…",
+    "searchPlaceholder": "Pesquisar entregas, tickets…",
+    "searchLabel": "Abrir a pesquisa",
+    "closeSearch": "Fechar a pesquisa",
+    "quickActions": "Ações rápidas",
+    "notifications": "Notificações",
+    "markAllRead": "Marcar tudo como lido",
+    "noNewNotifications": "Sem notificações novas",
+    "viewAllNotifications": "Ver todas as notificações",
+    "profile": "Perfil",
+    "logout": "Terminar sessão",
+    "logoutConfirmTitle": "Terminar sessão?",
+    "logoutConfirmDescription": "Terá de iniciar sessão novamente para aceder ao seu painel.",
+    "logoutConfirmAction": "Terminar sessão",
+    "searchResultsFor": "Resultados para «{{query}}»",
+    "noResults": "Sem resultados para «{{query}}»",
+    "noResultsHint": "Experimente um número de rastreio, o nome de um estafeta ou o assunto de um ticket.",
+    "hintNavigate": "para navegar",
+    "hintSelect": "para selecionar",
+    "hintClose": "para fechar"
+  },
+  "quickActions": {
+    "newTicket": {
+      "label": "Novo ticket",
+      "description": "Obter ajuda da equipa"
+    },
+    "viewShipments": {
+      "label": "Ver envios",
+      "description": "Rastrear e gerir envios"
+    },
+    "viewEarnings": {
+      "label": "Ver ganhos",
+      "description": "Saldo e pedidos de pagamento"
+    },
+    "viewCash": {
+      "label": "Gestão de numerário",
+      "description": "Depósitos e remessas COD"
+    },
+    "updateCoverage": {
+      "label": "Atualizar áreas de cobertura",
+      "description": "Editar as regiões onde entrega"
+    }
+  },
+  "platformStatus": {
+    "operational": "Todos os sistemas operacionais",
+    "degraded": "Desempenho degradado",
+    "down": "Interrupção do serviço",
+    "checking": "A verificar o estado…",
+    "label": "Estado da plataforma"
+  }
+}

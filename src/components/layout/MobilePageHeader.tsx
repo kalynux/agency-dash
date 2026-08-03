@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
@@ -29,6 +30,7 @@ export function MobilePageHeader({
   subheader,
   className,
 }: MobilePageHeaderProps) {
+  const { t } = useTranslation('common');
   const direction = useScrollDirection();
   const subheaderHidden = direction === 'down';
 
@@ -40,7 +42,7 @@ export function MobilePageHeader({
           <button
             type="button"
             onClick={onBack}
-            aria-label="Go back"
+            aria-label={t('actions.goBack')}
             className="-ms-2 flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
           >
             <ArrowLeft className="h-5 w-5 rtl:-scale-x-100" />

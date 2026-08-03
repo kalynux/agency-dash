@@ -1,0 +1,86 @@
+{
+  "required": "Ce champ est obligatoire",
+  "invalid": "Veuillez vérifier cette valeur",
+  "number": "Doit être un nombre",
+  "wholeNumber": "Doit être un nombre entier",
+  "nonNegative": "Doit être supérieur ou égal à 0",
+  "positive": "Doit être supérieur à 0",
+  "min": "Doit être au minimum {{min}}",
+  "max": "Doit être au maximum {{max}}",
+  "minLength": "Doit contenir au moins {{count}} caractères",
+  "maxLength": "Ne doit pas dépasser {{count}} caractères",
+  "email": "Doit être une adresse e-mail valide",
+  "url": "Doit être un lien valide",
+  "phone": {
+    "tooShort": "Le numéro de téléphone est trop court (min. {{count}} caractères)",
+    "tooLong": "Le numéro de téléphone est trop long (max. {{count}} caractères)",
+    "format": "Format de téléphone invalide (chiffres, +, espaces, tirets ou parenthèses)"
+  },
+  "password": {
+    "currentRequired": "Saisissez votre mot de passe actuel",
+    "minLength": "Doit contenir au moins 8 caractères",
+    "uppercase": "Doit contenir au moins une majuscule",
+    "lowercase": "Doit contenir au moins une minuscule",
+    "number": "Doit contenir au moins un chiffre",
+    "special": "Doit contenir au moins un caractère spécial",
+    "mismatch": "Les mots de passe ne correspondent pas"
+  },
+  "address": {
+    "labelRequired": "Le nom du site est obligatoire",
+    "labelTooLong": "Le nom du site ne doit pas dépasser 50 caractères",
+    "regionTooLong": "Région trop longue (max. 100 caractères)",
+    "cityTooLong": "Ville trop longue (max. 100 caractères)",
+    "descriptionRequired": "La description de l'adresse est obligatoire",
+    "descriptionTooLong": "Description de l'adresse trop longue (max. 200 caractères)",
+    "geoRequired": "Recherchez et sélectionnez l'adresse de ce site"
+  },
+  "logistics": {
+    "coverageRequired": "Sélectionnez au moins une région couverte",
+    "headquartersRequired": "Au moins une adresse de siège est obligatoire"
+  },
+  "payout": {
+    "providerRequired": "L'opérateur est obligatoire",
+    "accountNameRequired": "Le nom du titulaire est obligatoire",
+    "bankNameRequired": "Le nom de la banque est obligatoire",
+    "accountNumberRequired": "Le numéro de compte est obligatoire",
+    "countryRequired": "Le pays est obligatoire",
+    "atLeastOne": "Au moins un moyen de versement est obligatoire",
+    "atMostTwo": "Vous pouvez ajouter au maximum 2 moyens de versement (un mobile money et un bancaire)",
+    "duplicateType": "Vous ne pouvez ajouter qu'un seul moyen de chaque type (mobile money / bancaire)."
+  },
+  "policies": {
+    "codFeeTypeRequired": "Le type de frais COD est obligatoire",
+    "returnPayerRequired": "Le payeur des frais de retour est obligatoire",
+    "notesTooLong": "Notes trop longues (max. 700 caractères)",
+    "onePricingModel": "Au moins un modèle tarifaire doit être activé"
+  },
+  "ticket": {
+    "subjectRequired": "Ajoutez un objet",
+    "subjectTooLong": "L'objet ne doit pas dépasser {{count}} caractères",
+    "descriptionRequired": "Décrivez ce dont vous avez besoin",
+    "descriptionTooLong": "La description ne doit pas dépasser {{count}} caractères",
+    "typeRequired": "Choisissez un type de ticket",
+    "entityRequired": "Choisissez l'élément concerné par ce ticket",
+    "noteRequired": "Écrivez une note avant d'envoyer"
+  },
+  "cash": {
+    "amountRequired": "Saisissez un montant",
+    "amountPositive": "Saisissez un montant entier positif",
+    "amountExceedsBalance": "C'est plus que ce que le livreur détient actuellement",
+    "amountExceedsLiability": "C'est plus que ce que votre agence doit actuellement",
+    "referenceRequired": "Une référence de virement est obligatoire"
+  },
+  "contract": {
+    "sharePercentRange": "Saisissez une part comprise entre 0 et 100",
+    "flatFeePositive": "Saisissez un forfait supérieur ou égal à 0",
+    "feeSplitRequired": "Définissez un pourcentage ou un forfait",
+    "codThresholdRange": "Saisissez un plafond COD supérieur ou égal à 0",
+    "coverageRequired": "Choisissez au moins une région que ce livreur desservira"
+  },
+  "magazin": {
+    "nameRequired": "Le nom de l'entreprise est obligatoire",
+    "nameTooShort": "Le nom de l'entreprise doit contenir au moins 2 caractères",
+    "nameTooLong": "Le nom de l'entreprise ne doit pas dépasser 100 caractères",
+    "descriptionTooLong": "Description trop longue (max. {{count}} caractères)"
+  }
+}

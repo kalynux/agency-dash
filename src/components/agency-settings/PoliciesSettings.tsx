@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm, Controller, type DefaultValues } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,11 +17,12 @@ import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
-import { policiesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
+import { buildPoliciesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import type { AgencyPolicies } from '@/types/api';
 import { resolveFileUrl } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { isSameFormValue } from '@/lib/form-diff';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 /**
@@ -30,71 +32,48 @@ import { cn } from '@/lib/utils';
  * before connecting, and getting one wrong is a billing dispute rather than a
  * cosmetic mistake. The labels alone can't carry that ("RTO fee" says nothing
  * about replacing the delivery fee), so every field gets an ⓘ. Kept in one map,
- * keyed by form path, so the copy can be reviewed as copy.
+ * form path → `settings:policies.hints.*` key, so the copy lives with the rest
+ * of the translated copy and can be reviewed as copy.
  *
  * Unlike the rest of this mobile pass, these show at every width: the
  * information is new, so hiding it on desktop would put it out of reach there.
  */
 const POLICY_FIELD_HINTS: Record<string, string> = {
   // Storage-based — you hold the stock
-  'pricing.storage_based.enabled':
-    'You hold the vendor\'s stock and ship from your own warehouse. Turn this off and vendors can only book you for pickups. At least one of the two models must stay on.',
-  'pricing.storage_based.monthly_storage_fee_per_sku':
-    'Charged per distinct product you hold, every month. Set 500 → a vendor storing 40 SKUs is billed 20,000 XAF a month.',
-  'pricing.storage_based.pick_pack_fee_per_order':
-    'Charged once per order you pick and pack, whatever its size. Set 300 → 50 orders in a month bills 15,000 XAF.',
-  'pricing.storage_based.local_delivery_fee':
-    'Your fee for a delivery inside a region you cover. Set 1,500 and each local order earns 1,500 XAF, before the delivering agent\'s share.',
-  'pricing.storage_based.out_of_region_delivery_fee':
-    'Replaces the local fee when the drop-off falls outside your coverage regions. Set 3,000 and a Douala → Bafoussam order bills 3,000 instead of the local rate.',
+  'pricing.storage_based.enabled': 'storageEnabled',
+  'pricing.storage_based.monthly_storage_fee_per_sku': 'monthlyStorageFee',
+  'pricing.storage_based.pick_pack_fee_per_order': 'pickPackFee',
+  'pricing.storage_based.local_delivery_fee': 'localDeliveryFee',
+  'pricing.storage_based.out_of_region_delivery_fee': 'outOfRegionDeliveryFee',
 
   // Pickup-based — the vendor holds the stock
-  'pricing.pickup_based.enabled':
-    'The vendor keeps its own stock and you collect per order, priced by weight. At least one of the two models must stay on.',
-  'pricing.pickup_based.base_rate_first_kg':
-    'Covers the first kilogram of any pickup. Set 1,000 → a 0.4 kg parcel still bills 1,000 XAF.',
-  'pricing.pickup_based.additional_per_kg':
-    'Added for every kilogram past the first. With a 1,000 base and 250 here, a 4 kg parcel bills 1,000 + 3 × 250 = 1,750 XAF.',
-  'pricing.pickup_based.out_of_region_surcharge':
-    'Added on top of the weight price when the drop-off falls outside your coverage regions. Set 2,000 and that 4 kg parcel bills 3,750 XAF.',
+  'pricing.pickup_based.enabled': 'pickupEnabled',
+  'pricing.pickup_based.base_rate_first_kg': 'baseRateFirstKg',
+  'pricing.pickup_based.additional_per_kg': 'additionalPerKg',
+  'pricing.pickup_based.out_of_region_surcharge': 'outOfRegionSurcharge',
 
   // Additional fees
-  'pricing.additional_fees.cod_handling_fee.type':
-    'Percentage bills a share of the order value; Fixed bills a flat amount. Changing the type re-reads the value beside it — 2 means 2% under Percentage, and 2 XAF under Fixed.',
-  'pricing.additional_fees.cod_handling_fee.value':
-    'Your fee for collecting and remitting the cash. At Percentage 2, a 50,000 XAF COD order earns you 1,000 XAF.',
-  'pricing.additional_fees.failed_delivery_fee':
-    'Charged when the agent reaches the customer but the handover fails — nobody home, or refused at the door. Set 500 and each failed attempt still bills 500 XAF.',
-  'pricing.additional_fees.rto_fee':
-    'Charged when a shipment goes back to the vendor undelivered. It replaces the delivery fee for that shipment — you earn the RTO fee instead of it, not on top of it.',
-  'pricing.additional_fees.peak_season_surcharge':
-    'A flat amount added to each order during periods you declare busy. Leave it at 0 to never surcharge.',
-  'pricing.notes':
-    'Free text shown to vendors alongside your rates. Use it for anything the fields above can\'t express — volume discounts, fragile-goods handling.',
+  'pricing.additional_fees.cod_handling_fee.type': 'codFeeType',
+  'pricing.additional_fees.cod_handling_fee.value': 'codFeeValue',
+  'pricing.additional_fees.failed_delivery_fee': 'failedDeliveryFee',
+  'pricing.additional_fees.rto_fee': 'rtoFee',
+  'pricing.additional_fees.peak_season_surcharge': 'peakSeasonSurcharge',
+  'pricing.notes': 'pricingNotes',
 
   // Cash on delivery
-  'cod.enabled':
-    'Whether you accept cash-on-delivery orders at all. Off, and vendors can only route prepaid orders to you. This is separate from the COD handling fee above, which prices the ones you do accept.',
-  'cod.max_order_amount':
-    'Orders worth more than this are never offered to you as COD. Leave it empty for no cap; set 200,000 and a 250,000 XAF cart has to be prepaid.',
+  'cod.enabled': 'codEnabled',
+  'cod.max_order_amount': 'codMaxAmount',
 
   // Returns
-  'returns.payer':
-    'Who is billed for the return trip. "Vendor" deducts it from the vendor, "Agency" means you absorb it, "Customer" bills it at collection.',
-  'returns.handling_fee':
-    'Your fee for processing a return once it is back with you. Set 1,000 and each returned order bills 1,000 XAF on top of the return trip itself.',
-  'returns.return_window_days':
-    'How long after delivery a return can still be raised. Set 7 → an order delivered on the 1st can be returned until the 8th; on the 9th it is refused.',
-  'returns.notes':
-    'Conditions the fields above can\'t express, shown to vendors before they connect. E.g. "only unopened items, original seal intact".',
+  'returns.payer': 'returnsPayer',
+  'returns.handling_fee': 'returnsHandlingFee',
+  'returns.return_window_days': 'returnsWindowDays',
+  'returns.notes': 'returnsNotes',
 
   // Damage
-  'damage.claim_deadline_days':
-    'How long after delivery a damage claim can still be filed against you. Set 7 and a claim raised on day 8 is out of time.',
-  'damage.max_refund_per_item':
-    'Caps what you pay out per damaged item, whatever the item is worth. Set 50,000 and a 200,000 XAF item still settles at 50,000.',
-  'damage.notes':
-    'What you require before accepting a claim — photos, original packaging, an unboxing video.',
+  'damage.claim_deadline_days': 'damageClaimDeadline',
+  'damage.max_refund_per_item': 'damageMaxRefund',
+  'damage.notes': 'damageNotes',
 };
 
 /** A field label with its ⓘ, wired to {@link POLICY_FIELD_HINTS} by form path. */
@@ -107,22 +86,28 @@ function FieldLabel({
   htmlFor?: string;
   children: React.ReactNode;
 }) {
-  const hint = POLICY_FIELD_HINTS[name];
+  const { t } = useTranslation('settings');
+  const hintKey = POLICY_FIELD_HINTS[name];
   return (
     <Label htmlFor={htmlFor} className="flex items-center gap-1.5">
       <span>{children}</span>
-      {hint && <InfoHint label={`About this field`}>{hint}</InfoHint>}
+      {hintKey && (
+        <InfoHint label={t('policies.aboutField')}>{tx(t, `policies.hints.${hintKey}`)}</InfoHint>
+      )}
     </Label>
   );
 }
 
 /** The same label treatment for the switch rows, which use a <p>, not a <Label>. */
 function ToggleLabel({ name, children }: { name: string; children: React.ReactNode }) {
-  const hint = POLICY_FIELD_HINTS[name];
+  const { t } = useTranslation('settings');
+  const hintKey = POLICY_FIELD_HINTS[name];
   return (
     <p className="flex items-center gap-1.5 text-sm font-medium">
       <span>{children}</span>
-      {hint && <InfoHint label={`About this setting`}>{hint}</InfoHint>}
+      {hintKey && (
+        <InfoHint label={t('policies.aboutSetting')}>{tx(t, `policies.hints.${hintKey}`)}</InfoHint>
+      )}
     </p>
   );
 }
@@ -141,13 +126,14 @@ function Section({
   short?: string;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation('settings');
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Icon className="w-4 h-4 text-muted-foreground" />
         <h4 className="font-medium">{title}</h4>
         {description && short && (
-          <InfoHint className="md:hidden" label={`About ${title}`}>
+          <InfoHint className="md:hidden" label={t('policies.aboutSection', { title })}>
             {description}
           </InfoHint>
         )}
@@ -214,9 +200,12 @@ function toFormValues(existing: AgencyPolicies | null | undefined): DefaultValue
 }
 
 export function PoliciesSettings() {
+  const { t } = useTranslation(['settings', 'common']);
   const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
+  // Rebuilt on a language switch so validation messages follow the UI.
+  const schema = useMemo(() => buildPoliciesSchema(t), [t]);
 
   /**
    * The last values the server is known to hold — both the form's seed and the
@@ -235,7 +224,7 @@ export function PoliciesSettings() {
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<PoliciesFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(policiesSchema) as any,
+    resolver: zodResolver(schema) as any,
     defaultValues: baseline,
   });
 
@@ -262,11 +251,11 @@ export function PoliciesSettings() {
       reset(submitted as DefaultValues<PoliciesFormValues>);
       setBaseline(submitted as DefaultValues<PoliciesFormValues>);
       setSavedDocuments(documents);
-      toast.success('Policies saved!');
+      toast.success(t('policies.saved'));
     } catch (err) {
       setApiError(getApiErrorMessage(err));
     }
-  }, [updateAgencyProfile, documents, reset]);
+  }, [updateAgencyProfile, documents, reset, t]);
 
   const handleDiscard = useCallback(() => {
     reset(baseline);
@@ -276,17 +265,15 @@ export function PoliciesSettings() {
 
   // The bar sits at the bottom of the viewport, far from the field that failed —
   // so an invalid submit says so out loud instead of only marking the input.
-  const submit = handleSubmit(onSubmit, () =>
-    toast.error('Please fix the highlighted fields before saving.'),
-  );
+  const submit = handleSubmit(onSubmit, () => toast.error(t('common.fixHighlighted')));
 
   return (
     <>
     <Card className={sectionSurfaceClass}>
       <SectionHeading
-        title="Pricing, Returns & Damage Policies"
-        description="These policies apply to every vendor and customer you deliver for"
-        short="Applies to every vendor"
+        title={t('policies.title')}
+        description={t('policies.description')}
+        short={t('policies.short')}
       />
       <CardContent className="space-y-8 max-md:px-0">
         {apiError && <div role="alert" className="p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}
@@ -294,13 +281,15 @@ export function PoliciesSettings() {
         <form onSubmit={submit} className="space-y-8" noValidate>
           <Section
             icon={DollarSign}
-            title="Pricing"
-            description="Set your rates for each fulfilment model. At least one must be enabled."
-            short="Your rates"
+            title={t('policies.pricing.title')}
+            description={t('policies.pricing.description')}
+            short={t('policies.pricing.short')}
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <ToggleLabel name="pricing.storage_based.enabled">Storage-based fees</ToggleLabel>
+                <ToggleLabel name="pricing.storage_based.enabled">
+                  {t('policies.pricing.storageToggle')}
+                </ToggleLabel>
                 <Controller control={control} name="pricing.storage_based.enabled" render={({ field }) => (
                   <Switch checked={field.value} onCheckedChange={field.onChange} disabled={!pickupEnabled} />
                 )} />
@@ -309,26 +298,26 @@ export function PoliciesSettings() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.monthly_storage_fee_per_sku">
-                      Monthly storage fee / SKU (XAF)
+                      {t('policies.pricing.monthlyStorageFee')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.storage_based.monthly_storage_fee_per_sku')} />
                     {pe?.storage_based?.monthly_storage_fee_per_sku && <p className="text-xs text-red-500">{pe.storage_based.monthly_storage_fee_per_sku.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.pick_pack_fee_per_order">
-                      Pick &amp; pack fee / order (XAF)
+                      {t('policies.pricing.pickPackFee')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.storage_based.pick_pack_fee_per_order')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.local_delivery_fee">
-                      Local delivery fee (XAF)
+                      {t('policies.pricing.localDeliveryFee')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.storage_based.local_delivery_fee')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.out_of_region_delivery_fee">
-                      Out-of-region delivery fee (XAF)
+                      {t('policies.pricing.outOfRegionDeliveryFee')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.storage_based.out_of_region_delivery_fee')} />
                   </div>
@@ -340,7 +329,9 @@ export function PoliciesSettings() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <ToggleLabel name="pricing.pickup_based.enabled">Pickup-based fees</ToggleLabel>
+                <ToggleLabel name="pricing.pickup_based.enabled">
+                  {t('policies.pricing.pickupToggle')}
+                </ToggleLabel>
                 <Controller control={control} name="pricing.pickup_based.enabled" render={({ field }) => (
                   <Switch checked={field.value} onCheckedChange={field.onChange} disabled={!storageEnabled} />
                 )} />
@@ -349,19 +340,19 @@ export function PoliciesSettings() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.pickup_based.base_rate_first_kg">
-                      Base rate — first kg (XAF)
+                      {t('policies.pricing.baseRateFirstKg')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.pickup_based.base_rate_first_kg')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.pickup_based.additional_per_kg">
-                      Additional per kg (XAF)
+                      {t('policies.pricing.additionalPerKg')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.pickup_based.additional_per_kg')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.pickup_based.out_of_region_surcharge">
-                      Out-of-region surcharge (XAF)
+                      {t('policies.pricing.outOfRegionSurcharge')}
                     </FieldLabel>
                     <Input type="number" min={0} {...register('pricing.pickup_based.out_of_region_surcharge')} />
                   </div>
@@ -375,43 +366,45 @@ export function PoliciesSettings() {
             <Separator />
 
             <div className="space-y-3">
-              <p className="text-sm font-medium">Additional fees</p>
+              <p className="text-sm font-medium">{t('policies.pricing.additionalFees')}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.cod_handling_fee.type">
-                    COD handling fee type
+                    {t('policies.pricing.codFeeType')}
                   </FieldLabel>
                   <Controller control={control} name="pricing.additional_fees.cod_handling_fee.type" render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('policies.pricing.codFeeTypePlaceholder')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">Percentage (%)</SelectItem>
-                        <SelectItem value="fixed">Fixed amount (XAF)</SelectItem>
+                        <SelectItem value="percentage">{t('policies.pricing.codFeeTypePercentage')}</SelectItem>
+                        <SelectItem value="fixed">{t('policies.pricing.codFeeTypeFixed')}</SelectItem>
                       </SelectContent>
                     </Select>
                   )} />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.cod_handling_fee.value">
-                    COD handling fee value
+                    {t('policies.pricing.codFeeValue')}
                   </FieldLabel>
-                  <Input type="number" min={0} placeholder="e.g. 2" {...register('pricing.additional_fees.cod_handling_fee.value')} />
+                  <Input type="number" min={0} placeholder={t('policies.pricing.codFeeValuePlaceholder')} {...register('pricing.additional_fees.cod_handling_fee.value')} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.failed_delivery_fee">
-                    Failed delivery fee (XAF)
+                    {t('policies.pricing.failedDeliveryFee')}
                   </FieldLabel>
                   <Input type="number" min={0} {...register('pricing.additional_fees.failed_delivery_fee')} />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel name="pricing.additional_fees.rto_fee">RTO fee (XAF)</FieldLabel>
+                  <FieldLabel name="pricing.additional_fees.rto_fee">
+                    {t('policies.pricing.rtoFee')}
+                  </FieldLabel>
                   <Input type="number" min={0} {...register('pricing.additional_fees.rto_fee')} />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.peak_season_surcharge">
-                    Peak season surcharge (XAF)
+                    {t('policies.pricing.peakSeasonSurcharge')}
                   </FieldLabel>
                   <Input type="number" min={0} placeholder="0" {...register('pricing.additional_fees.peak_season_surcharge')} />
                 </div>
@@ -419,8 +412,8 @@ export function PoliciesSettings() {
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel name="pricing.notes">Pricing notes</FieldLabel>
-              <Textarea rows={2} placeholder="Any additional pricing notes..." {...register('pricing.notes')} />
+              <FieldLabel name="pricing.notes">{t('policies.pricing.notes')}</FieldLabel>
+              <Textarea rows={2} placeholder={t('policies.pricing.notesPlaceholder')} {...register('pricing.notes')} />
             </div>
           </Section>
 
@@ -428,20 +421,20 @@ export function PoliciesSettings() {
 
           <Section
             icon={Banknote}
-            title="Cash on Delivery"
-            description="Whether your agency accepts cash-on-delivery orders at all — separate from the COD handling fee above."
-            short="Whether you accept COD"
+            title={t('policies.cod.title')}
+            description={t('policies.cod.description')}
+            short={t('policies.cod.short')}
           >
             <div className="flex items-center justify-between">
-              <ToggleLabel name="cod.enabled">Accept cash-on-delivery orders</ToggleLabel>
+              <ToggleLabel name="cod.enabled">{t('policies.cod.toggle')}</ToggleLabel>
               <Controller control={control} name="cod.enabled" render={({ field }) => (
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               )} />
             </div>
             {codEnabled && (
               <div className="space-y-1.5">
-                <FieldLabel name="cod.max_order_amount">Max COD order amount (XAF)</FieldLabel>
-                <Input type="number" min={0} placeholder="No cap" {...register('cod.max_order_amount')} />
+                <FieldLabel name="cod.max_order_amount">{t('policies.cod.maxAmount')}</FieldLabel>
+                <Input type="number" min={0} placeholder={t('policies.cod.maxAmountPlaceholder')} {...register('cod.max_order_amount')} />
                 {errors.cod?.max_order_amount && <p className="text-xs text-red-500">{errors.cod.max_order_amount.message}</p>}
               </div>
             )}
@@ -449,16 +442,16 @@ export function PoliciesSettings() {
 
           <Separator />
 
-          <Section icon={RotateCcw} title="Returns Policy">
+          <Section icon={RotateCcw} title={t('policies.returns.title')}>
             <div className="space-y-1.5">
-              <FieldLabel name="returns.payer">Return cost paid by</FieldLabel>
+              <FieldLabel name="returns.payer">{t('policies.returns.payer')}</FieldLabel>
               <Controller control={control} name="returns.payer" render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder="Select who bears return costs" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t('policies.returns.payerPlaceholder')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                    <SelectItem value="agency">Agency</SelectItem>
-                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="vendor">{t('policies.returns.payerVendor')}</SelectItem>
+                    <SelectItem value="agency">{t('policies.returns.payerAgency')}</SelectItem>
+                    <SelectItem value="customer">{t('policies.returns.payerCustomer')}</SelectItem>
                   </SelectContent>
                 </Select>
               )} />
@@ -466,36 +459,36 @@ export function PoliciesSettings() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <FieldLabel name="returns.handling_fee">Handling fee (XAF)</FieldLabel>
+                <FieldLabel name="returns.handling_fee">{t('policies.returns.handlingFee')}</FieldLabel>
                 <Input type="number" min={0} {...register('returns.handling_fee')} />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel name="returns.return_window_days">Return window (days)</FieldLabel>
+                <FieldLabel name="returns.return_window_days">{t('policies.returns.windowDays')}</FieldLabel>
                 <Input type="number" min={0} placeholder="7" {...register('returns.return_window_days')} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel name="returns.notes">Returns notes</FieldLabel>
-              <Textarea rows={2} placeholder="E.g. only unopened items accepted..." {...register('returns.notes')} />
+              <FieldLabel name="returns.notes">{t('policies.returns.notes')}</FieldLabel>
+              <Textarea rows={2} placeholder={t('policies.returns.notesPlaceholder')} {...register('returns.notes')} />
             </div>
           </Section>
 
           <Separator />
 
-          <Section icon={AlertTriangle} title="Damage Policy">
+          <Section icon={AlertTriangle} title={t('policies.damage.title')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <FieldLabel name="damage.claim_deadline_days">Claim deadline (days)</FieldLabel>
+                <FieldLabel name="damage.claim_deadline_days">{t('policies.damage.claimDeadline')}</FieldLabel>
                 <Input type="number" min={0} placeholder="7" {...register('damage.claim_deadline_days')} />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel name="damage.max_refund_per_item">Max refund per item (XAF)</FieldLabel>
+                <FieldLabel name="damage.max_refund_per_item">{t('policies.damage.maxRefund')}</FieldLabel>
                 <Input type="number" min={0} {...register('damage.max_refund_per_item')} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel name="damage.notes">Damage notes</FieldLabel>
-              <Textarea rows={2} placeholder="E.g. original packaging required..." {...register('damage.notes')} />
+              <FieldLabel name="damage.notes">{t('policies.damage.notes')}</FieldLabel>
+              <Textarea rows={2} placeholder={t('policies.damage.notesPlaceholder')} {...register('damage.notes')} />
             </div>
             {de?.claim_deadline_days && <p className="text-xs text-red-500">{de.claim_deadline_days.message}</p>}
           </Section>
@@ -504,9 +497,9 @@ export function PoliciesSettings() {
 
           <Section
             icon={FileText}
-            title="Supporting Documents"
-            description="Optional signed PDF addenda (max 2) for terms not covered above."
-            short="Optional PDF addenda"
+            title={t('policies.documents.title')}
+            description={t('policies.documents.description')}
+            short={t('policies.documents.short')}
           >
             {documents.length > 0 && (
               <div className="space-y-1">
@@ -514,7 +507,7 @@ export function PoliciesSettings() {
                   <div key={i} className="flex items-center gap-2 text-sm rounded-md border px-2 py-1">
                     <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <a href={url} target="_blank" rel="noopener noreferrer" className="truncate flex-1 hover:underline">
-                      {url.split('/').pop() ?? `Document ${i + 1}`}
+                      {url.split('/').pop() ?? t('policies.documents.fallbackName', { number: i + 1 })}
                     </a>
                     <button type="button" onClick={() => setDocuments((prev) => prev.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
                       <X className="w-4 h-4" />
@@ -532,7 +525,7 @@ export function PoliciesSettings() {
               onClick={() => setDocPickerOpen(true)}
             >
               <FileText className="w-4 h-4" />
-              Add document ({documents.length}/2)
+              {t('policies.documents.add', { used: documents.length, max: 2 })}
             </Button>
 
             <MediaPicker

@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, Smartphone, Building2, Star } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,12 +13,14 @@ import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBa
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
-import { payoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
+import { buildPayoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
 import type { PayoutDetails } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
 import { isSameFormValue } from '@/lib/form-diff';
 import { cn } from '@/lib/utils';
 
+// Proper nouns — brand names and the country names the backend stores verbatim.
+// Not translated: they are data sent to the API, not UI copy.
 const MOBILE_MONEY_PROVIDERS = ['MTN Mobile Money', 'Orange Money', 'Wave', 'Moov Money', 'Airtel Money'];
 const COUNTRIES = ['Cameroon', "Côte d'Ivoire", 'Senegal', 'Nigeria', 'Ghana', 'Kenya'];
 
@@ -42,6 +45,7 @@ function toFormValues(saved: PayoutDetails | undefined): PayoutFormValues {
 }
 
 export function PayoutSettings() {
+  const { t } = useTranslation('account');
   const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
@@ -55,8 +59,9 @@ export function PayoutSettings() {
    */
   const [baseline, setBaseline] = useState<PayoutFormValues>(() => toFormValues(roleEntity?.payout_details));
 
+  const schema = useMemo(() => buildPayoutSchema(t), [t]);
   const { register, handleSubmit, control, watch, setValue, reset } = useForm<PayoutFormValues>({
-    resolver: zodResolver(payoutSchema),
+    resolver: zodResolver(schema),
     defaultValues: baseline,
   });
 
@@ -80,11 +85,11 @@ export function PayoutSettings() {
       // bar settles instead of hanging on a stray space the user typed.
       reset(submitted);
       setBaseline(submitted);
-      toast.success('Payout methods saved!');
+      toast.success(t('payout.saved'));
     } catch (err) {
       setApiError(getApiErrorMessage(err));
     }
-  }, [updateAgencyProfile, reset]);
+  }, [updateAgencyProfile, reset, t]);
 
   const handleDiscard = useCallback(() => {
     reset(baseline);
@@ -93,17 +98,15 @@ export function PayoutSettings() {
 
   // The bar sits at the bottom of the viewport, away from the field at fault —
   // and these fields carry no inline error text, so say it out loud.
-  const submit = handleSubmit(onSubmit, () =>
-    toast.error('Fill in every field of each payout method before saving.'),
-  );
+  const submit = handleSubmit(onSubmit, () => toast.error(t('payout.incomplete')));
 
   return (
     <>
     <Card className={sectionSurfaceClass}>
       <SectionHeading
-        title="Payout Methods"
-        description="Where your delivery earnings are sent. The first entry is your preferred method."
-        short="Where earnings are sent"
+        title={t('payout.title')}
+        description={t('payout.description')}
+        short={t('payout.short')}
       />
       <CardContent className="space-y-6 max-md:px-0">
         {apiError && <div role="alert" className="p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}
@@ -116,40 +119,45 @@ export function PayoutSettings() {
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <Star className={cn('w-3.5 h-3.5', isPreferred && 'fill-primary text-primary')} />
-                    {isPreferred ? 'Preferred Method' : 'Fallback Method'}
+                    {isPreferred ? t('payout.preferredMethod') : t('payout.fallbackMethod')}
                   </span>
                   {fields.length > 1 && (
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      aria-label={t('payout.removeMethod')}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant={currentMethod === 'mobile_money' ? 'default' : 'outline'} size="sm" className="flex-1 gap-2" onClick={() => switchMethod(index, 'mobile_money')}>
-                    <Smartphone className="w-4 h-4" /> Mobile Money
+                    <Smartphone className="w-4 h-4" /> {t('payout.mobileMoney')}
                   </Button>
                   <Button type="button" variant={currentMethod === 'bank' ? 'default' : 'outline'} size="sm" className="flex-1 gap-2" onClick={() => switchMethod(index, 'bank')}>
-                    <Building2 className="w-4 h-4" /> Bank Transfer
+                    <Building2 className="w-4 h-4" /> {t('payout.bankTransfer')}
                   </Button>
                 </div>
 
                 {currentMethod === 'mobile_money' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <Label>Provider</Label>
+                      <Label>{t('payout.provider')}</Label>
                       <Controller control={control} name={`payout_details.${index}.mobile_money.provider` as `payout_details.${number}.mobile_money.provider`} render={({ field: f }) => (
                         <Select value={f.value ?? ''} onValueChange={f.onChange}>
-                          <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('payout.providerPlaceholder')} /></SelectTrigger>
                           <SelectContent>{MOBILE_MONEY_PROVIDERS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                         </Select>
                       )} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Phone Number</Label>
-                      <Input placeholder="+237 6XX XXX XXX" {...register(`payout_details.${index}.mobile_money.phone_number` as never)} />
+                      <Label>{t('payout.phoneNumber')}</Label>
+                      <Input placeholder={t('payout.phonePlaceholder')} {...register(`payout_details.${index}.mobile_money.phone_number` as never)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Account Name</Label>
+                      <Label>{t('payout.accountName')}</Label>
                       <Input {...register(`payout_details.${index}.mobile_money.account_name` as never)} />
                     </div>
                   </div>
@@ -158,22 +166,22 @@ export function PayoutSettings() {
                 {currentMethod === 'bank' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>Bank Name</Label>
+                      <Label>{t('payout.bankName')}</Label>
                       <Input {...register(`payout_details.${index}.bank.bank_name` as never)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Account Number</Label>
+                      <Label>{t('payout.accountNumber')}</Label>
                       <Input {...register(`payout_details.${index}.bank.account_number` as never)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Account Name</Label>
+                      <Label>{t('payout.accountName')}</Label>
                       <Input {...register(`payout_details.${index}.bank.account_name` as never)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Bank Country</Label>
+                      <Label>{t('payout.bankCountry')}</Label>
                       <Controller control={control} name={`payout_details.${index}.bank.country` as `payout_details.${number}.bank.country`} render={({ field: f }) => (
                         <Select value={f.value ?? ''} onValueChange={f.onChange}>
-                          <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('payout.countryPlaceholder')} /></SelectTrigger>
                           <SelectContent>{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                         </Select>
                       )} />
@@ -188,12 +196,12 @@ export function PayoutSettings() {
             <div className="flex gap-2">
               {canAddMobileMoney && (
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_MOBILE_MONEY })} className="flex-1 gap-1.5">
-                  <Plus className="w-3.5 h-3.5" /> Add Mobile Money
+                  <Plus className="w-3.5 h-3.5" /> {t('payout.addMobileMoney')}
                 </Button>
               )}
               {canAddBank && (
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ ...EMPTY_BANK })} className="flex-1 gap-1.5">
-                  <Plus className="w-3.5 h-3.5" /> Add Bank Account
+                  <Plus className="w-3.5 h-3.5" /> {t('payout.addBank')}
                 </Button>
               )}
             </div>

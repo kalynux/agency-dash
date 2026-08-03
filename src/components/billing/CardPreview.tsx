@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +37,7 @@ export function CardPreview({
   expYear,
   className,
 }: CardPreviewProps) {
+  const { t } = useTranslation('billing');
   return (
     <div
       className={cn(
@@ -48,9 +50,11 @@ export function CardPreview({
       <div className="pointer-events-none absolute -bottom-12 -left-6 h-40 w-40 rounded-full bg-white/5" />
 
       <div className="flex items-start justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/70">Card type</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-white/70">
+          {t('card.type')}
+        </span>
         <span className="text-lg font-bold uppercase italic tracking-tight">
-          {brand ?? 'CARD'}
+          {brand ?? t('card.fallbackBrand')}
         </span>
       </div>
 
@@ -63,11 +67,13 @@ export function CardPreview({
       <div className="mt-4 flex items-end justify-between">
         <div className="min-w-0">
           <span className="block truncate text-sm font-medium">
-            {holderName?.trim() || 'Card holder'}
+            {holderName?.trim() || t('card.holderPlaceholder')}
           </span>
         </div>
         <div className="text-right">
-          <span className="block text-[10px] uppercase tracking-wide text-white/60">Valid</span>
+          <span className="block text-[10px] uppercase tracking-wide text-white/60">
+            {t('card.valid')}
+          </span>
           <span className="text-sm font-medium">{formatExpiry(expMonth, expYear)}</span>
         </div>
       </div>

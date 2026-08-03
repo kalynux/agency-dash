@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   verifyTopup,
 } from '@/services/billing.service';
 import { fetchStorageUsage } from '@/services/files.service';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import type { StorageUsage } from '@/types/file.types';
 import type {
   CurrentPlanData,
@@ -60,6 +61,7 @@ interface PaymentRequest {
  * and credit top-up. (Transaction history lives on its own top-level page.)
  */
 export function BillingTab() {
+  const { t } = useTranslation(['billing', 'common']);
   const [current, setCurrent] = useState<CurrentPlanData | null>(null);
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
@@ -92,7 +94,7 @@ export function BillingTab() {
       setPacks(packList);
       setStorage(storageUsage);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load billing information.');
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -128,13 +130,17 @@ export function BillingTab() {
           const { status } = await verify(marker.id);
           if (status === 'paid') {
             if (!cancelled) {
-              toast.success(marker.kind === 'plan' ? 'Plan purchased' : 'Credits added');
+              toast.success(
+                marker.kind === 'plan'
+                  ? t('checkout.planPurchased')
+                  : t('checkout.creditsAdded'),
+              );
               await refreshAfterPayment();
             }
             return;
           }
           if (status === 'failed' || status === 'reversed') {
-            if (!cancelled) toast.error('The card payment was not completed.');
+            if (!cancelled) toast.error(t('checkout.cardNotCompleted'));
             return;
           }
         } catch {
@@ -143,7 +149,7 @@ export function BillingTab() {
         await new Promise((r) => setTimeout(r, 3000));
       }
       if (!cancelled) {
-        toast.info("We're still confirming your card payment — it'll update here shortly.");
+        toast.info(t('checkout.stillConfirming'));
       }
     })();
     return () => {
@@ -154,11 +160,11 @@ export function BillingTab() {
 
   function openPlanPurchase(plan: PricingPlan) {
     setPayment({
-      title: `Switch to ${plan.name}`,
-      summary: `${plan.name} plan`,
+      title: t('checkout.planTitle', { name: plan.name }),
+      summary: t('checkout.planSummary', { name: plan.name }),
       amount: plan.price,
       currency: plan.currency,
-      successLabel: 'Plan purchased',
+      successLabel: t('checkout.planPurchased'),
       paymentKind: 'plan',
       initiate: (gateway, channel) => initiatePlanPurchase(plan._id, { gateway, channel }),
       verify: verifyPlanPurchase,
@@ -168,11 +174,11 @@ export function BillingTab() {
 
   function openPackPurchase(pack: CreditPack) {
     setPayment({
-      title: 'Buy credits',
-      summary: `${formatCredits(pack.credits)} credits`,
+      title: t('checkout.topupTitle'),
+      summary: t('checkout.topupSummary', { credits: formatCredits(pack.credits) }),
       amount: pack.price,
       currency: pack.currency,
-      successLabel: 'Credits added',
+      successLabel: t('checkout.creditsAdded'),
       paymentKind: 'topup',
       initiate: (gateway, channel) => initiateTopup({ packCode: pack.code, gateway, channel }),
       verify: verifyTopup,
@@ -198,7 +204,7 @@ export function BillingTab() {
         <AlertCircle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={load}>
-          Retry
+          {t('common:actions.retry')}
         </Button>
       </div>
     );
@@ -227,14 +233,12 @@ export function BillingTab() {
       <section ref={plansRef} className={cn('space-y-3', sectionRuleClass)}>
         <div>
           <h3 className="flex items-center gap-1.5 text-lg font-semibold">
-            Plans
-            <InfoHint className="md:hidden" label="About plans">
-              Upgrade any time — a paid plan you buy now starts when your current one ends.
+            {t('plans.title')}
+            <InfoHint className="md:hidden" label={t('plans.aboutLabel')}>
+              {t('plans.description')}
             </InfoHint>
           </h3>
-          <p className="text-sm text-muted-foreground max-md:hidden">
-            Upgrade any time — a paid plan you buy now starts when your current one ends.
-          </p>
+          <p className="text-sm text-muted-foreground max-md:hidden">{t('plans.description')}</p>
         </div>
         <PlansCatalog plans={plans} current={current} onBuy={openPlanPurchase} />
       </section>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Loader2,
   ExternalLink,
@@ -13,6 +14,8 @@ import { toast } from 'sonner';
 import { authService } from '@/services/auth.service';
 import { telegramService, whatsappService } from '@/services/channels.service';
 import { getApiErrorMessage } from '@/lib/errors';
+import { formatTime } from '@/lib/format';
+import { tx } from '@/i18n/tx';
 import { ApiError } from '@/types/api';
 import type { NotificationChannel } from '@/types/notification.types';
 
@@ -25,12 +28,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-
-const CHANNEL_LABELS: Record<NotificationChannel, string> = {
-  email: 'Email',
-  telegram: 'Telegram',
-  whatsapp: 'WhatsApp',
-};
 
 type Phase = 'initiating' | 'ready' | 'verified';
 
@@ -56,6 +53,7 @@ export function ChannelSetupDialog({
   onRefresh,
   onClose,
 }: ChannelSetupDialogProps) {
+  const { t } = useTranslation(['settings', 'common']);
   const [phase, setPhase] = useState<Phase>('initiating');
   const [error, setError] = useState<string | null>(null);
   const [actionUrl, setActionUrl] = useState<string | null>(null);
@@ -115,14 +113,14 @@ export function ChannelSetupDialog({
       if (nowVerified) {
         setPhase('verified');
       } else {
-        toast.info('Not verified yet — finish the steps, then check again.');
+        toast.info(t('channelSetup.notVerifiedYet'));
       }
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setRefreshing(false);
     }
-  }, [onRefresh]);
+  }, [onRefresh, t]);
 
   const copyCommand = useCallback(() => {
     if (!waCommand) return;
@@ -133,19 +131,21 @@ export function ChannelSetupDialog({
   }, [waCommand]);
 
   if (!channel) return null;
-  const label = CHANNEL_LABELS[channel];
+  const label = tx(t, `notifications.channels.${channel}`);
 
   return (
     <Dialog open={!!channel} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {phase === 'verified' ? `${label} connected` : `Connect ${label}`}
+            {phase === 'verified'
+              ? t('channelSetup.connectedTitle', { channel: label })
+              : t('channelSetup.connectTitle', { channel: label })}
           </DialogTitle>
           <DialogDescription>
             {phase === 'verified'
-              ? `Your ${label} is verified. You can now enable it as your delivery channel.`
-              : `Link your ${label} to receive notifications there. This is a one-time setup.`}
+              ? t('channelSetup.connectedDescription', { channel: label })
+              : t('channelSetup.connectDescription', { channel: label })}
           </DialogDescription>
         </DialogHeader>
 
@@ -160,11 +160,13 @@ export function ChannelSetupDialog({
             <div className="p-3 rounded-full bg-emerald-100 text-emerald-600">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <p className="text-sm text-muted-foreground">All set — close this and choose {label} as your channel.</p>
+            <p className="text-sm text-muted-foreground">
+              {t('channelSetup.allSet', { channel: label })}
+            </p>
           </div>
         ) : phase === 'initiating' ? (
           <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" /> Preparing…
+            <Loader2 className="w-5 h-5 animate-spin" /> {t('channelSetup.preparing')}
           </div>
         ) : (
           <div className="space-y-4 py-1">
@@ -173,17 +175,21 @@ export function ChannelSetupDialog({
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">1</span>
                   <span>
-                    We sent a verification link to{' '}
-                    <span className="font-medium text-foreground">{agencyEmail ?? 'your email'}</span>.
+                    <Trans
+                      ns="settings"
+                      i18nKey="channelSetup.email.step1"
+                      values={{ email: agencyEmail ?? t('channelSetup.email.yourEmail') }}
+                      components={{ strong: <span className="font-medium text-foreground" /> }}
+                    />
                   </span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">2</span>
-                  <span>Open the email and click the link to verify, then refresh below.</span>
+                  <span>{t('channelSetup.email.step2')}</span>
                 </li>
                 <li>
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => initiate('email')}>
-                    <Mail className="w-4 h-4" /> Resend email
+                    <Mail className="w-4 h-4" /> {t('channelSetup.email.resend')}
                   </Button>
                 </li>
               </ol>
@@ -193,25 +199,31 @@ export function ChannelSetupDialog({
               <ol className="space-y-3 text-sm">
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">1</span>
-                  <span>Open our Telegram bot and press <span className="font-medium text-foreground">Start</span>.</span>
+                  <span>
+                    <Trans
+                      ns="settings"
+                      i18nKey="channelSetup.telegram.step1"
+                      components={{ strong: <span className="font-medium text-foreground" /> }}
+                    />
+                  </span>
                 </li>
                 {actionUrl && (
                   <li>
                     <Button asChild variant="outline" size="sm" className="gap-2">
                       <a href={actionUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4" /> Open Telegram
+                        <ExternalLink className="w-4 h-4" /> {t('channelSetup.telegram.open')}
                       </a>
                     </Button>
                     {expiresAt && (
                       <p className="text-xs text-muted-foreground mt-1.5">
-                        Link expires {new Date(expiresAt).toLocaleTimeString()}.
+                        {t('channelSetup.telegram.expires', { time: formatTime(expiresAt) })}
                       </p>
                     )}
                   </li>
                 )}
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">2</span>
-                  <span>Once the bot confirms, refresh below.</span>
+                  <span>{t('channelSetup.telegram.step2')}</span>
                 </li>
               </ol>
             )}
@@ -220,13 +232,13 @@ export function ChannelSetupDialog({
               <ol className="space-y-3 text-sm">
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">1</span>
-                  <span>Open WhatsApp and send the pre-filled command to our bot.</span>
+                  <span>{t('channelSetup.whatsapp.step1')}</span>
                 </li>
                 {actionUrl && (
                   <li>
                     <Button asChild variant="outline" size="sm" className="gap-2">
                       <a href={actionUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4" /> Open WhatsApp
+                        <ExternalLink className="w-4 h-4" /> {t('channelSetup.whatsapp.open')}
                       </a>
                     </Button>
                   </li>
@@ -234,14 +246,20 @@ export function ChannelSetupDialog({
                 {waCommand && (
                   <li className="flex items-center gap-2">
                     <code className="flex-1 px-2.5 py-1.5 rounded bg-muted text-xs font-mono truncate">{waCommand}</code>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={copyCommand} aria-label="Copy command">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={copyCommand}
+                      aria-label={t('channelSetup.whatsapp.copyCommand')}
+                    >
                       {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </li>
                 )}
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">2</span>
-                  <span>After the bot replies, refresh below.</span>
+                  <span>{t('channelSetup.whatsapp.step2')}</span>
                 </li>
               </ol>
             )}
@@ -250,13 +268,13 @@ export function ChannelSetupDialog({
 
         <DialogFooter>
           {phase === 'verified' ? (
-            <Button onClick={onClose}>Done</Button>
+            <Button onClick={onClose}>{t('common:actions.done')}</Button>
           ) : (
             <>
-              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button variant="outline" onClick={onClose}>{t('common:actions.cancel')}</Button>
               <Button onClick={handleRefresh} disabled={refreshing || phase === 'initiating'} className="gap-2">
                 {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                I've done this — check
+                {t('channelSetup.checkAgain')}
               </Button>
             </>
           )}

@@ -1,5 +1,6 @@
 import { formatNumber, formatDate as fmtDate } from '@/lib/format';
 import { useState, type ComponentType, type ReactNode } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Banknote,
   CheckCircle2,
@@ -28,178 +29,56 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
+import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
+import { ContractTermsFields } from '@/components/agents/ContractTermsFields';
+import {
+  buildEmploymentPayload,
+  buildNegotiablePayload,
+  feeSplitError,
+  seedTermsForm,
+  summarizeTerms,
+  termPathLabel,
+  termValueText,
+  type TermsForm,
+} from '@/components/agents/contractTerms';
 import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
 import { useAgentActions } from '@/hooks/useAgentActions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAgentsRoster } from '@/store/agents.store';
 import { agentsService } from '@/services/agents.service';
+import { cn } from '@/lib/utils';
+import { txStatic } from '@/i18n/tx';
 import {
   agentAvatarUrl,
-  readContractTerms,
+  contractOffer,
+  needsTermsProposal,
   HISTORY_MEMBERSHIP_STATUSES,
 } from '@/types/agent.types';
 import type {
   RosterEntry,
   AgentMembership,
-  EmploymentType,
-  FeeSplitModel,
-  RemittanceCadence,
   AgentEligibility,
   AgentHistoryEvent,
   ContractSettlements,
-  UpdateEmploymentPayload,
-  UpdateTermsPayload,
+  ContractTermsProposal,
 } from '@/types/agent.types';
-
-const EMPLOYMENT_TYPES: EmploymentType[] = ['employee', 'contractor', 'freelancer'];
-
-const REMITTANCE_CADENCES: { value: RemittanceCadence; label: string }[] = [
-  { value: 'per_delivery', label: 'Per delivery' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'biweekly', label: 'Every two weeks' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'on_demand', label: 'On demand' },
-];
-
-const CADENCE_LABEL: Record<string, string> = Object.fromEntries(
-  REMITTANCE_CADENCES.map((c) => [c.value, c.label]),
-);
-
-// ─── Contract terms form ──────────────────────────────────────────────────────
-// One editor for everything negotiated on the contract, saved through
-// `PATCH .../terms` (the `/employment` endpoint is a thin alias for one group of
-// it). Every field is a string so an untouched input stays untouched: the payload
-// is diffed against the seeded values and only changed groups are sent, matching
-// the endpoint's field-by-field merge.
-
-interface TermsForm {
-  empType: EmploymentType | '';
-  empRef: string;
-  empStart: string;
-  empEnd: string;
-  feeModel: FeeSplitModel | '';
-  sharePercent: string;
-  flatFee: string;
-  currency: string;
-  cadence: RemittanceCadence | '';
-  dayOfWeek: string;
-  dayOfMonth: string;
-  graceHours: string;
-  /** `coverage.regions`, comma-separated. The polygon `area` is not editable here. */
-  regions: string;
-  ceiling: string;
-}
-
-function num(value: number | null | undefined): string {
-  return value == null ? '' : String(value);
-}
-
-/** Split a comma-separated region list into trimmed, non-empty names. */
-function parseRegions(value: string): string[] {
-  return value.split(',').map((r) => r.trim()).filter(Boolean);
-}
-
-function seedTermsForm(membership: AgentMembership): TermsForm {
-  const { feeSplit, remittanceTerms, coverage, shipmentValueCeiling } = readContractTerms(membership);
-  return {
-    empType: membership.employment.employmentType ?? '',
-    empRef: membership.employment.employeeRef ?? '',
-    empStart: membership.employment.startedAt?.slice(0, 10) ?? '',
-    empEnd: membership.employment.endsAt?.slice(0, 10) ?? '',
-    feeModel: feeSplit.model,
-    sharePercent: num(feeSplit.agentSharePercent),
-    flatFee: num(feeSplit.agentFlatFee),
-    currency: feeSplit.currency,
-    cadence: remittanceTerms.cadence,
-    dayOfWeek: num(remittanceTerms.dayOfWeek),
-    dayOfMonth: num(remittanceTerms.dayOfMonth),
-    graceHours: num(remittanceTerms.graceHours),
-    regions: coverage.regions.join(', '),
-    ceiling: num(shipmentValueCeiling),
-  };
-}
-
-/** Only what the agency actually changed, grouped as the endpoint expects. */
-function buildTermsPayload(form: TermsForm, seed: TermsForm): UpdateTermsPayload {
-  const payload: UpdateTermsPayload = {};
-
-  const employment: UpdateEmploymentPayload = {};
-  if (form.empType && form.empType !== seed.empType) employment.employment_type = form.empType;
-  // `employee_ref` is clearable: an emptied input is an explicit null.
-  if (form.empRef.trim() !== seed.empRef) employment.employee_ref = form.empRef.trim() || null;
-  if (form.empStart !== seed.empStart) employment.started_at = form.empStart || null;
-  if (form.empEnd !== seed.empEnd) employment.ends_at = form.empEnd || null;
-  if (Object.keys(employment).length > 0) payload.employment = employment;
-
-  const feeSplit: NonNullable<UpdateTermsPayload['fee_split']> = {};
-  if (form.feeModel && form.feeModel !== seed.feeModel) feeSplit.model = form.feeModel;
-  if (form.sharePercent !== seed.sharePercent && form.sharePercent !== '') {
-    feeSplit.agent_share_percent = Number(form.sharePercent);
-  }
-  if (form.flatFee !== seed.flatFee && form.flatFee !== '') {
-    feeSplit.agent_flat_fee = Number(form.flatFee);
-  }
-  const currency = form.currency.trim().toUpperCase();
-  if (currency && currency !== seed.currency.toUpperCase()) feeSplit.currency = currency;
-  if (Object.keys(feeSplit).length > 0) payload.fee_split = feeSplit;
-
-  const remittance: NonNullable<UpdateTermsPayload['remittance_terms']> = {};
-  if (form.cadence && form.cadence !== seed.cadence) remittance.cadence = form.cadence;
-  if (form.dayOfWeek !== seed.dayOfWeek && form.dayOfWeek !== '') {
-    remittance.day_of_week = Number(form.dayOfWeek);
-  }
-  if (form.dayOfMonth !== seed.dayOfMonth && form.dayOfMonth !== '') {
-    remittance.day_of_month = Number(form.dayOfMonth);
-  }
-  if (form.graceHours !== seed.graceHours && form.graceHours !== '') {
-    remittance.grace_hours = Number(form.graceHours);
-  }
-  if (Object.keys(remittance).length > 0) payload.remittance_terms = remittance;
-
-  // `area` is deliberately left alone — a polygon is not something this text
-  // editor can express, and omitting the key keeps whatever is stored.
-  if (form.regions !== seed.regions) {
-    payload.coverage = { regions: parseRegions(form.regions) };
-  }
-
-  // Nullable on purpose — an emptied ceiling means "no per-shipment cap".
-  if (form.ceiling !== seed.ceiling) {
-    payload.shipment_value_ceiling = form.ceiling.trim() === '' ? null : Number(form.ceiling);
-  }
-
-  return payload;
-}
-
-/**
- * The one rule the server enforces up front: the split that RESULTS from the
- * patch must carry a value for its model. Checked here too so a mistyped split is
- * caught before it can mispay anyone.
- */
-function feeSplitError(form: TermsForm, seed: TermsForm): string | null {
-  const model = form.feeModel || seed.feeModel;
-  if (model === 'percentage' && !(form.sharePercent || seed.sharePercent)) {
-    return 'A percentage split needs an agent share.';
-  }
-  if (model === 'flat' && !(form.flatFee || seed.flatFee)) {
-    return 'A flat split needs a flat fee.';
-  }
-  if (form.sharePercent !== '' && (Number(form.sharePercent) < 0 || Number(form.sharePercent) > 100)) {
-    return 'The agent share must be between 0 and 100.';
-  }
-  return null;
-}
 
 function formatDate(iso: string | null | undefined) {
   return fmtDate(iso);
 }
+
+/** The `membership.ending.*` keys, so the switch below stays exhaustive. */
+type EndingKey =
+  | 'membership.ending.rejected'
+  | 'membership.ending.withdrawn'
+  | 'membership.ending.deactivated'
+  | 'membership.ending.transferred';
 
 /**
  * How a terminal contract ended, or null while it is still live.
@@ -210,31 +89,44 @@ function formatDate(iso: string | null | undefined) {
  */
 function contractEnding(
   membership: AgentMembership,
-): { label: string; at: string | null; reason: string | null } | null {
+): { labelKey: EndingKey; at: string | null; reason: string | null } | null {
   switch (membership.status) {
     case 'rejected':
       return {
-        label: 'The agent turned down your request',
+        labelKey: 'membership.ending.rejected',
         at: membership.rejectedAt,
         reason: membership.rejectionReason,
       };
     case 'withdrawn':
       return {
-        label: 'The request was withdrawn before it was answered',
+        labelKey: 'membership.ending.withdrawn',
         at: membership.withdrawnAt,
         reason: membership.withdrawalReason,
       };
     case 'deactivated':
       return {
-        label: membership.transferredToAgencyId
-          ? 'Ended — an admin transferred this agent to another agency'
-          : 'Contract ended',
+        labelKey: membership.transferredToAgencyId
+          ? 'membership.ending.transferred'
+          : 'membership.ending.deactivated',
         at: membership.removedAt,
         reason: membership.removalReason,
       };
     default:
       return null;
   }
+}
+
+/**
+ * Copy for a backend token, falling back to its humanized form.
+ *
+ * Contract origins, history event types, eligibility rules and deposit statuses
+ * are all open unions on the wire (`(string & {})`) and the membership log is
+ * append-only, so a value we have no copy for still has to read as something.
+ */
+function tokenLabel(group: string, token: string): string {
+  const key = `${group}.${token}`;
+  const translated = txStatic(key);
+  return translated === key ? token.replace(/_/g, ' ') : translated;
 }
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
@@ -244,13 +136,15 @@ function InfoTile({
   icon: Icon,
   label,
   value,
+  className,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="bg-card px-3 py-2.5">
+    <div className={cn('bg-card px-3 py-2.5', className)}>
       <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         <Icon className="h-3 w-3 shrink-0" />
         {label}
@@ -270,6 +164,8 @@ function Section({
   title,
   summary,
   defaultOpen = false,
+  open,
+  onOpenChange,
   onOpen,
   children,
 }: {
@@ -277,13 +173,23 @@ function Section({
   title: string;
   summary?: ReactNode;
   defaultOpen?: boolean;
+  /**
+   * Controlled, for a section another control opens (Counter / Propose terms).
+   * Pass it together with `onOpenChange`, or neither — Radix will not survive a
+   * section flipping between the two modes mid-life.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onOpen?: () => void;
   children: ReactNode;
 }) {
   return (
     <Collapsible
-      defaultOpen={defaultOpen}
-      onOpenChange={(open) => { if (open) onOpen?.(); }}
+      {...(open === undefined ? { defaultOpen } : { open })}
+      onOpenChange={(next) => {
+        onOpenChange?.(next);
+        if (next) onOpen?.();
+      }}
       className="group/section rounded-xl border bg-card"
     >
       <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-muted/50">
@@ -301,25 +207,6 @@ function Section({
   );
 }
 
-function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="space-y-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
-      {children}
-    </div>
-  );
-}
-
-function FormField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
-      {hint && <p className="text-[11px] leading-relaxed text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
 // ─── Dialog ───────────────────────────────────────────────────────────────────
 
 export interface AgentMembershipDialogProps {
@@ -330,22 +217,48 @@ export interface AgentMembershipDialogProps {
 }
 
 export function AgentMembershipDialog({ entry, open, onOpenChange, onChanged }: AgentMembershipDialogProps) {
+  const isMobile = useIsMobile();
+
+  // Keyed on the contract so switching rows resets every editor and drops the
+  // lazily-loaded panels — otherwise the previous agent's eligibility, history
+  // and settlements would be shown for the next one.
+  const body = entry && (
+    <MembershipBody
+      key={entry.membership.id}
+      entry={entry}
+      onOpenChange={onOpenChange}
+      onChanged={onChanged}
+    />
+  );
+
+  // A phone gets the bottom sheet the rest of the app uses for detail panels
+  // (see AgentDetailSheet) — a centred dialog on a 375px screen leaves the
+  // action footer somewhere in the middle of the viewport. `Sheet` and `Dialog`
+  // are both `@radix-ui/react-dialog` over the same unscoped context, so the
+  // body's `DialogTitle`/`DialogDescription` label either shell unchanged.
+  //
+  // Both shells set an EXPLICIT height rather than `max-h`. A flex column whose
+  // height is only clamped by `max-height` has an indefinite main size, so
+  // `flex-1` on the scroller resolves against content instead of the panel and
+  // the footer gets pushed out past `overflow-hidden`. A definite height makes
+  // `flex-1 min-h-0` unambiguous.
+  if (isMobile) {
+    return (
+      <Sheet open={open && !!entry} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[92dvh] gap-0 rounded-t-2xl p-0">
+          <div className="mx-auto mb-1 mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-muted" />
+          {body}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <Dialog open={open && !!entry} onOpenChange={onOpenChange}>
       {/* `flex`/`p-0` override the base grid+padding; `overflow-hidden` keeps the
           rounded corners clipping the scroller. */}
-      <DialogContent className="flex max-h-[min(92vh,48rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        {entry && (
-          // Keyed on the contract so switching rows resets every editor and drops
-          // the lazily-loaded panels — otherwise the previous agent's eligibility,
-          // history and settlements would be shown for the next one.
-          <MembershipBody
-            key={entry.membership.id}
-            entry={entry}
-            onOpenChange={onOpenChange}
-            onChanged={onChanged}
-          />
-        )}
+      <DialogContent className="flex h-[min(88vh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        {body}
       </DialogContent>
     </Dialog>
   );
@@ -360,8 +273,9 @@ function MembershipBody({
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation(['agents', 'common']);
   const actions = useAgentActions({ onRosterChanged: onChanged });
-  const { statusRequests } = useAgentsRoster();
+  const { statusRequests, termsProposals } = useAgentsRoster();
   const { membership, agent, cashHeld } = entry;
   const mid = membership.id;
 
@@ -370,18 +284,34 @@ function MembershipBody({
   // as on the row because this sheet is where "manage this agent" leads, and a
   // decision waiting on you must not be reachable only from the list behind it.
   const statusRequest = statusRequests.find((r) => r.contractId === mid) ?? null;
+  // Likewise the open terms proposal — at most one per contract. Note this comes
+  // from the roster's `/terms-proposals` fetch, not from `membership.openTermsProposalId`,
+  // which most endpoints return as null regardless of whether one exists.
+  const termsProposal = termsProposals.find((p) => p.contractId === mid) ?? null;
 
   // Inline "confirm with reason" modes
   const [mode, setMode] = useState<'suspend' | 'pause' | 'terminate' | 'reject' | null>(null);
   const [reason, setReason] = useState('');
   const [requestNoteOpen, setRequestNoteOpen] = useState(false);
   const [requestNote, setRequestNote] = useState('');
+  const [proposalNoteOpen, setProposalNoteOpen] = useState(false);
+  const [proposalNote, setProposalNote] = useState('');
 
   // COD threshold + contract terms editors
   const [threshold, setThreshold] = useState('');
   const [termsSeed, setTermsSeed] = useState<TermsForm>(() => seedTermsForm(membership));
   const [terms, setTerms] = useState<TermsForm>(termsSeed);
   const [termsError, setTermsError] = useState<string | null>(null);
+  /** Note sent with a proposal or counter-proposal, explaining the change. */
+  const [termsNote, setTermsNote] = useState('');
+  /**
+   * Controlled, not `defaultOpen`: Counter / Propose in the footer and on the
+   * proposal panel open this section, so its state has to be reachable from
+   * outside it. Terminal contracts start closed — there is nothing to edit.
+   */
+  const [termsOpen, setTermsOpen] = useState(
+    () => !HISTORY_MEMBERSHIP_STATUSES.includes(membership.status),
+  );
 
   // Lazy eligibility / history / settlements
   const [eligibility, setEligibility] = useState<AgentEligibility | null>(null);
@@ -390,14 +320,35 @@ function MembershipBody({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [settlements, setSettlements] = useState<ContractSettlements | null>(null);
   const [settlementsLoading, setSettlementsLoading] = useState(false);
+  const [trail, setTrail] = useState<ContractTermsProposal[] | null>(null);
+  const [trailLoading, setTrailLoading] = useState(false);
 
   const VehicleIcon = getVehicleIcon(agent.vehicleInfo?.vehicle_type);
   const ending = contractEnding(membership);
   /** Terminal contracts are history — nothing on them can still be negotiated. */
   const editable = !HISTORY_MEMBERSHIP_STATUSES.includes(membership.status);
+  const offer = contractOffer(membership);
 
-  const termsPayload = buildTermsPayload(terms, termsSeed);
-  const dirty = Object.keys(termsPayload).length > 0;
+  // Where a terms change goes depends entirely on the contract's status, and the
+  // two routes are not interchangeable. A `pending` contract IS the offer, so
+  // figures are written onto it and the ball moves to the agent. A live one is
+  // pricing deliveries by an agreed split right now, so the same edit becomes a
+  // proposal staged behind the agent's answer — `PATCH .../terms` there is a 409.
+  const staged = needsTermsProposal(membership);
+  // One open proposal per contract, by unique index, so a change can only be
+  // superseded — never doubled up. Their proposal we may counter (which keeps
+  // the negotiation chain); our own has to be withdrawn from the panel above,
+  // and raising a second would be 409 CONTRACT_TERMS_PROPOSAL_ALREADY_PENDING.
+  // `availableActions` decides, rather than `proposedByRole`, so this agrees
+  // with whatever the server will actually accept on that row.
+  const canCounterProposal = termsProposal?.availableActions?.includes('counter') ?? false;
+  const proposalBlocked = staged && termsProposal != null && !canCounterProposal;
+
+  const employmentPayload = buildEmploymentPayload(terms, termsSeed);
+  const negotiablePayload = buildNegotiablePayload(terms, termsSeed);
+  const employmentDirty = Object.keys(employmentPayload).length > 0;
+  const negotiableDirty = Object.keys(negotiablePayload).length > 0;
+  const dirty = employmentDirty || negotiableDirty;
 
   const resetInline = () => {
     setMode(null);
@@ -408,6 +359,14 @@ function MembershipBody({
     if (result) {
       setRequestNoteOpen(false);
       setRequestNote('');
+    }
+    return result;
+  };
+
+  const clearProposalNote = <T,>(result: T): T => {
+    if (result) {
+      setProposalNoteOpen(false);
+      setProposalNote('');
     }
     return result;
   };
@@ -456,6 +415,19 @@ function MembershipBody({
     }
   };
 
+  const loadTrail = async () => {
+    if (trail) return;
+    setTrailLoading(true);
+    try {
+      const res = await agentsService.listContractTermsProposals(mid);
+      setTrail(res.data);
+    } catch {
+      /* surfaced inline */
+    } finally {
+      setTrailLoading(false);
+    }
+  };
+
   const saveThreshold = async () => {
     const value = Number(threshold);
     if (Number.isNaN(value)) return;
@@ -463,18 +435,61 @@ function MembershipBody({
     if (result) setThreshold('');
   };
 
+  /**
+   * Employment and the negotiated terms leave through different doors, because
+   * the API draws the line there and not where a single "Save" button would.
+   *
+   * Employment is the agency's own HR record — unilateral at any status via
+   * `PATCH .../employment`. The four negotiated groups are the agent's business:
+   * countered onto a `pending` contract, or staged as a proposal on a live one.
+   * Sending employment through either negotiation route is `403
+   * CONTRACT_TERMS_NOT_NEGOTIABLE`, so it is split out rather than filtered.
+   */
   const saveTerms = async () => {
     if (!dirty) {
-      setTermsError('Nothing changed yet.');
+      setTermsError(t('membership.terms.nothingChanged'));
       return;
     }
-    const splitError = feeSplitError(terms, termsSeed);
-    if (splitError) {
-      setTermsError(splitError);
-      return;
+    if (negotiableDirty) {
+      const splitError = feeSplitError(terms, termsSeed);
+      if (splitError) {
+        setTermsError(splitError);
+        return;
+      }
+      if (proposalBlocked) {
+        setTermsError(t('membership.terms.proposalBlocked'));
+        return;
+      }
     }
-    const result = await actions.updateTerms(mid, termsPayload);
-    if (result) setTermsSeed(terms);
+
+    if (employmentDirty) {
+      const saved = await actions.updateEmployment(mid, employmentPayload);
+      // The negotiated half is a separate write, and pushing it after a failed
+      // employment save would leave the form claiming both went through.
+      if (!saved) return;
+      if (!negotiableDirty) {
+        setTermsSeed(terms);
+        return;
+      }
+    }
+
+    const note = termsNote.trim() || undefined;
+    const result = staged
+      ? termsProposal && canCounterProposal
+        ? // Their proposal is open: counter it rather than raising a second one.
+          // The old row becomes `superseded` and the new one points back at it.
+          await actions.counterTermsProposal(termsProposal.id, negotiablePayload, note)
+        : await actions.proposeTerms(mid, negotiablePayload, note)
+      : await actions.counterTerms(mid, negotiablePayload, agent.id);
+
+    if (result) {
+      setTermsNote('');
+      // A staged change has NOT been applied — reseeding from the form would
+      // show the proposed figures as if they were the agreed ones. The contract
+      // refetch behind us is what will move them, if and when the agent agrees.
+      if (!staged) setTermsSeed(terms);
+      else setTerms(termsSeed);
+    }
   };
 
   const confirmInline = async () => {
@@ -496,18 +511,12 @@ function MembershipBody({
 
   const pk = actions.pendingKey;
   const avatar = agentAvatarUrl(agent);
-  const cadence = terms.cadence || termsSeed.cadence;
-  const feeModel = terms.feeModel || termsSeed.feeModel;
-
-  const termsSummary = [
-    membership.employment.employmentType,
-    membership.feeSplit.model === 'flat'
-      ? `${formatNumber(membership.feeSplit.agentFlatFee ?? 0)} flat`
-      : `${membership.feeSplit.agentSharePercent ?? 0}% share`,
-    CADENCE_LABEL[membership.remittanceTerms.cadence],
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const termsSummary = summarizeTerms(membership);
+  const termsBusy =
+    pk === `employment:${mid}` ||
+    pk === `counter:${mid}` ||
+    pk === `propose:${mid}` ||
+    (termsProposal != null && pk === `proposal-counter:${termsProposal.id}`);
 
   // A departure is already on the table — from either side. Offering "Remove"
   // again would 409 (`CONTRACT_STATUS_REQUEST_ALREADY_PENDING`); the panel at the
@@ -522,7 +531,7 @@ function MembershipBody({
 
   return (
     <>
-      <DialogHeader className="flex-shrink-0 gap-0 border-b px-6 py-5 pr-14">
+      <DialogHeader className="flex-shrink-0 gap-0 border-b px-4 py-4 pr-14 sm:px-6 sm:py-5 sm:pr-14">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted">
             {avatar ? (
@@ -537,23 +546,28 @@ function MembershipBody({
             <DialogTitle className="truncate text-base">{agent.name}</DialogTitle>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <MembershipStatusBadge status={membership.status} className="text-[10px]" />
-              {membership.isPrimary && <Badge variant="secondary" className="text-[10px]">Primary</Badge>}
-              <Badge variant="outline" className="text-[10px] capitalize text-muted-foreground">
-                {membership.origin.replace(/_/g, ' ')}
+              {membership.isPrimary && (
+                <Badge variant="secondary" className="text-[10px]">{t('membership.primary')}</Badge>
+              )}
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                {tokenLabel('agents:origin', membership.origin)}
               </Badge>
             </div>
           </div>
         </div>
         <DialogDescription className="sr-only">
-          Contract details for {agent.name} — COD limit, negotiated terms, settlements and history.
+          {t('membership.srDescription', { name: agent.name })}
         </DialogDescription>
       </DialogHeader>
 
-      {/* `min-h-0` is what makes this scroll: a flex child defaults to
-          `min-height: auto`, so without it the viewport grows past the dialog
-          instead of overflowing inside it. */}
-      <ScrollArea className="min-h-0 flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
-        <div className="space-y-4 px-6 py-5">
+      {/* Native scrolling, deliberately not Radix's ScrollArea: that one keeps
+          the viewport at `overflow-y: hidden` until a scrollbar mounts, and with
+          the default `type="hover"` a scrollbar only mounts on pointer-enter —
+          so it can never scroll on a touch screen. `min-h-0` lets this flex
+          child shrink below its content; `overscroll-contain` stops a phone
+          flick from scrolling the roster behind the sheet. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="space-y-4 px-4 py-5 sm:px-6">
           {/* A pending two-party change comes first: it is the one thing here
               that is waiting on somebody, and burying it under the terms would
               make an agent's request to leave look like nothing had arrived. */}
@@ -580,39 +594,100 @@ function MembershipBody({
             />
           )}
 
+          {/* An open change to the agreed terms. Same reasoning as above, and
+              the copy has to be explicit that nothing has moved: the contract
+              goes on paying the old split until this is accepted. */}
+          {termsProposal && (
+            <TermsProposalPanel
+              proposal={termsProposal}
+              busy={
+                pk === `proposal-resolve:${termsProposal.id}` ||
+                pk === `proposal-cancel:${termsProposal.id}`
+              }
+              note={proposalNote}
+              noteOpen={proposalNoteOpen}
+              onNoteChange={setProposalNote}
+              onOpenNote={() => { setProposalNoteOpen(true); setProposalNote(''); }}
+              onResolve={(decision) =>
+                actions
+                  .resolveTermsProposal(termsProposal.id, decision, proposalNote.trim() || undefined)
+                  .then(clearProposalNote)
+              }
+              onCancel={() =>
+                actions
+                  .cancelTermsProposal(termsProposal.id, proposalNote.trim() || undefined)
+                  .then(clearProposalNote)
+              }
+              // Countering is the terms editor with their figures answered, so
+              // it opens the section below rather than being its own form.
+              onCounter={() => setTermsOpen(true)}
+            />
+          )}
+
           {/* How a terminal contract ended. Terminal is terminal — the row
               survives only as history, so the reason is the whole story. */}
           {ending && (
             <div className="rounded-xl border bg-muted/40 p-4">
-              <p className="text-sm font-medium">{ending.label}</p>
+              <p className="text-sm font-medium">{t(ending.labelKey)}</p>
               {ending.at && <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(ending.at)}</p>}
               {ending.reason ? (
-                <p className="mt-2 text-sm">“{ending.reason}”</p>
+                <p className="mt-2 text-sm">
+                  {t('membership.ending.quotedReason', { reason: ending.reason })}
+                </p>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">No reason was given.</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('membership.ending.noReason')}</p>
               )}
               <p className="mt-2 text-xs text-muted-foreground">
-                Contracting with this agent again starts a new contract; this one stays as history.
+                {t('membership.ending.newContractHint')}
               </p>
             </div>
           )}
 
-          {/* At a glance — contact, vehicle, standing */}
-          <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
-            <InfoTile icon={Mail} label="Email" value={agent.email ?? '—'} />
-            <InfoTile icon={Phone} label="Phone" value={agent.phone ?? '—'} />
+          {/* At a glance — contact, vehicle, standing. Email takes the full row
+              on a phone; an address does not survive a 160px column. */}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
+            <InfoTile
+              className="col-span-2 sm:col-span-1"
+              icon={Mail}
+              label={t('membership.tiles.email')}
+              value={agent.email ?? t('common:values.notAvailable')}
+            />
+            <InfoTile
+              icon={Phone}
+              label={t('membership.tiles.phone')}
+              value={agent.phone ?? t('common:values.notAvailable')}
+            />
             <InfoTile
               icon={VehicleIcon}
-              label="Vehicle"
-              value={agent.vehicleInfo ? formatVehicleType(agent.vehicleInfo.vehicle_type) : '—'}
+              label={t('membership.tiles.vehicle')}
+              value={
+                agent.vehicleInfo
+                  ? formatVehicleType(agent.vehicleInfo.vehicle_type)
+                  : t('common:values.notAvailable')
+              }
             />
             <InfoTile
               icon={Star}
-              label="Trust score"
-              value={<span className="flex items-center gap-1">{agent.trustScore}<span className="font-normal text-muted-foreground">/ 100</span></span>}
+              label={t('membership.tiles.trustScore')}
+              value={
+                <span className="flex items-center gap-1">
+                  {agent.trustScore}
+                  <span className="font-normal text-muted-foreground">
+                    {t('membership.tiles.trustOutOf')}
+                  </span>
+                </span>
+              }
             />
-            <InfoTile icon={Package} label="Active jobs" value={agent.activeShipmentCount} />
-            <InfoTile icon={Signal} label="Availability" value={<span className="capitalize">{String(agent.availability).replace(/_/g, ' ')}</span>} />
+            <InfoTile
+              icon={Package}
+              label={t('membership.tiles.activeJobs')}
+              value={agent.activeShipmentCount}
+            />
+            <InfoTile
+              icon={Signal}
+              label={t('membership.tiles.availability')}
+              value={tokenLabel('agents:availability', String(agent.availability))}
+            />
           </div>
 
           {/* Cash + COD threshold */}
@@ -620,14 +695,22 @@ function MembershipBody({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  <Banknote className="h-3 w-3" /> COD cash held
+                  <Banknote className="h-3 w-3" /> {t('membership.cod.held')}
                 </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(cashHeld)}</p>
               </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Current cap</p>
+              <div className="text-end">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('membership.cod.cap')}
+                </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {membership.codThreshold > 0 ? formatNumber(membership.codThreshold) : <span className="text-base font-normal text-muted-foreground">No cap</span>}
+                  {membership.codThreshold > 0 ? (
+                    formatNumber(membership.codThreshold)
+                  ) : (
+                    <span className="text-base font-normal text-muted-foreground">
+                      {t('membership.cod.noCap')}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -638,17 +721,17 @@ function MembershipBody({
                   <Input
                     type="number"
                     min={0}
-                    placeholder="New COD threshold (0 = none)"
+                    placeholder={t('membership.cod.placeholder')}
                     value={threshold}
                     onChange={(e) => setThreshold(e.target.value)}
                     className="flex-1"
                   />
                   <Button size="sm" disabled={threshold === '' || pk === `cod-limit:${mid}`} onClick={saveThreshold}>
-                    {pk === `cod-limit:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set'}
+                    {pk === `cod-limit:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.cod.set')}
                   </Button>
                 </div>
                 <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                  A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool.
+                  {t('membership.cod.hint')}
                 </p>
               </>
             )}
@@ -657,196 +740,93 @@ function MembershipBody({
           {/* Contract terms — employment, fee split, remittance, value ceiling */}
           <Section
             icon={ClipboardList}
-            title="Contract terms"
-            summary={termsSummary || 'Employment, fee split, remittance and limits'}
-            defaultOpen={editable}
+            title={offer === 'settled' ? t('membership.terms.title') : t('membership.terms.titleOnTable')}
+            summary={termsSummary || t('membership.terms.summaryFallback')}
+            open={termsOpen}
+            onOpenChange={setTermsOpen}
           >
             <div className="space-y-5">
-              <FieldGroup title="Employment">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField label="Type">
-                    <Select
-                      value={terms.empType}
-                      disabled={!editable}
-                      onValueChange={(v) => setTerm('empType', v as EmploymentType)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        {EMPLOYMENT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  <FormField label="Employee ref">
-                    <Input
-                      value={terms.empRef}
-                      disabled={!editable}
-                      onChange={(e) => setTerm('empRef', e.target.value)}
-                      placeholder="EMP-042"
+              {/* Which mechanism applies is the one thing a reader must not have
+                  to guess, so it is stated before the fields rather than
+                  discovered when Save behaves unexpectedly. */}
+              {editable && (
+                <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                  {staged ? (
+                    <Trans
+                      ns="agents"
+                      i18nKey="membership.terms.modeStaged"
+                      values={{ name: agent.name }}
+                      components={{ strong: <span className="font-medium text-foreground" /> }}
                     />
-                  </FormField>
-                  <FormField label="Started">
-                    <Input type="date" value={terms.empStart} disabled={!editable} onChange={(e) => setTerm('empStart', e.target.value)} />
-                  </FormField>
-                  <FormField label="Ends">
-                    <Input type="date" value={terms.empEnd} disabled={!editable} onChange={(e) => setTerm('empEnd', e.target.value)} />
-                  </FormField>
-                </div>
-              </FieldGroup>
-
-              {/* Fee split — what this agent is paid per delivery */}
-              <FieldGroup title="Fee split">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField label="Model">
-                    <Select
-                      value={terms.feeModel}
-                      disabled={!editable}
-                      onValueChange={(v) => setTerm('feeModel', v as FeeSplitModel)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                        <SelectItem value="flat">Flat fee</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  {feeModel === 'flat' ? (
-                    <FormField label="Flat fee per delivery">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={terms.flatFee}
-                        disabled={!editable}
-                        onChange={(e) => setTerm('flatFee', e.target.value)}
-                        placeholder="1500"
-                      />
-                    </FormField>
+                  ) : offer === 'ours-to-answer' ? (
+                    t('membership.terms.modeOursToAnswer', { name: agent.name })
+                  ) : offer === 'needs-terms' ? (
+                    t('membership.terms.modeNeedsTerms', { name: agent.name })
                   ) : (
-                    <FormField label="Agent share (%)">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={terms.sharePercent}
-                        disabled={!editable}
-                        onChange={(e) => setTerm('sharePercent', e.target.value)}
-                        placeholder="40"
-                      />
-                    </FormField>
-                  )}
-                  <FormField label="Currency">
-                    <Input
-                      value={terms.currency}
-                      maxLength={3}
-                      disabled={!editable}
-                      onChange={(e) => setTerm('currency', e.target.value.toUpperCase())}
-                      placeholder="XAF"
-                    />
-                  </FormField>
-                </div>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  The agent's cut comes <span className="font-medium">out of</span> your delivery fee, never on
-                  top — the vendor pays the same either way. The platform pays it from the agent's own
-                  earnings account.
-                </p>
-              </FieldGroup>
-
-              {/* Remittance cadence */}
-              <FieldGroup title="COD remittance">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField label="Cadence">
-                    <Select
-                      value={terms.cadence}
-                      disabled={!editable}
-                      onValueChange={(v) => setTerm('cadence', v as RemittanceCadence)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        {REMITTANCE_CADENCES.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  <FormField label="Grace hours">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={720}
-                      value={terms.graceHours}
-                      disabled={!editable}
-                      onChange={(e) => setTerm('graceHours', e.target.value)}
-                      placeholder="24"
-                    />
-                  </FormField>
-                  {['weekly', 'biweekly'].includes(cadence) && (
-                    <FormField label="Day of week" hint="0 = Sunday">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={6}
-                        value={terms.dayOfWeek}
-                        disabled={!editable}
-                        onChange={(e) => setTerm('dayOfWeek', e.target.value)}
-                      />
-                    </FormField>
-                  )}
-                  {cadence === 'monthly' && (
-                    <FormField label="Day of month" hint="1–28">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={28}
-                        value={terms.dayOfMonth}
-                        disabled={!editable}
-                        onChange={(e) => setTerm('dayOfMonth', e.target.value)}
-                      />
-                    </FormField>
+                    t('membership.terms.modeTheirsToAnswer', { name: agent.name })
                   )}
                 </div>
-              </FieldGroup>
+              )}
 
-              <FieldGroup title="Coverage & limits">
-                <FormField
-                  label="Coverage regions"
-                  hint="Comma-separated. Where this agent works for you — it cannot exceed the area they agreed to cover. Leave empty for no restriction."
-                >
-                  <Input
-                    value={terms.regions}
-                    disabled={!editable}
-                    onChange={(e) => setTerm('regions', e.target.value)}
-                    placeholder="Douala, Bonabéri"
+              <ContractTermsFields
+                form={terms}
+                seed={termsSeed}
+                onChange={setTerm}
+                disabled={!editable}
+                includeEmployment
+              />
+
+              {/* A note only travels with a staged change — the counter endpoint
+                  on a pending contract takes terms and nothing else. */}
+              {editable && staged && negotiableDirty && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t('membership.terms.noteLabel')}
+                  </p>
+                  <Textarea
+                    value={termsNote}
+                    onChange={(e) => setTermsNote(e.target.value)}
+                    rows={2}
+                    maxLength={300}
+                    placeholder={t('membership.terms.notePlaceholder')}
                   />
-                </FormField>
-                <FormField
-                  label="Shipment value ceiling"
-                  hint="The most this agent may carry on one shipment. Leave empty for no cap."
-                >
-                  <Input
-                    type="number"
-                    min={0}
-                    value={terms.ceiling}
-                    disabled={!editable}
-                    onChange={(e) => setTerm('ceiling', e.target.value)}
-                    placeholder="No cap"
-                  />
-                </FormField>
-              </FieldGroup>
+                </div>
+              )}
 
               {editable && (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                   <p className={termsError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
-                    {termsError ?? (dirty ? 'Unsaved changes' : 'Only changed fields are sent.')}
+                    {termsError ??
+                      (proposalBlocked && negotiableDirty
+                        ? t('membership.terms.proposalBlockedHint')
+                        : dirty
+                          ? t('membership.terms.unsaved')
+                          : t('membership.terms.onlyChanged'))}
                   </p>
                   <div className="flex gap-2">
                     {dirty && (
                       <Button size="sm" variant="ghost" onClick={() => { setTerms(termsSeed); setTermsError(null); }}>
-                        Discard
+                        {t('common:actions.discard')}
                       </Button>
                     )}
-                    <Button size="sm" disabled={!dirty || pk === `terms:${mid}`} onClick={saveTerms}>
-                      {pk === `terms:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save terms'}
+                    <Button
+                      size="sm"
+                      disabled={!dirty || termsBusy || (proposalBlocked && negotiableDirty)}
+                      onClick={saveTerms}
+                    >
+                      {termsBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : !negotiableDirty ? (
+                        t('membership.terms.saveEmployment')
+                      ) : staged ? (
+                        canCounterProposal
+                          ? t('membership.terms.sendCounterProposal')
+                          : t('membership.terms.proposeToAgent')
+                      ) : offer === 'ours-to-answer' ? (
+                        t('membership.terms.sendCounterOffer')
+                      ) : (
+                        t('membership.terms.sendTerms')
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -854,69 +834,173 @@ function MembershipBody({
             </div>
           </Section>
 
+          {/* The negotiation trail — every proposal ever raised on this
+              contract, not only the open one. Resolved rows carry the terms
+              that were actually on the table when they were raised, which is
+              why they are worth keeping: `termsBefore` is a snapshot, so an old
+              row stays honest after the contract has moved on.
+
+              Hidden only while `pending`: that contract negotiates on its own
+              document and produces no proposal rows at all, so the section
+              could only ever say "none". A terminal one may well have a trail
+              worth reading — it was live once. */}
+          {membership.status !== 'pending' && (
+            <Section
+              icon={ClipboardList}
+              title={t('membership.trail.title')}
+              summary={t('membership.trail.summary')}
+              onOpen={loadTrail}
+            >
+              {trailLoading ? (
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common:states.loading')}
+                </p>
+              ) : trail && trail.length > 0 ? (
+                <div className="space-y-3">
+                  {trail.map((proposal) => (
+                    <div key={proposal.id} className="rounded-lg border px-3 py-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">
+                          {tokenLabel('agents:termsProposal.states', proposal.state)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {t('membership.trail.byline', {
+                            who:
+                              proposal.proposedByRole === 'agency'
+                                ? t('membership.trail.you')
+                                : agent.name,
+                            date: formatDate(proposal.createdAt),
+                          })}
+                        </span>
+                      </div>
+                      {proposal.diff.length > 0 ? (
+                        <ul className="mt-1.5 space-y-0.5">
+                          {proposal.diff.map((entry) => (
+                            <li key={entry.path} className="text-xs">
+                              <span className="text-muted-foreground">
+                                {t('membership.trail.diffEntry', { label: termPathLabel(entry.path) })}
+                              </span>
+                              <span className="line-through opacity-60">
+                                {termValueText(entry.path, entry.before)}
+                              </span>{' '}
+                              <span className="inline-block rtl:-scale-x-100">→</span>{' '}
+                              <span className="font-medium">{termValueText(entry.path, entry.after)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {t('membership.trail.noChange')}
+                        </p>
+                      )}
+                      {proposal.resolutionNote && (
+                        <p className="mt-1.5 text-xs">
+                          {t('membership.trail.quotedNote', { note: proposal.resolutionNote })}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('membership.trail.empty')}</p>
+              )}
+            </Section>
+          )}
+
           {/* Settlements — this contract's cash history */}
-          <Section icon={Banknote} title="Settlements" summary="Outstanding cash and deposits on this contract" onOpen={loadSettlements}>
+          <Section
+            icon={Banknote}
+            title={t('membership.settlements.title')}
+            summary={t('membership.settlements.summary')}
+            onOpen={loadSettlements}
+          >
             {settlementsLoading ? (
               <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common:states.loading')}
               </p>
             ) : settlements ? (
               <div className="space-y-3">
                 <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
                   <div className="bg-card px-3 py-2.5">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Outstanding</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t('membership.settlements.outstanding')}
+                    </p>
                     <p className={`mt-1 text-lg font-semibold tabular-nums ${settlements.cod.outstandingBalance > 0 ? 'text-amber-600' : ''}`}>
                       {formatNumber(settlements.cod.outstandingBalance)}
                     </p>
                   </div>
                   <div className="bg-card px-3 py-2.5">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Settled lifetime</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t('membership.settlements.lifetimeSettled')}
+                    </p>
                     <p className="mt-1 text-lg font-semibold tabular-nums">{formatNumber(settlements.cod.lifetimeSettled)}</p>
                   </div>
                 </div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Outstanding cash must reach zero before this contract can end. Last settled{' '}
-                  {formatDate(settlements.cod.lastSettledAt)}.
+                  {t('membership.settlements.hint', {
+                    date: formatDate(settlements.cod.lastSettledAt),
+                  })}
                 </p>
                 {settlements.deposits.length > 0 ? (
                   <div className="divide-y rounded-lg border">
                     {settlements.deposits.map((deposit) => (
                       <div key={deposit.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
                         <span className="min-w-0 truncate text-muted-foreground">
-                          {formatDate(deposit.declaredAt)} · to {deposit.recipient}
+                          {t('membership.settlements.depositLine', {
+                            date: formatDate(deposit.declaredAt),
+                            recipient: tokenLabel('cash:recipient', deposit.recipient),
+                          })}
                         </span>
                         <span className="flex flex-shrink-0 items-center gap-2 tabular-nums">
                           {formatNumber(deposit.amount)}
-                          <Badge variant="outline" className="capitalize">{deposit.status}</Badge>
+                          <Badge variant="outline">
+                            {tokenLabel('cash:depositStatus', deposit.status)}
+                          </Badge>
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No deposits recorded under this contract.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('membership.settlements.noDeposits')}
+                  </p>
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Could not load settlements.</p>
+              <p className="text-sm text-muted-foreground">{t('membership.settlements.loadFailed')}</p>
             )}
           </Section>
 
           {/* Eligibility */}
-          <Section icon={ShieldCheck} title="Assignment eligibility" summary="Whether this agent can take a shipment right now" onOpen={loadEligibility}>
+          <Section
+            icon={ShieldCheck}
+            title={t('membership.eligibility.title')}
+            summary={t('membership.eligibility.summary')}
+            onOpen={loadEligibility}
+          >
             {eligLoading ? (
               <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('membership.eligibility.checking')}
               </p>
             ) : eligibility ? (
               <div className="space-y-2">
                 <p className="flex flex-wrap items-center gap-1.5 text-sm">
                   {eligibility.eligible ? (
-                    <><CheckCircle2 className="h-4 w-4 text-green-500" /> Eligible now</>
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />{' '}
+                      {t('membership.eligibility.eligible')}
+                    </>
                   ) : (
-                    <><XCircle className="h-4 w-4 text-destructive" /> Not eligible</>
+                    <>
+                      <XCircle className="h-4 w-4 text-destructive" />{' '}
+                      {t('membership.eligibility.notEligible')}
+                    </>
                   )}
                   <span className="text-muted-foreground">
-                    ({eligibility.activeShipmentCount}/{eligibility.maxConcurrentShipments} capacity)
+                    {t('membership.eligibility.capacity', {
+                      active: eligibility.activeShipmentCount,
+                      max: eligibility.maxConcurrentShipments,
+                    })}
                   </span>
                 </p>
                 <div className="space-y-1">
@@ -928,22 +1012,32 @@ function MembershipBody({
                         <XCircle className="h-3 w-3 flex-shrink-0 text-destructive" />
                       )}
                       <span className={rule.passed ? 'text-muted-foreground' : 'text-destructive'}>
-                        {rule.rule.replace(/_/g, ' ')}{rule.reason ? ` — ${rule.reason.replace(/_/g, ' ')}` : ''}
+                        {rule.reason
+                          ? t('membership.eligibility.ruleWithReason', {
+                              rule: tokenLabel('agents:membership.eligibility.rules', rule.rule),
+                              reason: tokenLabel('agents:membership.eligibility.reasons', rule.reason),
+                            })
+                          : tokenLabel('agents:membership.eligibility.rules', rule.rule)}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Could not load eligibility.</p>
+              <p className="text-sm text-muted-foreground">{t('membership.eligibility.loadFailed')}</p>
             )}
           </Section>
 
           {/* History */}
-          <Section icon={History} title="History" summary="Everything that has happened with this agent" onOpen={loadHistory}>
+          <Section
+            icon={History}
+            title={t('membership.history.title')}
+            summary={t('membership.history.summary')}
+            onOpen={loadHistory}
+          >
             {historyLoading ? (
               <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common:states.loading')}
               </p>
             ) : history && history.length > 0 ? (
               <div className="space-y-2.5">
@@ -951,47 +1045,49 @@ function MembershipBody({
                   <div key={i} className="flex items-start gap-2 text-xs">
                     <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
-                      <span className="font-medium capitalize">{event.type.replace(/_/g, ' ')}</span>
-                      <span className="ml-1 text-muted-foreground">{formatDate(event.createdAt ?? event.at)}</span>
+                      <span className="font-medium">{tokenLabel('agents:historyEvents', event.type)}</span>
+                      <span className="ms-1 text-muted-foreground">{formatDate(event.createdAt ?? event.at)}</span>
                       {event.note && <p className="break-words text-muted-foreground">{String(event.note)}</p>}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No history.</p>
+              <p className="text-sm text-muted-foreground">{t('membership.history.empty')}</p>
             )}
           </Section>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Action footer. The reason box lives here too, so confirming never
           depends on finding a panel buried at the bottom of the scroller. */}
       {(mode || showActions) && (
-        <div className="flex-shrink-0 border-t bg-muted/20 px-6 py-4">
+        <div className="flex-shrink-0 border-t bg-muted/20 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4 sm:pb-4">
           {mode ? (
             <div className="space-y-2">
               <p className="text-sm font-medium">
-                {mode === 'suspend' && 'Reason for suspension'}
-                {mode === 'pause' && 'Reason for pausing (optional)'}
-                {mode === 'reject' && 'Reason for declining (optional)'}
-                {mode === 'terminate' && 'Reason for removal (optional)'}
+                {t(`membership.reason.${mode}` as 'membership.reason.suspend')}
               </p>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Add a reason…" />
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
+                placeholder={t('membership.reason.placeholder')}
+              />
               {mode === 'pause' && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  A mutual break: no new assignments, shipments already in flight are untouched.
-                  Reinstate whenever you both want to restart.
+                  {t('membership.reason.pauseHint')}
                 </p>
               )}
               {mode === 'terminate' && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  This proposes termination — the contract ends once the agent agrees and any outstanding cash
-                  and unpaid earnings are settled.
+                  {t('membership.reason.terminateHint')}
                 </p>
               )}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={resetInline}>Cancel</Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={resetInline}>
+                  {t('common:actions.cancel')}
+                </Button>
                 <Button
                   size="sm"
                   variant={mode === 'suspend' || mode === 'terminate' ? 'destructive' : 'default'}
@@ -999,26 +1095,37 @@ function MembershipBody({
                   disabled={(mode === 'suspend' && !reason.trim()) || pk === `${mode}:${mid}`}
                   onClick={confirmInline}
                 >
-                  {pk === `${mode}:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+                  {pk === `${mode}:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common:actions.confirm')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {/* Whoever raised the contract cannot answer it — the server picks the
-                  valid pair from `initiatedBy`, and the wrong one is a 403. */}
-              {membership.status === 'pending' && membership.initiatedBy === 'agent' && (
-                <>
-                  <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
-                    {pk === `approve:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>Decline</Button>
-                </>
-              )}
-              {membership.status === 'pending' && membership.initiatedBy === 'agency' && (
+              {/* The party whose terms are standing may only withdraw them; the
+                  other may accept, decline or counter. That is
+                  `awaitingDecisionFrom`, not who opened the contract — an agency
+                  that raised a request becomes the answering party the moment
+                  the agent counters, and calling the wrong verb is a 403. */}
+              {offer === 'ours-to-answer' && (
                 <>
                   <p className="w-full text-xs text-muted-foreground">
-                    Waiting on the agent to accept your request.
+                    {t('membership.footer.waitingOnYou', { name: agent.name })}
+                  </p>
+                  <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
+                    {pk === `approve:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.acceptTerms')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setTermsOpen(true)}>
+                    {t('membership.footer.counter')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>
+                    {t('membership.footer.decline')}
+                  </Button>
+                </>
+              )}
+              {offer === 'theirs-to-answer' && (
+                <>
+                  <p className="w-full text-xs text-muted-foreground">
+                    {t('membership.footer.waitingOnThem', { name: agent.name })}
                   </p>
                   <Button
                     size="sm"
@@ -1027,30 +1134,50 @@ function MembershipBody({
                     disabled={pk === `withdraw:${mid}`}
                     onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
                   >
-                    {pk === `withdraw:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw request'}
+                    {pk === `withdraw:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.withdrawOffer')}
+                  </Button>
+                </>
+              )}
+              {/* Nobody has stated terms, so there is nothing to approve —
+                  approving here is 422 CONTRACT_TERMS_NOT_PROPOSED. Not a fault
+                  with the agent: the first offer is ours to make. */}
+              {offer === 'needs-terms' && (
+                <>
+                  <p className="w-full text-xs text-muted-foreground">
+                    {t('membership.footer.needsTerms', { name: agent.name })}
+                  </p>
+                  <Button size="sm" className="flex-1" onClick={() => setTermsOpen(true)}>
+                    {t('membership.footer.proposeTerms')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>
+                    {t('membership.footer.decline')}
                   </Button>
                 </>
               )}
               {membership.status === 'active' && (
                 <>
                   <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('pause')}>
-                    <PauseCircle className="h-4 w-4" /> Pause
+                    <PauseCircle className="h-4 w-4" /> {t('membership.footer.pause')}
                   </Button>
                   <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('suspend')}>
-                    <ShieldAlert className="h-4 w-4" /> Suspend
+                    <ShieldAlert className="h-4 w-4" /> {t('membership.footer.suspend')}
                   </Button>
                   {!departurePending && (
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
+                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>
+                      {t('membership.footer.remove')}
+                    </Button>
                   )}
                 </>
               )}
               {(membership.status === 'paused' || membership.status === 'suspended') && (
                 <>
                   <Button size="sm" className="flex-1" disabled={pk === `reinstate:${mid}`} onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}>
-                    {pk === `reinstate:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reinstate'}
+                    {pk === `reinstate:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.reinstate')}
                   </Button>
                   {!departurePending && (
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>Remove</Button>
+                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>
+                      {t('membership.footer.remove')}
+                    </Button>
                   )}
                 </>
               )}

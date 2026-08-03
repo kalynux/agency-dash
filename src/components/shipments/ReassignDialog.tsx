@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -48,6 +49,7 @@ export function ReassignDialog({
   onOpenChange,
   onReassigned,
 }: ReassignDialogProps) {
+  const { t } = useTranslation(['shipments', 'common']);
   const { reassign, pendingKey } = useShipmentActions();
   const [agentId, setAgentId] = useState('');
   const [reason, setReason] = useState('');
@@ -115,30 +117,37 @@ export function ReassignDialog({
     >
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Reassign shipment</DialogTitle>
-          <DialogDescription>
-            Release the current agent and offer this shipment to a replacement. This is an audited
-            action.
-          </DialogDescription>
+          <DialogTitle>{t('reassignDialog.title')}</DialogTitle>
+          <DialogDescription>{t('reassignDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>
-              Replacement agent{' '}
+              {t('reassignDialog.replacementAgent')}{' '}
               {agentRequired ? (
                 <span className="text-destructive">*</span>
               ) : (
-                <span className="text-muted-foreground text-xs">(optional — auto-assigns if empty)</span>
+                <span className="text-muted-foreground text-xs">
+                  {t('reassignDialog.replacementOptional')}
+                </span>
               )}
             </Label>
             <Select value={agentId} onValueChange={setAgentId}>
               <SelectTrigger>
-                <SelectValue placeholder={agentRequired ? 'Choose a replacement…' : 'Auto-assign best candidate'} />
+                <SelectValue
+                  placeholder={
+                    agentRequired
+                      ? t('reassignDialog.choosePlaceholder')
+                      : t('reassignDialog.autoPlaceholder')
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {replacementOptions.length === 0 ? (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">No eligible agents</div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    {t('reassignDialog.noEligibleAgents')}
+                  </div>
                 ) : (
                   replacementOptions.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
@@ -149,21 +158,19 @@ export function ReassignDialog({
               </SelectContent>
             </Select>
             {agentRequired && (
-              <p className="text-xs text-muted-foreground">
-                The parcel has left the agency, so you must name the replacement.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('reassignDialog.agentRequiredHint')}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reassign-reason">
-              Reason <span className="text-destructive">*</span>
+              {t('reassignDialog.reason')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="reassign-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Agent's bike broke down on Rue Joffre"
+              placeholder={t('reassignDialog.reasonPlaceholder')}
               rows={2}
             />
           </div>
@@ -171,36 +178,33 @@ export function ReassignDialog({
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
             <CollapsibleTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="px-0 text-muted-foreground">
-                {advancedOpen ? 'Hide' : 'Override'} handover pickup location
+                {advancedOpen ? t('reassignDialog.overrideHide') : t('reassignDialog.overrideShow')}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
-              <p className="text-xs text-muted-foreground">
-                Leave blank to use the automatic handover point (the previous agent's last known
-                location, the original pickup, or your HQ — depending on the shipment's status).
-              </p>
-              <Input placeholder="Label (e.g. Total station)" value={override.label ?? ''} onChange={(e) => setField('label', e.target.value)} />
-              <Input placeholder="Address line 1" value={override.addressLine1 ?? ''} onChange={(e) => setField('addressLine1', e.target.value)} />
+              <p className="text-xs text-muted-foreground">{t('reassignDialog.overrideHint')}</p>
+              <Input placeholder={t('reassignDialog.overrideLabel')} value={override.label ?? ''} onChange={(e) => setField('label', e.target.value)} />
+              <Input placeholder={t('reassignDialog.overrideAddress')} value={override.addressLine1 ?? ''} onChange={(e) => setField('addressLine1', e.target.value)} />
               <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="City" value={override.city ?? ''} onChange={(e) => setField('city', e.target.value)} />
-                <Input placeholder="State/region" value={override.state ?? ''} onChange={(e) => setField('state', e.target.value)} />
+                <Input placeholder={t('reassignDialog.overrideCity')} value={override.city ?? ''} onChange={(e) => setField('city', e.target.value)} />
+                <Input placeholder={t('reassignDialog.overrideState')} value={override.state ?? ''} onChange={(e) => setField('state', e.target.value)} />
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <Input placeholder="Country" value={override.country ?? ''} onChange={(e) => setField('country', e.target.value)} />
-                <Input placeholder="Latitude" type="number" step="any" value={override.latitude ?? ''} onChange={(e) => setCoord('latitude', e.target.value)} />
-                <Input placeholder="Longitude" type="number" step="any" value={override.longitude ?? ''} onChange={(e) => setCoord('longitude', e.target.value)} />
+                <Input placeholder={t('reassignDialog.overrideCountry')} value={override.country ?? ''} onChange={(e) => setField('country', e.target.value)} />
+                <Input placeholder={t('reassignDialog.overrideLatitude')} type="number" step="any" value={override.latitude ?? ''} onChange={(e) => setCoord('latitude', e.target.value)} />
+                <Input placeholder={t('reassignDialog.overrideLongitude')} type="number" step="any" value={override.longitude ?? ''} onChange={(e) => setCoord('longitude', e.target.value)} />
               </div>
-              <Input placeholder="Note for the agent" value={override.note ?? ''} onChange={(e) => setField('note', e.target.value)} />
+              <Input placeholder={t('reassignDialog.overrideNote')} value={override.note ?? ''} onChange={(e) => setField('note', e.target.value)} />
             </CollapsibleContent>
           </Collapsible>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
+            {t('common:actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reassign'}
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('reassignDialog.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

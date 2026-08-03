@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +9,7 @@ import { SearchFilterBar } from '@/components/common/SearchFilterBar';
 import { AgentCard, AgentCardSkeleton } from '@/components/agents/AgentCard';
 import { AgentDetailSheet } from '@/components/agents/AgentDetailSheet';
 import { AgentFiltersPanel } from '@/components/agents/AgentFiltersPanel';
+import { RequestAgentDialog } from '@/components/agents/RequestAgentDialog';
 import {
   countActiveAgentFilters,
   INITIAL_AGENT_FILTERS,
@@ -16,14 +19,22 @@ import {
 import { useAgentActions } from '@/hooks/useAgentActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { agentsService } from '@/services/agents.service';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
+import { HISTORY_MEMBERSHIP_STATUSES } from '@/types/agent.types';
 import type { AgentDirectoryItem, AgentListMeta, AgentMembership } from '@/types/agent.types';
 
 // ─── Per-card action slot ───────────────────────────────────────────────────────
-// Which button belongs on a card is decided entirely by `contract`: absent or
-// terminal → Request; pending → Withdraw if we raised it, Approve/Decline if the
-// agent did; live → a status pill. The directory already carries `initiatedBy`,
-// so unlike the vendor browse there is nothing to fetch lazily here.
+// Which control belongs on a card is decided by `contract`: absent or terminal →
+// Offer; live → a status pill; pending → a link into the roster.
+//
+// A pending contract is deliberately NOT answerable from here. Terms are
+// negotiated now, so whose move it is comes from `awaitingDecisionFrom` — and a
+// directory row does not carry it. `initiatedBy` cannot stand in: an agency that
+// raised a request becomes the answering party the moment the agent counters,
+// and a bare agent join request is nobody's to approve until we make an offer.
+// Guessing from what the directory does carry would render Approve on rows the
+// server answers with 403, so the card sends the user where the whole contract
+// is loaded instead.
 
 /**
  * `size="sm"` is 32px tall — fine as a trailing control on a desktop row, under
@@ -35,90 +46,57 @@ const ACTION_BUTTON = 'max-md:h-10 max-md:px-4';
 function ContractActionSlot({
   agent,
   actions,
+  onOffer,
 }: {
   agent: AgentDirectoryItem;
   actions: ReturnType<typeof useAgentActions>;
+  onOffer: (agent: AgentDirectoryItem) => void;
 }) {
+  const { t } = useTranslation('agents');
   const contract = agent.contract;
 
   // No history, or a terminal one — a fresh request creates a NEW contract
-  // rather than reviving the old row, so "Request again" is a plain request.
-  if (!contract || contract.status === 'rejected' || contract.status === 'withdrawn' || contract.status === 'deactivated') {
-    const key = `request:${agent.id}`;
+  // rather than reviving the old row, so "Offer again" is a plain offer.
+  if (!contract || HISTORY_MEMBERSHIP_STATUSES.includes(contract.status)) {
     return (
       <Button
         size="sm"
         variant="outline"
         className={ACTION_BUTTON}
-        disabled={actions.pendingKey === key}
-        onClick={() => actions.request(agent.id)}
+        disabled={actions.pendingKey === `request:${agent.id}`}
+        onClick={() => onOffer(agent)}
       >
-        {actions.pendingKey === key ? (
+        {actions.pendingKey === `request:${agent.id}` ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : contract ? (
-          'Request again'
+          t('browse.offerAgain')
         ) : (
-          'Request'
+          t('browse.offer')
         )}
       </Button>
     );
   }
 
   if (contract.status === 'pending') {
-    // Whoever raised it cannot answer it — that consent is the point of the
-    // handshake, and asking for the wrong action is a 403.
-    if (contract.initiatedBy === 'agency') {
-      const key = `withdraw:${contract.id}`;
-      return (
-        <Button
-          size="sm"
-          variant="outline"
-          className={ACTION_BUTTON}
-          disabled={actions.pendingKey === key}
-          onClick={() => actions.withdraw(agent.id, contract.id)}
-        >
-          {actions.pendingKey === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Withdraw'}
-        </Button>
-      );
-    }
-
-    const approveKey = `approve:${contract.id}`;
-    const rejectKey = `reject:${contract.id}`;
     return (
-      <div className="flex items-center gap-1.5">
-        <Button
-          size="sm"
-          className={ACTION_BUTTON}
-          disabled={actions.pendingKey === approveKey}
-          onClick={() => actions.approve(contract.id, agent.id)}
-        >
-          {actions.pendingKey === approveKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Approve'}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className={ACTION_BUTTON}
-          disabled={actions.pendingKey === rejectKey}
-          onClick={() => actions.reject(contract.id, undefined, agent.id)}
-        >
-          {actions.pendingKey === rejectKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Decline'}
-        </Button>
-      </div>
+      <Button asChild size="sm" variant="outline" className={ACTION_BUTTON}>
+        <Link to={`/dashboard/agents/${contract.id}`}>{t('browse.reviewOffer')}</Link>
+      </Button>
     );
   }
 
   if (contract.status === 'active') {
     return (
       <Badge variant="secondary" className="text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
-        On your roster
+        {t('browse.onRoster')}
       </Badge>
     );
   }
 
   // paused / suspended — managed from the Connections tab, not from here.
   return (
-    <Badge variant="secondary" className="capitalize">
-      {contract.status}
+    <Badge variant="secondary">
+      {t(`membershipStatus.${contract.status}` as 'membershipStatus.paused')}
     </Badge>
   );
 }
@@ -132,6 +110,7 @@ export interface BrowseTabProps {
 
 /** Agents → Browse tab: the platform directory, each card driven by your contract state. */
 export function BrowseTab({ onContractChange }: BrowseTabProps) {
+  const { t } = useTranslation(['agents', 'common']);
   const isMobile = useIsMobile();
   const [agents, setAgents] = useState<AgentDirectoryItem[]>([]);
   const [meta, setMeta] = useState<AgentListMeta | null>(null);
@@ -139,6 +118,8 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [detailAgent, setDetailAgent] = useState<AgentDirectoryItem | null>(null);
+  /** The agent whose offer is being written — `POST /requests` needs terms with it. */
+  const [offerAgent, setOfferAgent] = useState<AgentDirectoryItem | null>(null);
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<AgentFilters>(INITIAL_AGENT_FILTERS);
@@ -179,7 +160,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         setAgents(res.data ?? []);
         setMeta(res.meta ?? null);
       } catch (err) {
-        setFetchError(err instanceof ApiError ? err.message : 'Failed to load agents. Please try again.');
+        setFetchError(getApiErrorMessage(err));
       } finally {
         setLoadingAgents(false);
       }
@@ -232,7 +213,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
       key={agent.id}
       agent={agent}
       onInfo={() => setDetailAgent(agent)}
-      rightSlot={<ContractActionSlot agent={agent} actions={actions} />}
+      rightSlot={<ContractActionSlot agent={agent} actions={actions} onOffer={setOfferAgent} />}
     />
   ));
 
@@ -241,22 +222,20 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
       <SearchFilterBar
         value={search}
         onChange={handleSearchChange}
-        placeholder="Search agents…"
-        searchLabel="Search agents by name or home base"
+        placeholder={t('browse.searchPlaceholder')}
+        searchLabel={t('browse.searchLabel')}
         activeCount={activeFilterCount}
         onReset={handleClearFilters}
-        filterDescription="Every agent on the platform who could take your shipments."
+        filterDescription={t('browse.filterDescription')}
         resultCount={meta?.total}
-        resultNoun="agent"
+        resultNounKey="common:nouns.agent"
       >
         <AgentFiltersPanel filters={filters} onChange={handleFilterChange} />
       </SearchFilterBar>
 
       <div className="flex items-center justify-between h-5">
         {!loadingAgents && meta && (
-          <p className="text-xs text-muted-foreground">
-            {meta.total} {meta.total === 1 ? 'agent' : 'agents'} found
-          </p>
+          <p className="text-xs text-muted-foreground">{t('browse.found', { count: meta.total })}</p>
         )}
         {loadingAgents && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
       </div>
@@ -265,7 +244,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground mb-4">{fetchError}</p>
           <Button variant="outline" onClick={() => loadAgents(appliedFilters, appliedSearch, page)}>
-            Retry
+            {t('common:actions.retry')}
           </Button>
         </div>
       ) : loadingAgents && agents.length === 0 ? (
@@ -276,9 +255,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         <div className="text-center py-10">
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
-            {activeFilterCount > 0 || appliedSearch
-              ? 'No agents match your search or filters.'
-              : 'No agents are available to contract with yet.'}
+            {activeFilterCount > 0 || appliedSearch ? t('browse.emptyFiltered') : t('browse.empty')}
           </p>
           {(activeFilterCount > 0 || appliedSearch) && (
             <button
@@ -286,7 +263,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
               onClick={() => { handleSearchChange(''); handleClearFilters(); }}
               className="mt-2 text-xs text-primary hover:underline"
             >
-              Clear all filters
+              {t('browse.clearFilters')}
             </button>
           )}
         </div>
@@ -310,10 +287,10 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
             disabled={page <= 1 || loadingAgents}
             onClick={() => setPage((p) => p - 1)}
           >
-            Previous
+            {t('common:actions.previous')}
           </Button>
           <span className="text-xs text-muted-foreground">
-            Page {page} of {meta.totalPages}
+            {t('common:pagination.pageOf', { page, total: meta.totalPages })}
           </span>
           <Button
             type="button"
@@ -322,7 +299,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
             disabled={page >= meta.totalPages || loadingAgents}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next
+            {t('common:actions.next')}
           </Button>
         </div>
       )}
@@ -331,7 +308,19 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         agent={detailAgent}
         open={detailAgent !== null}
         onOpenChange={(open) => { if (!open) setDetailAgent(null); }}
-        footerSlot={detailAgent && <ContractActionSlot agent={detailAgent} actions={actions} />}
+        footerSlot={
+          detailAgent && (
+            <ContractActionSlot agent={detailAgent} actions={actions} onOffer={setOfferAgent} />
+          )
+        }
+      />
+
+      <RequestAgentDialog
+        agent={offerAgent}
+        open={offerAgent !== null}
+        onOpenChange={(open) => { if (!open) setOfferAgent(null); }}
+        busy={offerAgent ? actions.pendingKey === `request:${offerAgent.id}` : false}
+        onSubmit={(terms) => actions.request(offerAgent!.id, terms)}
       />
     </div>
   );

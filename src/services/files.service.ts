@@ -6,6 +6,7 @@
 // GET /files/:id — never from `usageCount`.
 
 import { api, BASE_URL } from './api';
+import { txStatic } from '@/i18n/tx';
 import { ApiError } from '@/types/api';
 import type {
   ApiFile,
@@ -181,12 +182,13 @@ const MB = 1024 * 1024;
 const PER_TYPE_CAPS: {
   match: (mime: string, ext: string) => boolean;
   bytes: number;
-  label: string;
+  /** `media:` key — module-scope data can't hold a translated string. */
+  labelKey: string;
 }[] = [
-  { match: (m, e) => m === 'image/gif' || e === 'gif', bytes: 5 * MB, label: '5 MB GIF' },
-  { match: (m, e) => m === 'application/pdf' || e === 'pdf', bytes: 25 * MB, label: '25 MB PDF' },
-  { match: (m, e) => m === 'application/zip' || e === 'zip', bytes: 50 * MB, label: '50 MB ZIP' },
-  { match: (m) => m.startsWith('image/'), bytes: 10 * MB, label: '10 MB image' },
+  { match: (m, e) => m === 'image/gif' || e === 'gif', bytes: 5 * MB, labelKey: 'media:upload.caps.gif' },
+  { match: (m, e) => m === 'application/pdf' || e === 'pdf', bytes: 25 * MB, labelKey: 'media:upload.caps.pdf' },
+  { match: (m, e) => m === 'application/zip' || e === 'zip', bytes: 50 * MB, labelKey: 'media:upload.caps.zip' },
+  { match: (m) => m.startsWith('image/'), bytes: 10 * MB, labelKey: 'media:upload.caps.image' },
 ];
 
 /** Coarse fallback ceiling for anything without a specific per-type cap. */
@@ -206,16 +208,19 @@ export function isVideoUpload(file: File): boolean {
   return (VIDEO_EXTENSIONS as readonly string[]).includes(extensionOf(file));
 }
 
-function capFor(file: File): { bytes: number; label: string } {
+function capFor(file: File): { bytes: number; labelKey: string } {
   const mime = file.type ?? '';
   const ext = extensionOf(file);
   return (
-    PER_TYPE_CAPS.find((c) => c.match(mime, ext)) ?? { bytes: DEFAULT_MAX_BYTES, label: '200 MB' }
+    PER_TYPE_CAPS.find((c) => c.match(mime, ext)) ?? {
+      bytes: DEFAULT_MAX_BYTES,
+      labelKey: 'media:upload.caps.default',
+    }
   );
 }
 
 /**
- * Validate a mixed selection client-side before uploading. Returns a friendly
+ * Validate a mixed selection client-side before uploading. Returns a localized
  * error message, or `null` when the selection is acceptable.
  */
 export function validateMediaSelection(files: File[]): string | null {
@@ -223,24 +228,29 @@ export function validateMediaSelection(files: File[]): string | null {
   const others = files.filter((f) => !isVideoUpload(f));
 
   if (others.length > MAX_FILES_PER_UPLOAD) {
-    return `You can upload at most ${MAX_FILES_PER_UPLOAD} files at once.`;
+    return txStatic('media:upload.tooManyFiles', { count: MAX_FILES_PER_UPLOAD });
   }
   if (videos.length > MAX_VIDEOS_PER_UPLOAD) {
-    return `You can upload at most ${MAX_VIDEOS_PER_UPLOAD} videos at once.`;
+    return txStatic('media:upload.tooManyVideos', { count: MAX_VIDEOS_PER_UPLOAD });
   }
 
   for (const file of others) {
     const cap = capFor(file);
-    if (file.size > cap.bytes) return `"${file.name}" exceeds the ${cap.label} limit.`;
+    if (file.size > cap.bytes) {
+      return txStatic('media:upload.overTypeLimit', {
+        name: file.name,
+        limit: txStatic(cap.labelKey),
+      });
+    }
   }
 
   const bigVideo = videos.find((f) => f.size > VIDEO_MAX_BYTES);
-  if (bigVideo) return `"${bigVideo.name}" exceeds the 70 MB video limit.`;
+  if (bigVideo) return txStatic('media:upload.overVideoLimit', { name: bigVideo.name });
 
   const badFormat = videos.find(
     (f) => f.type && !(VIDEO_MIME_TYPES as readonly string[]).includes(f.type),
   );
-  if (badFormat) return `"${badFormat.name}" is not a supported video (use MP4, MOV or WebM).`;
+  if (badFormat) return txStatic('media:upload.unsupportedVideo', { name: badFormat.name });
 
   return null;
 }

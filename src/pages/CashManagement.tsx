@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SummaryTab } from '@/components/cash/SummaryTab';
 import { DepositsTab } from '@/components/cash/DepositsTab';
 import { RemittancesTab } from '@/components/cash/RemittancesTab';
@@ -8,6 +9,7 @@ const VALID_TABS = ['summary', 'deposits', 'remittances', 'discrepancies'] as co
 type CashTab = typeof VALID_TABS[number];
 
 export function CashManagement() {
+  const { t } = useTranslation('cash');
   const { tab } = useParams<{ tab: string }>();
   const activeTab: CashTab = (VALID_TABS as readonly string[]).includes(tab ?? '')
     ? (tab as CashTab)
@@ -16,10 +18,8 @@ export function CashManagement() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Cash Management</h1>
-        <p className="text-muted-foreground">
-          Track cash-on-delivery collections as they move from customer to agent to your agency to the platform
-        </p>
+        <h1 className="text-2xl font-bold">{t('page.title')}</h1>
+        <p className="text-muted-foreground">{t('page.description')}</p>
       </div>
 
       {activeTab === 'summary' && <SummaryTab />}

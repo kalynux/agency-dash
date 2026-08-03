@@ -1,6 +1,7 @@
 import { formatDate } from '@/lib/format';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import type { AgencyNotification } from '@/types/notification.types';
@@ -11,14 +12,12 @@ import {
   Command,
   X,
   ArrowRight,
-  Truck,
-  Receipt,
+  SearchX,
   LogOut,
   User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -40,12 +39,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QUICK_ACTIONS, type QuickAction } from '@/config/quickActions';
 import { notificationVisual, notificationHref } from '@/lib/notification-display';
-
-const recentSearches = [
-  'Order #1001',
-  'Delivery #1002',
-  'Alice Johnson',
-];
+import { tx } from '@/i18n/tx';
 
 function initialsOf(name: string): string {
   return name
@@ -58,6 +52,7 @@ function initialsOf(name: string): string {
 }
 
 export function Header() {
+  const { t } = useTranslation(['nav', 'common']);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -66,7 +61,7 @@ export function Header() {
   const { session, logout } = useOnboarding();
   const roleEntity = session?.role_entity;
 
-  const agencyName = roleEntity?.agency_name || 'My Agency';
+  const agencyName = roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
   const agencyLogo = roleEntity?.logo_url || null;
   const agencyEmail = roleEntity?.email ?? '';
 
@@ -99,9 +94,10 @@ export function Header() {
               variant="outline"
               className="h-9 gap-2 text-muted-foreground"
               onClick={toggleSearch}
+              aria-label={t('header.searchLabel')}
             >
               <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Search...</span>
+              <span className="hidden sm:inline">{t('header.searchPlaceholderShort')}</span>
               <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
                 <Command className="w-3 h-3" />
                 <span>K</span>
@@ -114,12 +110,17 @@ export function Header() {
             {/* Quick Actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  aria-label={t('header.quickActions')}
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
-                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('header.quickActions')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {QUICK_ACTIONS.map((action) => (
                   <DropdownMenuItem
@@ -129,8 +130,10 @@ export function Header() {
                   >
                     <action.icon className="w-4 h-4" />
                     <div className="flex flex-col">
-                      <span>{action.label}</span>
-                      <span className="text-xs text-muted-foreground">{action.description}</span>
+                      <span>{tx(t, action.labelKey)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {tx(t, action.descriptionKey)}
+                      </span>
                     </div>
                   </DropdownMenuItem>
                 ))}
@@ -140,7 +143,12 @@ export function Header() {
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 relative">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 relative"
+                  aria-label={t('header.notifications')}
+                >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -end-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -151,7 +159,7 @@ export function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80">
                 <div className="flex items-center justify-between px-3 py-2">
-                  <DropdownMenuLabel className="m-0">Notifications</DropdownMenuLabel>
+                  <DropdownMenuLabel className="m-0">{t('header.notifications')}</DropdownMenuLabel>
                   {unreadCount > 0 && (
                     <Button
                       variant="ghost"
@@ -159,7 +167,7 @@ export function Header() {
                       onClick={() => markAllAsRead()}
                       className="h-auto py-1 px-2 text-xs"
                     >
-                      Mark all read
+                      {t('header.markAllRead')}
                     </Button>
                   )}
                 </div>
@@ -167,7 +175,7 @@ export function Header() {
                 {unreadNotifications.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
                     <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No new notifications</p>
+                    <p className="text-sm">{t('header.noNewNotifications')}</p>
                   </div>
                 ) : (
                   unreadNotifications.map((notification) => (
@@ -194,8 +202,8 @@ export function Header() {
                   onClick={() => navigate('/dashboard/notifications')}
                   className="justify-center text-sm text-primary"
                 >
-                  View all notifications
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  {t('header.viewAllNotifications')}
+                  <ArrowRight className="w-4 h-4 ms-1 rtl:-scale-x-100" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -226,7 +234,7 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={goToProfile} className="gap-2">
                   <User className="w-4 h-4" />
-                  Profile
+                  {t('header.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -237,7 +245,7 @@ export function Header() {
                   className="gap-2 text-destructive focus:text-destructive"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
+                  {t('header.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -249,18 +257,18 @@ export function Header() {
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Log out?</AlertDialogTitle>
+            <AlertDialogTitle>{t('header.logoutConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              You&apos;ll need to sign in again to access your dashboard.
+              {t('header.logoutConfirmDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => logout()}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              Log out
+              {t('header.logoutConfirmAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -282,7 +290,7 @@ export function Header() {
                 <Search className="w-5 h-5 text-muted-foreground" />
                 <Input
                   id="global-search"
-                  placeholder="Search deliveries, tickets..."
+                  placeholder={t('header.searchPlaceholder')}
                   className="flex-1 border-0 bg-transparent text-lg focus-visible:ring-0 placeholder:text-muted-foreground"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -295,6 +303,7 @@ export function Header() {
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => setIsSearchOpen(false)}
+                  aria-label={t('header.closeSearch')}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -303,67 +312,33 @@ export function Header() {
               {/* Search Results */}
               <div className="max-h-[60vh] overflow-auto">
                 {searchQuery ? (
-                  <div className="p-4">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Search results for &quot;{searchQuery}&quot;
+                  // Global search has no backend endpoint yet — say so plainly
+                  // rather than painting placeholder rows that never resolve.
+                  <div className="p-8 text-center">
+                    <SearchX className="w-8 h-8 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-sm font-medium">
+                      {t('header.noResults', { query: searchQuery })}
                     </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <Truck className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="font-medium">Order #1001</p>
-                          <p className="text-sm text-muted-foreground">Alice Johnson - $284.97</p>
-                        </div>
-                        <Badge variant="secondary">Delivery</Badge>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <Receipt className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="font-medium">Payout to Mobile Money</p>
-                          <p className="text-sm text-muted-foreground">$3,245.67</p>
-                        </div>
-                        <Badge variant="secondary">Transaction</Badge>
-                      </div>
-                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t('header.noResultsHint')}
+                    </p>
                   </div>
                 ) : (
                   <div className="p-4">
-                    {/* Quick Actions */}
-                    <div className="mb-6">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        Quick Actions
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {QUICK_ACTIONS.map((action) => (
-                          <button
-                            key={action.id}
-                            onClick={() => handleQuickAction(action)}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-left transition-colors"
-                          >
-                            <action.icon className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{action.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Recent Searches */}
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        Recent Searches
-                      </p>
-                      <div className="space-y-1">
-                        {recentSearches.map((search, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setSearchQuery(search)}
-                            className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent text-left transition-colors"
-                          >
-                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{search}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                      {t('header.quickActions')}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {QUICK_ACTIONS.map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => handleQuickAction(action)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-start transition-colors"
+                        >
+                          <action.icon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{tx(t, action.labelKey)}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -374,16 +349,16 @@ export function Header() {
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <kbd className="bg-muted px-1.5 py-0.5 rounded border">↑↓</kbd>
-                    to navigate
+                    {t('header.hintNavigate')}
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="bg-muted px-1.5 py-0.5 rounded border">↵</kbd>
-                    to select
+                    {t('header.hintSelect')}
                   </span>
                 </div>
                 <span className="flex items-center gap-1">
                   <kbd className="bg-muted px-1.5 py-0.5 rounded border">esc</kbd>
-                  to close
+                  {t('header.hintClose')}
                 </span>
               </div>
             </div>

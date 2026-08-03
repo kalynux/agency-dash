@@ -1,5 +1,6 @@
 import { formatCurrency, formatNumber, formatDateTime as fmtDateTime } from '@/lib/format';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, HandCoins, Loader2, AlertTriangle, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,18 +30,12 @@ import type { CodDeposit, CodDepositStatus, CodListMeta } from '@/types/cod-cash
 
 const PAGE_LIMIT = 20;
 
-const STATUS_FILTERS: { value: CodDepositStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All deposits' },
-  { value: 'declared', label: 'Awaiting your answer' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'rejected', label: 'Rejected' },
-];
-
 function formatDateTime(iso: string | null): string {
   return fmtDateTime(iso);
 }
 
 export function DepositsTab() {
+  const { t } = useTranslation(['cash', 'common']);
   const { agents, refetch: refetchRoster } = useAgentsRoster();
   const actions = useCodCashActions();
 
@@ -59,6 +54,16 @@ export function DepositsTab() {
 
   const [rejectTarget, setRejectTarget] = useState<CodDeposit | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('deposits.allDeposits') },
+      { value: 'declared' as const, label: t('deposits.awaitingAnswer') },
+      { value: 'confirmed' as const, label: t('depositStatus.confirmed') },
+      { value: 'rejected' as const, label: t('depositStatus.rejected') },
+    ],
+    [t],
+  );
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -139,12 +144,9 @@ export function DepositsTab() {
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-900">
-                {declaredCount} hand-over{declaredCount === 1 ? '' : 's'} awaiting your answer
+                {t('deposits.alertTitle', { count: declaredCount })}
               </p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Confirm or reject within 2 days. Leaving a declaration unanswered opens a
-                discrepancy that freezes your rolling-reserve releases.
-              </p>
+              <p className="text-xs text-amber-700 mt-0.5">{t('deposits.alertBody')}</p>
             </div>
             {status !== 'declared' && (
               <Button
@@ -156,7 +158,7 @@ export function DepositsTab() {
                   setPage(1);
                 }}
               >
-                Review
+                {t('deposits.review')}
               </Button>
             )}
           </CardContent>
@@ -166,22 +168,22 @@ export function DepositsTab() {
       {/* Record form */}
       <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
-          <p className="text-sm font-medium">Record cash received from an agent</p>
+          <p className="text-sm font-medium">{t('deposits.recordTitle')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <Select value={agentId} onValueChange={setAgentId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select agent" />
+                <SelectValue placeholder={t('deposits.selectAgent')} />
               </SelectTrigger>
               <SelectContent>
                 {agents.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({formatNumber(a.cashHeld)} held)
+                    {t('deposits.agentOption', { name: a.name, amount: formatNumber(a.cashHeld) })}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input type="number" min={1} placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <Input type="number" min={1} placeholder={t('deposits.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input placeholder={t('deposits.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
             <Button
               className="gap-2"
               disabled={!agentId || !amount || actions.pendingKey === 'record-deposit'}
@@ -192,41 +194,38 @@ export function DepositsTab() {
               ) : (
                 <HandCoins className="w-4 h-4" />
               )}
-              Record Deposit
+              {t('deposits.record')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            If the agent handed over less than they hold, record what you actually received and raise a
-            discrepancy for the difference.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('deposits.recordHint')}</p>
         </CardContent>
       </Card>
 
       {/* Search & filter */}
       <div className="space-y-3">
-        <p className="text-sm font-medium">Deposit history</p>
+        <p className="text-sm font-medium">{t('deposits.historyTitle')}</p>
         <SearchFilterBar
           value={search}
           onChange={setSearch}
-          placeholder="Search deposits…"
-          searchLabel="Search this page by agent, reference or note"
+          placeholder={t('deposits.searchPlaceholder')}
+          searchLabel={t('deposits.searchLabel')}
           activeCount={status === 'all' ? 0 : 1}
           onReset={() => {
             setStatus('all');
             setPage(1);
           }}
-          filterDescription="Status filters every deposit; search looks at the page you're on."
+          filterDescription={t('deposits.filterDescription')}
           resultCount={query ? visibleDeposits.length : meta.total}
-          resultNoun="deposit"
+          resultNounKey="common:nouns.deposit"
         >
-          <FilterSection label="Status">
+          <FilterSection label={t('deposits.status')}>
             <FilterOptionGroup
               value={status}
               onChange={(v) => {
                 setStatus(v);
                 setPage(1);
               }}
-              options={STATUS_FILTERS}
+              options={statusOptions}
             />
           </FilterSection>
         </SearchFilterBar>
@@ -239,12 +238,12 @@ export function DepositsTab() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 text-sm font-medium">Agent</th>
-                  <th className="text-left p-4 text-sm font-medium">Amount</th>
-                  <th className="text-left p-4 text-sm font-medium">Recipient</th>
-                  <th className="text-left p-4 text-sm font-medium">Status</th>
-                  <th className="text-left p-4 text-sm font-medium">Date</th>
-                  <th className="text-right p-4 text-sm font-medium">Actions</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.agent')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.amount')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.recipient')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.status')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.date')}</th>
+                  <th className="text-end p-4 text-sm font-medium">{t('deposits.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -261,14 +260,14 @@ export function DepositsTab() {
                     <td colSpan={6} className="p-8 text-center">
                       <p className="text-muted-foreground mb-4">{loadError}</p>
                       <Button variant="outline" onClick={load}>
-                        Retry
+                        {t('common:actions.retry')}
                       </Button>
                     </td>
                   </tr>
                 ) : visibleDeposits.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                      {query ? 'No deposits match your search' : 'No deposits in this view'}
+                      {query ? t('deposits.emptyFiltered') : t('deposits.empty')}
                     </td>
                   </tr>
                 ) : (
@@ -282,15 +281,21 @@ export function DepositsTab() {
                         <td className="p-4">
                           {formatCurrency(d.amount, d.currency)}
                         </td>
-                        <td className="p-4 text-sm capitalize text-muted-foreground">
-                          {d.recipient ?? 'agency'}
-                          {d.reference && <div className="text-xs">Ref: {d.reference}</div>}
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {t(`recipient.${d.recipient ?? 'agency'}` as 'recipient.agency')}
+                          {d.reference && (
+                            <div className="text-xs">
+                              {t('deposits.table.reference', { reference: d.reference })}
+                            </div>
+                          )}
                         </td>
                         <td className="p-4">
                           {d.status ? (
                             <CodDepositStatusBadge status={d.status} />
                           ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
+                            <span className="text-muted-foreground text-sm">
+                              {t('common:values.notAvailable')}
+                            </span>
                           )}
                           {d.rejectionReason && (
                             <div className="text-xs text-muted-foreground mt-1 max-w-[16rem]">
@@ -302,7 +307,7 @@ export function DepositsTab() {
                           {formatDateTime(d.declaredAt ?? d.recordedAt)}
                           {d.note && <div className="text-xs">{d.note}</div>}
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-end">
                           {actionable ? (
                             <div className="flex items-center justify-end gap-2">
                               <Button
@@ -316,7 +321,7 @@ export function DepositsTab() {
                                 ) : (
                                   <Check className="w-3.5 h-3.5" />
                                 )}
-                                Confirm
+                                {t('deposits.confirm')}
                               </Button>
                               <Button
                                 size="sm"
@@ -325,13 +330,17 @@ export function DepositsTab() {
                                 onClick={() => setRejectTarget(d)}
                               >
                                 <X className="w-3.5 h-3.5" />
-                                Reject
+                                {t('deposits.reject')}
                               </Button>
                             </div>
                           ) : isDeclared ? (
-                            <span className="text-xs text-muted-foreground">Awaiting admin</span>
+                            <span className="text-xs text-muted-foreground">
+                              {t('deposits.table.awaitingAdmin')}
+                            </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">
+                              {t('common:values.notAvailable')}
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -345,14 +354,14 @@ export function DepositsTab() {
           {!isLoading && !loadError && meta.pages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <p className="text-sm text-muted-foreground">
-                Page {meta.page} of {meta.pages}
+                {t('common:pagination.pageOf', { page: meta.page, total: meta.pages })}
               </p>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  <ChevronLeft className="w-4 h-4" />
+                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)} aria-label={t('common:pagination.previous')}>
+                  <ChevronLeft className="w-4 h-4 rtl:-scale-x-100" />
                 </Button>
-                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)}>
-                  <ChevronRight className="w-4 h-4" />
+                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)} aria-label={t('common:pagination.next')}>
+                  <ChevronRight className="w-4 h-4 rtl:-scale-x-100" />
                 </Button>
               </div>
             </div>
@@ -364,22 +373,19 @@ export function DepositsTab() {
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Reject declaration</DialogTitle>
-            <DialogDescription>
-              No money moves. The agent's late-deposit clock resumes and an admin can see both sides.
-              Rejecting a claim you dispute is a normal, cost-free action.
-            </DialogDescription>
+            <DialogTitle>{t('deposits.rejectTitle')}</DialogTitle>
+            <DialogDescription>{t('deposits.rejectDescription')}</DialogDescription>
           </DialogHeader>
           <Textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="e.g. Nothing was handed over at the desk; our till reconciles."
+            placeholder={t('deposits.rejectPlaceholder')}
             rows={3}
             maxLength={500}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -389,7 +395,7 @@ export function DepositsTab() {
               {rejectTarget && actions.pendingKey === `reject:${rejectTarget.id}` ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                'Reject declaration'
+                t('deposits.rejectSubmit')
               )}
             </Button>
           </DialogFooter>

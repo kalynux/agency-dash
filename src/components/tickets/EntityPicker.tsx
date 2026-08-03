@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, ChevronDown, Loader2, Package, ShoppingBag, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,8 @@ import {
 import { cn } from '@/lib/utils';
 import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
-import { humanizeEnum } from './ticket.constants';
+import { txStatic } from '@/i18n/tx';
+import { fulfillmentStatusLabel, shipmentStatusLabel } from './ticket.constants';
 import type { TicketEntityType } from '@/types/ticket.types';
 
 /** A tracking number offered for a picked order/shipment, with context for labelling. */
@@ -51,14 +53,16 @@ const SEARCHABLE: Record<string, true> = { ORDER: true, PRODUCT: true, SHIPMENT:
 const PAGE_LIMIT = 50;
 
 export function EntityPicker({ entityType, value, onChange, onEntitySelected, invalid }: EntityPickerProps) {
+  const { t } = useTranslation('tickets');
+
   // AGENCY / OTHER (and any non-searchable type) fall back to a free-text id.
   if (!SEARCHABLE[entityType]) {
     return (
       <Input
         placeholder={
           entityType === 'OTHER' || entityType === 'AGENCY'
-            ? 'Optional — leave blank to use your agency'
-            : 'Enter the related item ID'
+            ? t('entityPicker.placeholderAgency')
+            : t('entityPicker.placeholderId')
         }
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -80,21 +84,24 @@ export function EntityPicker({ entityType, value, onChange, onEntitySelected, in
   );
 }
 
-const NOUN: Record<string, string> = {
-  ORDER: 'order',
-  PRODUCT: 'product',
-  SHIPMENT: 'shipment',
-  DELIVERY: 'delivery',
-};
-
 function SearchablePicker({ entityType, value, onChange, onEntitySelected, invalid }: EntityPickerProps) {
+  const { t } = useTranslation('tickets');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<EntityOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<EntityOption | null>(null);
-  const noun = NOUN[entityType] ?? 'item';
+  // The picker's copy names what is being picked, and only the four searchable
+  // types reach here — anything else falls back to the generic "item". Both
+  // forms are needed: the trigger reads "Select order…", the list "No orders
+  // found.", and neither is derivable from the other in every language.
+  const noun = t(`entityPicker.nouns.${entityType}` as 'entityPicker.nouns.item', {
+    defaultValue: t('entityPicker.nouns.item'),
+  });
+  const nouns = t(`entityPicker.nounsPlural.${entityType}` as 'entityPicker.nounsPlural.item', {
+    defaultValue: t('entityPicker.nounsPlural.item'),
+  });
 
   // Load results (server-side search) whenever the modal is open and the query changes.
   useEffect(() => {
@@ -144,23 +151,25 @@ function SearchablePicker({ entityType, value, onChange, onEntitySelected, inval
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate font-medium">{selected.title}</span>
             {selected.caption && (
-              <span className="truncate text-xs text-muted-foreground">· {selected.caption}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {t('entityPicker.selectedCaption', { caption: selected.caption })}
+              </span>
             )}
           </span>
         ) : (
-          <span>Select {noun}…</span>
+          <span>{t('entityPicker.trigger', { noun })}</span>
         )}
-        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        <ChevronDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
           <DialogHeader className="px-4 pt-4">
-            <DialogTitle>Select {noun}</DialogTitle>
+            <DialogTitle>{t('entityPicker.dialogTitle', { noun })}</DialogTitle>
             <DialogDescription>
               {entityType === 'PRODUCT'
-                ? 'Search products on orders you handle by name, category, or tag.'
-                : 'Search orders you handle by order number or customer.'}
+                ? t('entityPicker.descriptionProduct')
+                : t('entityPicker.descriptionOrder')}
             </DialogDescription>
           </DialogHeader>
           <Command shouldFilter={false} className="bg-transparent">
@@ -169,8 +178,8 @@ function SearchablePicker({ entityType, value, onChange, onEntitySelected, inval
               onValueChange={setQuery}
               placeholder={
                 entityType === 'PRODUCT'
-                  ? 'Search by name, category, or tag…'
-                  : 'Search by order number or customer…'
+                  ? t('entityPicker.searchProduct')
+                  : t('entityPicker.searchOrder')
               }
             />
             <CommandList className="max-h-[55vh]">
@@ -181,10 +190,12 @@ function SearchablePicker({ entityType, value, onChange, onEntitySelected, inval
                 </div>
               ) : loading && results.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading {noun}s…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t('entityPicker.loading', { nouns })}
                 </div>
               ) : results.length === 0 ? (
-                <div className="py-10 text-center text-sm text-muted-foreground">No {noun}s found.</div>
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  {t('entityPicker.empty', { nouns })}
+                </div>
               ) : (
                 <div className="p-1">
                   {results.map((option) => {
@@ -195,7 +206,7 @@ function SearchablePicker({ entityType, value, onChange, onEntitySelected, inval
                         type="button"
                         onClick={() => select(option)}
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors',
+                          'flex w-full items-center gap-3 rounded-md px-2 py-2 text-start transition-colors',
                           isSelected ? 'bg-accent' : 'hover:bg-accent/60',
                         )}
                       >
@@ -264,6 +275,8 @@ async function searchEntities(entityType: TicketEntityType, query: string): Prom
 
   const { data } = await ticketsService.referenceOrders({ q: query || undefined, limit: PAGE_LIMIT });
 
+  const unknownCustomer = txStatic('tickets:entityPicker.unknownCustomer');
+
   if (entityType === 'SHIPMENT' || entityType === 'DELIVERY') {
     // One row per this-agency shipment on each order; the entity id is the shipment id.
     const rows: EntityOption[] = [];
@@ -272,9 +285,16 @@ async function searchEntities(entityType: TicketEntityType, query: string): Prom
         rows.push({
           id: s.shipmentId,
           kind: 'shipment' as const,
-          title: `${o.orderNumber} · ${o.customerName ?? 'Unknown customer'}`,
-          subtitle: `Status: ${humanizeEnum(s.status)}`,
-          caption: s.trackingNumber ? `Tracking ${s.trackingNumber}` : undefined,
+          title: txStatic('tickets:entityPicker.orderTitle', {
+            orderNumber: o.orderNumber,
+            customer: o.customerName ?? unknownCustomer,
+          }),
+          subtitle: txStatic('tickets:entityPicker.shipmentStatus', {
+            status: shipmentStatusLabel(s.status),
+          }),
+          caption: s.trackingNumber
+            ? txStatic('tickets:entityPicker.trackingCaption', { number: s.trackingNumber })
+            : undefined,
           trackingOptions: s.trackingNumber
             ? [{ trackingNumber: s.trackingNumber, agencyName: s.agencyName, deliveryStatus: s.status }]
             : [],
@@ -288,8 +308,10 @@ async function searchEntities(entityType: TicketEntityType, query: string): Prom
   return data.map((o) => ({
     id: o.id,
     kind: 'order' as const,
-    title: o.customerName?.trim() || 'Unknown customer',
-    subtitle: `Delivery: ${humanizeEnum(o.fulfillmentStatus)}`,
+    title: o.customerName?.trim() || unknownCustomer,
+    subtitle: txStatic('tickets:entityPicker.fulfillment', {
+      status: fulfillmentStatusLabel(o.fulfillmentStatus),
+    }),
     caption: o.orderNumber,
     imageUrl: o.customerAvatarUrl,
     trackingOptions: o.shipments

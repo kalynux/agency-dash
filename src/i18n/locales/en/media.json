@@ -1,0 +1,171 @@
+{
+  "page": {
+    "title": "Media Library",
+    "aboutLabel": "About the media library",
+    "about": "Every file your agency has uploaded, and exactly where each one is attached.",
+    "description": "Every file your agency has uploaded, and exactly where each one is attached",
+    "descriptionShort": "Every file you've uploaded"
+  },
+  "kinds": {
+    "image": "Images",
+    "video": "Video",
+    "audio": "Audio",
+    "document": "Documents"
+  },
+  "kindsSingular": {
+    "image": "image",
+    "video": "video",
+    "audio": "audio",
+    "document": "document"
+  },
+  "filters": {
+    "searchPlaceholder": "Search files…",
+    "searchLabel": "Search by file name",
+    "description": "Filters and sorting apply to your whole library.",
+    "fileType": "File type",
+    "allTypes": "All types",
+    "all": "All",
+    "storageProvider": "Storage provider",
+    "allProviders": "All providers",
+    "sortBy": "Sort by",
+    "clear": "Clear filters",
+    "gridView": "Grid view",
+    "listView": "List view"
+  },
+  "sort": {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "nameAsc": "Name A–Z",
+    "nameDesc": "Name Z–A",
+    "largest": "Largest first",
+    "smallest": "Smallest first"
+  },
+  "stats": {
+    "totalFiles": "Total files",
+    "storageUsed": "Storage used",
+    "storageUsedOfLimit": "{{used}} / {{limit}}",
+    "attachedOnPage": "Attached (page)",
+    "unusedOnPage": "Unused (page)"
+  },
+  "storage": {
+    "title": "Media storage",
+    "usage": "{{used}} of {{limit}} ({{percent}}%)",
+    "full": "Storage is full — delete unused media before you can upload more.",
+    "nearlyFull": "Storage is nearly full. Delete unused media or upgrade your plan."
+  },
+  "upload": {
+    "button": "Upload",
+    "uploadFiles": "Upload files",
+    "progress": "Uploading {{what}}…",
+    "uploading": "Uploading…",
+    "fileCount_one": "{{count}} file",
+    "fileCount_other": "{{count}} files",
+    "succeeded_one": "Uploaded {{count}} file.",
+    "succeeded_other": "Uploaded {{count}} files.",
+    "dropTitle": "Drop to upload",
+    "dropHint": "Up to {{files}} files or {{videos}} videos (70 MB each)",
+    "tooManyFiles": "You can upload at most {{count}} files at once.",
+    "tooManyVideos": "You can upload at most {{count}} videos at once.",
+    "overTypeLimit": "\"{{name}}\" exceeds the {{limit}} limit.",
+    "overVideoLimit": "\"{{name}}\" exceeds the 70 MB video limit.",
+    "unsupportedVideo": "\"{{name}}\" is not a supported video (use MP4, MOV or WebM).",
+    "caps": {
+      "gif": "5 MB GIF",
+      "pdf": "25 MB PDF",
+      "zip": "50 MB ZIP",
+      "image": "10 MB image",
+      "default": "200 MB"
+    }
+  },
+  "list": {
+    "untitled": "Untitled",
+    "inspect": "Inspect",
+    "fileActions": "File actions",
+    "delete": "Delete",
+    "meta": "{{size}} · {{date}}",
+    "metaWithKind": "{{kind}} · {{size}} · {{date}}",
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+    "emptyFilteredTitle": "No files match your filters",
+    "emptyFilteredDescription": "Try clearing the search or filters to see more files.",
+    "emptyTitle": "Your library is empty",
+    "emptyDescription": "Upload images, videos or documents to start building your library.",
+    "unused": "Unused"
+  },
+  "inspector": {
+    "sheetTitle": "File details",
+    "placeholder": "Select a file to see its details and where it's attached.",
+    "close": "Close inspector",
+    "rename": "Rename file",
+    "saveName": "Save name",
+    "renamed": "File renamed.",
+    "deleted": "File deleted.",
+    "confirmDelete": "Delete this file? This cannot be undone.",
+    "detachFirst": "Detach this file from everything using it before deleting it.",
+    "stillInUse": "This file is still in use. Detach it everywhere it is used first.",
+    "deleteDisabledHint": "Detach this file from everything using it before deleting.",
+    "deleteFile": "Delete file",
+    "meta": {
+      "type": "Type",
+      "size": "Size",
+      "mime": "MIME",
+      "provider": "Provider",
+      "uploaded": "Uploaded",
+      "references": "References"
+    },
+    "whereUsed": "Where it's used",
+    "notAttached": "Not attached to anything. This file can be safely deleted.",
+    "usedInPlaces_one": "Used in {{count}} place. Detach it there before deleting.",
+    "usedInPlaces_other": "Used in {{count}} places. Detach it there before deleting."
+  },
+  "references": {
+    "avatar": "Profile avatar",
+    "avatarHint": "Clear it in Account → Profile to detach.",
+    "logo": "Business logo",
+    "logoHint": "Clear it in Account → Store to detach.",
+    "cover": "Cover image",
+    "banner": "Banner",
+    "bannerHint": "Clear it in Account → Store to detach.",
+    "deliveryProof": "Delivery proof",
+    "deliveryProofHint": "Uploaded by the agent on their shipment — only they can replace it.",
+    "ticketAttachment": "Ticket attachment",
+    "ticketAttachmentHint": "Attachments stay with the ticket for its lifetime.",
+    "shipment": "Shipment",
+    "shipmentHint": "Attached to a shipment record.",
+    "ticket": "Support ticket",
+    "agency": "Your agency",
+    "agencyHint": "Clear it in Account to detach.",
+    "agent": "Agent",
+    "agentHint": "Attached to an agent record.",
+    "product": "Product",
+    "productHint": "Attached to a product.",
+    "generic": "In use",
+    "genericHint": "Detach it where it is used."
+  },
+  "preview": {
+    "openInNewTab": "Open in new tab",
+    "fileAlt": "File"
+  },
+  "picker": {
+    "title": "Select media",
+    "selectedOf": "{{count}} selected",
+    "selectedOfMax": "{{count}} selected / {{max}} max",
+    "searchPlaceholder": "Search files…",
+    "filters": "Filters",
+    "noFiles": "No files found",
+    "clearFilters": "Clear filters",
+    "added": "Added",
+    "dismiss": "Dismiss",
+    "confirm": "Select",
+    "confirmWithCount": "Select ({{count}})",
+    "pageOf": "Page {{page}} of {{pages}} · {{total}} total",
+    "wrongKind": "{{kind}} can't be used here — only {{accepted}} files are allowed.",
+    "filterPanel": {
+      "size": "Size (MB)",
+      "min": "Min",
+      "max": "Max",
+      "uploaded": "Uploaded",
+      "after": "After",
+      "before": "Before"
+    }
+  }
+}

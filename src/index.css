@@ -315,6 +315,78 @@ textarea:focus-visible {
   border-color: #eaa916;
 }
 
+/* An agent recedes — but never disappears — while a shipment holds the focus. */
+.agent-marker-icon--muted {
+  opacity: 0.45;
+}
+.agent-marker-icon--muted .agent-marker__pulse {
+  animation: none;
+  opacity: 0;
+}
+
+/* ── Shipment start / end pins ─────────────────────────────────────────────── */
+/* Anchored on the tip (iconAnchor [20, 52]), so the point sits on the address. */
+.leaflet-marker-icon.ship-pin {
+  background: transparent;
+  border: none;
+}
+.ship-pin__body {
+  position: absolute;
+  inset: 0;
+  animation: pinDrop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.ship-pin__svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.35));
+}
+/* A ground ellipse under the tip — what reads as the pin standing on the map. */
+.ship-pin__shadow {
+  position: absolute;
+  left: 50%;
+  top: 49px;
+  width: 16px;
+  height: 5px;
+  margin-left: -8px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.28);
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+.ship-pin__label {
+  position: absolute;
+  left: 50%;
+  top: 55px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.92);
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+@keyframes pinDrop {
+  0% {
+    transform: translateY(-14px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ship-pin__body {
+    animation: none;
+  }
+}
+
 /* Popup themed to match the app */
 .agent-popup-wrap .leaflet-popup-content-wrap {
   border-radius: 12px;
@@ -327,6 +399,14 @@ textarea:focus-visible {
 }
 .agent-popup-wrap .leaflet-popup-tip {
   background: hsl(var(--popover));
+}
+.agent-popup__kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 2px;
 }
 .agent-popup__name {
   font-weight: 600;

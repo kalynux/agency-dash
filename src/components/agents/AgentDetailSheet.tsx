@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatNumber } from '@/lib/format';
 import { MapPin, Package, Shield, ShieldCheck, Star, Timer, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -6,29 +8,33 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { VehicleIcon } from '@/components/agents/VehicleIcon';
+import { txStatic } from '@/i18n/tx';
 import type { AgentDirectoryItem, AgentRating } from '@/types/agent.types';
 
 function StatRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 py-2">
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
-      <span className="text-xs font-medium text-right">{value}</span>
+      <span className="text-xs font-medium text-end">{value}</span>
     </div>
   );
 }
 
 function RatingRow({ label, rating }: { label: string; rating: AgentRating }) {
+  const { t } = useTranslation('agents');
   return (
     <StatRow
       label={label}
       value={
         rating.average == null ? (
-          <span className="text-muted-foreground">Not rated yet</span>
+          <span className="text-muted-foreground">{t('detail.notRated')}</span>
         ) : (
           <span className="flex items-center justify-end gap-1">
             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
             {rating.average.toFixed(1)}
-            <span className="text-muted-foreground font-normal">({rating.count})</span>
+            <span className="text-muted-foreground font-normal">
+              {t('detail.ratingCount', { count: rating.count })}
+            </span>
           </span>
         )
       }
@@ -36,17 +42,16 @@ function RatingRow({ label, rating }: { label: string; rating: AgentRating }) {
   );
 }
 
-const AVAILABILITY_LABEL: Record<string, string> = {
-  online: 'Online — wants work',
-  on_break: 'On a break',
-  offline: 'Offline',
-};
-
-const WORKING_STATE_LABEL: Record<string, string> = {
-  idle: 'Free right now',
-  working: 'On a job',
-  at_capacity: 'At capacity',
-};
+/**
+ * The long-form availability/workload copy this sheet uses — wordier than the
+ * chips on the card, which read from `agents:availability.*`. Both are open
+ * unions on the wire, so an unrecognised token falls back to itself.
+ */
+function longLabel(group: 'availabilityLong' | 'workingStateLong', token: string): string {
+  const key = `agents:detail.${group}.${token}`;
+  const translated = txStatic(key);
+  return translated === key ? token : translated;
+}
 
 export interface AgentDetailSheetProps {
   agent: AgentDirectoryItem | null;
@@ -61,6 +66,7 @@ export interface AgentDetailSheetProps {
  * they are earned by contracting and arrive with the roster, never the directory.
  */
 export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: AgentDetailSheetProps) {
+  const { t } = useTranslation('agents');
   if (!agent) return null;
 
   const availability = String(agent.availability);
@@ -86,17 +92,17 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
                 {agent.kycVerified ? (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
                     <ShieldCheck className="w-3 h-3" />
-                    KYC Verified
+                    {t('detail.kycVerified')}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800">
                     <Shield className="w-3 h-3" />
-                    Unverified
+                    {t('detail.unverified')}
                   </Badge>
                 )}
                 <Badge variant="secondary" className="gap-1 text-xs font-medium">
                   <VehicleIcon vehicleType={agent.vehicleType} className="w-3 h-3" />
-                  {agent.vehicleType ? formatVehicleType(agent.vehicleType) : 'No vehicle'}
+                  {agent.vehicleType ? formatVehicleType(agent.vehicleType) : t('vehicle.none')}
                 </Badge>
               </div>
             </div>
@@ -110,7 +116,7 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
             {agent.homeBase.label && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Home base
+                  {t('detail.homeBase')}
                 </h3>
                 <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                   <p className="text-sm font-medium flex items-center gap-1.5">
@@ -119,7 +125,7 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
                   </p>
                   {agent.homeBase.serviceRadiusKm != null && (
                     <p className="text-xs text-muted-foreground">
-                      Works within {agent.homeBase.serviceRadiusKm} km of here
+                      {t('detail.serviceRadius', { km: agent.homeBase.serviceRadiusKm })}
                     </p>
                   )}
                 </div>
@@ -128,36 +134,36 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
 
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                Track record
+                {t('detail.trackRecord')}
               </h3>
               <div className="rounded-lg border divide-y">
                 <StatRow
-                  label="Trust score"
+                  label={t('detail.trustScore')}
                   value={
                     <span className="flex items-center justify-end gap-1">
                       <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                      {agent.trustScore} / 100
+                      {t('detail.trustOutOf', { score: agent.trustScore })}
                     </span>
                   }
                 />
                 <StatRow
-                  label="Deliveries completed"
+                  label={t('detail.deliveriesCompleted')}
                   value={
                     <span className="flex items-center justify-end gap-1">
                       <Package className="w-3 h-3" />
-                      {agent.completedShipments.toLocaleString()}
+                      {formatNumber(agent.completedShipments)}
                     </span>
                   }
                 />
                 <StatRow
-                  label="On time"
+                  label={t('detail.onTime')}
                   value={
                     agent.onTimeRate == null ? (
-                      <span className="text-muted-foreground">Not enough deliveries yet</span>
+                      <span className="text-muted-foreground">{t('detail.notEnoughDeliveries')}</span>
                     ) : (
                       <span className="flex items-center justify-end gap-1">
                         <Timer className="w-3 h-3" />
-                        {Math.round(agent.onTimeRate * 100)}%
+                        {t('detail.onTimeRate', { percent: Math.round(agent.onTimeRate * 100) })}
                       </span>
                     )
                   }
@@ -167,27 +173,30 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
 
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                Ratings
+                {t('detail.ratings')}
               </h3>
               <div className="rounded-lg border divide-y">
-                <RatingRow label="From customers" rating={agent.ratings.customer} />
-                <RatingRow label="From agencies" rating={agent.ratings.agency} />
-                <RatingRow label="From vendors" rating={agent.ratings.vendor} />
+                <RatingRow label={t('detail.fromCustomers')} rating={agent.ratings.customer} />
+                <RatingRow label={t('detail.fromAgencies')} rating={agent.ratings.agency} />
+                <RatingRow label={t('detail.fromVendors')} rating={agent.ratings.vendor} />
               </div>
             </section>
 
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                Right now
+                {t('detail.rightNow')}
               </h3>
               <div className="rounded-lg border divide-y">
-                <StatRow label="Availability" value={AVAILABILITY_LABEL[availability] ?? availability} />
-                <StatRow label="Workload" value={WORKING_STATE_LABEL[workingState] ?? workingState} />
+                <StatRow
+                  label={t('detail.availability')}
+                  value={longLabel('availabilityLong', availability)}
+                />
+                <StatRow
+                  label={t('detail.workload')}
+                  value={longLabel('workingStateLong', workingState)}
+                />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Phone, email and live position aren't shown here — those come with the contract, not
-                the directory.
-              </p>
+              <p className="text-xs text-muted-foreground mt-2">{t('detail.privacyNote')}</p>
             </section>
           </div>
         </ScrollArea>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarClock, Globe, Headphones, RotateCcw, Shield, ShieldCheck, Store, XCircle,
 } from 'lucide-react';
@@ -6,22 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { tx } from '@/i18n/tx';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
 function PolicyRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 py-2">
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
-      <span className="text-xs font-medium text-right">{value}</span>
+      <span className="text-xs font-medium text-end">{value}</span>
     </div>
   );
 }
-
-const AVAILABILITY_LABEL: Record<string, string> = {
-  '24_7': '24/7',
-  business_hours: 'Business hours',
-  limited: 'Limited',
-};
 
 export interface VendorDetailSheetProps {
   vendor: VendorBrowseItemDto | null;
@@ -32,6 +28,7 @@ export interface VendorDetailSheetProps {
 }
 
 export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: VendorDetailSheetProps) {
+  const { t } = useTranslation(['vendors', 'common']);
   if (!vendor) return null;
 
   const addr = vendor.primaryAddress;
@@ -57,12 +54,12 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
                 {vendor.kycVerified ? (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
                     <ShieldCheck className="w-3 h-3" />
-                    KYC Verified
+                    {t('detail.kycVerified')}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800">
                     <Shield className="w-3 h-3" />
-                    Unverified
+                    {t('detail.unverified')}
                   </Badge>
                 )}
               </div>
@@ -77,7 +74,7 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
             {addr && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Address
+                  {t('detail.address')}
                 </h3>
                 <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                   <p className="text-sm font-medium">{addr.city}{addr.state ? `, ${addr.state}` : ''}</p>
@@ -89,22 +86,28 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
             {p?.returnPolicy && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  Return Policy
+                  {t('detail.returnPolicy')}
                 </h3>
                 <div className="rounded-lg border divide-y">
                   <PolicyRow
-                    label="Accepted"
+                    label={t('detail.accepted')}
                     value={
                       <span className="flex items-center gap-1">
                         <RotateCcw className="w-3 h-3" />
-                        {p.returnPolicy.returnEligible ? 'Yes' : 'No'}
+                        {p.returnPolicy.returnEligible ? t('common:values.yes') : t('common:values.no')}
                       </span>
                     }
                   />
                   {p.returnPolicy.returnEligible && (
                     <>
-                      <PolicyRow label="Return window" value={`${p.returnPolicy.returnWindowDays} days after delivery`} />
-                      <PolicyRow label="Refund type" value={<span className="capitalize">{p.returnPolicy.refundType}</span>} />
+                      <PolicyRow
+                        label={t('detail.returnWindow')}
+                        value={t('detail.returnWindowValue', { count: p.returnPolicy.returnWindowDays })}
+                      />
+                      <PolicyRow
+                        label={t('detail.refundType')}
+                        value={tx(t, `vendors:detail.refundTypes.${p.returnPolicy.refundType}`)}
+                      />
                     </>
                   )}
                 </div>
@@ -114,25 +117,25 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
             {p?.cancellationPolicy && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  Cancellation Policy
+                  {t('detail.cancellationPolicy')}
                 </h3>
                 <div className="rounded-lg border divide-y">
                   <PolicyRow
-                    label="Cancellable"
+                    label={t('detail.cancellableLabel')}
                     value={
                       <span className="flex items-center gap-1">
                         <XCircle className="w-3 h-3" />
-                        {p.cancellationPolicy.cancellable ? 'Yes' : 'No'}
+                        {p.cancellationPolicy.cancellable ? t('common:values.yes') : t('common:values.no')}
                       </span>
                     }
                   />
                   {p.cancellationPolicy.cancellable && p.cancellationPolicy.cancellationDeadline && (
                     <PolicyRow
-                      label="Deadline"
+                      label={t('detail.deadline')}
                       value={
                         <span className="flex items-center gap-1">
                           <CalendarClock className="w-3 h-3" />
-                          {p.cancellationPolicy.cancellationDeadline.replace(/_/g, ' ')}
+                          {tx(t, `vendors:detail.deadlines.${p.cancellationPolicy.cancellationDeadline}`)}
                         </span>
                       }
                     />
@@ -144,21 +147,23 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
             {p?.supportPolicy && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  Support
+                  {t('detail.support')}
                 </h3>
                 <div className="rounded-lg border divide-y">
                   <PolicyRow
-                    label="Availability"
+                    label={t('detail.availability')}
                     value={
                       <span className="flex items-center gap-1">
                         <Headphones className="w-3 h-3" />
-                        {p.supportPolicy.availability ? AVAILABILITY_LABEL[p.supportPolicy.availability] ?? p.supportPolicy.availability : '—'}
+                        {p.supportPolicy.availability
+                          ? tx(t, `vendors:detail.availabilities.${p.supportPolicy.availability}`)
+                          : t('common:values.notAvailable')}
                       </span>
                     }
                   />
                   {p.supportPolicy.languages.length > 0 && (
                     <PolicyRow
-                      label="Languages"
+                      label={t('detail.languages')}
                       value={
                         <span className="flex items-center gap-1 uppercase">
                           <Globe className="w-3 h-3" />

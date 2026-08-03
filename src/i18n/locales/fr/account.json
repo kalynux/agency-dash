@@ -1,0 +1,139 @@
+{
+  "page": {
+    "title": "Compte",
+    "description": "Gérez votre profil personnel, l'identité de votre entreprise et vos versements",
+    "descriptionShort": "Profil, entreprise et versements",
+    "aboutLabel": "À propos de la section Compte"
+  },
+  "profile": {
+    "saveError": "Corrigez les champs signalés avant d'enregistrer.",
+    "loading": "Chargement de votre profil…",
+    "saved": "Profil mis à jour",
+    "fallbackName": "Mon agence",
+    "identity": {
+      "title": "Informations du profil",
+      "description": "Vos coordonnées personnelles — distinctes de l'identité de votre entreprise.",
+      "short": "Vos coordonnées",
+      "storeHint": "Le nom et le logo de votre entreprise se trouvent dans l'onglet Boutique.",
+      "avatarHint": "Cliquez sur votre photo pour en choisir une nouvelle.",
+      "displayName": "Nom affiché",
+      "displayNamePlaceholder": "ex. Jean-Paul (FastTrack)",
+      "displayNameTooShort": "Le nom affiché doit contenir au moins 2 caractères.",
+      "email": "E-mail",
+      "emailLocked": "L'e-mail ne se modifie pas ici — contactez le support.",
+      "phone": "Téléphone",
+      "phonePlaceholder": "+237 6XX XXX XXX",
+      "phoneLocked": "Le téléphone ne se modifie pas ici — contactez le support."
+    },
+    "localization": {
+      "title": "Localisation",
+      "description": "Votre pays d'exploitation, votre fuseau horaire et la langue du tableau de bord.",
+      "short": "Pays, fuseau horaire, langue",
+      "country": "Pays",
+      "countryAria": "Pays (lecture seule)",
+      "countryLocked": "Défini une fois pour toutes lors de l'inscription.",
+      "timezone": "Fuseau horaire",
+      "timezonePlaceholder": "Choisir un fuseau horaire",
+      "language": "Langue",
+      "languagePlaceholder": "Choisir une langue",
+      "languageHint": "Utilisée pour ce tableau de bord et pour toutes vos notifications.",
+      "languagePreviewHint": "Le tableau de bord change immédiatement. Enregistrez pour conserver ce choix."
+    },
+    "kyc": {
+      "title": "KYC / Vérification",
+      "description": "Informations d'immatriculation examinées par notre équipe.",
+      "short": "Immatriculation de l'entreprise",
+      "verified": "Vérifié",
+      "pending": "En cours d'examen",
+      "registrationNumber": "Numéro d'immatriculation",
+      "registrationNumberPlaceholder": "ex. RC/DLA/2020/B/1234",
+      "transportLicense": "Numéro de licence de transport",
+      "transportLicensePlaceholder": "ex. TL-00998877"
+    }
+  },
+  "security": {
+    "password": {
+      "title": "Changer le mot de passe",
+      "description": "Utilisez un mot de passe fort que vous n'utilisez nulle part ailleurs.",
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "rules": "Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.",
+      "submit": "Mettre à jour le mot de passe",
+      "success": "Mot de passe mis à jour."
+    },
+    "twoFactor": {
+      "title": "Authentification à deux facteurs",
+      "comingSoon": "Bientôt disponible",
+      "description": "Ajoutez une couche de sécurité supplémentaire à votre compte.",
+      "enable": "Activer la 2FA",
+      "enableAria": "Activer l'authentification à deux facteurs",
+      "notAvailable": "Pas encore disponible — cette option arrivera dans une prochaine mise à jour."
+    }
+  },
+  "payout": {
+    "title": "Moyens de versement",
+    "description": "Où sont envoyés vos revenus de livraison. La première entrée est votre moyen préféré.",
+    "short": "Où sont envoyés les revenus",
+    "saved": "Moyens de versement enregistrés !",
+    "incomplete": "Remplissez tous les champs de chaque moyen de versement avant d'enregistrer.",
+    "preferredMethod": "Moyen préféré",
+    "fallbackMethod": "Moyen de secours",
+    "removeMethod": "Retirer ce moyen de versement",
+    "mobileMoney": "Mobile Money",
+    "bankTransfer": "Virement bancaire",
+    "addMobileMoney": "Ajouter un Mobile Money",
+    "addBank": "Ajouter un compte bancaire",
+    "provider": "Opérateur",
+    "providerPlaceholder": "Choisir un opérateur",
+    "phoneNumber": "Numéro de téléphone",
+    "phonePlaceholder": "+237 6XX XXX XXX",
+    "accountName": "Nom du titulaire",
+    "bankName": "Nom de la banque",
+    "accountNumber": "Numéro de compte",
+    "bankCountry": "Pays de la banque",
+    "countryPlaceholder": "Choisir un pays"
+  },
+  "earnings": {
+    "title": "Revenus",
+    "description": "Votre solde de frais de livraison — retenu pendant les livraisons, libéré une fois terminées",
+    "descriptionShort": "Votre solde de frais de livraison",
+    "aboutLabel": "À propos des revenus",
+    "loading": "Chargement des revenus…",
+    "noData": "Aucune donnée disponible.",
+    "refresh": "Actualiser",
+    "howItWorksLead": "Votre solde de frais de livraison — retenu pendant les livraisons, libéré une fois terminées.",
+    "howItWorks": "Vous gagnez des frais de livraison lorsque le livreur remet l'expédition — pas au moment où le client paie — et une écriture est créée par expédition. Ce qui arrive ici, ce sont les frais <strong>déduction faite de la part contractuelle du livreur</strong>, que la plateforme lui verse directement. Le montant devient disponible une fois la commande entièrement terminée et le délai de rétention écoulé (pour le COD, également une fois les espèces reversées et confirmées). Une expédition retournée vous rapporte vos frais de retour à l'expéditeur.",
+    "balance": {
+      "aboutLabel": "À propos de votre solde « {{label}} »",
+      "available": "Disponible",
+      "availableHint": "Retirable dès maintenant via une demande de versement",
+      "pending": "En attente",
+      "pendingHint": "Retenu pendant le délai de rétention, ou espèces COD non encore réglées",
+      "reserve": "Réserve",
+      "reserveHint": "Marge de sécurité COD — immobilisée 30 jours",
+      "requested": "Demandé",
+      "requestedHint": "Réservé pour votre demande de versement en cours"
+    },
+    "status": {
+      "pending": "En attente",
+      "paid": "Payé",
+      "rejected": "Refusé",
+      "automatic": "Automatique"
+    },
+    "requestedOn": "demandé le {{date}}",
+    "viewInTickets": "Voir dans les tickets",
+    "withdraw": "Retirer {{amount}}",
+    "requestWithdrawal": "Demander un retrait",
+    "requesting": "Demande en cours…",
+    "requested": "Versement de {{amount}} demandé — suivez-le dans les tickets.",
+    "autoPayoutLabel": "À propos des versements automatiques",
+    "autoPayout": "Si votre solde disponible atteint {{threshold}}, nous demandons automatiquement un versement en votre nom pour que les fonds ne restent pas immobilisés. Assurez-vous qu'un moyen de versement est enregistré — sans cela, la demande automatique ne peut pas être créée.",
+    "blocked": {
+      "noMethod": "Ajoutez un moyen de versement ci-dessous avant de demander un retrait.",
+      "pendingRequest": "Vous avez déjà une demande de versement en cours.",
+      "noBalance": "Aucun solde disponible à retirer pour l'instant.",
+      "belowMinimum": "Le versement minimum est de {{amount}}."
+    }
+  }
+}

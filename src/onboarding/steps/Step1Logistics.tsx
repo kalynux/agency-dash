@@ -1,15 +1,17 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Phone, Mail, Building, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout } from '@/onboarding/OnboardingLayout';
-import { logisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
+import { buildLogisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 import { regionsFor, DEFAULT_COUNTRY, type RegionEntry } from '@/lib/regions';
 import type { GeoAddress } from '@/types/geo.types';
@@ -26,8 +28,6 @@ import type { GeoAddress } from '@/types/geo.types';
  */
 const AGENCY_COUNTRY = DEFAULT_COUNTRY;
 
-const REGIONS: RegionEntry[] = regionsFor(AGENCY_COUNTRY);
-
 const EMPTY_HQ = {
     label: '', region: '', city: '', address_description: '',
     support_contact: { phone: '', email: '' },
@@ -35,11 +35,16 @@ const EMPTY_HQ = {
 } as unknown as HeadquartersAddressFormValues;
 
 function FieldRow({ label, required, optional, error, children }: { label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
+    const { t } = useTranslation('common');
     return (
         <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-                {optional && <span className="text-slate-400 normal-case font-normal ml-1">(optional)</span>}
+                {optional && (
+                    <span className="text-slate-400 normal-case font-normal ml-1">
+                        ({t('form.optional').toLowerCase()})
+                    </span>
+                )}
             </label>
             {children}
             {error && <p className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
@@ -62,16 +67,25 @@ function IconInput({ icon: Icon, hasError, className, ...props }: React.InputHTM
 }
 
 export function Step1Logistics() {
+    const { t, i18n } = useTranslation(['onboarding', 'common']);
     const { submitLogistics, isSubmitting, session, drafts, saveDraft } = useOnboarding();
     const [apiError, setApiError] = useState<string | null>(null);
+    // Rebuilt on a language switch so validation messages follow the UI.
+    const schema = useMemo(() => buildLogisticsSchema(t), [t]);
 
     const roleEntity = session?.role_entity;
     // Drafts are the ONLY pre-population source: coverage areas and HQ addresses
     // now live on the magazin, so the session's role_entity no longer carries them.
     const draft = drafts.logistics;
 
+    // Region labels come out of locations.json in the active language.
+    const regions: RegionEntry[] = useMemo(
+        () => regionsFor(AGENCY_COUNTRY, i18n.language),
+        [i18n.language],
+    );
+
     const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<LogisticsFormValues>({
-        resolver: zodResolver(logisticsSchema),
+        resolver: zodResolver(schema),
         defaultValues: {
             coverage_areas: draft?.coverage_areas ?? [],
             headquarters_addresses: draft?.headquarters_addresses ?? [{ ...EMPTY_HQ }],
@@ -117,22 +131,26 @@ export function Step1Logistics() {
                 }),
                 version: roleEntity?.version,
             });
-            toast.success('Logistics setup saved!');
+            toast.success(t('logistics.saved'));
         } catch (err) {
             if (err instanceof ApiError) {
-                if (err.isConcurrentModification) setApiError('Profile was modified elsewhere. Please refresh and try again.');
-                else if (err.isValidation) setApiError(err.firstFieldError() ?? err.message);
-                else setApiError(err.isServer ? 'Server error. Please try again.' : err.message);
+                // Field errors are the one place raw server text is allowed through:
+                // they name a specific field and carry no code to resolve.
+                if (err.isConcurrentModification) setApiError(t('errors.concurrent'));
+                else if (err.isValidation) setApiError(err.firstFieldError() ?? getApiErrorMessage(err));
+                else setApiError(err.isServer ? t('errors.server') : getApiErrorMessage(err));
             }
         }
-    }, [submitLogistics, saveDraft, roleEntity]);
+    }, [submitLogistics, saveDraft, roleEntity, t]);
 
     return (
         <OnboardingLayout stepKey={1} viewingStepOverride={1}
             ctaSlot={
                 <div className="px-6 pb-6 pt-2">
                     <Button type="submit" form="step1-logistics-form" disabled={isSubmitting} className="w-full h-12 rounded-xl font-semibold gap-2">
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>Continue <ChevronRight className="w-4 h-4" /></>}
+                        {isSubmitting
+                            ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('actions.saving')}</>
+                            : <>{t('actions.continue')} <ChevronRight className="w-4 h-4" /></>}
                     </Button>
                 </div>
             }
@@ -140,9 +158,9 @@ export function Step1Logistics() {
             <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-zinc-800">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Globe className="w-4 h-4 text-primary" /></div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">Logistics Setup</h1>
+                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('logistics.title')}</h1>
                 </div>
-                <p className="text-sm text-slate-500">Select your coverage regions and set up your headquarters address(es).</p>
+                <p className="text-sm text-slate-500">{t('logistics.description')}</p>
             </div>
 
             {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">{apiError}</div>}
@@ -150,10 +168,10 @@ export function Step1Logistics() {
             <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="px-6 pt-5 pb-6 space-y-6" noValidate>
                 {/* Coverage Regions */}
                 <section>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Coverage Regions <span className="text-red-500">*</span></p>
-                    <p className="text-xs text-slate-400 mb-3">Select every region your agency can deliver to.</p>
-                    <div role="group" aria-label="Coverage regions" className="grid grid-cols-2 gap-2">
-                        {REGIONS.map(({ key, label }) => {
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t('logistics.coverageTitle')} <span className="text-red-500">*</span></p>
+                    <p className="text-xs text-slate-400 mb-3">{t('logistics.coverageHint')}</p>
+                    <div role="group" aria-label={t('logistics.coverageGroupLabel')} className="grid grid-cols-2 gap-2">
+                        {regions.map(({ key, label }) => {
                             const isChecked = (selectedAreas ?? []).includes(key);
                             return (
                                 <label key={key} htmlFor={`region-${key}`} className={cn(
@@ -172,15 +190,12 @@ export function Step1Logistics() {
                 {/* HQ Addresses */}
                 <section className="border-t border-slate-100 dark:border-zinc-800 pt-5">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Headquarters <span className="text-red-500">*</span></p>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-red-500">*</span></p>
                         <Button type="button" variant="ghost" size="sm" onClick={() => append({ ...EMPTY_HQ })} className="h-7 text-xs gap-1 text-primary hover:text-primary/80">
-                            <Plus className="w-3 h-3" /> Add address
+                            <Plus className="w-3 h-3" /> {t('logistics.addAddress')}
                         </Button>
                     </div>
-                    <p className="text-xs text-slate-400 mb-4">
-                        Search for each location and pick it from the results — the street, city and region
-                        are read off the map result. The first address is your primary headquarters.
-                    </p>
+                    <p className="text-xs text-slate-400 mb-4">{t('logistics.addressesHint')}</p>
                     {errors.headquarters_addresses && !Array.isArray(errors.headquarters_addresses) && (
                         <p className="text-xs text-red-500 mb-3" role="alert">{errors.headquarters_addresses.message}</p>
                     )}
@@ -209,6 +224,7 @@ interface HQAddressCardProps {
 }
 
 function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, setValue, errors, onRemove }: HQAddressCardProps) {
+    const { t } = useTranslation(['onboarding', 'common']);
     const addrErrors = errors.headquarters_addresses?.[index];
     const geo = watch(`headquarters_addresses.${index}.geo`);
     const region = watch(`headquarters_addresses.${index}.region`);
@@ -238,47 +254,48 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                 <div className="flex items-center gap-2">
                     <Building className="w-3.5 h-3.5 text-slate-400" />
                     <span className={cn('text-xs font-semibold', isPrimary ? 'text-primary' : 'text-slate-500')}>
-                        {isPrimary ? '★ Primary Headquarters' : `Branch Address ${index + 1}`}
+                        {isPrimary
+                            ? t('logistics.primaryHeadquarters')
+                            : t('logistics.branchAddress', { number: index + 1 })}
                     </span>
                 </div>
                 {canRemove && (
-                    <button type="button" onClick={onRemove} aria-label="Remove" className="text-slate-400 hover:text-red-500 transition-colors">
+                    <button type="button" onClick={onRemove} aria-label={t('common:actions.remove')} className="text-slate-400 hover:text-red-500 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>
                 )}
             </div>
 
             <div className="p-4 bg-white dark:bg-zinc-900 space-y-4">
-                <FieldRow label="Find this location" required error={addrErrors?.geo?.message}>
+                <FieldRow label={t('logistics.findLocation')} required error={addrErrors?.geo?.message}>
                     <Controller control={control} name={`headquarters_addresses.${index}.geo`} render={({ field }) => (
                         <AddressSearchInput
                             value={field.value ?? null}
                             country={AGENCY_COUNTRY.toLowerCase()}
                             hasError={!!addrErrors?.geo}
-                            placeholder="Search a street, area, or city…"
+                            placeholder={t('logistics.searchPlaceholder')}
                             onSelect={applyGeo}
                             onClear={() => field.onChange(null)}
                         />
                     )} />
-                    <p className="text-[11px] text-slate-400">
-                        Pick your address from the results so it can be placed on a map — auto-assignment
-                        measures distance from here.
-                    </p>
+                    <p className="text-[11px] text-slate-400">{t('logistics.pinHint')}</p>
                 </FieldRow>
 
-                <FieldRow label="Label" required error={addrErrors?.label?.message}>
-                    <IconInput icon={Tag} type="text" placeholder="e.g. Main Warehouse, Douala Hub"
+                <FieldRow label={t('logistics.label')} required error={addrErrors?.label?.message}>
+                    <IconInput icon={Tag} type="text" placeholder={t('logistics.labelPlaceholder')}
                         maxLength={50} hasError={!!addrErrors?.label}
                         {...register(`headquarters_addresses.${index}.label`)} />
                 </FieldRow>
 
-                <FieldRow label="Street Address" required error={addrErrors?.address_description?.message}>
-                    <IconInput icon={MapPin} type="text" placeholder="e.g. Akwa, Rue Sylvani, 3rd floor"
+                <FieldRow label={t('logistics.street')} required error={addrErrors?.address_description?.message}>
+                    <IconInput icon={MapPin} type="text" placeholder={t('logistics.streetPlaceholder')}
                         hasError={!!addrErrors?.address_description}
                         {...register(`headquarters_addresses.${index}.address_description`)} />
                     {geo && (city || region) && (
                         <p className="text-[11px] text-slate-400">
-                            {[city, region].filter(Boolean).join(', ')} · read from the map result
+                            {t('logistics.readFromMap', {
+                                place: [city, region].filter(Boolean).join(', '),
+                            })}
                         </p>
                     )}
                 </FieldRow>
@@ -286,32 +303,32 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                 {/* City / region are geo-derived. They only become inputs when the
                     provider returned neither — the backend still requires both. */}
                 {geo && !city && (
-                    <FieldRow label="City" optional error={addrErrors?.city?.message}>
-                        <IconInput icon={MapPin} type="text" placeholder="Douala" maxLength={100}
+                    <FieldRow label={t('logistics.city')} optional error={addrErrors?.city?.message}>
+                        <IconInput icon={MapPin} type="text" placeholder={t('logistics.cityPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.city}
                             {...register(`headquarters_addresses.${index}.city`)} />
-                        <p className="text-[11px] text-slate-400">The map result named no city — add one if it helps.</p>
+                        <p className="text-[11px] text-slate-400">{t('logistics.cityNotNamed')}</p>
                     </FieldRow>
                 )}
 
                 {geo && !region && (
-                    <FieldRow label="Region" optional error={addrErrors?.region?.message}>
-                        <IconInput icon={MapPin} type="text" placeholder="Littoral" maxLength={100}
+                    <FieldRow label={t('logistics.region')} optional error={addrErrors?.region?.message}>
+                        <IconInput icon={MapPin} type="text" placeholder={t('logistics.regionPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.region}
                             {...register(`headquarters_addresses.${index}.region`)} />
-                        <p className="text-[11px] text-slate-400">The map result named no region — add one if it helps.</p>
+                        <p className="text-[11px] text-slate-400">{t('logistics.regionNotNamed')}</p>
                     </FieldRow>
                 )}
 
                 <div className="border-t border-dashed border-slate-200 dark:border-zinc-700 pt-3 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Location Contact</p>
-                    <FieldRow label="Phone" required error={addrErrors?.support_contact?.phone?.message}>
-                        <IconInput icon={Phone} type="tel" inputMode="tel" placeholder="+237 6XX XXX XXX"
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('logistics.locationContact')}</p>
+                    <FieldRow label={t('logistics.phone')} required error={addrErrors?.support_contact?.phone?.message}>
+                        <IconInput icon={Phone} type="tel" inputMode="tel" placeholder={t('logistics.phonePlaceholder')}
                             hasError={!!addrErrors?.support_contact?.phone}
                             {...register(`headquarters_addresses.${index}.support_contact.phone`)} />
                     </FieldRow>
-                    <FieldRow label="Email" optional error={addrErrors?.support_contact?.email?.message}>
-                        <IconInput icon={Mail} type="email" inputMode="email" placeholder="support@youragency.com"
+                    <FieldRow label={t('logistics.email')} optional error={addrErrors?.support_contact?.email?.message}>
+                        <IconInput icon={Mail} type="email" inputMode="email" placeholder={t('logistics.emailPlaceholder')}
                             hasError={!!addrErrors?.support_contact?.email}
                             {...register(`headquarters_addresses.${index}.support_contact.email`)} />
                     </FieldRow>

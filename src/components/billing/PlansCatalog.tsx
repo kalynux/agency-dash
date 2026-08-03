@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ interface PlansCatalogProps {
 }
 
 export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
+  const { t } = useTranslation('billing');
   const activeCode = current?.active.plan.code;
   const hasPending = !!current?.pending;
 
@@ -35,11 +37,11 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
             <CardHeader className="space-y-1">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">{plan.name}</CardTitle>
-                {isCurrent && <Badge>Current</Badge>}
+                {isCurrent && <Badge>{t('plans.current')}</Badge>}
               </div>
               <div>
                 <span className="text-2xl font-bold">
-                  {isFree ? 'Free' : formatMoney(plan.price, plan.currency)}
+                  {isFree ? t('plans.free') : formatMoney(plan.price, plan.currency)}
                 </span>
                 {!isFree && (
                   <span className="text-sm text-muted-foreground"> · {formatTerm(plan.term_days)}</span>
@@ -48,31 +50,39 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-3">
               <ul className="space-y-2 text-sm">
-                <Feature>{formatCredits(plan.credit_allowance)} credits on activation</Feature>
-                <Feature>{formatShipmentCap(plan.max_unterminated_shipments)} concurrent shipments</Feature>
-                {plan.live_tracking_enabled && <Feature>Live agent tracking included</Feature>}
+                <Feature>
+                  {t('plans.creditsOnActivation', { credits: formatCredits(plan.credit_allowance) })}
+                </Feature>
+                <Feature>
+                  {t('plans.concurrentShipments', {
+                    cap: formatShipmentCap(plan.max_unterminated_shipments),
+                  })}
+                </Feature>
+                {plan.live_tracking_enabled && <Feature>{t('plans.liveTrackingIncluded')}</Feature>}
                 {/* Storage caps are per-plan and admin-editable — only advertise one when the plan actually carries it. */}
                 {typeof plan.max_storage_bytes === 'number' && plan.max_storage_bytes > 0 && (
-                  <Feature>{formatFileSize(plan.max_storage_bytes)} media storage</Feature>
+                  <Feature>
+                    {t('plans.mediaStorage', { size: formatFileSize(plan.max_storage_bytes) })}
+                  </Feature>
                 )}
               </ul>
               <div className="mt-auto">
                 {isCurrent ? (
                   <Button variant="outline" className="w-full" disabled>
-                    Your plan
+                    {t('plans.yourPlan')}
                   </Button>
                 ) : isFree ? (
                   <Button variant="outline" className="w-full" disabled>
-                    Default tier
+                    {t('plans.defaultTier')}
                   </Button>
                 ) : (
                   <Button
                     className="w-full"
                     onClick={() => onBuy(plan)}
                     disabled={hasPending}
-                    title={hasPending ? 'A plan is already queued to start when your current one ends.' : undefined}
+                    title={hasPending ? t('plans.queuedTitle') : undefined}
                   >
-                    {hasPending ? 'Plan queued' : 'Choose plan'}
+                    {hasPending ? t('plans.queued') : t('plans.choose')}
                   </Button>
                 )}
               </div>

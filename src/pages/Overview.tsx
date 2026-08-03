@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Wallet,
   Truck,
@@ -31,7 +32,7 @@ import {
   sectionSurfaceClass,
 } from '@/components/layout/PageContainer';
 import { SectionHeading } from '@/components/common/InfoHint';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 
 type MetricAccent = 'emerald' | 'blue' | 'gold';
 
@@ -118,6 +119,7 @@ function MetricCard({ title, value, icon: Icon, isLoading, onClick, hint, accent
 }
 
 export function Overview() {
+  const { t } = useTranslation('overview');
   const navigate = useNavigate();
   const { balance, isLoading: earningsLoading } = useEarnings();
   const { activeCount } = useShipments();
@@ -145,45 +147,45 @@ export function Overview() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Overview"
-        description="Welcome back! Here's what's happening with your agency."
-        shortDescription="Welcome back!"
+        title={t('title')}
+        description={t('description')}
+        shortDescription={t('descriptionShort')}
       />
 
       {/* Metrics — one filled hero (money), three supporting counts. 2×2 on phones. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <MetricCard
           hero
-          title="Available Earnings"
+          title={t('metrics.availableEarnings')}
           value={formatCurrency(balance?.available ?? 0, currency)}
           icon={Wallet}
           isLoading={earningsLoading}
-          hint="Ready to withdraw"
+          hint={t('metrics.availableEarningsHint')}
           onClick={() => navigate('/dashboard/account/payout')}
         />
         <MetricCard
-          title="Shipments Needing Action"
-          value={activeCount.toString()}
+          title={t('metrics.shipmentsNeedingAction')}
+          value={formatNumber(activeCount)}
           icon={Truck}
           accent="blue"
-          hint="Awaiting your dispatch"
+          hint={t('metrics.shipmentsNeedingActionHint')}
           onClick={() => navigate('/dashboard/shipments')}
         />
         <MetricCard
-          title="Owed to Platform (COD)"
+          title={t('metrics.codOwed')}
           value={formatCurrency(codLiability, currency)}
           icon={Banknote}
           accent="gold"
           isLoading={dashboard.isLoading}
-          hint="Cash to remit"
+          hint={t('metrics.codOwedHint')}
           onClick={() => navigate('/dashboard/cash/summary')}
         />
         <MetricCard
-          title="Agents on Roster"
-          value={roster.length.toString()}
+          title={t('metrics.agentsOnRoster')}
+          value={formatNumber(roster.length)}
           icon={Users}
           accent="emerald"
-          hint="Active riders"
+          hint={t('metrics.agentsOnRosterHint')}
           onClick={() => navigate('/dashboard/agents/connections')}
         />
       </div>
@@ -193,11 +195,11 @@ export function Overview() {
         <Card className={cn(listSurfaceClass, 'gap-4 md:gap-6')}>
           <CardHeader className="flex flex-row items-center justify-between px-4 pt-4 md:px-6 md:pt-0">
             <div>
-              <CardTitle>Recent Shipments</CardTitle>
-              <CardDescription>Latest shipments assigned to your agency</CardDescription>
+              <CardTitle>{t('recentShipments.title')}</CardTitle>
+              <CardDescription>{t('recentShipments.description')}</CardDescription>
             </div>
             <Button variant="ghost" size="sm" className="gap-1" onClick={() => navigate('/dashboard/shipments')}>
-              View all
+              {t('recentShipments.viewAll')}
               <ArrowRight className="w-4 h-4 rtl:-scale-x-100" />
             </Button>
           </CardHeader>
@@ -211,8 +213,8 @@ export function Overview() {
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                   <Package className="h-6 w-6 opacity-60" />
                 </div>
-                <p className="text-sm font-medium">No shipments yet</p>
-                <p className="text-xs text-muted-foreground">New assignments from vendors will appear here.</p>
+                <p className="text-sm font-medium">{t('recentShipments.emptyTitle')}</p>
+                <p className="text-xs text-muted-foreground">{t('recentShipments.emptyDescription')}</p>
               </div>
             ) : (
               <div className="divide-y md:space-y-2 md:divide-y-0">
@@ -246,27 +248,27 @@ export function Overview() {
               phone it sheds the frame and is ruled off from the list above. */}
           <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
             <SectionHeading
-              title="Quick Actions"
-              description="Common tasks you might want to perform"
-              short="Common tasks"
+              title={t('quickActions.title')}
+              description={t('quickActions.description')}
+              short={t('quickActions.short')}
             />
             <CardContent className="max-md:px-0">
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="outline" className="h-auto justify-start gap-3 py-3" onClick={() => navigate('/dashboard/tickets', { state: { create: true } })}>
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><TicketIcon className="w-4 h-4" /></span>
-                  <div className="text-left"><p className="font-semibold">New Ticket</p><p className="text-xs font-normal text-muted-foreground">Get help</p></div>
+                  <div className="text-start"><p className="font-semibold">{t('quickActions.newTicket')}</p><p className="text-xs font-normal text-muted-foreground">{t('quickActions.newTicketHint')}</p></div>
                 </Button>
                 <Button variant="outline" className="h-auto justify-start gap-3 py-3" onClick={() => navigate('/dashboard/account/locations')}>
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-info-500/10 text-info-600 dark:text-info-500"><MapPin className="w-4 h-4" /></span>
-                  <div className="text-left"><p className="font-semibold">Coverage</p><p className="text-xs font-normal text-muted-foreground">Update regions</p></div>
+                  <div className="text-start"><p className="font-semibold">{t('quickActions.coverage')}</p><p className="text-xs font-normal text-muted-foreground">{t('quickActions.coverageHint')}</p></div>
                 </Button>
                 <Button variant="outline" className="h-auto justify-start gap-3 py-3" onClick={() => navigate('/dashboard/account/payout')}>
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Wallet className="w-4 h-4" /></span>
-                  <div className="text-left"><p className="font-semibold">Earnings</p><p className="text-xs font-normal text-muted-foreground">Request payout</p></div>
+                  <div className="text-start"><p className="font-semibold">{t('quickActions.earnings')}</p><p className="text-xs font-normal text-muted-foreground">{t('quickActions.earningsHint')}</p></div>
                 </Button>
                 <Button variant="outline" className="h-auto justify-start gap-3 py-3" onClick={() => navigate('/dashboard/cash/deposits')}>
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-500/15 text-gold-700 dark:text-gold-400"><Banknote className="w-4 h-4" /></span>
-                  <div className="text-left"><p className="font-semibold">COD Cash</p><p className="text-xs font-normal text-muted-foreground">Deposits</p></div>
+                  <div className="text-start"><p className="font-semibold">{t('quickActions.codCash')}</p><p className="text-xs font-normal text-muted-foreground">{t('quickActions.codCashHint')}</p></div>
                 </Button>
               </div>
             </CardContent>
@@ -277,27 +279,39 @@ export function Overview() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-gold-700 dark:text-gold-400">
                   <AlertCircle className="w-5 h-5" />
-                  Attention Needed
+                  {t('attention.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {declaredCount > 0 && (
-                    <button onClick={() => navigate('/dashboard/cash/deposits')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-left transition-colors hover:bg-background dark:bg-background/40">
-                      <span className="text-sm font-medium">{declaredCount} cash declaration{declaredCount === 1 ? '' : 's'} to answer</span>
-                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">2-day SLA</Badge>
+                    <button onClick={() => navigate('/dashboard/cash/deposits')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-start transition-colors hover:bg-background dark:bg-background/40">
+                      <span className="text-sm font-medium">
+                        {t('attention.cashDeclarations', { count: declaredCount })}
+                      </span>
+                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">
+                        {t('attention.cashDeclarationsBadge')}
+                      </Badge>
                     </button>
                   )}
                   {activeCount > 0 && (
-                    <button onClick={() => navigate('/dashboard/shipments')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-left transition-colors hover:bg-background dark:bg-background/40">
-                      <span className="text-sm font-medium">{activeCount} shipment{activeCount === 1 ? '' : 's'} need action</span>
-                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">Shipments</Badge>
+                    <button onClick={() => navigate('/dashboard/shipments')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-start transition-colors hover:bg-background dark:bg-background/40">
+                      <span className="text-sm font-medium">
+                        {t('attention.shipments', { count: activeCount })}
+                      </span>
+                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">
+                        {t('attention.shipmentsBadge')}
+                      </Badge>
                     </button>
                   )}
                   {pendingActionCount > 0 && (
-                    <button onClick={() => navigate('/dashboard/vendors/connections')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-left transition-colors hover:bg-background dark:bg-background/40">
-                      <span className="text-sm font-medium">{pendingActionCount} vendor connection request{pendingActionCount === 1 ? '' : 's'}</span>
-                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">Vendors</Badge>
+                    <button onClick={() => navigate('/dashboard/vendors/connections')} className="flex w-full items-center justify-between rounded-lg bg-background/70 p-2.5 text-start transition-colors hover:bg-background dark:bg-background/40">
+                      <span className="text-sm font-medium">
+                        {t('attention.vendorRequests', { count: pendingActionCount })}
+                      </span>
+                      <Badge variant="outline" className="border-gold-400/60 text-gold-700 dark:text-gold-400">
+                        {t('attention.vendorRequestsBadge')}
+                      </Badge>
                     </button>
                   )}
                 </div>

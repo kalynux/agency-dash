@@ -1,4 +1,5 @@
 import { useState, type ElementType, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 /**
@@ -48,10 +50,14 @@ export interface SearchFilterBarProps {
   filterDescription?: string;
   /** Rendered on the sheet's dismiss button ("Show 24 results") when provided. */
   resultCount?: number;
-  /** What `resultCount` counts, singular ("shipment" → "Show 3 shipments"). */
-  resultNoun?: string;
-  /** Plural of `resultNoun` when adding an "s" doesn't work ("discrepancies"). */
-  resultNounPlural?: string;
+  /**
+   * Translation key for what `resultCount` counts, e.g.
+   * `common:nouns.shipment`. Resolved here with `{ count: resultCount }` so
+   * plural selection happens in the one place that knows the number — a
+   * caller-built string can't serve a language with more than two plural forms.
+   * Defaults to the generic "result".
+   */
+  resultNounKey?: string;
   /** Inline controls after the filter button — a view-mode toggle, a refresh, … */
   trailing?: ReactNode;
   /** A line of help under the row (e.g. a minimum-characters hint). */
@@ -64,22 +70,25 @@ export interface SearchFilterBarProps {
 export function SearchFilterBar({
   value,
   onChange,
-  placeholder = 'Search…',
+  placeholder,
   children,
   activeCount = 0,
   onReset,
-  filterTitle = 'Filters',
+  filterTitle,
   filterDescription,
   resultCount,
-  resultNoun = 'result',
-  resultNounPlural,
+  resultNounKey,
   trailing,
   hint,
   className,
   searchLabel,
 }: SearchFilterBarProps) {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
   const hasFilters = Boolean(children);
+
+  const searchPlaceholder = placeholder ?? t('filters.searchPlaceholder');
+  const title = filterTitle ?? t('filters.title');
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -90,15 +99,15 @@ export function SearchFilterBar({
             type="search"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            aria-label={searchLabel ?? placeholder}
+            placeholder={searchPlaceholder}
+            aria-label={searchLabel ?? searchPlaceholder}
             className="h-11 rounded-xl pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"
           />
           {value && (
             <button
               type="button"
               onClick={() => onChange('')}
-              aria-label="Clear search"
+              aria-label={t('filters.clearSearch')}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -111,7 +120,11 @@ export function SearchFilterBar({
             type="button"
             variant="outline"
             onClick={() => setOpen(true)}
-            aria-label={activeCount > 0 ? `Filters (${activeCount} active)` : 'Filters'}
+            aria-label={
+              activeCount > 0
+                ? t('filters.openWithCount', { count: activeCount })
+                : t('filters.open')
+            }
             aria-expanded={open}
             className={cn(
               'relative h-11 w-11 flex-shrink-0 rounded-xl p-0',
@@ -137,9 +150,9 @@ export function SearchFilterBar({
           <DrawerContent className="mx-auto max-w-2xl rounded-t-2xl">
             {/* `DrawerContent` already draws the grab handle above this row. */}
             <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-2">
-              <div className="min-w-0 text-left">
+              <div className="min-w-0 text-start">
                 <DrawerTitle className="flex items-center gap-2 text-base">
-                  {filterTitle}
+                  {title}
                   {activeCount > 0 && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                       {activeCount}
@@ -147,7 +160,7 @@ export function SearchFilterBar({
                   )}
                 </DrawerTitle>
                 <DrawerDescription className={cn('mt-0.5 text-xs', !filterDescription && 'sr-only')}>
-                  {filterDescription ?? 'Narrow this list down.'}
+                  {filterDescription ?? t('filters.description')}
                 </DrawerDescription>
               </div>
               <div className="flex flex-shrink-0 items-center gap-1">
@@ -161,7 +174,7 @@ export function SearchFilterBar({
                     className="h-8 gap-1.5 text-muted-foreground disabled:opacity-40"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    Reset
+                    {t('filters.reset')}
                   </Button>
                 )}
                 <Button
@@ -169,7 +182,7 @@ export function SearchFilterBar({
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => setOpen(false)}
-                  aria-label="Close filters"
+                  aria-label={t('filters.close')}
                   className="text-muted-foreground"
                 >
                   <X className="h-4 w-4" />
@@ -184,10 +197,13 @@ export function SearchFilterBar({
             <div className="border-t bg-background px-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-3.5">
               <Button type="button" className="h-11 w-full rounded-xl" onClick={() => setOpen(false)}>
                 {typeof resultCount === 'number'
-                  ? `Show ${resultCount} ${
-                      resultCount === 1 ? resultNoun : resultNounPlural ?? `${resultNoun}s`
-                    }`
-                  : 'Show results'}
+                  ? t('filters.showResults', {
+                      count: resultCount,
+                      noun: resultNounKey
+                        ? tx(t, resultNounKey, { count: resultCount })
+                        : t('filters.resultNoun', { count: resultCount }),
+                    })
+                  : t('filters.showResults')}
               </Button>
             </div>
           </DrawerContent>

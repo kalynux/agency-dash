@@ -17,6 +17,10 @@ import type {
   ContractStatusRequestsResponse,
   ContractStatusRequestResponse,
   ContractStatusRequestDecision,
+  NegotiableTermsPayload,
+  TermsProposalListResponse,
+  TermsProposalResponse,
+  TermsProposalResolveResponse,
 } from '@/types/agent.types';
 
 function buildQueryString(params: Record<string, unknown>): string {
@@ -44,14 +48,28 @@ export const agentsService = {
       `/agency/agents/browse${buildQueryString(params as Record<string, unknown>)}`,
     );
   },
-  /** POST /agency/agents/requests — ask a specific agent to contract. Lands `pending`; the AGENT accepts. */
-  requestAgent(agentId: string): Promise<MembershipMutationResponse> {
-    return api.post<MembershipMutationResponse>('/agency/agents/requests', { agentId });
+  /**
+   * POST /agency/agents/requests — ask a specific agent to contract **on stated
+   * terms**. Lands `pending`; the agent accepts, rejects, or counters.
+   *
+   * `terms` is required and must carry a `fee_split`: an offer with no numbers
+   * in it would land the agent on the schema default, whose null
+   * `agent_share_percent` pays them zero, so a bare `{ agentId }` is a 400.
+   *
+   * The agent's relationship cap and COD headroom are **not** checked here — a
+   * request may always be raised, and it is approval that binds.
+   */
+  requestAgent(agentId: string, terms: NegotiableTermsPayload): Promise<MembershipMutationResponse> {
+    return api.post<MembershipMutationResponse>('/agency/agents/requests', { agentId, terms });
   },
   /**
-   * POST /agency/agents/:membershipId/withdraw — pull back a request **you** raised.
-   * Refusing an agent's application is `reject`; the server enforces which
-   * applies from `initiatedBy`, so offering the wrong one is a 403.
+   * POST /agency/agents/:membershipId/withdraw — pull back the offer **we** have
+   * standing, while the contract is still pending.
+   *
+   * Not interchangeable with `reject`: the server picks the valid verb from
+   * whose terms are standing (`awaitingDecisionFrom`), and the wrong one is a
+   * 403. Withdrawing is terminal — requesting the same agent again creates a new
+   * contract rather than reviving this row.
    */
   withdraw(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(
@@ -78,11 +96,19 @@ export const agentsService = {
   getMembership(membershipId: string): Promise<AgentMembershipResponse> {
     return api.get<AgentMembershipResponse>(`/agency/agents/${membershipId}`);
   },
-  /** POST /agency/agents/:membershipId/approve — approve a join request the AGENT raised. */
+  /**
+   * POST /agency/agents/:membershipId/approve — accept the terms the AGENT has
+   * standing. `pending` → `active`.
+   *
+   * Only callable when `awaitingDecisionFrom` is `agency`. Approving a contract
+   * nobody has proposed terms for is `422 CONTRACT_TERMS_NOT_PROPOSED` — render
+   * that as "waiting on terms", not as a fault with the agent's account: the
+   * guard order is terms → platform gates → COD pool.
+   */
   approve(membershipId: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/approve`);
   },
-  /** POST /agency/agents/:membershipId/reject — refuse a join request the AGENT raised. */
+  /** POST /agency/agents/:membershipId/reject — refuse the terms the AGENT has standing. */
   reject(membershipId: string, reason?: string): Promise<MembershipMutationResponse> {
     return api.post<MembershipMutationResponse>(
       `/agency/agents/${membershipId}/reject`,
@@ -125,9 +151,13 @@ export const agentsService = {
     );
   },
   /**
-   * PATCH /agency/agents/:membershipId/employment — update employment terms.
-   * A thin alias for the `employment` group of `/terms`, kept because it predates
-   * it; new code should prefer {@link updateTerms}.
+   * PATCH /agency/agents/:membershipId/employment — the agency's own HR record
+   * about this agent: type, staff reference, start and end dates.
+   *
+   * **Unilateral at any status**, and per contract — the same person can be your
+   * employee and another agency's freelancer. This is the only route that still
+   * works on a live contract, which is why employment is written here rather
+   * than through the terms endpoints even though `/terms` also reaches it.
    */
   updateEmployment(membershipId: string, payload: UpdateEmploymentPayload): Promise<AgentMembershipResponse> {
     return api.patch<AgentMembershipResponse>(`/agency/agents/${membershipId}/employment`, payload);
@@ -136,9 +166,124 @@ export const agentsService = {
    * PATCH /agency/agents/:membershipId/terms — the negotiated contract: fee split,
    * remittance cadence, coverage, per-shipment value ceiling. Groups are merged
    * field-by-field, so send only what changed.
+   *
+   * ⚠️ **Pending contracts only.** On a live one this is `409
+   * CONTRACT_TERMS_LIVE_EDIT_NOT_ALLOWED` — its agreed split is pricing
+   * deliveries right now, so a change must be staged through
+   * {@link proposeTerms} instead. On a pending contract it is identical to
+   * {@link counterTerms}, which is the clearer name for what it does; prefer
+   * that one and keep this for the `employment` group.
    */
   updateTerms(membershipId: string, payload: UpdateTermsPayload): Promise<AgentMembershipResponse> {
     return api.patch<AgentMembershipResponse>(`/agency/agents/${membershipId}/terms`, payload);
+  },
+
+  // ── Terms negotiation ────────────────────────────────────────────────────────
+  /**
+   * POST /agency/agents/:membershipId/counter — write the terms standing on a
+   * **pending** contract.
+   *
+   * A counter when the agent's terms were standing (the ball moves to them), a
+   * revision when ours already were (it stays with them either way). Revising is
+   * allowed on purpose: forcing a withdraw and re-request to fix a mistyped
+   * percentage would destroy the contract row, its history and the agent's
+   * notification thread over a figure nobody had answered. `termsVersion` bumps
+   * in both cases, which is how a stale client notices.
+   */
+  counterTerms(
+    membershipId: string,
+    terms: NegotiableTermsPayload,
+  ): Promise<MembershipMutationResponse> {
+    return api.post<MembershipMutationResponse>(`/agency/agents/${membershipId}/counter`, terms);
+  },
+  /**
+   * POST /agency/agents/:membershipId/terms-proposals — propose a change to a
+   * **live** contract (`active`, `paused` or `suspended`).
+   *
+   * The contract is **not modified**: it goes on pricing deliveries by its
+   * agreed `fee_split` until the agent accepts, and a rejected or unanswered
+   * proposal changes nothing. At most one may be open per contract (enforced by
+   * a unique index) — counter the open one to keep the chain, or cancel it.
+   */
+  proposeTerms(
+    membershipId: string,
+    terms: NegotiableTermsPayload,
+    note?: string,
+  ): Promise<TermsProposalResponse> {
+    return api.post<TermsProposalResponse>(`/agency/agents/${membershipId}/terms-proposals`, {
+      terms,
+      ...(note ? { note } : {}),
+    });
+  },
+  /**
+   * GET /agency/agents/:membershipId/terms-proposals — that contract's full
+   * negotiation trail, newest first, resolved rows included. `supersedesId`
+   * reconstructs a counter chain; each row's `termsBefore` is the snapshot taken
+   * when it was raised, so an old row still shows what was on the table then.
+   */
+  listContractTermsProposals(membershipId: string): Promise<TermsProposalListResponse> {
+    return api.get<TermsProposalListResponse>(`/agency/agents/${membershipId}/terms-proposals`);
+  },
+  /**
+   * GET /agency/agents/terms-proposals — every **open** proposal across the
+   * roster, in both directions.
+   *
+   * Ours come back too, and must: this is the only place a client learns the id
+   * of a proposal it raised itself, which is what `/cancel` needs. Read
+   * `awaitingMyDecision` to tell them apart — it is also the correct badge
+   * predicate, since counting rows over-counts by our own.
+   */
+  listOpenTermsProposals(): Promise<TermsProposalListResponse> {
+    return api.get<TermsProposalListResponse>('/agency/agents/terms-proposals');
+  },
+  /**
+   * POST /agency/agents/terms-proposals/:proposalId/resolve — answer a proposal
+   * the AGENT raised.
+   *
+   * On approve the terms land on the contract inside the same transaction that
+   * marks the proposal accepted, and coherence is re-checked against the
+   * contract's *current* split rather than `termsBefore` (the two can diverge
+   * while a proposal sits). On reject the contract is untouched.
+   */
+  resolveTermsProposal(
+    proposalId: string,
+    decision: ContractStatusRequestDecision,
+    note?: string,
+  ): Promise<TermsProposalResolveResponse> {
+    return api.post<TermsProposalResolveResponse>(
+      `/agency/agents/terms-proposals/${proposalId}/resolve`,
+      { decision, ...(note ? { note } : {}) },
+    );
+  },
+  /**
+   * POST /agency/agents/terms-proposals/:proposalId/cancel — pull back a
+   * proposal **we** raised. The contract is untouched — a withdrawn proposal
+   * never applied anything — and it frees the one-open-proposal slot.
+   */
+  cancelTermsProposal(proposalId: string, note?: string): Promise<TermsProposalResponse> {
+    return api.post<TermsProposalResponse>(
+      `/agency/agents/terms-proposals/${proposalId}/cancel`,
+      note ? { note } : undefined,
+    );
+  },
+  /**
+   * POST /agency/agents/terms-proposals/:proposalId/counter — supersede the
+   * agent's open proposal with ours, in one transaction.
+   *
+   * Distinct from resolving with `reject`: a rejection ends the negotiation, a
+   * counter keeps it alive and records the chain — the old row becomes
+   * `superseded` (not `rejected`, which would be a lie) and the new one carries
+   * `supersedesId` back to it.
+   */
+  counterTermsProposal(
+    proposalId: string,
+    terms: NegotiableTermsPayload,
+    note?: string,
+  ): Promise<TermsProposalResponse> {
+    return api.post<TermsProposalResponse>(
+      `/agency/agents/terms-proposals/${proposalId}/counter`,
+      { terms, ...(note ? { note } : {}) },
+    );
   },
   /** PATCH /agency/agents/:membershipId/cod-limit — set this contract's COD threshold slice. */
   updateCodLimit(membershipId: string, threshold: number): Promise<CodLimitResponse> {

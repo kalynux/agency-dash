@@ -1,5 +1,6 @@
 import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Loader2, Lock, Pencil, X, Check, CircleSlash, Info, XCircle, ShieldAlert,
 } from 'lucide-react';
@@ -28,10 +29,10 @@ import { NotesThread } from './NotesThread';
 import { AttachmentsPanel } from './AttachmentsPanel';
 import { ActorAvatar } from './ActorAvatar';
 import {
-  STATUS_LABELS, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, TICKET_STATUSES,
-  PRIORITY_LABELS, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
-  IMPORTANCE_LABELS, IMPORTANCE_BADGE_CLASSES, WAITING_STATUS_ROLE,
-  TICKET_TYPE_LABELS, ENTITY_ICONS, roleLabel, getTypeVisual, shortTicketRef, relativeTime,
+  statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, TICKET_STATUSES,
+  priorityLabel, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
+  importanceLabel, IMPORTANCE_BADGE_CLASSES, WAITING_STATUS_ROLE,
+  ticketTypeLabel, ENTITY_ICONS, roleLabel, getTypeVisual, shortTicketRef, relativeTime,
   responsiveSheetProps, DESCRIPTION_MAX_LENGTH,
 } from './ticket.constants';
 import type {
@@ -49,6 +50,7 @@ function formatDate(iso: string): string {
 }
 
 export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketDetailSheetProps) {
+  const { t } = useTranslation(['tickets', 'common']);
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     const res = await run(
       'edit',
       () => ticketsService.update(ticket._id, { subject: draftSubject, description: draftDescription }),
-      { success: 'Ticket updated.' },
+      { success: t('detail.toasts.updated') },
     );
     if (res) {
       applyUpdate(res.data);
@@ -109,7 +111,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
   async function changeStatus(status: TicketStatus) {
     if (!ticket || status === ticket.status) return;
     const res = await run('status', () => ticketsService.updateStatus(ticket._id, status), {
-      success: 'Status updated.',
+      success: t('detail.toasts.statusUpdated'),
     });
     if (res) applyUpdate(res.data);
   }
@@ -117,7 +119,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
   async function changePriority(priority: TicketPriority) {
     if (!ticket || priority === ticket.priority) return;
     const res = await run('priority', () => ticketsService.updatePriority(ticket._id, priority), {
-      success: 'Priority updated.',
+      success: t('detail.toasts.priorityUpdated'),
     });
     if (res) applyUpdate(res.data);
   }
@@ -125,14 +127,16 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
   async function escalate() {
     if (!ticket) return;
     const res = await run('escalate', () => ticketsService.assign(ticket._id, 'admin'), {
-      success: 'Escalated to support.',
+      success: t('detail.toasts.escalated'),
     });
     if (res) applyUpdate(res.data);
   }
 
   async function handleClose() {
     if (!ticket) return;
-    const res = await run('close', () => ticketsService.close(ticket._id), { success: 'Ticket closed.' });
+    const res = await run('close', () => ticketsService.close(ticket._id), {
+      success: t('detail.toasts.closed'),
+    });
     if (res) {
       applyUpdate(res.data);
       setConfirmCloseOpen(false);
@@ -172,15 +176,15 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
               <SheetTitle className="text-lg leading-snug">{ticket.subject}</SheetTitle>
             </>
           ) : (
-            <SheetTitle>{loading ? 'Loading ticket…' : 'Ticket'}</SheetTitle>
+            <SheetTitle>{loading ? t('detail.loading') : t('detail.fallbackTitle')}</SheetTitle>
           )}
 
           {ticket && !isClosed && (
             <button
               type="button"
               onClick={() => setEditing((e) => !e)}
-              className="absolute right-12 top-4 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-70 transition hover:bg-accent hover:opacity-100"
-              aria-label="Edit ticket"
+              className="absolute end-12 top-4 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-70 transition hover:bg-accent hover:opacity-100"
+              aria-label={t('detail.edit')}
             >
               <Pencil className="h-4 w-4" />
             </button>
@@ -194,18 +198,20 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <XCircle className="h-8 w-8 text-destructive" />
               <p className="text-sm text-muted-foreground">{error}</p>
-              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
+              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                {t('common:actions.close')}
+              </Button>
             </div>
           ) : ticket ? (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               {/* Main column */}
               <div className="space-y-6 lg:col-span-2">
                 <section className="space-y-2">
-                  <h3 className="text-sm font-semibold">Description</h3>
+                  <h3 className="text-sm font-semibold">{t('detail.description')}</h3>
                   {editing ? (
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="edit-subject">Subject</Label>
+                        <Label htmlFor="edit-subject">{t('detail.subject')}</Label>
                         <Input
                           id="edit-subject"
                           value={draftSubject}
@@ -213,7 +219,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="edit-description">Description</Label>
+                        <Label htmlFor="edit-description">{t('detail.description')}</Label>
                         <Textarea
                           id="edit-description"
                           rows={6}
@@ -221,8 +227,11 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                           value={draftDescription}
                           onChange={(e) => setDraftDescription(e.target.value)}
                         />
-                        <p className="text-right text-xs tabular-nums text-muted-foreground">
-                          {draftDescription.length}/{DESCRIPTION_MAX_LENGTH}
+                        <p className="text-end text-xs tabular-nums text-muted-foreground">
+                          {t('detail.charCount', {
+                            current: draftDescription.length,
+                            max: DESCRIPTION_MAX_LENGTH,
+                          })}
                         </p>
                       </div>
                       <div className="flex justify-end gap-2">
@@ -236,11 +245,11 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                             setDraftDescription(ticket.description);
                           }}
                         >
-                          <X className="mr-2 h-3.5 w-3.5" /> Cancel
+                          <X className="me-2 h-3.5 w-3.5" /> {t('common:actions.cancel')}
                         </Button>
                         <Button size="sm" onClick={saveEdit} disabled={pendingKey === 'edit'}>
-                          {pendingKey === 'edit' ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-2 h-3.5 w-3.5" />}
-                          Save
+                          {pendingKey === 'edit' ? <Loader2 className="me-2 h-3.5 w-3.5 animate-spin" /> : <Check className="me-2 h-3.5 w-3.5" />}
+                          {t('common:actions.save')}
                         </Button>
                       </div>
                     </div>
@@ -260,7 +269,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
               <aside className="space-y-6 lg:col-span-1">
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-1 lg:gap-6">
                   {/* Status control */}
-                  <SidebarSection label="Status">
+                  <SidebarSection label={t('detail.status')}>
                     <Select
                       value={ticket.status}
                       onValueChange={(v) => {
@@ -278,8 +287,10 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                           const blocked = !!role && role !== 'admin' && role !== 'agency' && !participantRoles.has(role);
                           return (
                             <SelectItem key={s} value={s} disabled={blocked}>
-                              {STATUS_LABELS[s]}
-                              {blocked && <span className="text-muted-foreground"> · no participant</span>}
+                              {statusLabel(s)}
+                              {blocked && (
+                                <span className="text-muted-foreground"> · {t('detail.noParticipant')}</span>
+                              )}
                             </SelectItem>
                           );
                         })}
@@ -288,13 +299,17 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                   </SidebarSection>
 
                   {/* Priority control */}
-                  <SidebarSection label="Priority">
+                  <SidebarSection label={t('detail.priority')}>
                     {ticket.priority_locked ? (
                       <div className="space-y-1.5">
-                        <PriorityPill priority={ticket.priority} locked lockedLabel="Locked" />
+                        <PriorityPill
+                          priority={ticket.priority}
+                          locked
+                          lockedLabel={t('detail.priorityLocked')}
+                        />
                         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
                           <Info className="mt-0.5 h-3 w-3 shrink-0" />
-                          Support set this priority; it can no longer be changed.
+                          {t('detail.priorityLockedHint')}
                         </p>
                       </div>
                     ) : (
@@ -304,11 +319,11 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                         disabled={pendingKey === 'priority' || isClosed}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder={PRIORITY_LABELS[ticket.priority]} />
+                          <SelectValue placeholder={priorityLabel(ticket.priority)} />
                         </SelectTrigger>
                         <SelectContent>
                           {TICKET_PRIORITIES.map((p) => (
-                            <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
+                            <SelectItem key={p} value={p}>{priorityLabel(p)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -317,36 +332,38 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                 </div>
 
                 <div className="space-y-3 border-t pt-4">
-                  <InfoRow label="Type">
+                  <InfoRow label={t('detail.type')}>
                     <span className="inline-flex items-center gap-1.5">
                       {TypeIcon && <TypeIcon className="h-3.5 w-3.5 text-muted-foreground" />}
-                      {TICKET_TYPE_LABELS[ticket.type] ?? ticket.type}
+                      {ticketTypeLabel(ticket.type)}
                     </span>
                   </InfoRow>
-                  <InfoRow label="Importance">
+                  <InfoRow label={t('detail.importance')}>
                     <Badge className={cn('border-0', IMPORTANCE_BADGE_CLASSES[ticket.importance as TicketImportance])}>
-                      {IMPORTANCE_LABELS[ticket.importance as TicketImportance]}
+                      {importanceLabel(ticket.importance)}
                     </Badge>
                   </InfoRow>
-                  <InfoRow label="Related to">
+                  <InfoRow label={t('detail.relatedTo')}>
                     {ticket.entity ? (
                       <Badge variant="outline" className="max-w-full gap-1">
                         {EntityIcon && <EntityIcon className="h-3 w-3 shrink-0" />}
                         <span className="truncate">{ticket.entity.label}</span>
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">{ticket.entity_id || '—'}</span>
+                      <span className="text-muted-foreground">
+                        {ticket.entity_id || t('common:values.notAvailable')}
+                      </span>
                     )}
                   </InfoRow>
                   {ticket.tracking_number && (
-                    <InfoRow label="Tracking">
+                    <InfoRow label={t('detail.tracking')}>
                       <span className="font-mono text-xs">{ticket.tracking_number}</span>
                     </InfoRow>
                   )}
                 </div>
 
                 {/* Assigned to + escalate */}
-                <SidebarSection label="Assigned to" className="border-t pt-4">
+                <SidebarSection label={t('detail.assignedTo')} className="border-t pt-4">
                   {assignee ? (
                     <div className="flex items-center gap-2.5">
                       <ActorAvatar actor={assignee} />
@@ -356,7 +373,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Unassigned</p>
+                    <p className="text-sm text-muted-foreground">{t('detail.unassigned')}</p>
                   )}
                   {!isClosed && (
                     <Button
@@ -367,16 +384,16 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                       onClick={escalate}
                     >
                       {pendingKey === 'escalate' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-                      Escalate to support
+                      {t('detail.escalate')}
                     </Button>
                   )}
                 </SidebarSection>
 
                 {/* Followers */}
-                <SidebarSection label="Followers" className="border-t pt-4">
+                <SidebarSection label={t('detail.followers')} className="border-t pt-4">
                   <ul className="space-y-2">
                     {followers.length === 0 ? (
-                      <li className="text-sm text-muted-foreground">No followers yet.</li>
+                      <li className="text-sm text-muted-foreground">{t('detail.noFollowers')}</li>
                     ) : (
                       followers.map((f) => (
                         <li key={f.user_id} className="flex items-center gap-2.5">
@@ -393,9 +410,9 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
                 {/* Timeline meta */}
                 <dl className="space-y-2 border-t pt-4 text-sm">
-                  <MetaLine label="Created" value={formatDate(ticket.createdAt)} />
-                  <MetaLine label="Last updated" value={relativeTime(ticket.updatedAt)} />
-                  <MetaLine label="Ticket ID" value={shortTicketRef(ticket._id)} mono />
+                  <MetaLine label={t('detail.created')} value={formatDate(ticket.createdAt)} />
+                  <MetaLine label={t('detail.lastUpdated')} value={relativeTime(ticket.updatedAt)} />
+                  <MetaLine label={t('detail.ticketId')} value={shortTicketRef(ticket._id)} mono />
                 </dl>
               </aside>
             </div>
@@ -410,8 +427,8 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
               onClick={() => setConfirmCloseOpen(true)}
               disabled={pendingKey === 'close'}
             >
-              <CircleSlash className="mr-2 h-4 w-4" />
-              Close ticket
+              <CircleSlash className="me-2 h-4 w-4" />
+              {t('detail.closeTicket')}
             </Button>
           </SheetFooter>
         )}
@@ -420,22 +437,18 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
       <AlertDialog open={confirmCloseOpen} onOpenChange={(o) => pendingKey !== 'close' && setConfirmCloseOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Close this ticket?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Closing the ticket marks it as resolved. You won't be able to change its
-              priority or add new messages or attachments afterwards. Reopening is handled
-              by support.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('detail.confirmCloseTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('detail.confirmCloseDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pendingKey === 'close'}>Keep open</AlertDialogCancel>
+            <AlertDialogCancel disabled={pendingKey === 'close'}>{t('detail.keepOpen')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); handleClose(); }}
               disabled={pendingKey === 'close'}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {pendingKey === 'close' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CircleSlash className="mr-2 h-4 w-4" />}
-              Close ticket
+              {pendingKey === 'close' ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <CircleSlash className="me-2 h-4 w-4" />}
+              {t('detail.closeTicket')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -450,7 +463,7 @@ function StatusPill({ status }: { status: TicketStatus }) {
   return (
     <Badge className={cn('gap-1.5 border-0 font-medium', STATUS_BADGE_CLASSES[status])}>
       <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASSES[status])} />
-      {STATUS_LABELS[status]}
+      {statusLabel(status)}
     </Badge>
   );
 }
@@ -461,7 +474,7 @@ function PriorityPill({
   return (
     <Badge className={cn('gap-1.5 border-0 font-medium', PRIORITY_BADGE_CLASSES[priority])}>
       <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_CLASSES[priority])} />
-      {PRIORITY_LABELS[priority]}
+      {priorityLabel(priority)}
       {locked && <Lock className="h-3 w-3" />}
       {locked && lockedLabel && <span className="text-[10px] font-normal opacity-80">{lockedLabel}</span>}
     </Badge>
@@ -483,7 +496,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right font-medium">{children}</span>
+      <span className="min-w-0 text-end font-medium">{children}</span>
     </div>
   );
 }
@@ -492,7 +505,7 @@ function MetaLine({ label, value, mono }: { label: string; value: string; mono?:
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={cn('text-right', mono && 'font-mono text-xs')}>{value}</dd>
+      <dd className={cn('text-end', mono && 'font-mono text-xs')}>{value}</dd>
     </div>
   );
 }

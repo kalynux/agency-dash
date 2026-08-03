@@ -32,12 +32,18 @@ import {
  *
  * Every menu and submenu is a real route (absolute `/dashboard/...` path).
  * Consumed by the desktop Sidebar, MobileTabBar and MobileMoreDrawer.
+ *
+ * Labels are translation keys, not copy — this table is module-scope data
+ * evaluated once at import, so it cannot hold a translated string (it would
+ * freeze in whatever language was active at boot). Consumers resolve it at
+ * render with `tx(t, item.labelKey)`.
  */
 
 export type NavBadge = 'shipments' | 'notifications' | 'vendorConnections' | 'agentContracts';
 
 export interface NavChild {
-  name: string;
+  /** `nav:` namespace key, resolved at render. */
+  labelKey: string;
   icon: LucideIcon;
   path: string;
   badge?: NavBadge;
@@ -45,7 +51,8 @@ export interface NavChild {
 }
 
 export interface NavItem {
-  name: string;
+  /** `nav:` namespace key, resolved at render. */
+  labelKey: string;
   icon: LucideIcon;
   /** Absolute route. For a parent with children this is its default child route. */
   path: string;
@@ -57,42 +64,42 @@ export interface NavItem {
 // ─── Top group (scrolls) ──────────────────────────────────────────────────────
 
 export const PRIMARY_NAV: NavItem[] = [
-  { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
-  { name: 'Live Tracking', path: '/dashboard/tracking', icon: Radio },
-  { name: 'Media', path: '/dashboard/media', icon: Image },
-  { name: 'Transactions', path: '/dashboard/transactions', icon: Receipt },
+  { labelKey: 'nav:primary.overview', path: '/dashboard', icon: LayoutDashboard },
+  { labelKey: 'nav:primary.shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
+  { labelKey: 'nav:primary.tracking', path: '/dashboard/tracking', icon: Radio },
+  { labelKey: 'nav:primary.media', path: '/dashboard/media', icon: Image },
+  { labelKey: 'nav:primary.transactions', path: '/dashboard/transactions', icon: Receipt },
   {
-    name: 'Cash Management',
+    labelKey: 'nav:primary.cash',
     path: '/dashboard/cash',
     icon: Banknote,
     children: [
-      { name: 'Summary', path: '/dashboard/cash/summary', icon: Gauge },
-      { name: 'Deposits', path: '/dashboard/cash/deposits', icon: HandCoins },
-      { name: 'Remittances', path: '/dashboard/cash/remittances', icon: Send },
-      { name: 'Discrepancies', path: '/dashboard/cash/discrepancies', icon: AlertTriangle },
+      { labelKey: 'nav:primary.cashSummary', path: '/dashboard/cash/summary', icon: Gauge },
+      { labelKey: 'nav:primary.cashDeposits', path: '/dashboard/cash/deposits', icon: HandCoins },
+      { labelKey: 'nav:primary.cashRemittances', path: '/dashboard/cash/remittances', icon: Send },
+      { labelKey: 'nav:primary.cashDiscrepancies', path: '/dashboard/cash/discrepancies', icon: AlertTriangle },
     ],
   },
-  { name: 'Notifications', path: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
-  { name: 'Tickets', path: '/dashboard/tickets', icon: Ticket },
+  { labelKey: 'nav:primary.notifications', path: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
+  { labelKey: 'nav:primary.tickets', path: '/dashboard/tickets', icon: Ticket },
   {
-    name: 'Agents',
+    labelKey: 'nav:primary.agents',
     path: '/dashboard/agents',
     icon: Users,
     badge: 'agentContracts',
     children: [
-      { name: 'Connections', path: '/dashboard/agents/connections', icon: Handshake },
-      { name: 'Browse', path: '/dashboard/agents/browse', icon: Search },
+      { labelKey: 'nav:primary.agentsConnections', path: '/dashboard/agents/connections', icon: Handshake },
+      { labelKey: 'nav:primary.agentsBrowse', path: '/dashboard/agents/browse', icon: Search },
     ],
   },
   {
-    name: 'Vendors',
+    labelKey: 'nav:primary.vendors',
     path: '/dashboard/vendors',
     icon: Store,
     badge: 'vendorConnections',
     children: [
-      { name: 'Connections', path: '/dashboard/vendors/connections', icon: Handshake },
-      { name: 'Browse', path: '/dashboard/vendors/browse', icon: Search },
+      { labelKey: 'nav:primary.vendorsConnections', path: '/dashboard/vendors/connections', icon: Handshake },
+      { labelKey: 'nav:primary.vendorsBrowse', path: '/dashboard/vendors/browse', icon: Search },
     ],
   },
 ];
@@ -101,26 +108,26 @@ export const PRIMARY_NAV: NavItem[] = [
 
 export const FOOTER_NAV: NavItem[] = [
   {
-    name: 'Account',
+    labelKey: 'nav:footer.account',
     path: '/dashboard/account',
     icon: UserCog,
     children: [
-      { name: 'Profile', path: '/dashboard/account/profile', icon: User },
-      { name: 'Store', path: '/dashboard/account/store', icon: Store },
-      { name: 'Locations', path: '/dashboard/account/locations', icon: MapPin },
-      { name: 'Security', path: '/dashboard/account/security', icon: Shield },
-      { name: 'Billing', path: '/dashboard/account/billing', icon: CreditCard },
-      { name: 'Payout', path: '/dashboard/account/payout', icon: Wallet },
+      { labelKey: 'nav:footer.accountProfile', path: '/dashboard/account/profile', icon: User },
+      { labelKey: 'nav:footer.accountStore', path: '/dashboard/account/store', icon: Store },
+      { labelKey: 'nav:footer.accountLocations', path: '/dashboard/account/locations', icon: MapPin },
+      { labelKey: 'nav:footer.accountSecurity', path: '/dashboard/account/security', icon: Shield },
+      { labelKey: 'nav:footer.accountBilling', path: '/dashboard/account/billing', icon: CreditCard },
+      { labelKey: 'nav:footer.accountPayout', path: '/dashboard/account/payout', icon: Wallet },
     ],
   },
   {
-    name: 'Settings',
+    labelKey: 'nav:footer.settings',
     path: '/dashboard/settings',
     icon: Settings,
     children: [
-      { name: 'Policies', path: '/dashboard/settings/policies', icon: ScrollText },
-      { name: 'Notifications', path: '/dashboard/settings/notifications', icon: Bell },
-      { name: 'Preferences', path: '/dashboard/settings/preferences', icon: SlidersHorizontal },
+      { labelKey: 'nav:footer.settingsPolicies', path: '/dashboard/settings/policies', icon: ScrollText },
+      { labelKey: 'nav:footer.settingsNotifications', path: '/dashboard/settings/notifications', icon: Bell },
+      { labelKey: 'nav:footer.settingsPreferences', path: '/dashboard/settings/preferences', icon: SlidersHorizontal },
     ],
   },
 ];

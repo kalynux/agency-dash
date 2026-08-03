@@ -7,6 +7,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   X,
   Store as StoreIcon,
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { useMagazin } from '@/store/magazin.store';
 import { magazinService } from '@/services/magazin.service';
 import { getApiErrorMessage } from '@/lib/errors';
+import type { AnyTFunction } from '@/i18n/tx';
 import { ApiError } from '@/types/api';
 import type { AgencyMagazin, MagazinUpdatePayload } from '@/types/magazin.types';
 
@@ -118,22 +120,22 @@ function buildPayload(form: FormState, magazin: AgencyMagazin): MagazinUpdatePay
 }
 
 /** Client-side validation mirroring the PATCH /agency/magazin constraints. */
-function validateForm(form: FormState): FieldErrors {
+function validateForm(form: FormState, t: AnyTFunction): FieldErrors {
   const errors: FieldErrors = {};
 
   const name = form.name.trim();
-  if (name.length < 2) errors.name = 'Business name must be at least 2 characters.';
-  else if (name.length > 100) errors.name = 'Business name must be at most 100 characters.';
+  if (name.length < 2) errors.name = t('settings:store.validation.nameMin');
+  else if (name.length > 100) errors.name = t('settings:store.validation.nameMax');
 
   const email = form.supportEmail.trim();
   if (email && !/^\S+@\S+\.\S+$/.test(email)) {
-    errors.supportEmail = 'Enter a valid email address.';
+    errors.supportEmail = t('settings:store.validation.email');
   }
 
   for (const key of ['supportPhone', 'supportWhatsapp'] as const) {
     const value = form[key].trim();
     if (value && (value.length < 8 || value.length > 20)) {
-      errors[key] = 'Must be between 8 and 20 characters.';
+      errors[key] = t('settings:store.validation.phoneLength');
     }
   }
 
@@ -141,6 +143,7 @@ function validateForm(form: FormState): FieldErrors {
 }
 
 export function MagazinSettings() {
+  const { t } = useTranslation(['settings', 'common']);
   // Shared with the app chrome (sidebar identity block) — saving through `setData`
   // updates the business name and logo everywhere without a refetch.
   const { data: magazin, isLoading, error, refetch, setData } = useMagazin();
@@ -180,10 +183,10 @@ export function MagazinSettings() {
   const handleSave = useCallback(async () => {
     if (!magazin || !form) return;
 
-    const errors = validateForm(form);
+    const errors = validateForm(form, t);
     if (Object.values(errors).some(Boolean)) {
       setFieldErrors(errors);
-      setSaveError('Please fix the highlighted fields before saving.');
+      setSaveError(t('common.fixHighlighted'));
       return;
     }
 
@@ -192,11 +195,11 @@ export function MagazinSettings() {
     try {
       const updated = await magazinService.updateMagazin(buildPayload(form, magazin));
       setData(updated);
-      toast.success('Business details updated');
+      toast.success(t('store.saved'));
     } catch (err) {
       if (err instanceof ApiError && err.isConflict) {
         // Optimistic-locking clash — refresh so the agency edits the latest.
-        toast.error('Business details were updated elsewhere. Refreshed — please re-apply your changes.');
+        toast.error(t('store.conflict'));
         await refetch();
       } else {
         setSaveError(getApiErrorMessage(err));
@@ -204,9 +207,9 @@ export function MagazinSettings() {
     } finally {
       setSaving(false);
     }
-  }, [magazin, form, setData, refetch]);
+  }, [magazin, form, setData, refetch, t]);
 
-  if (isLoading && !magazin) return <LoadingState label="Loading business details…" />;
+  if (isLoading && !magazin) return <LoadingState label={t('store.loading')} />;
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
   if (!magazin || !form) return null;
 
@@ -222,7 +225,7 @@ export function MagazinSettings() {
           {/* The logo box itself is the click target — it opens the media library. */}
           <div className="relative shrink-0">
             <MediaPickerTrigger
-              label={form.logo ? 'Change logo' : 'Add logo'}
+              label={form.logo ? t('store.changeLogo') : t('store.addLogo')}
               acceptedTypes={['image']}
               onSelect={(media) => set('logo', media)}
               className="h-20 w-20 rounded-xl border bg-muted shadow-sm"
@@ -230,7 +233,7 @@ export function MagazinSettings() {
               {form.logo ? (
                 <img
                   src={form.logo.url}
-                  alt="Business logo"
+                  alt={t('store.logoAlt')}
                   crossOrigin="use-credentials"
                   className="h-full w-full object-cover"
                 />
@@ -243,7 +246,7 @@ export function MagazinSettings() {
             {form.logo && (
               <button
                 type="button"
-                aria-label="Remove logo"
+                aria-label={t('store.removeLogo')}
                 onClick={() => set('logo', null)}
                 className="absolute -right-1.5 -top-1.5 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
               >
@@ -254,10 +257,8 @@ export function MagazinSettings() {
 
           <div className="min-w-0 flex-1 space-y-1">
             <h2 className="truncate text-xl font-bold leading-tight">{previewName}</h2>
-            <p className="text-sm text-muted-foreground max-md:hidden">
-              Your agency's business identity — the name, logo and contacts vendors and customers see.
-            </p>
-            <p className="text-xs text-muted-foreground">Click the logo to pick one from your media library.</p>
+            <p className="text-sm text-muted-foreground max-md:hidden">{t('store.heroDescription')}</p>
+            <p className="text-xs text-muted-foreground">{t('store.heroHint')}</p>
           </div>
         </CardContent>
       </Card>
@@ -278,15 +279,17 @@ export function MagazinSettings() {
           <Card className={sectionSurfaceClass}>
             <SectionHeading
               icon={StoreIcon}
-              title="Business identity"
-              description="The name and description that represent your agency."
-              short="Name and description"
+              title={t('store.identity.title')}
+              description={t('store.identity.description')}
+              short={t('store.identity.short')}
             />
             <CardContent className="space-y-5 max-md:px-0">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="magazin-name">Business name</Label>
-                  <span className="text-xs tabular-nums text-muted-foreground">{form.name.length}/100</span>
+                  <Label htmlFor="magazin-name">{t('store.identity.name')}</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {t('store.identity.counter', { used: form.name.length, max: 100 })}
+                  </span>
                 </div>
                 <Input
                   id="magazin-name"
@@ -294,21 +297,21 @@ export function MagazinSettings() {
                   maxLength={100}
                   aria-invalid={!!fieldErrors.name}
                   onChange={(e) => set('name', e.target.value)}
-                  placeholder="Your agency's business name"
+                  placeholder={t('store.identity.namePlaceholder')}
                 />
                 <FieldError message={fieldErrors.name} />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="magazin-description">Description</Label>
+                  <Label htmlFor="magazin-description">{t('store.identity.description_')}</Label>
                   <span
                     className={cn(
                       'text-xs tabular-nums text-muted-foreground',
                       form.description.length > 900 && 'text-amber-600 dark:text-amber-500',
                     )}
                   >
-                    {form.description.length}/1000
+                    {t('store.identity.counter', { used: form.description.length, max: 1000 })}
                   </span>
                 </div>
                 <Textarea
@@ -317,7 +320,7 @@ export function MagazinSettings() {
                   maxLength={1000}
                   rows={5}
                   onChange={(e) => set('description', e.target.value)}
-                  placeholder="Tell vendors what your agency does — coverage, strengths, what sets you apart"
+                  placeholder={t('store.identity.descriptionPlaceholder')}
                   className="resize-y"
                 />
               </div>
@@ -328,14 +331,14 @@ export function MagazinSettings() {
           <Card className={sectionSurfaceClass}>
             <SectionHeading
               icon={LifeBuoy}
-              title="Support & contact"
-              description="How vendors and customers reach your agency about deliveries."
-              short="How people reach you"
+              title={t('store.support.title')}
+              description={t('store.support.description')}
+              short={t('store.support.short')}
             />
             <CardContent className="max-md:px-0">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="magazin-email">Support email</Label>
+                  <Label htmlFor="magazin-email">{t('store.support.email')}</Label>
                   <IconInput
                     icon={Mail}
                     id="magazin-email"
@@ -343,12 +346,12 @@ export function MagazinSettings() {
                     value={form.supportEmail}
                     aria-invalid={!!fieldErrors.supportEmail}
                     onChange={(e) => set('supportEmail', e.target.value)}
-                    placeholder="support@youragency.com"
+                    placeholder={t('store.support.emailPlaceholder')}
                   />
                   <FieldError message={fieldErrors.supportEmail} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="magazin-phone">Support phone</Label>
+                  <Label htmlFor="magazin-phone">{t('store.support.phone')}</Label>
                   <IconInput
                     icon={Phone}
                     id="magazin-phone"
@@ -356,12 +359,12 @@ export function MagazinSettings() {
                     maxLength={20}
                     aria-invalid={!!fieldErrors.supportPhone}
                     onChange={(e) => set('supportPhone', e.target.value)}
-                    placeholder="+2376…"
+                    placeholder={t('store.support.phonePlaceholder')}
                   />
                   <FieldError message={fieldErrors.supportPhone} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="magazin-wa">WhatsApp</Label>
+                  <Label htmlFor="magazin-wa">{t('store.support.whatsapp')}</Label>
                   <IconInput
                     icon={MessageCircle}
                     id="magazin-wa"
@@ -369,7 +372,7 @@ export function MagazinSettings() {
                     maxLength={20}
                     aria-invalid={!!fieldErrors.supportWhatsapp}
                     onChange={(e) => set('supportWhatsapp', e.target.value)}
-                    placeholder="+2376…"
+                    placeholder={t('store.support.phonePlaceholder')}
                   />
                   <FieldError message={fieldErrors.supportWhatsapp} />
                 </div>
@@ -382,17 +385,23 @@ export function MagazinSettings() {
         <div className={cn(sectionGroupClass, sectionRuleClass)}>
           {/* Profile vs. Store explainer */}
           <Card className={sectionSurfaceClass}>
-            <SectionHeading icon={Info} title="Business vs. personal" />
+            <SectionHeading icon={Info} title={t('store.explainer.title')} />
             <CardContent className="space-y-3 text-sm text-muted-foreground max-md:px-0">
               <p>
-                This tab is your agency's <span className="font-medium text-foreground">business identity</span> —
-                the public name, logo and support contacts.
+                <Trans
+                  ns="settings"
+                  i18nKey="store.explainer.line1"
+                  components={{ strong: <span className="font-medium text-foreground" /> }}
+                />
               </p>
               <p className="flex items-start gap-2">
                 <UserCog className="mt-0.5 w-4 h-4 shrink-0" />
                 <span>
-                  Your <span className="font-medium text-foreground">personal</span> contact name and avatar live on
-                  the <span className="font-medium text-foreground">Profile</span> tab instead.
+                  <Trans
+                    ns="settings"
+                    i18nKey="store.explainer.line2"
+                    components={{ strong: <span className="font-medium text-foreground" /> }}
+                  />
                 </span>
               </p>
             </CardContent>
@@ -400,13 +409,13 @@ export function MagazinSettings() {
 
           {/* Read-only details */}
           <Card className={sectionSurfaceClass}>
-            <SectionHeading title="Details" description="Fixed properties of your business profile." />
+            <SectionHeading title={t('store.details.title')} description={t('store.details.description')} />
             <CardContent className="space-y-4 max-md:px-0">
-              <DetailRow icon={CalendarDays} label="Last updated">
+              <DetailRow icon={CalendarDays} label={t('store.details.lastUpdated')}>
                 <span className="text-sm">{formatDate(magazin.updatedAt)}</span>
               </DetailRow>
               <Separator />
-              <DetailRow icon={CalendarDays} label="Created">
+              <DetailRow icon={CalendarDays} label={t('store.details.created')}>
                 <span className="text-sm">{formatDate(magazin.createdAt)}</span>
               </DetailRow>
             </CardContent>

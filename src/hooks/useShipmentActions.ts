@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '@/lib/errors';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { shipmentsService } from '@/services/shipments.service';
@@ -20,30 +21,36 @@ export function getShipmentErrorMessage(err: unknown): string {
  * per-action loading key; every action resolves to its typed result or `null`.
  */
 export function useShipmentActions() {
+  const { t } = useTranslation('shipments');
   const { pendingKey, run, isPending } = useActionRunner();
 
+  /**
+   * @param statusLabel the already-translated name of the new status, so the
+   *   toast reads "Shipment marked “In Transit”." — the caller has it from the
+   *   action it just ran, and only the caller knows which label was clicked.
+   */
   const updateStatus = useCallback(
-    (id: string, status: ShipmentActionableStatus, successMessage: string) =>
+    (id: string, status: ShipmentActionableStatus, statusLabel: string) =>
       run(`status:${id}`, async () => (await shipmentsService.updateStatus(id, status)).data, {
-        success: successMessage,
+        success: t('actions.statusChanged', { label: statusLabel }),
       }),
-    [run],
+    [run, t],
   );
 
   const reject = useCallback(
     (id: string, reason: ShipmentRejectionReason, note?: string) =>
       run(`reject:${id}`, async () => (await shipmentsService.reject(id, reason, note)).data, {
-        success: 'Shipment rejected.',
+        success: t('reject.success'),
       }),
-    [run],
+    [run, t],
   );
 
   const assignAgent = useCallback(
     (id: string, agentId: string) =>
       run(`assign:${id}`, async () => (await shipmentsService.assignAgent(id, agentId)).data, {
-        success: 'Offer sent to the agent.',
+        success: t('assignment.offerSent'),
       }),
-    [run],
+    [run, t],
   );
 
   const autoAssign = useCallback(
@@ -51,9 +58,9 @@ export function useShipmentActions() {
       run(`auto:${id}`, async () => (await shipmentsService.autoAssign(id)).data, {
         // A broadcast, not a single offer — the nearest agent is offered now and
         // the rest follow in turn until one accepts.
-        success: 'Searching — offered to the nearest agent first.',
+        success: t('assignment.autoAssignStarted'),
       }),
-    [run],
+    [run, t],
   );
 
   const cancelOffer = useCallback(
@@ -61,17 +68,17 @@ export function useShipmentActions() {
       // Withdraws every live offer on the shipment, not just the newest — an
       // auto-assign broadcast can have several standing at once.
       run(`cancel-offer:${id}`, async () => (await shipmentsService.cancelOffer(id)).data, {
-        success: 'Offers withdrawn — the shipment is back in your queue.',
+        success: t('assignment.offersWithdrawn'),
       }),
-    [run],
+    [run, t],
   );
 
   const reassign = useCallback(
     (id: string, payload: ReassignPayload) =>
       run(`reassign:${id}`, async () => (await shipmentsService.reassign(id, payload)).data, {
-        success: 'Shipment released and offered to the replacement.',
+        success: t('reassignDialog.success'),
       }),
-    [run],
+    [run, t],
   );
 
   // No tracking-number action: the number is generated at shipment creation and

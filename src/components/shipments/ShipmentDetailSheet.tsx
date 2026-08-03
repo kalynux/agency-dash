@@ -1,5 +1,6 @@
 import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Ban, Banknote, Clock, Loader2, Mail, MapPin, Phone, XCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +16,7 @@ import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getApiErrorMessage } from '@/lib/errors';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentActionableStatus, ShipmentDetail } from '@/types/shipment.types';
@@ -36,6 +38,7 @@ export interface ShipmentDetailSheetProps {
  * bottom sheet on mobile — same body, different container.
  */
 export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged }: ShipmentDetailSheetProps) {
+  const { t } = useTranslation(['shipments', 'common']);
   const isMobile = useIsMobile();
   const [detail, setDetail] = useState<ShipmentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,25 +83,25 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const pickupBlocked = detail?.status === 'assigned' && !detail.agentId;
 
   const runStatus = async (status: ShipmentActionableStatus, label: string) => {
-    const result = await actions.updateStatus(detail!.id, status, `Shipment marked “${label}”.`);
+    const result = await actions.updateStatus(detail!.id, status, label);
     if (result) refresh();
   };
   const TitleComp = isMobile ? SheetTitle : DialogTitle;
 
   const body = isLoading ? (
     <>
-      <TitleComp className="sr-only">Shipment details</TitleComp>
+      <TitleComp className="sr-only">{t('detail.srTitle')}</TitleComp>
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-16">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading shipment…
+        <Loader2 className="w-4 h-4 animate-spin" /> {t('detail.loading')}
       </div>
     </>
   ) : loadError ? (
     <>
-      <TitleComp className="sr-only">Shipment details</TitleComp>
+      <TitleComp className="sr-only">{t('detail.srTitle')}</TitleComp>
       <div className="text-center py-16">
         <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
         <Button variant="outline" onClick={() => shipmentId && load(shipmentId)}>
-          Retry
+          {t('common:actions.retry')}
         </Button>
       </div>
     </>
@@ -109,14 +112,14 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           <div>
             <TitleComp className="text-base leading-tight">{detail.orderNumber}</TitleComp>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {detail.items.length} item{detail.items.length === 1 ? '' : 's'}
+              {t('table.itemCount', { count: detail.items.length })}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <ShipmentStatusBadge status={detail.status} />
             {isCod && (
               <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 bg-amber-50">
-                <Banknote className="w-3 h-3" /> Cash on Delivery
+                <Banknote className="w-3 h-3" /> {t('detail.cashOnDelivery')}
               </Badge>
             )}
           </div>
@@ -130,7 +133,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           {/* Items */}
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Items
+              {t('detail.items')}
             </h3>
             <div className="space-y-2">
               {detail.items.map((item) => (
@@ -153,12 +156,20 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                           label with nothing after it, which reads as a missing
                           value on an otherwise fine parcel. */}
                       <p className="text-sm font-medium truncate">
-                        {item.title ?? <span className="italic text-muted-foreground">Unnamed product</span>}
+                        {item.title ?? (
+                          <span className="italic text-muted-foreground">
+                            {t('detail.unnamedProduct')}
+                          </span>
+                        )}
                       </p>
                       {item.variantTitle && (
                         <p className="text-xs text-muted-foreground">{item.variantTitle}</p>
                       )}
-                      {item.sku && <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>}
+                      {item.sku && (
+                        <p className="text-xs text-muted-foreground">
+                          {t('detail.sku', { sku: item.sku })}
+                        </p>
+                      )}
                     </div>
                     <Badge variant="secondary" className="flex-shrink-0">
                       ×{item.quantity}
@@ -171,7 +182,9 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                     <div className="mt-2 pt-2 border-t flex items-start gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                       <span>
-                        {item.pickupLocation.alreadyInYourStorage ? 'In your storage — ' : 'Pick up from '}
+                        {item.pickupLocation.alreadyInYourStorage
+                          ? t('detail.inStorage')
+                          : t('detail.pickUpFrom')}
                         {item.pickupLocation.address.label
                           ? `${item.pickupLocation.address.label}, ${describeAddress(item.pickupLocation.address)}`
                           : describeAddress(item.pickupLocation.address)}
@@ -187,15 +200,15 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           {detail.cod && (
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Cash Collection
+                {t('detail.cashCollection')}
               </h3>
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-amber-900">
                     {formatCurrency(detail.cod.expectedAmount, detail.cod.currency)}
                   </p>
-                  <p className="text-xs text-amber-700 capitalize">
-                    {detail.cod.status}
+                  <p className="text-xs text-amber-700">
+                    {tx(t, `cash:collectionStatus.${detail.cod.status}`)}
                     {detail.cod.collectedAt && ` · ${formatDateTime(detail.cod.collectedAt)}`}
                   </p>
                 </div>
@@ -208,7 +221,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Vendor
+                {t('detail.vendor')}
               </h3>
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                 <p className="text-sm font-medium">{detail.vendor.businessName}</p>
@@ -224,7 +237,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
             </div>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Customer
+                {t('detail.customer')}
               </h3>
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                 <p className="text-sm font-medium">{detail.customer.name}</p>
@@ -239,7 +252,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                   <span>
                     {detail.customer.deliveryAddress.formattedAddress ??
                       describeAddress(detail.customer.deliveryAddress) ??
-                      '—'}
+                      t('common:values.notAvailable')}
                   </span>
                 </p>
               </div>
@@ -254,15 +267,17 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               only changes future shipments. */}
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Tracking Number
+              {t('detail.trackingNumber')}
             </h3>
-            <p className="font-mono text-sm">{detail.trackingNumber ?? '—'}</p>
+            <p className="font-mono text-sm">
+              {detail.trackingNumber ?? t('common:values.notAvailable')}
+            </p>
           </section>
 
           {/* Status history */}
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              History
+              {t('detail.history')}
             </h3>
             <div className="space-y-3">
               {detail.statusHistory.map((entry, i) => (
@@ -282,8 +297,14 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               <p className="text-xs text-destructive mt-2 flex items-start gap-1">
                 <XCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                 <span>
-                  Rejected: {detail.rejection.reason.replace(/_/g, ' ')}
-                  {detail.rejection.note && ` — ${detail.rejection.note}`}
+                  {detail.rejection.note
+                    ? t('detail.rejectedWithNote', {
+                        reason: tx(t, `shipments:reject.reasons.${detail.rejection.reason}`),
+                        note: detail.rejection.note,
+                      })
+                    : t('detail.rejected', {
+                        reason: tx(t, `shipments:reject.reasons.${detail.rejection.reason}`),
+                      })}
                 </span>
               </p>
             )}
@@ -303,13 +324,17 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                 actions.pendingKey === `status:${detail.id}` ||
                 (pickupBlocked && next.status === 'picked_up')
               }
-              title={pickupBlocked && next.status === 'picked_up' ? 'An agent must accept the offer first' : undefined}
-              onClick={() => runStatus(next.status, next.label)}
+              title={
+                pickupBlocked && next.status === 'picked_up'
+                  ? t('actions.needsAcceptedOffer')
+                  : undefined
+              }
+              onClick={() => runStatus(next.status, tx(t, next.labelKey))}
             >
               {actions.pendingKey === `status:${detail.id}` ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                next.label
+                tx(t, next.labelKey)
               )}
             </Button>
           ))}
@@ -319,11 +344,11 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               variant="outline"
               className={cn(
                 'gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive',
-                nextActions.length > 0 && 'ml-auto',
+                nextActions.length > 0 && 'ms-auto',
               )}
               onClick={() => setRejectOpen(true)}
             >
-              <Ban className="w-3.5 h-3.5" /> Reject
+              <Ban className="w-3.5 h-3.5" /> {t('reject.short')}
             </Button>
           )}
         </div>

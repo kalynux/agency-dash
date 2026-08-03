@@ -1,5 +1,6 @@
 import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -13,23 +14,17 @@ import {
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
 import { listSurfaceClass } from '@/components/layout/PageContainer';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
 import type { CodListMeta, CodRemittance, CodRemittanceStatus } from '@/types/cod-cash.types';
 
 const PAGE_LIMIT = 20;
-
-const STATUS_FILTERS: { value: CodRemittanceStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'declared', label: 'Declared' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'rejected', label: 'Rejected' },
-];
 
 function formatDateTime(iso: string): string {
   return fmtDateTime(iso);
 }
 
 export function RemittancesTab() {
+  const { t } = useTranslation(['cash', 'common']);
   const [remittances, setRemittances] = useState<CodRemittance[]>([]);
   const [meta, setMeta] = useState<CodListMeta>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
   const [page, setPage] = useState(1);
@@ -43,6 +38,16 @@ export function RemittancesTab() {
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('remittances.allStatuses') },
+      { value: 'declared' as const, label: t('remittanceStatus.declared') },
+      { value: 'confirmed' as const, label: t('remittanceStatus.confirmed') },
+      { value: 'rejected' as const, label: t('remittanceStatus.rejected') },
+    ],
+    [t],
+  );
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -55,7 +60,7 @@ export function RemittancesTab() {
       setRemittances(data);
       setMeta(m);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Could not load remittance history.');
+      setLoadError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -71,14 +76,14 @@ export function RemittancesTab() {
     setIsSubmitting(true);
     try {
       await codCashService.declareRemittance(amountNum, reference.trim(), note || undefined);
-      toast.success('Remittance declared — awaiting platform confirmation.');
+      toast.success(t('remittances.declared'));
       setAmount('');
       setReference('');
       setNote('');
       setPage(1);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not declare this remittance.');
+      toast.error(getApiErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -96,38 +101,36 @@ export function RemittancesTab() {
     <div className="space-y-6">
       <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
-          <p className="text-sm font-medium">Declare a cash transfer to the platform</p>
+          <p className="text-sm font-medium">{t('remittances.declareTitle')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <Input type="number" min={1} placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Input placeholder="Reference (e.g. bank tx id)" value={reference} onChange={(e) => setReference(e.target.value)} />
-            <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <Input type="number" min={1} placeholder={t('remittances.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input placeholder={t('remittances.referencePlaceholder')} value={reference} onChange={(e) => setReference(e.target.value)} />
+            <Input placeholder={t('remittances.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
             <Button className="gap-2" disabled={!amount || !reference.trim() || isSubmitting} onClick={handleSubmit}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Declare
+              {t('remittances.declare')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            An admin confirms receipt; only then does your liability fall and collections settle (oldest first).
-          </p>
+          <p className="text-xs text-muted-foreground">{t('remittances.declareHint')}</p>
         </CardContent>
       </Card>
 
       <SearchFilterBar
         value={search}
         onChange={setSearch}
-        placeholder="Search remittances…"
-        searchLabel="Search this page by reference or note"
+        placeholder={t('remittances.searchPlaceholder')}
+        searchLabel={t('remittances.searchLabel')}
         activeCount={statusFilter === 'all' ? 0 : 1}
         onReset={() => { setStatusFilter('all'); setPage(1); }}
-        filterDescription="Status filters every remittance; search looks at the page you're on."
+        filterDescription={t('remittances.filterDescription')}
         resultCount={query ? visibleRemittances.length : meta.total}
-        resultNoun="remittance"
+        resultNounKey="common:nouns.remittance"
       >
-        <FilterSection label="Status">
+        <FilterSection label={t('remittances.status')}>
           <FilterOptionGroup
             value={statusFilter}
             onChange={(v) => { setStatusFilter(v); setPage(1); }}
-            options={STATUS_FILTERS}
+            options={statusOptions}
           />
         </FilterSection>
       </SearchFilterBar>
@@ -138,11 +141,11 @@ export function RemittancesTab() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 text-sm font-medium">Reference</th>
-                  <th className="text-left p-4 text-sm font-medium">Amount</th>
-                  <th className="text-left p-4 text-sm font-medium">Status</th>
-                  <th className="text-left p-4 text-sm font-medium">Declared</th>
-                  <th className="text-left p-4 text-sm font-medium">Resolved</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.reference')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.amount')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.status')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.declared')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.resolved')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -151,10 +154,10 @@ export function RemittancesTab() {
                     <tr key={i} className="border-b"><td colSpan={5} className="p-4"><div className="h-10 bg-muted animate-pulse rounded" /></td></tr>
                   ))
                 ) : loadError ? (
-                  <tr><td colSpan={5} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>Retry</Button></td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>{t('common:actions.retry')}</Button></td></tr>
                 ) : visibleRemittances.length === 0 ? (
                   <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
-                    {query ? 'No remittances match your search' : 'No remittances in this category yet'}
+                    {query ? t('remittances.emptyFiltered') : t('remittances.empty')}
                   </td></tr>
                 ) : (
                   visibleRemittances.map((r) => (
@@ -163,7 +166,7 @@ export function RemittancesTab() {
                       <td className="p-4">{formatCurrency(r.amount, r.currency)}</td>
                       <td className="p-4"><CodRemittanceStatusBadge status={r.status} /></td>
                       <td className="p-4 text-sm text-muted-foreground">{formatDateTime(r.declaredAt)}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{r.resolvedAt ? formatDateTime(r.resolvedAt) : '—'}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{r.resolvedAt ? formatDateTime(r.resolvedAt) : t('common:values.notAvailable')}</td>
                     </tr>
                   ))
                 )}
@@ -173,10 +176,10 @@ export function RemittancesTab() {
 
           {!isLoading && !loadError && meta.pages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
-              <p className="text-sm text-muted-foreground">Page {meta.page} of {meta.pages}</p>
+              <p className="text-sm text-muted-foreground">{t('common:pagination.pageOf', { page: meta.page, total: meta.pages })}</p>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
-                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+                <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)} aria-label={t('common:pagination.previous')}><ChevronLeft className="w-4 h-4 rtl:-scale-x-100" /></Button>
+                <Button variant="outline" size="sm" disabled={meta.page >= meta.pages} onClick={() => setPage((p) => p + 1)} aria-label={t('common:pagination.next')}><ChevronRight className="w-4 h-4 rtl:-scale-x-100" /></Button>
               </div>
             </div>
           )}

@@ -1,13 +1,14 @@
 // ─── Agency Billing — display constants & helpers ────────────────────────────────
 
 import { formatNumber } from '@/lib/format';
+import { getApiErrorMessage } from '@/lib/errors';
+import { txStatic } from '@/i18n/tx';
 import type {
   PaymentGateway,
   PhoneOperator,
   SubscriberPlanStatus,
 } from '@/types/billing.types';
 import type { PaymentMethodType } from '@/types/payment-method.types';
-import { ApiError } from '@/types/api';
 
 // Re-export the generic formatters so billing components have a single import surface.
 export { formatMoney, formatDate } from '@/lib/utils';
@@ -26,6 +27,7 @@ export const PAYMENT_POLL_TIMEOUT_MS = 3 * 60 * 1000;
 
 // ─── Mobile-money operators ──────────────────────────────────────────────────────
 
+// Operator names are brands — the same in every language, so they stay literals.
 export const PHONE_OPERATORS: { value: PhoneOperator; label: string }[] = [
   { value: 'MTN', label: 'MTN Mobile Money' },
   { value: 'ORANGE', label: 'Orange Money' },
@@ -43,37 +45,36 @@ export const CARD_GATEWAY: PaymentGateway = 'STRIPE';
 
 export interface GatewayMeta {
   value: PaymentGateway;
-  label: string;
+  /** `billing:` key, resolved at render — this table is module-scope data. */
+  labelKey: string;
   /** Which channel fields this gateway collects. */
   methodType: Extract<PaymentMethodType, 'card' | 'mobile_money'>;
-  /** Short helper line shown under the chip row. */
-  description: string;
+  /** `billing:` key for the short helper line shown under the chip row. */
+  descriptionKey: string;
   /** Currency the agency is actually charged in (mobile money: XAF, card: USD). */
   chargeCurrency: 'XAF' | 'USD';
 }
 
 export const GATEWAYS: GatewayMeta[] = [
-  { value: 'NOTCHPAY', label: 'NotchPay', methodType: 'mobile_money', description: 'Mobile money — charged in XAF', chargeCurrency: 'XAF' },
-  { value: 'MYCOOLPAY', label: 'MyCoolPay', methodType: 'mobile_money', description: 'Mobile money — charged in XAF', chargeCurrency: 'XAF' },
-  { value: 'STRIPE', label: 'Card', methodType: 'card', description: 'Visa, Mastercard & more — charged in USD', chargeCurrency: 'USD' },
+  { value: 'NOTCHPAY', labelKey: 'billing:gateways.NOTCHPAY', methodType: 'mobile_money', descriptionKey: 'billing:gateways.mobileMoneyDescription', chargeCurrency: 'XAF' },
+  { value: 'MYCOOLPAY', labelKey: 'billing:gateways.MYCOOLPAY', methodType: 'mobile_money', descriptionKey: 'billing:gateways.mobileMoneyDescription', chargeCurrency: 'XAF' },
+  { value: 'STRIPE', labelKey: 'billing:gateways.STRIPE', methodType: 'card', descriptionKey: 'billing:gateways.cardDescription', chargeCurrency: 'USD' },
 ];
 
 export function gatewayLabel(gateway: PaymentGateway): string {
-  return GATEWAYS.find((g) => g.value === gateway)?.label ?? gateway;
+  const meta = GATEWAYS.find((g) => g.value === gateway);
+  return meta ? txStatic(meta.labelKey) : gateway;
 }
 
 // ─── Saved payment-method display ────────────────────────────────────────────────
 
-const METHOD_TYPE_LABELS: Record<PaymentMethodType, string> = {
-  card: 'Card',
-  mobile_money: 'Mobile money',
-  bank_transfer: 'Bank transfer',
-};
-
 export function methodTypeLabel(type: PaymentMethodType): string {
-  return METHOD_TYPE_LABELS[type] ?? type;
+  const key = `billing:methods.types.${type}`;
+  const label = txStatic(key);
+  return label === key ? type : label;
 }
 
+// Payment providers are brands — not translated.
 const PROVIDER_LABELS: Record<string, string> = {
   stripe: 'Stripe',
   notchpay: 'NotchPay',
@@ -107,34 +108,27 @@ export function planAccent(code: string): string {
 // ─── Status labels ───────────────────────────────────────────────────────────────
 
 export function subscriberPlanStatusLabel(status: SubscriberPlanStatus): string {
-  switch (status) {
-    case 'active':
-      return 'Active';
-    case 'pending_activation':
-      return 'Queued';
-    case 'expired':
-      return 'Expired';
-    case 'cancelled':
-      return 'Cancelled';
-    default:
-      return status;
-  }
+  const key = `billing:plan.status.${status}`;
+  const label = txStatic(key);
+  return label === key ? status : label;
 }
 
 // ─── Term / cap / credits formatting ───────────────────────────────────────────────
 
 export function formatTerm(termDays: number | null): string {
-  if (termDays === null || termDays === undefined) return 'Never expires';
+  if (termDays === null || termDays === undefined) return txStatic('billing:plan.term.never');
   if (termDays % 30 === 0) {
     const months = termDays / 30;
-    return months === 1 ? 'Monthly' : `Every ${months} months`;
+    return months === 1
+      ? txStatic('billing:plan.term.monthly')
+      : txStatic('billing:plan.term.everyMonths', { count: months });
   }
-  return `Every ${termDays} days`;
+  return txStatic('billing:plan.term.everyDays', { count: termDays });
 }
 
 /** Render a shipment cap (`null` = unlimited). */
 export function formatShipmentCap(cap: number | null): string {
-  return cap === null || cap === undefined ? 'Unlimited' : formatNumber(cap);
+  return cap === null || cap === undefined ? txStatic('billing:plan.unlimited') : formatNumber(cap);
 }
 
 export function formatCredits(n: number): string {
@@ -149,15 +143,21 @@ export function formatCredits(n: number): string {
  */
 export function formatCharged(amount: number, currency = 'usd'): string {
   const code = currency.toUpperCase();
+  // Grouping and symbol placement follow the UI language; the currency code is
+  // repeated because "$" alone is ambiguous outside the US.
+  const locale =
+    typeof document !== 'undefined' && document.documentElement.lang
+      ? document.documentElement.lang
+      : undefined;
   try {
-    const formatted = new Intl.NumberFormat('en-US', {
+    const formatted = new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: code,
       minimumFractionDigits: 2,
     }).format(amount);
     return `${formatted} ${code}`;
   } catch {
-    return `$${amount.toFixed(2)} ${code}`;
+    return `${amount.toFixed(2)} ${code}`;
   }
 }
 
@@ -214,27 +214,15 @@ export function clearStripeResume(): void {
 
 // ─── Error-code → friendly message ────────────────────────────────────────────────
 
-const BILLING_ERROR_MESSAGES: Record<string, string> = {
-  BILLING_PLAN_NOT_FOUND: 'That plan is no longer available.',
-  BILLING_PLAN_INACTIVE: "That plan isn't available for purchase yet.",
-  BILLING_PLAN_ROLE_MISMATCH: 'That plan is not an agency plan.',
-  BILLING_PLAN_NOT_PURCHASABLE: 'The free plan is the default tier and cannot be purchased.',
-  BILLING_PENDING_PLAN_EXISTS: 'You already have a plan queued to start when your current one ends. Wait for it to activate before buying another.',
-  BILLING_TOPUP_PACK_NOT_FOUND: 'That credit pack is no longer available.',
-  BILLING_INSUFFICIENT_CREDITS: 'Not enough credits for this action.',
-  PAYMENT_GATEWAY_NOT_SUPPORTED: 'That payment method is not supported.',
-  PAYMENT_INITIATION_FAILED: 'The payment provider could not start the payment. Please try again.',
-  PAYMENT_CARD_DECLINED: 'Your card was declined. Check the details or try another card.',
-  BILLING_TOPUP_INVALID_STATE: 'This payment cannot be verified yet. Please retry in a moment.',
-  BILLING_PURCHASE_INVALID_STATE: 'This payment cannot be verified yet. Please retry in a moment.',
-  PAYMENT_METHOD_NOT_FOUND: 'That payment method could not be found.',
-  PAYMENT_METHOD_LIMIT_REACHED: 'You can save up to 10 payment methods. Remove one to add another.',
-  VALIDATION_ERROR: 'Please check the details and try again.',
-};
-
-export function billingErrorMessage(err: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  if (err instanceof ApiError) {
-    return BILLING_ERROR_MESSAGES[err.code] ?? err.message ?? fallback;
-  }
-  return fallback;
+/**
+ * Every billing/payment code the API can return already has copy in the shared
+ * `errors:codes.*` catalog, so this is a thin alias that keeps the billing
+ * components' import surface intact.
+ *
+ * `fallback` is a *rendered* string, not a key — callers pass one when the
+ * generic "something went wrong" is too vague for the action they just tried.
+ */
+export function billingErrorMessage(err: unknown, fallback?: string): string {
+  const message = getApiErrorMessage(err);
+  return fallback && message === txStatic('errors:generic') ? fallback : message;
 }

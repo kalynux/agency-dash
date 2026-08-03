@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import {
@@ -18,16 +19,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ticketsService } from '@/services/tickets.service';
 import {
   TICKET_TYPE_GROUPS,
+  ticketTypeGroupLabel,
+  ticketTypeLabel,
   IMPORTANCE_OPTIONS,
-  IMPORTANCE_LABELS,
+  importanceLabel,
   AGENCY_ENTITY_TYPES,
-  ENTITY_TYPE_LABELS,
+  entityTypeLabel,
   SEARCHABLE_ENTITY_TYPES,
   DESCRIPTION_MAX_LENGTH,
   SUBJECT_MAX_LENGTH,
   TRACKING_NUMBER_MAX,
   responsiveSheetProps,
-  humanizeEnum,
+  shipmentStatusLabel,
 } from './ticket.constants';
 import type { ApiFile } from '@/types/file.types';
 import type { TicketType, TicketImportance, TicketEntityType } from '@/types/ticket.types';
@@ -41,6 +44,7 @@ interface CreateTicketSheetProps {
 }
 
 export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicketSheetProps) {
+  const { t } = useTranslation(['tickets', 'common']);
   const { run, pendingKey } = useActionRunner();
   const isMobile = useIsMobile();
   const sheet = responsiveSheetProps(isMobile);
@@ -101,23 +105,23 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
 
   const handleSubmit = async () => {
     if (subject.trim().length < 3) {
-      toast.error('Subject must be at least 3 characters.');
+      toast.error(t('create.errors.subjectTooShort'));
       return;
     }
     if (description.trim().length < 10) {
-      toast.error('Please add a bit more detail to the description.');
+      toast.error(t('create.errors.descriptionTooShort'));
       return;
     }
     if (needsReference && !entityId.trim()) {
-      toast.error('Select the item this ticket is about.');
+      toast.error(t('create.errors.entityRequired'));
       return;
     }
     if (trackingRequired && !trackingNumber.trim()) {
-      toast.error('A tracking number is required for order tickets.');
+      toast.error(t('create.errors.trackingRequired'));
       return;
     }
     if (attachmentRequired && attachments.length === 0) {
-      toast.error('Attach at least one photo/video for this ticket type.');
+      toast.error(t('create.errors.attachmentRequired'));
       return;
     }
 
@@ -135,9 +139,11 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
           attachments: attachments.length > 0 ? attachments.map((f) => f.id) : undefined,
         }),
       {
-        success: 'Ticket created.',
+        success: t('create.toasts.created'),
+        // `errorOverrides` values are translation keys, not copy — they go
+        // through `getApiErrorMessage`, which resolves them via i18next.
         errorOverrides: {
-          TICKET_ENTITY_NOT_FOUND: 'The selected order or product no longer exists.',
+          TICKET_ENTITY_NOT_FOUND: 'tickets:create.errors.entityNotFound',
         },
       },
     );
@@ -152,31 +158,29 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side={sheet.side} className={`flex flex-col p-0 ${sheet.className}`}>
         <SheetHeader className="border-b">
-          <SheetTitle>New support ticket</SheetTitle>
-          <SheetDescription>
-            Describe your issue and link it to the related shipment, order, or product.
-          </SheetDescription>
+          <SheetTitle>{t('create.title')}</SheetTitle>
+          <SheetDescription>{t('create.description')}</SheetDescription>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
           {/* Subject */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-subject">
-              Subject <span className="text-destructive">*</span>
+              {t('create.subject')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="ticket-subject"
               value={subject}
               maxLength={SUBJECT_MAX_LENGTH}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Brief summary of the issue"
+              placeholder={t('create.subjectPlaceholder')}
             />
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-description">
-              Description <span className="text-destructive">*</span>
+              {t('create.descriptionLabel')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="ticket-description"
@@ -184,10 +188,10 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
               value={description}
               maxLength={DESCRIPTION_MAX_LENGTH}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Provide as much detail as possible…"
+              placeholder={t('create.descriptionPlaceholder')}
             />
-            <p className="text-right text-xs tabular-nums text-muted-foreground">
-              {description.length}/{DESCRIPTION_MAX_LENGTH}
+            <p className="text-end text-xs tabular-nums text-muted-foreground">
+              {t('create.charCount', { current: description.length, max: DESCRIPTION_MAX_LENGTH })}
             </p>
           </div>
 
@@ -195,7 +199,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>
-                Type <span className="text-destructive">*</span>
+                {t('create.type')} <span className="text-destructive">*</span>
               </Label>
               <Select value={type} onValueChange={(v) => setType(v as TicketType)}>
                 <SelectTrigger className="w-full">
@@ -203,10 +207,10 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                 </SelectTrigger>
                 <SelectContent>
                   {TICKET_TYPE_GROUPS.map((g) => (
-                    <SelectGroup key={g.groupLabel}>
-                      <SelectLabel>{g.groupLabel}</SelectLabel>
+                    <SelectGroup key={g.key}>
+                      <SelectLabel>{ticketTypeGroupLabel(g.key)}</SelectLabel>
                       {g.values.map((v) => (
-                        <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                        <SelectItem key={v} value={v}>{ticketTypeLabel(v)}</SelectItem>
                       ))}
                     </SelectGroup>
                   ))}
@@ -215,7 +219,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
             </div>
             <div className="space-y-1.5">
               <Label>
-                Importance <span className="text-destructive">*</span>
+                {t('create.importance')} <span className="text-destructive">*</span>
               </Label>
               <Select value={importance} onValueChange={(v) => setImportance(v as TicketImportance)}>
                 <SelectTrigger className="w-full">
@@ -223,11 +227,11 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                 </SelectTrigger>
                 <SelectContent>
                   {IMPORTANCE_OPTIONS.map((i) => (
-                    <SelectItem key={i} value={i}>{IMPORTANCE_LABELS[i]}</SelectItem>
+                    <SelectItem key={i} value={i}>{importanceLabel(i)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Can't be changed after creation.</p>
+              <p className="text-xs text-muted-foreground">{t('create.importanceHint')}</p>
             </div>
           </div>
 
@@ -235,15 +239,15 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>
-                Related to <span className="text-destructive">*</span>
+                {t('create.relatedTo')} <span className="text-destructive">*</span>
               </Label>
               <Select value={entityType} onValueChange={(v) => changeEntityType(v as TicketEntityType)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {AGENCY_ENTITY_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{ENTITY_TYPE_LABELS[t]}</SelectItem>
+                  {AGENCY_ENTITY_TYPES.map((value) => (
+                    <SelectItem key={value} value={value}>{entityTypeLabel(value)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -251,11 +255,13 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
 
             <div className="space-y-1.5">
               <Label>
-                Item{' '}
+                {t('create.item')}{' '}
                 {needsReference ? (
                   <span className="text-destructive">*</span>
                 ) : (
-                  <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {t('create.optional')}
+                  </span>
                 )}
               </Label>
               <EntityPicker
@@ -271,11 +277,13 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
           {trackingRelevant && (
             <div className="space-y-1.5">
               <Label htmlFor="ticket-tracking">
-                Tracking number{' '}
+                {t('create.trackingNumber')}{' '}
                 {trackingRequired ? (
                   <span className="text-destructive">*</span>
                 ) : (
-                  <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {t('create.optional')}
+                  </span>
                 )}
               </Label>
 
@@ -292,7 +300,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a tracking number" />
+                    <SelectValue placeholder={t('create.trackingSelectPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {trackingOptions.map((o) => (
@@ -300,13 +308,17 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                         <span className="flex flex-col">
                           <span className="font-medium">{o.trackingNumber}</span>
                           <span className="text-xs text-muted-foreground">
-                            {o.agencyName ?? 'Delivery agency'}
-                            {o.deliveryStatus ? ` · ${humanizeEnum(o.deliveryStatus)}` : ''}
+                            {o.deliveryStatus
+                              ? t('create.trackingOptionMeta', {
+                                  agency: o.agencyName ?? t('create.trackingAgencyFallback'),
+                                  status: shipmentStatusLabel(o.deliveryStatus),
+                                })
+                              : o.agencyName ?? t('create.trackingAgencyFallback')}
                           </span>
                         </span>
                       </SelectItem>
                     ))}
-                    <SelectItem value={MANUAL}>Enter manually…</SelectItem>
+                    <SelectItem value={MANUAL}>{t('create.trackingManual')}</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
@@ -316,7 +328,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                     value={trackingNumber}
                     maxLength={TRACKING_NUMBER_MAX}
                     onChange={(e) => setTrackingNumber(e.target.value)}
-                    placeholder="e.g. FS-1234567890"
+                    placeholder={t('create.trackingPlaceholder')}
                   />
                   {trackingOptions.length > 0 && (
                     <button
@@ -324,7 +336,7 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
                       onClick={() => { setTrackingManual(false); setTrackingNumber(''); }}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      Choose from this item's tracking numbers instead
+                      {t('create.trackingBackToList')}
                     </button>
                   )}
                 </>
@@ -335,24 +347,31 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
           {/* Attachments */}
           <div className="space-y-1.5">
             <Label>
-              Attachments{' '}
+              {t('create.attachments')}{' '}
               {attachmentRequired ? (
                 <span className="text-destructive">*</span>
               ) : (
-                <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t('create.optional')}
+                </span>
               )}
             </Label>
-            <FileUploadField value={attachments} onChange={setAttachments} max={5} label="Add attachment" />
+            <FileUploadField
+              value={attachments}
+              onChange={setAttachments}
+              max={5}
+              label={t('create.addAttachment')}
+            />
           </div>
         </div>
 
         <SheetFooter className="flex-row justify-end gap-2 border-t">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
-            Cancel
+            {t('common:actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Create ticket
+            {t('create.submit')}
           </Button>
         </SheetFooter>
       </SheetContent>

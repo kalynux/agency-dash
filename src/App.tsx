@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Toaster } from '@/components/ui/sonner';
 
 // Dashboard pages
@@ -22,7 +23,7 @@ import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { applyDocumentDirection } from '@/lib/direction';
+import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
 
 // Onboarding system
 import { OnboardingProvider } from '@/onboarding/store/onboarding.store';
@@ -50,6 +51,9 @@ import { MagazinProvider } from '@/store/magazin.store';
 // up on every viewport and content never stretches unusably wide on large
 // monitors. Keep these two class strings in sync.
 const CONTENT_FRAME = 'mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8';
+
+/** Where the login placeholder sends the user. Matches `/login`'s redirect. */
+const LOGIN_URL = 'http://localhost:3000/login';
 
 // ─── Sidebar collapse context (preserved for Sidebar/Header compatibility) ────
 
@@ -89,6 +93,34 @@ const LegacyAuthContext = createContext<LegacyAuthContextType>({
 });
 
 export const useAuth = () => useContext(LegacyAuthContext);
+
+// ─── Login placeholder ────────────────────────────────────────────────────────
+// Authentication lives on the main site; this screen only points there.
+
+function LoginRedirectScreen() {
+  const { t } = useTranslation('auth');
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+      <div className="text-center space-y-4 max-w-sm">
+        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+          <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold">{t('login.title')}</h1>
+        <p className="text-muted-foreground text-sm">{t('login.description')}</p>
+        <a
+          href={LOGIN_URL}
+          className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors w-full"
+        >
+          {t('login.cta')}
+        </a>
+      </div>
+    </div>
+  );
+}
 
 // ─── Dashboard shell ──────────────────────────────────────────────────────────
 
@@ -182,11 +214,9 @@ function AppContent() {
     return () => window.removeEventListener('auth:logout', onLogout);
   }, [reactNavigate]);
 
-  // i18n direction seam: mirror the whole shell for RTL languages (Arabic).
-  // A language switcher re-mirrors by calling applyDocumentDirection(lang).
-  useEffect(() => {
-    applyDocumentDirection(document.documentElement.lang || 'en');
-  }, []);
+  // Text direction is owned by the i18n layer now: `changeLanguage` calls
+  // `applyDocumentDirection`, so `<html lang>`/`dir` follow the active language
+  // on boot and on every switch. See i18n/index.ts.
 
   const legacyUser = {
     id: 'agency',
@@ -211,34 +241,11 @@ function AppContent() {
         <>
           <OnboardingErrorBoundary>
             <OnboardingProvider>
+              {/* Applies the agency's saved language as soon as the session loads. */}
+              <ProfileLanguageSync />
               <Routes>
-                {/* Login — placeholder, auth happens on example.com */}
-                <Route
-                  path="/login"
-                  element={
-                    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-                      <div className="text-center space-y-4 max-w-sm">
-                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
-                          <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                            <line x1="3" y1="6" x2="21" y2="6" />
-                            <path d="M16 10a4 4 0 0 1-8 0" />
-                          </svg>
-                        </div>
-                        <h1 className="text-2xl font-bold">Jovi Mall Agency</h1>
-                        <p className="text-muted-foreground text-sm">
-                          Please log in via the main site to access your agency dashboard.
-                        </p>
-                        <a
-                          href="http://localhost:3000/login"
-                          className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors w-full"
-                        >
-                          Go to login
-                        </a>
-                      </div>
-                    </div>
-                  }
-                />
+                {/* Login — placeholder, auth happens on the main site */}
+                <Route path="/login" element={<LoginRedirectScreen />} />
 
                 {/* Onboarding — gated: must be authenticated, step > 0 */}
                 <Route

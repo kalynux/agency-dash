@@ -1,26 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ApiError } from '@/types/api';
 import { earningsService } from '@/services/earnings.service';
+import { formatCurrency } from '@/lib/format';
+import { getApiErrorMessage } from '@/lib/errors';
 import type { EarningsBalance, EarningsPayoutRequest } from '@/types/earnings.types';
-
-// ─── Error mapping ────────────────────────────────────────────────────────────
-
-const PAYOUT_ERROR_LABELS: Record<string, string> = {
-  EARNINGS_PAYOUT_ALREADY_PENDING: 'You already have a pending payout request.',
-  EARNINGS_PAYOUT_METHOD_MISSING: 'Add a payout method below before requesting a withdrawal.',
-  EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE: 'There is no available balance to withdraw yet.',
-  EARNINGS_PAYOUT_BELOW_MINIMUM: 'Your available balance is below the 10,000 XAF minimum payout.',
-};
-
-function getPayoutErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return PAYOUT_ERROR_LABELS[err.code] ?? err.message;
-  return 'Something went wrong. Please try again.';
-}
 
 // ─── Shared earnings hook ─────────────────────────────────────────────────────
 
 export function useEarnings() {
+  const { t } = useTranslation('account');
   const [balance, setBalance] = useState<EarningsBalance | null>(null);
   const [latestPayout, setLatestPayout] = useState<EarningsPayoutRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +27,10 @@ export function useEarnings() {
       setBalance(balanceData);
       setLatestPayout(payoutData);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Could not load your earnings.');
+      // Resolved through the shared `errors` catalog — the payout codes
+      // (EARNINGS_PAYOUT_*) all live there, so there is no local table to keep
+      // in step with the backend any more.
+      setLoadError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -52,16 +44,18 @@ export function useEarnings() {
     setIsRequesting(true);
     try {
       const { data } = await earningsService.requestPayout();
-      toast.success(`Payout of ${data.amount.toLocaleString()} ${data.currency} requested — track it under Tickets.`);
+      toast.success(
+        t('earnings.requested', { amount: formatCurrency(data.amount, data.currency) }),
+      );
       await refetch();
       return data;
     } catch (err) {
-      toast.error(getPayoutErrorMessage(err));
+      toast.error(getApiErrorMessage(err));
       return null;
     } finally {
       setIsRequesting(false);
     }
-  }, [refetch]);
+  }, [refetch, t]);
 
   return { balance, latestPayout, isLoading, loadError, isRequesting, requestPayout, refetch };
 }

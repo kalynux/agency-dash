@@ -9,6 +9,7 @@
 
 import { formatDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Check,
@@ -71,6 +72,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn, formatFileSize, storageBarColor, storagePercent } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
+import { tx, txStatic, type AnyTFunction } from '@/i18n/tx';
 import { getUploadErrorMessage } from '@/lib/uploadErrors';
 import { ApiError } from '@/types/api';
 import {
@@ -115,32 +117,22 @@ const KIND_TINTS: Record<FileKind, string> = {
   document: 'bg-orange-500/10 text-orange-600',
 };
 
-const KIND_FILTERS: { value: FileKind | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'image', label: 'Images' },
-  { value: 'video', label: 'Video' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'document', label: 'Documents' },
-];
+const KIND_FILTER_VALUES: (FileKind | 'all')[] = ['all', 'image', 'video', 'audio', 'document'];
 
 const PROVIDERS: StorageProvider[] = ['local', 's3', 'gcs', 'r2', 'firebase', 'cloudinary'];
 
 const ALL_PROVIDERS = '__all__';
 
-const PROVIDER_FILTERS: { value: StorageProvider | typeof ALL_PROVIDERS; label: string }[] = [
-  { value: ALL_PROVIDERS, label: 'All providers' },
-  ...PROVIDERS.map((p) => ({ value: p, label: p.toUpperCase() })),
-];
-
 type SortValue = `${FileSortField}:${'asc' | 'desc'}`;
 
-const SORT_OPTIONS: { value: SortValue; label: string }[] = [
-  { value: 'createdAt:desc', label: 'Newest first' },
-  { value: 'createdAt:asc', label: 'Oldest first' },
-  { value: 'originalName:asc', label: 'Name A–Z' },
-  { value: 'originalName:desc', label: 'Name Z–A' },
-  { value: 'size:desc', label: 'Largest first' },
-  { value: 'size:asc', label: 'Smallest first' },
+/** Sort choices, with their copy as keys — this table is module-scope data. */
+const SORT_OPTIONS: { value: SortValue; labelKey: string }[] = [
+  { value: 'createdAt:desc', labelKey: 'media:sort.newest' },
+  { value: 'createdAt:asc', labelKey: 'media:sort.oldest' },
+  { value: 'originalName:asc', labelKey: 'media:sort.nameAsc' },
+  { value: 'originalName:desc', labelKey: 'media:sort.nameDesc' },
+  { value: 'size:desc', labelKey: 'media:sort.largest' },
+  { value: 'size:asc', labelKey: 'media:sort.smallest' },
 ];
 
 // ─── Usage references ─────────────────────────────────────────────────────────
@@ -157,67 +149,43 @@ interface ReferenceVisual {
  * raw entity type — an agency recognises "Business logo" long before "magazin".
  * Anything unknown falls back to a generic row rather than breaking.
  */
-function describeReference(ref: FileReference): ReferenceVisual {
+function describeReference(ref: FileReference, t: AnyTFunction): ReferenceVisual {
+  const label = (key: string, hintKey: string) => ({
+    typeLabel: tx(t, `media:references.${key}`),
+    detachHint: tx(t, `media:references.${hintKey}`),
+  });
+
   switch (ref.field) {
     case 'avatar':
-      return {
-        Icon: UserCircle,
-        typeLabel: 'Profile avatar',
-        detachHint: 'Clear it in Account → Profile to detach.',
-      };
+      return { Icon: UserCircle, ...label('avatar', 'avatarHint') };
     case 'logo':
-      return {
-        Icon: Store,
-        typeLabel: 'Business logo',
-        detachHint: 'Clear it in Account → Store to detach.',
-      };
+      return { Icon: Store, ...label('logo', 'logoHint') };
     case 'banner':
     case 'cover':
       return {
         Icon: ImageIcon,
-        typeLabel: ref.field === 'cover' ? 'Cover image' : 'Banner',
-        detachHint: 'Clear it in Account → Store to detach.',
+        ...label(ref.field === 'cover' ? 'cover' : 'banner', 'bannerHint'),
       };
     case 'delivery_proof':
-      return {
-        Icon: Truck,
-        typeLabel: 'Delivery proof',
-        detachHint: 'Uploaded by the agent on their shipment — only they can replace it.',
-      };
+      return { Icon: Truck, ...label('deliveryProof', 'deliveryProofHint') };
     case 'attachment':
-      return {
-        Icon: Paperclip,
-        typeLabel: 'Ticket attachment',
-        detachHint: 'Attachments stay with the ticket for its lifetime.',
-      };
+      return { Icon: Paperclip, ...label('ticketAttachment', 'ticketAttachmentHint') };
   }
 
   switch (ref.entityType) {
     case 'shipment':
-      return {
-        Icon: Truck,
-        typeLabel: 'Shipment',
-        detachHint: 'Attached to a shipment record.',
-      };
+      return { Icon: Truck, ...label('shipment', 'shipmentHint') };
     case 'ticket':
-      return {
-        Icon: LifeBuoy,
-        typeLabel: 'Support ticket',
-        detachHint: 'Attachments stay with the ticket for its lifetime.',
-      };
+      return { Icon: LifeBuoy, ...label('ticket', 'ticketAttachmentHint') };
     case 'agency':
     case 'magazin':
-      return {
-        Icon: Building2,
-        typeLabel: 'Your agency',
-        detachHint: 'Clear it in Account to detach.',
-      };
+      return { Icon: Building2, ...label('agency', 'agencyHint') };
     case 'agent':
-      return { Icon: User, typeLabel: 'Agent', detachHint: 'Attached to an agent record.' };
+      return { Icon: User, ...label('agent', 'agentHint') };
     case 'product':
-      return { Icon: Package, typeLabel: 'Product', detachHint: 'Attached to a product.' };
+      return { Icon: Package, ...label('product', 'productHint') };
     default:
-      return { Icon: Link2, typeLabel: 'In use', detachHint: 'Detach it where it is used.' };
+      return { Icon: Link2, ...label('generic', 'genericHint') };
   }
 }
 
@@ -244,7 +212,7 @@ function FileArtwork({
     return (
       <img
         src={url}
-        alt={file.originalName ?? 'File'}
+        alt={file.originalName ?? txStatic('media:preview.fileAlt')}
         crossOrigin="use-credentials"
         loading="lazy"
         onError={() => setBroken(true)}
@@ -299,6 +267,7 @@ function FileArtwork({
 
 /** Rich preview for the inspector — documents hand off to a new tab (e.g. PDFs). */
 function FilePreview({ file }: { file: ApiFile }) {
+  const { t } = useTranslation('media');
   const kind = kindFromMime(file.mimeType);
   const url = resolveFileUrl(file);
 
@@ -327,7 +296,7 @@ function FilePreview({ file }: { file: ApiFile }) {
       </div>
       <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
         <ExternalLink className="h-4 w-4" />
-        Open in new tab
+        {t('preview.openInNewTab')}
       </span>
     </a>
   );
@@ -336,6 +305,7 @@ function FilePreview({ file }: { file: ApiFile }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function MediaLibrary() {
+  const { t } = useTranslation(['media', 'common']);
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -432,6 +402,29 @@ export function MediaLibrary() {
 
   const hasFilters = !!search || kind !== 'all' || provider !== 'all';
 
+  const kindFilters = useMemo(
+    () =>
+      KIND_FILTER_VALUES.map((v) => ({
+        value: v,
+        label: v === 'all' ? t('filters.all') : t(`kinds.${v}` as const),
+      })),
+    [t],
+  );
+
+  const providerFilters = useMemo(
+    () => [
+      { value: ALL_PROVIDERS as StorageProvider | typeof ALL_PROVIDERS, label: t('filters.allProviders') },
+      // Provider names are product names, not copy — they stay upper-cased as-is.
+      ...PROVIDERS.map((p) => ({ value: p, label: p.toUpperCase() })),
+    ],
+    [t],
+  );
+
+  const sortOptions = useMemo(
+    () => SORT_OPTIONS.map((o) => ({ value: o.value, label: tx(t, o.labelKey) })),
+    [t],
+  );
+
   /** Sort counts too — it changes which files land on the page you're looking at. */
   const activeFilterCount =
     (kind === 'all' ? 0 : 1) + (provider === 'all' ? 0 : 1) + (sort === 'createdAt:desc' ? 0 : 1);
@@ -451,10 +444,12 @@ export function MediaLibrary() {
 
       setUploading(true);
       setUploadPercent(0);
-      setUploadLabel(arr.length === 1 ? arr[0].name : `${arr.length} files`);
+      setUploadLabel(
+        arr.length === 1 ? arr[0].name : t('upload.fileCount', { count: arr.length }),
+      );
       try {
         await uploadMediaWithProgress(arr, setUploadPercent);
-        toast.success(`Uploaded ${arr.length} file${arr.length > 1 ? 's' : ''}.`);
+        toast.success(t('upload.succeeded', { count: arr.length }));
         // Newest-first is the default, so land the user where the files are.
         if (page !== 1) setPage(1);
         else await load();
@@ -466,7 +461,7 @@ export function MediaLibrary() {
         setUploadLabel('');
       }
     },
-    [page, load],
+    [page, load, t],
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -506,20 +501,20 @@ export function MediaLibrary() {
       setDetailCache((prev) =>
         prev[id] ? { ...prev, [id]: { ...prev[id], originalName: trimmed } } : prev,
       );
-      toast.success('File renamed.');
+      toast.success(t('inspector.renamed'));
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     }
-  }, []);
+  }, [t]);
 
   const handleDelete = useCallback(
     async (id: string) => {
       const detail = detailCache[id];
       if (detail && detail.usage.totalReferences > 0) {
-        toast.error('Detach this file from everything using it before deleting it.');
+        toast.error(t('inspector.detachFirst'));
         return;
       }
-      if (!window.confirm('Delete this file? This cannot be undone.')) return;
+      if (!window.confirm(t('inspector.confirmDelete'))) return;
 
       const removed = files.find((f) => f.id === id);
       try {
@@ -544,18 +539,18 @@ export function MediaLibrary() {
           return next;
         });
         if (inspectId === id) setInspectId(null);
-        toast.success('File deleted.');
+        toast.success(t('inspector.deleted'));
       } catch (err) {
         // The backend answers 409 with CATALOG_FILE_STILL_REFERENCED (older
         // builds: FILE_IN_USE) — branch on the status, not the code.
         if (err instanceof ApiError && err.status === 409) {
-          toast.error('This file is still in use. Detach it everywhere it is used first.');
+          toast.error(t('inspector.stillInUse'));
         } else {
           toast.error(getApiErrorMessage(err));
         }
       }
     },
-    [files, detailCache, inspectId],
+    [files, detailCache, inspectId, t],
   );
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -577,7 +572,7 @@ export function MediaLibrary() {
       </Badge>
     ) : (
       <Badge variant="secondary" className="text-[11px]">
-        Unused
+        {t('list.unused')}
       </Badge>
     );
   };
@@ -615,15 +610,13 @@ export function MediaLibrary() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-              Media Library
-              <InfoHint className="md:hidden" label="About the media library">
-                Every file your agency has uploaded, and exactly where each one is attached.
+              {t('page.title')}
+              <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
+                {t('page.about')}
               </InfoHint>
             </h1>
-            <p className="text-muted-foreground max-md:hidden">
-              Every file your agency has uploaded, and exactly where each one is attached
-            </p>
-            <p className="text-muted-foreground md:hidden">Every file you've uploaded</p>
+            <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
+            <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
           </div>
           <Button
             onClick={() => fileInputRef.current?.click()}
@@ -631,7 +624,7 @@ export function MediaLibrary() {
             className="gap-2"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Upload
+            {t('upload.button')}
           </Button>
         </div>
 
@@ -640,8 +633,12 @@ export function MediaLibrary() {
           <Card>
             <CardContent className="space-y-2 p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="truncate font-medium">Uploading {uploadLabel}…</span>
-                <span className="text-muted-foreground">{uploadPercent}%</span>
+                <span className="truncate font-medium">
+                  {t('upload.progress', { what: uploadLabel })}
+                </span>
+                <span className="text-muted-foreground">
+                  {t('common:units.percent', { value: uploadPercent })}
+                </span>
               </div>
               <Progress value={uploadPercent} />
             </CardContent>
@@ -653,29 +650,32 @@ export function MediaLibrary() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
               icon={Layers}
-              label="Total files"
-              value={pagination ? String(pagination.total) : '—'}
+              label={t('stats.totalFiles')}
+              value={pagination ? String(pagination.total) : t('common:values.notAvailable')}
             />
             <StatCard
               icon={HardDrive}
-              label="Storage used"
+              label={t('stats.storageUsed')}
               value={
                 storage
                   ? storage.limitBytes !== null
-                    ? `${formatFileSize(storage.usedBytes)} / ${formatFileSize(storage.limitBytes)}`
+                    ? t('stats.storageUsedOfLimit', {
+                        used: formatFileSize(storage.usedBytes),
+                        limit: formatFileSize(storage.limitBytes),
+                      })
                     : formatFileSize(storage.usedBytes)
-                  : '—'
+                  : t('common:values.notAvailable')
               }
             />
             <StatCard
               icon={Link2}
-              label="Attached (page)"
-              value={pageStats.resolved ? String(pageStats.attached) : '—'}
+              label={t('stats.attachedOnPage')}
+              value={pageStats.resolved ? String(pageStats.attached) : t('common:values.notAvailable')}
             />
             <StatCard
               icon={Inbox}
-              label="Unused (page)"
-              value={pageStats.resolved ? String(pageStats.unused) : '—'}
+              label={t('stats.unusedOnPage')}
+              value={pageStats.resolved ? String(pageStats.unused) : t('common:values.notAvailable')}
             />
           </div>
           {storage && storage.limitBytes !== null && <StorageBar storage={storage} />}
@@ -685,8 +685,8 @@ export function MediaLibrary() {
         <SearchFilterBar
           value={searchInput}
           onChange={setSearchInput}
-          placeholder="Search files…"
-          searchLabel="Search by file name"
+          placeholder={t('filters.searchPlaceholder')}
+          searchLabel={t('filters.searchLabel')}
           activeCount={activeFilterCount}
           onReset={() => {
             setKind('all');
@@ -694,9 +694,9 @@ export function MediaLibrary() {
             setSort('createdAt:desc');
             setPage(1);
           }}
-          filterDescription="Filters and sorting apply to your whole library."
+          filterDescription={t('filters.description')}
           resultCount={pagination?.total}
-          resultNoun="file"
+          resultNounKey="common:nouns.file"
           trailing={
             <Tabs
               value={viewMode}
@@ -704,46 +704,46 @@ export function MediaLibrary() {
               className="flex-shrink-0"
             >
               <TabsList className="h-11">
-                <TabsTrigger value="grid" aria-label="Grid view">
+                <TabsTrigger value="grid" aria-label={t('filters.gridView')}>
                   <Grid3X3 className="h-4 w-4" />
                 </TabsTrigger>
-                <TabsTrigger value="list" aria-label="List view">
+                <TabsTrigger value="list" aria-label={t('filters.listView')}>
                   <List className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           }
         >
-          <FilterSection label="File type">
+          <FilterSection label={t('filters.fileType')}>
             <FilterOptionGroup
               value={kind}
               onChange={(v) => {
                 setKind(v);
                 setPage(1);
               }}
-              options={KIND_FILTERS}
+              options={kindFilters}
             />
           </FilterSection>
 
-          <FilterSection label="Storage provider">
+          <FilterSection label={t('filters.storageProvider')}>
             <FilterOptionGroup
               value={provider === 'all' ? ALL_PROVIDERS : provider}
               onChange={(v) => {
                 setProvider(v === ALL_PROVIDERS ? 'all' : (v as StorageProvider));
                 setPage(1);
               }}
-              options={PROVIDER_FILTERS}
+              options={providerFilters}
             />
           </FilterSection>
 
-          <FilterSection label="Sort by">
+          <FilterSection label={t('filters.sortBy')}>
             <FilterOptionGroup
               value={sort}
               onChange={(v) => {
                 setSort(v);
                 setPage(1);
               }}
-              options={SORT_OPTIONS}
+              options={sortOptions}
             />
           </FilterSection>
         </SearchFilterBar>
@@ -758,17 +758,15 @@ export function MediaLibrary() {
                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">{error}</p>
                 <Button variant="outline" size="sm" onClick={load}>
-                  Try again
+                  {t('common:actions.retry')}
                 </Button>
               </div>
             ) : files.length === 0 ? (
               <EmptyState
                 icon={ImageIcon}
-                title={hasFilters ? 'No files match your filters' : 'Your library is empty'}
+                title={hasFilters ? t('list.emptyFilteredTitle') : t('list.emptyTitle')}
                 description={
-                  hasFilters
-                    ? 'Try clearing the search or filters to see more files.'
-                    : 'Upload images, videos or documents to start building your library.'
+                  hasFilters ? t('list.emptyFilteredDescription') : t('list.emptyDescription')
                 }
                 action={
                   hasFilters ? (
@@ -781,12 +779,12 @@ export function MediaLibrary() {
                         setPage(1);
                       }}
                     >
-                      Clear filters
+                      {t('filters.clear')}
                     </Button>
                   ) : (
                     <Button onClick={() => fileInputRef.current?.click()} className="gap-2">
                       <Upload className="h-4 w-4" />
-                      Upload files
+                      {t('upload.uploadFiles')}
                     </Button>
                   )
                 }
@@ -809,17 +807,19 @@ export function MediaLibrary() {
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                         <span className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-black">
-                          Inspect
+                          {t('list.inspect')}
                         </span>
                       </div>
                     </div>
                     <div className="p-3">
                       <p className="truncate text-sm font-medium">
-                        {file.originalName ?? 'Untitled'}
+                        {file.originalName ?? t('list.untitled')}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatFileSize(file.size)} ·{' '}
-                        {formatDate(file.createdAt)}
+                        {t('list.meta', {
+                          size: formatFileSize(file.size),
+                          date: formatDate(file.createdAt),
+                        })}
                       </p>
                     </div>
                   </button>
@@ -843,11 +843,14 @@ export function MediaLibrary() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
-                            {file.originalName ?? 'Untitled'}
+                            {file.originalName ?? t('list.untitled')}
                           </p>
-                          <p className="text-xs capitalize text-muted-foreground">
-                            {kindFromMime(file.mimeType)} · {formatFileSize(file.size)} ·{' '}
-                            {formatDate(file.createdAt)}
+                          <p className="text-xs text-muted-foreground">
+                            {t('list.metaWithKind', {
+                              kind: t(`kinds.${kindFromMime(file.mimeType)}` as const),
+                              size: formatFileSize(file.size),
+                              date: formatDate(file.createdAt),
+                            })}
                           </p>
                         </div>
                         <StatusChip fileId={file.id} />
@@ -857,7 +860,7 @@ export function MediaLibrary() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => e.stopPropagation()}
-                              aria-label="File actions"
+                              aria-label={t('list.fileActions')}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -870,7 +873,7 @@ export function MediaLibrary() {
                               }}
                             >
                               <Link2 className="mr-2 h-4 w-4" />
-                              Inspect
+                              {t('list.inspect')}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -881,7 +884,7 @@ export function MediaLibrary() {
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t('common:actions.delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -896,8 +899,11 @@ export function MediaLibrary() {
             {pagination && files.length > 0 && (
               <div className="mt-4 flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
                 <span>
-                  Showing {(pagination.page - 1) * pagination.limit + 1}–
-                  {(pagination.page - 1) * pagination.limit + files.length} of {pagination.total}
+                  {t('common:pagination.showingRange', {
+                    from: (pagination.page - 1) * pagination.limit + 1,
+                    to: (pagination.page - 1) * pagination.limit + files.length,
+                    total: pagination.total,
+                  })}
                 </span>
                 {pagination.pages > 1 && (
                   <div className="flex items-center gap-2">
@@ -910,7 +916,10 @@ export function MediaLibrary() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span>
-                      Page {pagination.page} of {pagination.pages}
+                      {t('common:pagination.pageOf', {
+                        page: pagination.page,
+                        total: pagination.pages,
+                      })}
                     </span>
                     <Button
                       variant="outline"
@@ -938,9 +947,7 @@ export function MediaLibrary() {
                       <div className="rounded-full bg-muted p-4">
                         <ImageIcon className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Select a file to see its details and where it's attached.
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t('inspector.placeholder')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -956,7 +963,7 @@ export function MediaLibrary() {
               side="bottom"
               className="flex h-[90vh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
             >
-              <SheetTitle className="border-b p-4 pr-12">File details</SheetTitle>
+              <SheetTitle className="border-b p-4 pr-12">{t('inspector.sheetTitle')}</SheetTitle>
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {inspectId && (
                   <InspectorBody
@@ -980,9 +987,12 @@ export function MediaLibrary() {
           <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm">
             <div className="rounded-2xl border-2 border-dashed border-primary bg-background px-10 py-8 text-center shadow-lg">
               <Upload className="mx-auto mb-3 h-10 w-10 text-primary" />
-              <p className="text-lg font-semibold">Drop to upload</p>
+              <p className="text-lg font-semibold">{t('upload.dropTitle')}</p>
               <p className="text-sm text-muted-foreground">
-                Up to {MAX_FILES_PER_UPLOAD} files or {MAX_VIDEOS_PER_UPLOAD} videos (70 MB each)
+                {t('upload.dropHint', {
+                  files: MAX_FILES_PER_UPLOAD,
+                  videos: MAX_VIDEOS_PER_UPLOAD,
+                })}
               </p>
             </div>
           </div>
@@ -995,24 +1005,27 @@ export function MediaLibrary() {
 // ─── Storage + stats ──────────────────────────────────────────────────────────
 
 function StorageBar({ storage }: { storage: StorageUsage }) {
+  const { t } = useTranslation('media');
   const pct = storagePercent(storage.usedBytes, storage.limitBytes);
   return (
     <Card className="max-md:rounded-lg max-md:py-0 max-md:shadow-none">
       <CardContent className="space-y-2 p-4 max-md:px-3 max-md:py-2.5 max-md:text-xs">
         <div className="flex items-center justify-between text-sm max-md:text-xs">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            <HardDrive className="h-4 w-4 max-md:h-3.5 max-md:w-3.5" /> Media storage
+            <HardDrive className="h-4 w-4 max-md:h-3.5 max-md:w-3.5" /> {t('storage.title')}
           </span>
           <span className="font-medium">
-            {formatFileSize(storage.usedBytes)} of {formatFileSize(storage.limitBytes ?? 0)} ({pct}%)
+            {t('storage.usage', {
+              used: formatFileSize(storage.usedBytes),
+              limit: formatFileSize(storage.limitBytes ?? 0),
+              percent: pct,
+            })}
           </span>
         </div>
         <Progress value={pct} indicatorClassName={storageBarColor(pct)} />
         {pct >= 80 && (
           <p className="text-xs text-muted-foreground">
-            {pct >= 100
-              ? 'Storage is full — delete unused media before you can upload more.'
-              : 'Storage is nearly full. Delete unused media or upgrade your plan.'}
+            {pct >= 100 ? t('storage.full') : t('storage.nearlyFull')}
           </p>
         )}
       </CardContent>
@@ -1067,6 +1080,7 @@ function InspectorBody({
   onClose: () => void;
   hideClose?: boolean;
 }) {
+  const { t } = useTranslation(['media', 'common']);
   // Callers pass `key={fileId}`, so remounting on a new file resets the draft —
   // no effect needed to keep this in sync.
   const [editing, setEditing] = useState(false);
@@ -1099,7 +1113,7 @@ function InspectorBody({
             size="icon"
             className="absolute right-2 top-2 h-7 w-7"
             onClick={onClose}
-            aria-label="Close inspector"
+            aria-label={t('inspector.close')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -1130,7 +1144,7 @@ function InspectorBody({
                 onRename(fileId, nameDraft);
                 setEditing(false);
               }}
-              aria-label="Save name"
+              aria-label={t('inspector.saveName')}
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -1138,7 +1152,7 @@ function InspectorBody({
         ) : (
           <div className="flex items-start justify-between gap-2">
             <h3 className="break-words text-base font-semibold leading-tight">
-              {display.originalName ?? 'Untitled'}
+              {display.originalName ?? t('list.untitled')}
             </h3>
             <Button
               variant="ghost"
@@ -1148,7 +1162,7 @@ function InspectorBody({
                 setNameDraft(display.originalName ?? '');
                 setEditing(true);
               }}
-              aria-label="Rename file"
+              aria-label={t('inspector.rename')}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -1157,20 +1171,26 @@ function InspectorBody({
 
         {/* Metadata */}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <Meta label="Type" value={<span className="capitalize">{kind}</span>} />
-          <Meta label="Size" value={formatFileSize(display.size)} />
-          <Meta label="MIME" value={<span className="break-all">{display.mimeType}</span>} />
-          <Meta label="Provider" value={<span className="uppercase">{display.provider}</span>} />
-          <Meta label="Uploaded" value={formatDate(display.createdAt)} />
+          <Meta label={t('inspector.meta.type')} value={t(`kinds.${kind}` as const)} />
+          <Meta label={t('inspector.meta.size')} value={formatFileSize(display.size)} />
           <Meta
-            label="References"
+            label={t('inspector.meta.mime')}
+            value={<span className="break-all">{display.mimeType}</span>}
+          />
+          <Meta
+            label={t('inspector.meta.provider')}
+            value={<span className="uppercase">{display.provider}</span>}
+          />
+          <Meta label={t('inspector.meta.uploaded')} value={formatDate(display.createdAt)} />
+          <Meta
+            label={t('inspector.meta.references')}
             value={detail ? String(detail.usage.totalReferences) : '…'}
           />
         </dl>
 
         {/* Where it's used */}
         <div>
-          <h4 className="mb-2 text-sm font-semibold">Where it's used</h4>
+          <h4 className="mb-2 text-sm font-semibold">{t('inspector.whereUsed')}</h4>
           {loadingUsage ? (
             <div className="space-y-2">
               <Skeleton className="h-14 w-full" />
@@ -1178,12 +1198,12 @@ function InspectorBody({
             </div>
           ) : !attached ? (
             <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-              Not attached to anything. This file can be safely deleted.
+              {t('inspector.notAttached')}
             </div>
           ) : references.length > 0 ? (
             <div className="space-y-2">
               {references.map((ref, i) => {
-                const { Icon, typeLabel, detachHint } = describeReference(ref);
+                const { Icon, typeLabel, detachHint } = describeReference(ref, t);
                 return (
                   <UsageRow
                     key={`${ref.entityType}-${ref.entityId}-${ref.field}-${i}`}
@@ -1199,8 +1219,7 @@ function InspectorBody({
           ) : (
             // `references` is optional — an older backend reports only the count.
             <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-              Used in {detail!.usage.totalReferences} place
-              {detail!.usage.totalReferences === 1 ? '' : 's'}. Detach it there before deleting.
+              {t('inspector.usedInPlaces', { count: detail!.usage.totalReferences })}
             </div>
           )}
         </div>
@@ -1213,13 +1232,11 @@ function InspectorBody({
                 <span className="block">
                   <Button variant="outline" disabled className="w-full gap-2">
                     <Trash2 className="h-4 w-4" />
-                    Delete
+                    {t('common:actions.delete')}
                   </Button>
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="top">
-                Detach this file from everything using it before deleting.
-              </TooltipContent>
+              <TooltipContent side="top">{t('inspector.deleteDisabledHint')}</TooltipContent>
             </Tooltip>
           ) : (
             <Button
@@ -1229,7 +1246,7 @@ function InspectorBody({
               className="w-full gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
-              Delete file
+              {t('inspector.deleteFile')}
             </Button>
           )}
         </div>

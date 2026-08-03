@@ -1,0 +1,86 @@
+{
+  "required": "This field is required",
+  "invalid": "Please check this value",
+  "number": "Must be a number",
+  "wholeNumber": "Must be a whole number",
+  "nonNegative": "Must be 0 or greater",
+  "positive": "Must be greater than 0",
+  "min": "Must be at least {{min}}",
+  "max": "Must be at most {{max}}",
+  "minLength": "Must be at least {{count}} characters",
+  "maxLength": "Must be {{count}} characters or fewer",
+  "email": "Must be a valid email address",
+  "url": "Must be a valid link",
+  "phone": {
+    "tooShort": "Phone number is too short (min {{count}} characters)",
+    "tooLong": "Phone number is too long (max {{count}} characters)",
+    "format": "Invalid phone format (use digits, +, spaces, hyphens or parentheses)"
+  },
+  "password": {
+    "currentRequired": "Enter your current password",
+    "minLength": "Must be at least 8 characters",
+    "uppercase": "Must contain at least one uppercase letter",
+    "lowercase": "Must contain at least one lowercase letter",
+    "number": "Must contain at least one number",
+    "special": "Must contain at least one special character",
+    "mismatch": "Passwords do not match"
+  },
+  "address": {
+    "labelRequired": "Label is required",
+    "labelTooLong": "Label must be 50 characters or fewer",
+    "regionTooLong": "Region too long (max 100 characters)",
+    "cityTooLong": "City too long (max 100 characters)",
+    "descriptionRequired": "Address description is required",
+    "descriptionTooLong": "Address description too long (max 200 characters)",
+    "geoRequired": "Search for and select this location's address"
+  },
+  "logistics": {
+    "coverageRequired": "Select at least one coverage region",
+    "headquartersRequired": "At least one headquarters address is required"
+  },
+  "payout": {
+    "providerRequired": "Provider is required",
+    "accountNameRequired": "Account name is required",
+    "bankNameRequired": "Bank name is required",
+    "accountNumberRequired": "Account number is required",
+    "countryRequired": "Country is required",
+    "atLeastOne": "At least one payout method is required",
+    "atMostTwo": "You may add at most 2 payout methods (one mobile money and one bank)",
+    "duplicateType": "You can only add one method of each type (mobile money / bank)."
+  },
+  "policies": {
+    "codFeeTypeRequired": "COD fee type is required",
+    "returnPayerRequired": "Return cost payer is required",
+    "notesTooLong": "Notes too long (max 700 characters)",
+    "onePricingModel": "At least one pricing model must be enabled"
+  },
+  "ticket": {
+    "subjectRequired": "Add a subject",
+    "subjectTooLong": "Subject must be {{count}} characters or fewer",
+    "descriptionRequired": "Describe what you need help with",
+    "descriptionTooLong": "Description must be {{count}} characters or fewer",
+    "typeRequired": "Pick a ticket type",
+    "entityRequired": "Pick the item this ticket is about",
+    "noteRequired": "Write a note before sending"
+  },
+  "cash": {
+    "amountRequired": "Enter an amount",
+    "amountPositive": "Enter a positive whole amount",
+    "amountExceedsBalance": "That is more than the agent currently holds",
+    "amountExceedsLiability": "That is more than your agency currently owes",
+    "referenceRequired": "A transfer reference is required"
+  },
+  "contract": {
+    "sharePercentRange": "Enter a share between 0 and 100",
+    "flatFeePositive": "Enter a flat fee of 0 or more",
+    "feeSplitRequired": "Set a share percentage or a flat fee",
+    "codThresholdRange": "Enter a COD limit of 0 or more",
+    "coverageRequired": "Pick at least one region this agent will cover"
+  },
+  "magazin": {
+    "nameRequired": "Business name is required",
+    "nameTooShort": "Business name must be at least 2 characters",
+    "nameTooLong": "Business name must be 100 characters or fewer",
+    "descriptionTooLong": "Description too long (max {{count}} characters)"
+  }
+}

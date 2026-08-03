@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paperclip, X, FileIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MediaPicker } from '@/components/features/MediaPicker';
@@ -26,9 +27,10 @@ export function FileUploadField({
   onChange,
   max = 5,
   acceptedTypes,
-  label = 'Attach files',
+  label,
   disabled,
 }: FileUploadFieldProps) {
+  const { t } = useTranslation('common');
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const remaining = max - value.length;
@@ -47,7 +49,7 @@ export function FileUploadField({
         onClick={() => setPickerOpen(true)}
       >
         <Paperclip className="w-4 h-4" />
-        {label}
+        {label ?? t('media.attachFiles')}
         <span className="text-xs text-muted-foreground">
           ({value.length}/{max})
         </span>

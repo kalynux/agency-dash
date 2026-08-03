@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Info, RotateCcw, ShieldCheck, Store, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ export interface VendorCardProps {
 
 /** Presentational vendor card — logo, name, KYC badge, address, policy chips. */
 export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
+  const { t } = useTranslation('vendors');
   const addr = vendor.primaryAddress;
   const p = vendor.policies;
 
@@ -43,7 +45,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
                     name pushed the action buttons past the card's edge. */}
                 <p className="font-semibold text-sm truncate min-w-0">{vendor.displayName ?? vendor.businessName}</p>
                 {vendor.kycVerified && (
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" aria-label="KYC Verified" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" aria-label={t('card.kycVerified')} />
                 )}
               </div>
 
@@ -64,7 +66,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
                       )}
                     >
                       <RotateCcw className="w-2.5 h-2.5" />
-                      {p.returnPolicy.returnEligible ? 'Returns accepted' : 'No returns'}
+                      {p.returnPolicy.returnEligible ? t('card.returnsAccepted') : t('card.noReturns')}
                     </span>
                   )}
                   {p.cancellationPolicy && (
@@ -75,7 +77,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
                       )}
                     >
                       <XCircle className="w-2.5 h-2.5" />
-                      {p.cancellationPolicy.cancellable ? 'Cancellable' : 'Not cancellable'}
+                      {p.cancellationPolicy.cancellable ? t('card.cancellable') : t('card.notCancellable')}
                     </span>
                   )}
                 </div>
@@ -85,7 +87,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
         </div>
 
         {rightSlot && (
-          <div className="flex items-center justify-center gap-1.5 px-3 flex-shrink-0 border-l border-border/60 max-md:flex-1 max-md:justify-end max-md:border-l-0 max-md:border-t max-md:py-2.5">
+          <div className="flex items-center justify-center gap-1.5 px-3 flex-shrink-0 border-s border-border/60 max-md:flex-1 max-md:justify-end max-md:border-s-0 max-md:border-t max-md:py-2.5">
             {rightSlot}
           </div>
         )}
@@ -94,8 +96,8 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
           <button
             type="button"
             onClick={onInfo}
-            aria-label={`View details for ${vendor.businessName}`}
-            className="flex items-center justify-center w-12 flex-shrink-0 border-l border-border/60 max-md:border-t text-muted-foreground hover:text-foreground hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            aria-label={t('card.viewDetails', { name: vendor.businessName })}
+            className="flex items-center justify-center w-12 flex-shrink-0 border-s border-border/60 max-md:border-t text-muted-foreground hover:text-foreground hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <Info className="w-4 h-4" />
           </button>

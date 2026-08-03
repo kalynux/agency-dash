@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,23 +12,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { fetchBillingSettings, updateBillingSettings } from '@/services/billing.service';
-import { ApiError } from '@/types/api';
+import { getApiErrorMessage } from '@/lib/errors';
+import type { AnyTFunction } from '@/i18n/tx';
 import { CardSkeleton } from './BillingSkeletons';
 import { NOTIFY_DAYS_MIN, NOTIFY_DAYS_MAX, billingErrorMessage } from './billing.constants';
 
-const schema = z.object({
-  notifyDaysBeforeExpiry: z
-    .number({ message: 'Enter a number of days' })
-    .int('Must be a whole number')
-    .min(NOTIFY_DAYS_MIN, `Must be at least ${NOTIFY_DAYS_MIN}`)
-    .max(NOTIFY_DAYS_MAX, `Must be at most ${NOTIFY_DAYS_MAX}`),
-});
+/**
+ * A factory, not a module constant: a schema built at import time would freeze
+ * its messages in whatever language was active at boot.
+ */
+function buildSchema(t: AnyTFunction) {
+  return z.object({
+    notifyDaysBeforeExpiry: z
+      .number({ message: t('billing:settings.validation.number') })
+      .int(t('billing:settings.validation.integer'))
+      .min(NOTIFY_DAYS_MIN, t('billing:settings.validation.min', { min: NOTIFY_DAYS_MIN }))
+      .max(NOTIFY_DAYS_MAX, t('billing:settings.validation.max', { max: NOTIFY_DAYS_MAX })),
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 export function BillingSettingsCard() {
+  const { t } = useTranslation(['billing', 'common']);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const {
     register,
@@ -46,7 +57,7 @@ export function BillingSettingsCard() {
         const settings = await fetchBillingSettings();
         if (!cancelled) reset({ notifyDaysBeforeExpiry: settings.notifyDaysBeforeExpiry });
       } catch (err) {
-        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Failed to load settings.');
+        if (!cancelled) setLoadError(getApiErrorMessage(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -60,9 +71,9 @@ export function BillingSettingsCard() {
     try {
       const updated = await updateBillingSettings(values.notifyDaysBeforeExpiry);
       reset({ notifyDaysBeforeExpiry: updated.notifyDaysBeforeExpiry });
-      toast.success('Settings updated');
+      toast.success(t('settings.saved'));
     } catch (err) {
-      toast.error(billingErrorMessage(err, 'Failed to update settings.'));
+      toast.error(billingErrorMessage(err, t('settings.saveFailed')));
     }
   }
 
@@ -71,10 +82,8 @@ export function BillingSettingsCard() {
   return (
     <Card className={cn(sectionSurfaceClass, sectionRuleClass)}>
       <CardHeader className="max-md:px-0">
-        <CardTitle>Expiry reminders</CardTitle>
-        <CardDescription>
-          How many days before your plan expires should we warn you?
-        </CardDescription>
+        <CardTitle>{t('settings.title')}</CardTitle>
+        <CardDescription>{t('settings.description')}</CardDescription>
       </CardHeader>
       <CardContent className="max-md:px-0">
         {loadError ? (
@@ -82,7 +91,7 @@ export function BillingSettingsCard() {
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-1.5 sm:max-w-[200px]">
-              <Label htmlFor="notify-days">Days before expiry</Label>
+              <Label htmlFor="notify-days">{t('settings.daysLabel')}</Label>
               <Input
                 id="notify-days"
                 type="number"
@@ -97,7 +106,7 @@ export function BillingSettingsCard() {
             </div>
             <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
+              {t('common:actions.save')}
             </Button>
           </form>
         )}
