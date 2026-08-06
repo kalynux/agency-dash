@@ -12,24 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
-
-// IANA zones with their UTC offset — city names and abbreviations are not copy.
-const TIMEZONES = [
-    { value: 'Africa/Douala', label: 'Douala (WAT, UTC+1)' },
-    { value: 'Africa/Lagos', label: 'Lagos (WAT, UTC+1)' },
-    { value: 'Africa/Abidjan', label: 'Abidjan (GMT, UTC+0)' },
-    { value: 'Africa/Dakar', label: 'Dakar (GMT, UTC+0)' },
-    { value: 'Africa/Accra', label: 'Accra (GMT, UTC+0)' },
-    { value: 'Africa/Nairobi', label: 'Nairobi (EAT, UTC+3)' },
-    { value: 'Africa/Dar_es_Salaam', label: 'Dar es Salaam (EAT, UTC+3)' },
-    { value: 'Africa/Kampala', label: 'Kampala (EAT, UTC+3)' },
-    { value: 'Africa/Kigali', label: 'Kigali (CAT, UTC+2)' },
-    { value: 'Africa/Cairo', label: 'Cairo (EET, UTC+2)' },
-    { value: 'Africa/Johannesburg', label: 'Johannesburg (SAST, UTC+2)' },
-    { value: 'Europe/Paris', label: 'Paris (CET, UTC+1)' },
-    { value: 'Europe/London', label: 'London (GMT, UTC+0)' },
-    { value: 'America/New_York', label: 'New York (EST, UTC-5)' },
-];
+import { TIMEZONES } from '@/lib/timezones';
 
 function FieldRow({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
     return (

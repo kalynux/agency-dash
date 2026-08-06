@@ -43,24 +43,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
+import { InfoHint } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 
 // ─── Static config ──────────────────────────────────────────────────────────
-
-/** Same heading in all three render states, so loading/error/loaded don't shift. */
-function Heading() {
-  const { t } = useTranslation('settings');
-  return (
-    <SectionHeading
-      title={t('notifications.title')}
-      description={t('notifications.description')}
-      short={t('notifications.short')}
-    />
-  );
-}
 
 const TelegramIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -344,10 +332,11 @@ export function NotificationSettings() {
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
+  // No section heading in any of the three states: this tab is a single block,
+  // so the page header above it already names it.
   if (loading) {
     return (
       <Card className={sectionSurfaceClass}>
-        <Heading />
         <CardContent className="space-y-4 max-md:px-0">
           <Skeleton className="h-5 w-40" />
           {[0, 1, 2, 3].map((i) => (
@@ -361,7 +350,6 @@ export function NotificationSettings() {
   if (loadError || !prefs || !events) {
     return (
       <Card className={sectionSurfaceClass}>
-        <Heading />
         <CardContent className="space-y-4 max-md:px-0">
           <div role="alert" className="p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
             {loadError ?? t('notifications.loadFailed')}
@@ -375,7 +363,6 @@ export function NotificationSettings() {
   return (
     <>
     <Card className={sectionSurfaceClass}>
-      <Heading />
       <CardContent className="space-y-8 max-md:px-0">
         {/* Delivery channel */}
         <div className="space-y-4">

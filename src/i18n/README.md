@@ -24,6 +24,8 @@ src/i18n/
 `lib/validation-schemas.ts` and `onboarding/schemas/*` build Zod schemas from `t`.
 `lib/format.ts` formats numbers, currency and dates in the active locale.
 `lib/direction.ts` mirrors the shell for right-to-left languages.
+`lib/utils.ts#formatFileSize` renders byte units through `common:units.bytes.*`
+— the unit is translated, not just grouped: French counts in octets (o/Ko/Mo).
 
 ## Adding a language
 
@@ -143,15 +145,23 @@ and `errors` only and fall back to English per key — a normal, shippable state
 - **Language names** in the notification-language picker: each is written in
   its own language (`Français`, `العربية`), never translated into the current one.
 - **Timezone rows** (`Douala (WAT, UTC+1)`) — a city name plus a UTC offset.
+  The list lives in `lib/timezones.ts`, shared by onboarding and Account →
+  Profile: both write `role_entity.timezone`, so a zone offered by one and
+  missing from the other would leave a saved value with no matching option.
 - **Country names** in the payout bank picker, which go through
   `Intl.DisplayNames` rather than a namespace; the stored *value* stays English
-  because that is what the backend persists.
+  because that is what the backend persists. `lib/countries.ts` owns the list
+  for the same reason as timezones — onboarding and Account → Payout both write
+  `payout_details[].bank.country`.
 - **Region names**, which carry their own per-language strings inside
   `constants/locations.json` — see `regionsFor(country, language)`.
-- `components/features/LoginForm.tsx` and `pages/Login.tsx`, which are
-  unreachable: `/login` renders `LoginRedirectScreen` in `App.tsx`.
-- The legacy mock-data stores in `store/index.tsx` (products, orders, vendors,
-  analytics, media), which no screen reads any more.
+- **Unused `components/ui/` primitives** — `pagination`, `sidebar`, `carousel`
+  and `breadcrumb` are vendored shadcn files that nothing imports. Their
+  `sr-only` labels ("Previous", "Toggle Sidebar") are the only English left in
+  `src/`; localize them if one is ever adopted.
+
+The unreachable `LoginForm.tsx` / `pages/Login.tsx` and the mock-data stores
+that used to appear here were deleted, not exempted.
 
 Notification titles, messages and action labels are **not** in this table:
 the backend renders them in the agency's `preferred_language`, which is the same

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { shipmentsService } from '@/services/shipments.service';
+import { formatCurrency } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ReassignDialog } from '@/components/shipments/ReassignDialog';
 import type { AgentSummary } from '@/types/agent.types';
@@ -99,9 +100,17 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
         {t('assignment.title')}
       </h3>
 
-      {/* COD gating hint */}
+      {/* COD gating hint. Naming the sum is the point of showing it here: how
+          much cash a run puts in someone's hands is part of deciding who to
+          send, and it is knowable before anyone has accepted. */}
       {detail.paymentMethod === 'cash_on_delivery' && !hasBoundAgent && (
-        <p className="text-xs text-amber-600 mb-2">{t('assignment.codHint')}</p>
+        <p className="text-xs text-gold-700 dark:text-gold-400 mb-2">
+          {detail.cod
+            ? t('assignment.codHintAmount', {
+                amount: formatCurrency(detail.cod.expectedAmount, detail.cod.currency),
+              })
+            : t('assignment.codHint')}
+        </p>
       )}
 
       {/* Bound agent + reassign */}

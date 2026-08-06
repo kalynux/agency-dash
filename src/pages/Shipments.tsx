@@ -15,6 +15,7 @@ import { shipmentsService } from '@/services/shipments.service';
 import { useShipments } from '@/store/shipments.store';
 import { useAgentsRoster } from '@/store/agents.store';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
+import { ShipmentMoneyCell } from '@/components/shipments/ShipmentMoney';
 import { ShipmentDetailSheet } from '@/components/shipments/ShipmentDetailSheet';
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
@@ -277,6 +278,7 @@ export function Shipments() {
                       <th className="text-start p-4 text-sm font-medium">{t('table.shipment')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.vendor')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.customer')}</th>
+                      <th className="text-start p-4 text-sm font-medium">{t('table.money')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.date')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.status')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.agent')}</th>
@@ -301,8 +303,29 @@ export function Shipments() {
                             </div>
                           )}
                         </td>
+                        {/* The vendor's store, on every shipment — including one
+                            collected from our own magazin: who supplied the goods
+                            doesn't depend on where we pick them up. The phone is
+                            the one thing dispatch calls when a pickup goes wrong,
+                            so it dials straight from the row. */}
                         <td className="p-4">
-                          <div className="max-w-[14rem] truncate text-sm" title={shipment.vendor.businessName}>{shipment.vendor.businessName}</div>
+                          <div className="flex items-start gap-2">
+                            <Store className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <div className="max-w-[12rem] truncate text-sm font-medium" title={shipment.vendor.businessName}>
+                                {shipment.vendor.businessName}
+                              </div>
+                              {shipment.vendor.phone && (
+                                <a
+                                  href={`tel:${shipment.vendor.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                                >
+                                  {shipment.vendor.phone}
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
@@ -314,6 +337,12 @@ export function Shipments() {
                               <div className="truncate text-sm text-muted-foreground" title={shipment.customer.phone}>{shipment.customer.phone}</div>
                             </div>
                           </div>
+                        </td>
+                        {/* Cash at the door + what the run pays us. Both are on
+                            the row (not just the detail) because dispatch decides
+                            what to send out, and to whom, off this list. */}
+                        <td className="p-4">
+                          <ShipmentMoneyCell shipment={shipment} />
                         </td>
                         <td className="p-4 text-sm">{formatDate(shipment.createdAt)}</td>
                         <td className="p-4">
@@ -387,6 +416,13 @@ export function Shipments() {
                     {routeLabel(shipment) && (
                       <p className="mt-1 truncate text-xs text-muted-foreground">{routeLabel(shipment)}</p>
                     )}
+
+                    {/* Cash to collect and our net on the run — laid out in a row
+                        here, since a phone card has width to spare but not height. */}
+                    <ShipmentMoneyCell
+                      shipment={shipment}
+                      className="mt-2 flex-row flex-wrap items-center"
+                    />
                   </div>
                 ))}
               </div>

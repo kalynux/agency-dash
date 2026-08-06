@@ -1,9 +1,13 @@
 {
-  "page": {
-    "title": "Vendors",
-    "description": "Manage vendor partnerships — you only receive orders from connected vendors",
-    "descriptionShort": "Manage vendor partnerships",
-    "aboutLabel": "About vendor partnerships"
+  "tabs": {
+    "connections": {
+      "description": "Every vendor relationship your agency has, past and present — you only receive orders from connected vendors",
+      "short": "Your vendor connections"
+    },
+    "browse": {
+      "description": "Find vendors you can request a connection with",
+      "short": "Vendors you can connect to"
+    }
   },
   "status": {
     "pending": "Pending",

@@ -99,6 +99,9 @@
     "file_one": "fichier",
     "file_many": "fichiers",
     "file_other": "fichiers",
+    "item_one": "article",
+    "item_many": "articles",
+    "item_other": "articles",
     "notification_one": "notification",
     "notification_many": "notifications",
     "notification_other": "notifications",
@@ -150,6 +153,11 @@
     "moreInformation": "Plus d'informations",
     "aboutSection": "À propos de « {{title}} »"
   },
+  "phone": {
+    "countryFor": "Indicatif : {{country}} ({{code}}). Changer de pays",
+    "searchCountry": "Rechercher un pays ou un indicatif…",
+    "noCountry": "Aucun pays correspondant"
+  },
   "values": {
     "notAvailable": "—",
     "yes": "Oui",
@@ -198,7 +206,14 @@
     "percent": "{{value}} %",
     "items_one": "{{count}} élément",
     "items_many": "{{count}} éléments",
-    "items_other": "{{count}} éléments"
+    "items_other": "{{count}} éléments",
+    "bytes": {
+      "b": "{{value}} o",
+      "kb": "{{value}} Ko",
+      "mb": "{{value}} Mo",
+      "gb": "{{value}} Go",
+      "tb": "{{value}} To"
+    }
   },
   "media": {
     "changePhoto": "Changer la photo",

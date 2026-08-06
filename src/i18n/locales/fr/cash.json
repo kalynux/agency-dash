@@ -1,7 +1,21 @@
 {
-  "page": {
-    "title": "Gestion des espèces",
-    "description": "Suivez les encaissements à la livraison, du client au livreur, puis à votre agence et à la plateforme"
+  "tabs": {
+    "summary": {
+      "description": "Où se trouvent actuellement vos encaissements à la livraison — ce que vos livreurs détiennent encore et ce que vous devez à la plateforme",
+      "short": "Votre position de trésorerie"
+    },
+    "deposits": {
+      "description": "Les espèces remises par vos livreurs, et les déclarations qui attendent encore votre réponse",
+      "short": "Espèces reçues des livreurs"
+    },
+    "remittances": {
+      "description": "Les espèces que vous avez transférées à la plateforme, et ce qu'il reste à confirmer",
+      "short": "Espèces envoyées à la plateforme"
+    },
+    "discrepancies": {
+      "description": "Les problèmes de caisse signalés à propos d'un livreur, et la façon dont chacun a été résolu",
+      "short": "Problèmes de caisse avec les livreurs"
+    }
   },
   "collectionStatus": {
     "pending": "En attente",

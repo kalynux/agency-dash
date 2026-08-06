@@ -1,13 +1,14 @@
-import { formatCurrency, formatDateTime as fmtDateTime } from '@/lib/format';
+import { formatDateTime as fmtDateTime } from '@/lib/format';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ban, Banknote, Clock, Loader2, Mail, MapPin, Phone, XCircle } from 'lucide-react';
+import { Ban, Banknote, Clock, Loader2, Mail, MapPin, Phone, Store, XCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
+import { ShipmentMoneySection } from '@/components/shipments/ShipmentMoney';
 import { AssignmentPanel } from '@/components/shipments/AssignmentPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
 import { getNextActions, canRejectStatus, isTerminalStatus } from '@/components/shipments/shipment-actions';
@@ -117,8 +118,13 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <ShipmentStatusBadge status={detail.status} />
+            {/* Gold is the dashboard's money accent, and unlike a raw amber-50
+                fill it holds up in dark mode. */}
             {isCod && (
-              <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 bg-amber-50">
+              <Badge
+                variant="outline"
+                className="gap-1 border-gold-400/60 bg-gold-500/15 text-gold-700 dark:text-gold-400"
+              >
                 <Banknote className="w-3 h-3" /> {t('detail.cashOnDelivery')}
               </Badge>
             )}
@@ -196,26 +202,10 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
             </div>
           </section>
 
-          {/* COD collection */}
-          {detail.cod && (
-            <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                {t('detail.cashCollection')}
-              </h3>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-amber-900">
-                    {formatCurrency(detail.cod.expectedAmount, detail.cod.currency)}
-                  </p>
-                  <p className="text-xs text-amber-700">
-                    {tx(t, `cash:collectionStatus.${detail.cod.status}`)}
-                    {detail.cod.collectedAt && ` · ${formatDateTime(detail.cod.collectedAt)}`}
-                  </p>
-                </div>
-                <Banknote className="w-5 h-5 text-amber-600 flex-shrink-0" />
-              </div>
-            </section>
-          )}
+          {/* Cash to collect + what the run pays us, itemised. Sits above the
+              agent picker on purpose: both figures are inputs to choosing who
+              to send. */}
+          <ShipmentMoneySection detail={detail} />
 
           {/* Vendor & Customer */}
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -223,16 +213,34 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 {t('detail.vendor')}
               </h3>
+              {/* Present on every shipment, including one whose items were
+                  already in our own magazin — who supplied the goods doesn't
+                  depend on where we collect them. */}
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                <p className="text-sm font-medium">{detail.vendor.businessName}</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  {detail.vendor.phone}
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <Store className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate" title={detail.vendor.businessName}>
+                    {detail.vendor.businessName}
+                  </span>
                 </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Mail className="w-3 h-3" />
-                  {detail.vendor.email}
-                </p>
+                {detail.vendor.phone && (
+                  <a
+                    href={`tel:${detail.vendor.phone}`}
+                    className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary hover:underline"
+                  >
+                    <Phone className="w-3 h-3 flex-shrink-0" />
+                    {detail.vendor.phone}
+                  </a>
+                )}
+                {detail.vendor.email && (
+                  <a
+                    href={`mailto:${detail.vendor.email}`}
+                    className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary hover:underline"
+                  >
+                    <Mail className="w-3 h-3 flex-shrink-0" />
+                    <span className="min-w-0 truncate">{detail.vendor.email}</span>
+                  </a>
+                )}
               </div>
             </div>
             <div>
@@ -241,10 +249,15 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               </h3>
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                 <p className="text-sm font-medium">{detail.customer.name}</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  {detail.customer.phone}
-                </p>
+                {detail.customer.phone && (
+                  <a
+                    href={`tel:${detail.customer.phone}`}
+                    className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary hover:underline"
+                  >
+                    <Phone className="w-3 h-3 flex-shrink-0" />
+                    {detail.customer.phone}
+                  </a>
+                )}
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
                   {/* Snapshotted at checkout, so this is where they actually

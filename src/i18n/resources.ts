@@ -19,6 +19,7 @@ import enBilling from './locales/en/billing.json';
 import enCash from './locales/en/cash.json';
 import enCommon from './locales/en/common.json';
 import enErrors from './locales/en/errors.json';
+import enInventory from './locales/en/inventory.json';
 import enMedia from './locales/en/media.json';
 import enNav from './locales/en/nav.json';
 import enNotifications from './locales/en/notifications.json';
@@ -39,6 +40,7 @@ export const enResources = {
   cash: enCash,
   common: enCommon,
   errors: enErrors,
+  inventory: enInventory,
   media: enMedia,
   nav: enNav,
   notifications: enNotifications,

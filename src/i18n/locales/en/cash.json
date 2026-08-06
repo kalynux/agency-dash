@@ -1,7 +1,21 @@
 {
-  "page": {
-    "title": "Cash Management",
-    "description": "Track cash-on-delivery collections as they move from customer to agent to your agency to the platform"
+  "tabs": {
+    "summary": {
+      "description": "Where your cash-on-delivery money sits right now — what your agents still hold and what you owe the platform",
+      "short": "Your cash position"
+    },
+    "deposits": {
+      "description": "Cash your agents have handed over, and the declarations still waiting on your answer",
+      "short": "Cash received from agents"
+    },
+    "remittances": {
+      "description": "Cash you have transferred to the platform, and what it is still waiting to confirm",
+      "short": "Cash sent to the platform"
+    },
+    "discrepancies": {
+      "description": "Cash problems raised against an agent, and how each one was resolved",
+      "short": "Cash problems with agents"
+    }
   },
   "collectionStatus": {
     "pending": "Pending",

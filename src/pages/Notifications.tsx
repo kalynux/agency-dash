@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
@@ -211,7 +212,22 @@ export function Notifications() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('page.title')}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-2xl font-bold">{t('page.title')}</h1>
+            {/* Counts read as badges next to the title — desktop only, as the
+                cards they replaced were. */}
+            <div className="flex items-center gap-2 max-sm:hidden">
+              <Badge variant={unreadCount > 0 ? 'default' : 'secondary'}>
+                <Bell />
+                <span className="tabular-nums">{unreadCount}</span>
+                {t('stats.unread')}
+              </Badge>
+              <Badge variant="outline">
+                <span className="tabular-nums">{meta.total}</span>
+                {t('stats.total')}
+              </Badge>
+            </div>
+          </div>
           <p className="text-muted-foreground">{t('page.description')}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -228,36 +244,6 @@ export function Notifications() {
             <Settings className="w-4 h-4" />
           </Button>
         </div>
-      </div>
-
-      {/* Stats (desktop only) */}
-      <div className="hidden sm:grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('stats.unread')}</p>
-                <p className="text-2xl font-bold">{unreadCount}</p>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Bell className="w-5 h-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
-                <p className="text-2xl font-bold">{meta.total}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Check className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <SearchFilterBar

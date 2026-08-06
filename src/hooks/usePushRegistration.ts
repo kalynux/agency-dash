@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { notificationsService } from '@/services/notifications.service';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -41,6 +42,7 @@ function readStoredToken(): string | null {
  * only happens once the host's provider yields a real one.
  */
 export function usePushRegistration() {
+  const { t } = useTranslation('settings');
   const supported = typeof window !== 'undefined' && 'Notification' in window;
   const hasProvider = typeof window !== 'undefined' && typeof window.joviGetPushToken === 'function';
 
@@ -75,7 +77,7 @@ export function usePushRegistration() {
       }
       const token = await window.joviGetPushToken();
       if (!token) {
-        toast.error('Could not obtain a push token on this device.');
+        toast.error(t('notifications.push.toastTokenFailed'));
         setStatus('granted');
         return;
       }
@@ -90,13 +92,13 @@ export function usePushRegistration() {
         /* ignore */
       }
       setStatus('registered');
-      toast.success('Push notifications enabled on this device.');
+      toast.success(t('notifications.push.toastEnabled'));
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     } finally {
       setIsBusy(false);
     }
-  }, [supported, resolveStatus]);
+  }, [supported, resolveStatus, t]);
 
   const disable = useCallback(async () => {
     const token = readStoredToken();
@@ -109,13 +111,13 @@ export function usePushRegistration() {
         /* ignore */
       }
       setStatus(resolveStatus());
-      toast.success('Push notifications disabled on this device.');
+      toast.success(t('notifications.push.toastDisabled'));
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     } finally {
       setIsBusy(false);
     }
-  }, [resolveStatus]);
+  }, [resolveStatus, t]);
 
   return { supported, hasProvider, status, isBusy, enable, disable };
 }

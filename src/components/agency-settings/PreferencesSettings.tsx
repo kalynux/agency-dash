@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { SectionHeading } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUIStore } from '@/store';
@@ -21,9 +20,10 @@ export function PreferencesSettings() {
     system: t('preferences.themeSystem'),
   } satisfies Record<Theme, string>;
 
+  // No section heading: this tab is a single block, so the page header above it
+  // already names it — a heading here would print the same line twice.
   return (
     <Card className={sectionSurfaceClass}>
-      <SectionHeading title={t('preferences.title')} description={t('preferences.description')} />
       <CardContent className="space-y-4 max-md:px-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

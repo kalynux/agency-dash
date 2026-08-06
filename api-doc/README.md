@@ -225,6 +225,7 @@ Same JWT signs both services — forward the viewer's access token to geo-tracke
 - [Live tracking board](./agency/live-tracking.md) — the map's data load: trackable agents + their active shipments with start/end pins
 - [Billing (plans & credit)](./agency/billing.md) · [COD cash management](./agency/cod-cash-management.md) · [Earnings](./agency/earnings.md) · [Payment methods](./agency/payment-methods.md)
 - [Vendor connections](./agency/vendor-connections.md) · [Vendors](./agency/vendors.md) · [Products](./agency/products.md)
+- [Inventory](./agency/inventory.md) — ⚠️ **proposed, not implemented**: warehoused vendor stock, per-location quantities, and what the backend must add to serve it
 - [File management](./agency/file-management.md) · [Storage](./agency/storage.md)
 - [Notifications](./agency/notifications.md) · [Tickets](./agency/tickets.md)
 

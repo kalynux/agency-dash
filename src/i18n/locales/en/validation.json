@@ -12,9 +12,10 @@
   "email": "Must be a valid email address",
   "url": "Must be a valid link",
   "phone": {
-    "tooShort": "Phone number is too short (min {{count}} characters)",
-    "tooLong": "Phone number is too long (max {{count}} characters)",
-    "format": "Invalid phone format (use digits, +, spaces, hyphens or parentheses)"
+    "required": "Phone number is required",
+    "tooShort": "This number is too short for the selected country",
+    "tooLong": "This number is too long for the selected country",
+    "invalid": "Enter a valid phone number for the selected country"
   },
   "password": {
     "currentRequired": "Enter your current password",

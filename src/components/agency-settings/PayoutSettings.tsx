@@ -12,17 +12,17 @@ import { SectionHeading } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PhoneInput } from '@/components/common/PhoneInput';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
-import { buildPayoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
+import { buildPayoutSchema, toSubmittablePayoutDetails, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
 import type { PayoutDetails } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
+import { countryOptions } from '@/lib/countries';
 import { isSameFormValue } from '@/lib/form-diff';
 import { cn } from '@/lib/utils';
 
-// Proper nouns — brand names and the country names the backend stores verbatim.
-// Not translated: they are data sent to the API, not UI copy.
+// Operator brands — proper nouns, the same in every language.
 const MOBILE_MONEY_PROVIDERS = ['MTN Mobile Money', 'Orange Money', 'Wave', 'Moov Money', 'Airtel Money'];
-const COUNTRIES = ['Cameroon', "Côte d'Ivoire", 'Senegal', 'Nigeria', 'Ghana', 'Kenya'];
 
 const EMPTY_MOBILE_MONEY = { method: 'mobile_money' as const, mobile_money: { provider: '', phone_number: '', account_name: '' }, bank: null };
 const EMPTY_BANK = { method: 'bank' as const, bank: { bank_name: '', account_number: '', account_name: '', country: '' }, mobile_money: null };
@@ -45,10 +45,13 @@ function toFormValues(saved: PayoutDetails | undefined): PayoutFormValues {
 }
 
 export function PayoutSettings() {
-  const { t } = useTranslation('account');
+  const { t, i18n } = useTranslation('account');
   const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Same list and same localization as onboarding's payout step — see lib/countries.
+  const countries = useMemo(() => countryOptions(i18n.language), [i18n.language]);
 
   /**
    * The last values the server is known to hold — the form's seed and the
@@ -60,7 +63,7 @@ export function PayoutSettings() {
   const [baseline, setBaseline] = useState<PayoutFormValues>(() => toFormValues(roleEntity?.payout_details));
 
   const schema = useMemo(() => buildPayoutSchema(t), [t]);
-  const { register, handleSubmit, control, watch, setValue, reset } = useForm<PayoutFormValues>({
+  const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<PayoutFormValues>({
     resolver: zodResolver(schema),
     defaultValues: baseline,
   });
@@ -80,11 +83,14 @@ export function PayoutSettings() {
   const onSubmit = useCallback(async (submitted: PayoutFormValues) => {
     setApiError(null);
     try {
-      await updateAgencyProfile({ payout_details: submitted.payout_details });
-      // Re-seed from the values the server accepted — they are trimmed, so the
-      // bar settles instead of hanging on a stray space the user typed.
-      reset(submitted);
-      setBaseline(submitted);
+      // Mobile-money numbers go out as E.164, including ones seeded from a
+      // legacy row the user never touched (see toSubmittablePayoutDetails).
+      const payload = { ...submitted, payout_details: toSubmittablePayoutDetails(submitted.payout_details) };
+      await updateAgencyProfile({ payout_details: payload.payout_details });
+      // Re-seed from the values the server accepted — they are normalized, so the
+      // bar settles instead of hanging on a number we just rewrote.
+      reset(payload);
+      setBaseline(payload);
       toast.success(t('payout.saved'));
     } catch (err) {
       setApiError(getApiErrorMessage(err));
@@ -114,6 +120,12 @@ export function PayoutSettings() {
           {fields.map((field, index) => {
             const currentMethod = payoutDetails?.[index]?.method ?? 'mobile_money';
             const isPreferred = index === 0;
+            // `payout_details` is a discriminated union, so RHF's error type for an
+            // entry doesn't name either branch's fields — same reason the `register`
+            // paths below are cast.
+            const phoneError = (errors.payout_details?.[index] as
+              | { mobile_money?: { phone_number?: { message?: string } } }
+              | undefined)?.mobile_money?.phone_number?.message;
             return (
               <div key={field.id} className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -153,8 +165,21 @@ export function PayoutSettings() {
                       )} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>{t('payout.phoneNumber')}</Label>
-                      <Input placeholder={t('payout.phonePlaceholder')} {...register(`payout_details.${index}.mobile_money.phone_number` as never)} />
+                      <Label htmlFor={`payout-${index}-phone`}>{t('payout.phoneNumber')}</Label>
+                      <Controller control={control} name={`payout_details.${index}.mobile_money.phone_number` as `payout_details.${number}.mobile_money.phone_number`} render={({ field: f }) => (
+                        <PhoneInput
+                          id={`payout-${index}-phone`}
+                          value={f.value ?? ''}
+                          onChange={f.onChange}
+                          onBlur={f.onBlur}
+                          required
+                          hasError={!!phoneError}
+                          describedBy={phoneError ? `payout-${index}-phone-error` : undefined}
+                        />
+                      )} />
+                      {phoneError && (
+                        <p id={`payout-${index}-phone-error`} className="text-xs text-destructive">{phoneError}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label>{t('payout.accountName')}</Label>
@@ -182,7 +207,7 @@ export function PayoutSettings() {
                       <Controller control={control} name={`payout_details.${index}.bank.country` as `payout_details.${number}.bank.country`} render={({ field: f }) => (
                         <Select value={f.value ?? ''} onValueChange={f.onChange}>
                           <SelectTrigger><SelectValue placeholder={t('payout.countryPlaceholder')} /></SelectTrigger>
-                          <SelectContent>{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                          <SelectContent>{countries.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
                         </Select>
                       )} />
                     </div>

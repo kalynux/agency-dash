@@ -7,8 +7,6 @@
     "descriptionShort": "Mouvements d'argent et de crédits"
   },
   "transactions": {
-    "title": "Transactions",
-    "description": "Tous les mouvements d'argent et de crédits sur votre compte — achats de forfait, recharges et consommation de crédits, et revenus de frais de livraison.",
     "searchPlaceholder": "Rechercher une transaction…",
     "searchLabel": "Rechercher dans cette page par description ou catégorie",
     "filterDescription": "La catégorie filtre tout le registre ; la recherche ne porte que sur la page affichée.",
@@ -158,7 +156,6 @@
       "description": "Enregistrez un moyen de paiement pour accélérer le paiement. Nous ne stockons jamais le numéro complet de carte ni le CVV.",
       "type": "Type",
       "phone": "Numéro mobile money",
-      "phonePlaceholder": "+237650000000",
       "operator": "Opérateur",
       "holderNameMobile": "Nom du titulaire (facultatif)",
       "holderNameMobilePlaceholder": "Titulaire du compte",
@@ -168,8 +165,7 @@
       "setAsDefault": "Définir par défaut",
       "setAsDefaultHint": "Présélectionné lors du paiement.",
       "submit": "Enregistrer",
-      "added": "Moyen de paiement ajouté",
-      "invalidPhone": "Saisissez un numéro de téléphone valide (ex. +237650000000)."
+      "added": "Moyen de paiement ajouté"
     }
   },
   "settings": {
@@ -199,7 +195,6 @@
     "newMethod": "Nouveau",
     "payWith": "Payer avec",
     "phone": "Numéro mobile money",
-    "phonePlaceholder": "+237650000000",
     "operator": "Opérateur",
     "usdNotice": "Les paiements par carte sont traités en <strong>USD</strong> ; votre banque peut appliquer sa propre conversion. Le montant exact en dollars sera affiché à l'étape suivante.",
     "usdNoticeShort": "Débité en USD ; votre banque peut appliquer sa propre conversion.",
@@ -208,7 +203,6 @@
     "receiptEmail": "E-mail pour le reçu (facultatif)",
     "receiptEmailPlaceholder": "agence@exemple.com",
     "invalidEmail": "Saisissez un e-mail valide, ou laissez le champ vide.",
-    "invalidPhone": "Saisissez un numéro de téléphone valide (ex. +237650000000).",
     "continueToCard": "Continuer vers la carte",
     "confirmPayment": "Confirmer le paiement · {{amount}}",
     "youWillBeCharged": "Vous serez débité de",

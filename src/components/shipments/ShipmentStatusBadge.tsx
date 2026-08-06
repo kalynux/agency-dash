@@ -13,7 +13,7 @@ export function ShipmentStatusBadge({ status, className }: { status: ShipmentSta
   const style = SHIPMENT_STATUS_STYLE[status];
   return (
     <Badge variant="outline" className={cn(style.className, className)}>
-      <span className={cn('w-2 h-2 rounded-full me-1.5', style.dot)} />
+      {/* <span className={cn('w-2 h-2 rounded-full me-1.5', style.dot)} /> */}
       {label}
     </Badge>
   );

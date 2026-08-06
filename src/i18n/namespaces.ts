@@ -13,6 +13,7 @@
  *   onboarding   the 4-step onboarding flow
  *   overview     dashboard home
  *   shipments    shipments page + assignment/reassign/reject dialogs
+ *   inventory    warehoused vendor stock: list, detail sheet, stock states
  *   tracking     live tracking map
  *   agents       agent directory, contracts, terms negotiation
  *   vendors      vendor connections
@@ -34,6 +35,7 @@ export const NAMESPACES = [
   'onboarding',
   'overview',
   'shipments',
+  'inventory',
   'tracking',
   'agents',
   'vendors',

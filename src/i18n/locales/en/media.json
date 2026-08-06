@@ -42,8 +42,6 @@
   },
   "stats": {
     "totalFiles": "Total files",
-    "storageUsed": "Storage used",
-    "storageUsedOfLimit": "{{used}} / {{limit}}",
     "attachedOnPage": "Attached (page)",
     "unusedOnPage": "Unused (page)"
   },

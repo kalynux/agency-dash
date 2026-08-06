@@ -1,9 +1,29 @@
 {
-  "page": {
-    "title": "Compte",
-    "description": "Gérez votre profil personnel, l'identité de votre entreprise et vos versements",
-    "descriptionShort": "Profil, entreprise et versements",
-    "aboutLabel": "À propos de la section Compte"
+  "tabs": {
+    "profile": {
+      "description": "Vos coordonnées, et la langue de ce tableau de bord et de vos notifications",
+      "short": "Vos coordonnées et la langue"
+    },
+    "store": {
+      "description": "L'identité commerciale de votre agence — le nom, le logo et les contacts que voient les vendeurs et les clients",
+      "short": "Nom, logo et contacts"
+    },
+    "locations": {
+      "description": "Les régions que vous desservez et vos adresses de siège — l'empreinte opérationnelle que les vendeurs consultent pour choisir une agence",
+      "short": "Où vous opérez"
+    },
+    "security": {
+      "description": "Votre mot de passe et les vérifications supplémentaires qui protègent ce compte",
+      "short": "Mot de passe et 2FA"
+    },
+    "billing": {
+      "description": "Votre forfait, votre portefeuille de crédits, votre stockage et vos moyens de paiement enregistrés",
+      "short": "Forfait, crédits et cartes"
+    },
+    "payout": {
+      "description": "Votre solde de frais de livraison, et où ces revenus sont envoyés",
+      "short": "Revenus et moyens de versement"
+    }
   },
   "profile": {
     "saveError": "Corrigez les champs signalés avant d'enregistrer.",
@@ -87,7 +107,6 @@
     "provider": "Opérateur",
     "providerPlaceholder": "Choisir un opérateur",
     "phoneNumber": "Numéro de téléphone",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "accountName": "Nom du titulaire",
     "bankName": "Nom de la banque",
     "accountNumber": "Numéro de compte",

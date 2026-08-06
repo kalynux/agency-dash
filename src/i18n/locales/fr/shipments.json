@@ -15,6 +15,7 @@
     "shipment": "Expédition",
     "vendor": "Vendeur",
     "customer": "Client",
+    "money": "Montants",
     "date": "Date",
     "status": "Statut",
     "agent": "Livreur",
@@ -91,6 +92,7 @@
   "assignment": {
     "title": "Affectation d'un livreur",
     "codHint": "Les expéditions en paiement à la livraison nécessitent l'acceptation d'un livreur avant l'enlèvement — il détient les espèces et l'offre dépend de son profil de risque.",
+    "codHintAmount": "Le livreur qui accepte détiendra {{amount}} en espèces — l'offre dépend de son profil de risque et est revérifiée à l'acceptation.",
     "accepted": "Acceptée",
     "trackOnMap": "Suivre sur la carte",
     "reassign": "Réaffecter",
@@ -148,6 +150,32 @@
     "submit": "Réaffecter",
     "success": "Expédition libérée et proposée au remplaçant."
   },
+  "money": {
+    "cashToCollect": "Espèces à encaisser",
+    "codSnapshotHint": "Les espèces que le livreur encaisse auprès du client à la remise.",
+    "codProjectedHint": "Personne n'a encore pris cette livraison : ce montant est une projection de ce qui sera dû à la remise — prix des articles × quantité. Il est figé dès qu'un livreur accepte.",
+    "codProjectedCaption": "Projection — aucun livreur n'a encore pris cette course",
+    "payment": "Paiement",
+    "prepaid": "Prépayée",
+    "prepaidCaption": "Payée en ligne — rien à encaisser à la remise.",
+    "youEarnTitle": "Vous gagnez (est.)",
+    "approx": "≈ {{amount}}",
+    "deliveryFee": "Frais de livraison",
+    "agentCut": "Part du livreur",
+    "codHandlingFee": "Frais de gestion des espèces",
+    "youKeep": "Vous conservez",
+    "estimateCaveat": "Une estimation : la part du livreur est relue au moment du versement réel, donc modifier son contrat avant la livraison change ce montant.",
+    "orderValue": "Valeur de la commande {{amount}} — la commande entière, qui peut se répartir entre plusieurs expéditions et agences.",
+    "setPricing": "Configurer votre tarification",
+    "unavailableShort": {
+      "no_agent": "Dès qu'un livreur accepte",
+      "no_agency_policy": "Tarification non définie"
+    },
+    "unavailable": {
+      "no_agent": "Votre net ne peut être chiffré tant qu'aucun livreur n'a accepté — sa part contractuelle est prélevée sur les frais de livraison, donc tout montant affiché maintenant baisserait dès que quelqu'un prend la course.",
+      "no_agency_policy": "Votre tarification de livraison n'est pas configurée : il n'y a donc aucun frais à répartir."
+    }
+  },
   "detail": {
     "srTitle": "Détail de l'expédition",
     "loading": "Chargement de l'expédition…",
@@ -157,7 +185,7 @@
     "sku": "SKU : {{sku}}",
     "inStorage": "Dans votre entrepôt — ",
     "pickUpFrom": "À récupérer à ",
-    "cashCollection": "Encaissement",
+    "money": "Montants",
     "vendor": "Vendeur",
     "customer": "Client",
     "trackingNumber": "Numéro de suivi",

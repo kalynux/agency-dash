@@ -30,7 +30,9 @@ export function FileUploadField({
   label,
   disabled,
 }: FileUploadFieldProps) {
-  const { t } = useTranslation('common');
+  // `media` is bound alongside `common` for the filename fallback, which reuses
+  // the media library's existing `list.untitled` rather than duplicating it.
+  const { t } = useTranslation(['common', 'media']);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const remaining = max - value.length;
@@ -60,7 +62,7 @@ export function FileUploadField({
           {value.map((f) => (
             <div key={f.id} className="flex items-center gap-2 text-sm rounded-md border px-2 py-1">
               <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="truncate flex-1">{f.originalName ?? 'Untitled'}</span>
+              <span className="truncate flex-1">{f.originalName ?? t('media:list.untitled')}</span>
               <button type="button" onClick={() => remove(f.id)} className="text-muted-foreground hover:text-destructive">
                 <X className="w-4 h-4" />
               </button>

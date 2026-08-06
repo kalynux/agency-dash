@@ -531,6 +531,8 @@
     "FORBIDDEN": "Vous n'avez pas la permission d'effectuer cette action.",
     "INTERNAL_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer.",
     "FILE_TOO_LARGE": "Ce fichier est trop volumineux.",
-    "NETWORK_ERROR": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez."
+    "NETWORK_ERROR": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+    "PARSE_ERROR": "Impossible de lire la réponse du serveur. Veuillez réessayer.",
+    "ABORTED": "Envoi annulé."
   }
 }

@@ -1,13 +1,19 @@
 {
-  "page": {
-    "title": "Paramètres",
-    "description": "Gérez vos conditions de livraison et les préférences du tableau de bord",
-    "descriptionShort": "Conditions et préférences",
-    "aboutLabel": "À propos de la section Paramètres"
+  "tabs": {
+    "policies": {
+      "description": "Tarifs, retours et dommages — ces conditions s'appliquent à tous les vendeurs et clients pour lesquels vous livrez",
+      "short": "S'applique à tous les vendeurs"
+    },
+    "notifications": {
+      "description": "Choisissez comment, où et pour quels événements vous êtes notifié",
+      "short": "Comment vous êtes notifié"
+    },
+    "preferences": {
+      "description": "Personnalisez l'apparence du tableau de bord",
+      "short": "Thème et apparence"
+    }
   },
   "preferences": {
-    "title": "Préférences",
-    "description": "Personnalisez l'apparence du tableau de bord",
     "theme": "Thème",
     "themeHint": "Choisissez votre thème préféré",
     "themeFollowingDevice": "Suit votre appareil — actuellement {{theme}}",
@@ -45,7 +51,6 @@
       "email": "E-mail de support",
       "emailPlaceholder": "support@monagence.com",
       "phone": "Téléphone de support",
-      "phonePlaceholder": "+2376…",
       "whatsapp": "WhatsApp"
     },
     "explainer": {
@@ -62,17 +67,13 @@
     "validation": {
       "nameMin": "Le nom de l'entreprise doit contenir au moins 2 caractères.",
       "nameMax": "Le nom de l'entreprise ne doit pas dépasser 100 caractères.",
-      "email": "Saisissez une adresse e-mail valide.",
-      "phoneLength": "Doit contenir entre 8 et 20 caractères."
+      "email": "Saisissez une adresse e-mail valide."
     }
   },
   "locations": {
     "loading": "Chargement de la couverture et des sites…",
     "saved": "Couverture et sites enregistrés",
     "conflict": "Vos sites ont été modifiés ailleurs. Page actualisée — veuillez réappliquer vos modifications.",
-    "title": "Couverture et sites",
-    "description": "Les régions que vous desservez et vos adresses de siège — l'empreinte opérationnelle que les vendeurs consultent pour choisir une agence.",
-    "short": "Où vous opérez",
     "coverageLabel": "Régions couvertes",
     "noRegions": "Aucune donnée de région n'est encore disponible pour votre pays d'exploitation.",
     "coverageHint": "Seules les régions de votre pays d'exploitation peuvent être sélectionnées.",
@@ -104,12 +105,15 @@
     "regionPlaceholder": "Littoral",
     "regionNotNamed": "Le résultat de la carte n'a nommé aucune région — ajoutez-en une si cela aide.",
     "supportPhone": "Téléphone de support",
-    "supportPhonePlaceholder": "+237 6XX XXX XXX",
     "supportEmail": "E-mail de support (facultatif)",
     "supportEmailPlaceholder": "support@monagence.com",
     "countryNote": "Votre pays d'exploitation a été défini lors de l'intégration et ne peut pas être modifié. Les régions couvertes et les adresses doivent toutes s'y trouver.",
     "removeTitle": "Supprimer ce site ?",
     "removeDescription": "Les vendeurs et livreurs qui se rendent à cette adresse la perdront dès l'enregistrement. Les livraisons déjà affectées ne sont pas concernées.",
+    "removePinnedDescription": "Ce site est repéré sur la carte. Le supprimer efface le repère — il faudrait rechercher l'adresse à nouveau.",
+    "clearPinTitle": "Retirer ce repère ?",
+    "clearPinDescription": "C'est le repère vers lequel les vendeurs et livreurs se dirigent. L'effacer oblige à rechercher l'adresse à nouveau avant de pouvoir enregistrer cette page.",
+    "clearPinAction": "Retirer le repère",
     "validation": {
       "coverageRequired": "Sélectionnez au moins une région couverte.",
       "addressRequired": "Au moins une adresse de siège est requise.",
@@ -118,8 +122,6 @@
       "geoRequired": "Recherchez et sélectionnez l'adresse de ce site.",
       "streetRequired": "L'adresse est obligatoire.",
       "streetMax": "200 caractères maximum.",
-      "phoneLength": "Le téléphone doit contenir entre 6 et 20 caractères.",
-      "phoneFormat": "Utilisez des chiffres, +, espaces, tirets ou parenthèses.",
       "email": "Saisissez une adresse e-mail valide."
     }
   },
@@ -137,9 +139,6 @@
     "clearAddress": "Effacer l'adresse"
   },
   "policies": {
-    "title": "Tarifs, retours et dommages",
-    "description": "Ces conditions s'appliquent à tous les vendeurs et clients pour lesquels vous livrez",
-    "short": "S'applique à tous les vendeurs",
     "saved": "Conditions enregistrées !",
     "aboutField": "À propos de ce champ",
     "aboutSetting": "À propos de ce réglage",
@@ -232,9 +231,6 @@
     }
   },
   "notifications": {
-    "title": "Préférences de notification",
-    "description": "Choisissez comment, où et pour quels événements vous êtes notifié",
-    "short": "Comment vous êtes notifié",
     "loadFailed": "Impossible de charger les paramètres de notification.",
     "saved": "Paramètres de notification enregistrés",
     "notVerified": "Ce canal doit être vérifié avant de pouvoir être activé.",
@@ -269,7 +265,10 @@
       "unconfigured": "La messagerie push n'est pas configurée pour ce déploiement.",
       "denied": "Les notifications sont bloquées dans les réglages de votre navigateur.",
       "enable": "Activer",
-      "disable": "Désactiver"
+      "disable": "Désactiver",
+      "toastEnabled": "Notifications push activées sur cet appareil.",
+      "toastDisabled": "Notifications push désactivées sur cet appareil.",
+      "toastTokenFailed": "Impossible d'obtenir un jeton push sur cet appareil."
     },
     "language": {
       "title": "Langue",

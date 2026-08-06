@@ -1,9 +1,29 @@
 {
-  "page": {
-    "title": "Account",
-    "description": "Manage your personal profile, business identity, and payouts",
-    "descriptionShort": "Profile, business and payouts",
-    "aboutLabel": "About the Account section"
+  "tabs": {
+    "profile": {
+      "description": "Your contact details, and the language this dashboard and your notifications speak",
+      "short": "Your details and language"
+    },
+    "store": {
+      "description": "Your agency's business identity — the name, logo and contacts vendors and customers see",
+      "short": "Name, logo and contacts"
+    },
+    "locations": {
+      "description": "The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency",
+      "short": "Where you operate"
+    },
+    "security": {
+      "description": "Your password and the extra checks that keep this account yours",
+      "short": "Password and 2FA"
+    },
+    "billing": {
+      "description": "Your plan, credit wallet, storage and saved payment methods",
+      "short": "Plan, credits and cards"
+    },
+    "payout": {
+      "description": "Your delivery-fee balance, and where those earnings are sent",
+      "short": "Earnings and payout methods"
+    }
   },
   "profile": {
     "saveError": "Please fix the highlighted fields before saving.",
@@ -87,7 +107,6 @@
     "provider": "Provider",
     "providerPlaceholder": "Select provider",
     "phoneNumber": "Phone Number",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "accountName": "Account Name",
     "bankName": "Bank Name",
     "accountNumber": "Account Number",

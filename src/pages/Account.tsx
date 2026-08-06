@@ -7,8 +7,7 @@ import { SecuritySettings } from '@/components/agency-settings/SecuritySettings'
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
 import { BillingTab } from '@/components/billing/BillingTab';
-import { InfoHint } from '@/components/common/InfoHint';
-import { sectionGroupClass } from '@/components/layout/PageContainer';
+import { SubPageHeader, sectionGroupClass } from '@/components/layout/PageContainer';
 
 const VALID_TABS = ['profile', 'store', 'locations', 'security', 'billing', 'payout'] as const;
 type AccountTab = typeof VALID_TABS[number];
@@ -28,16 +27,13 @@ export function Account() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-          {t('page.title')}
-          <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
-            {t('page.description')}
-          </InfoHint>
-        </h1>
-        <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
-        <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
-      </div>
+      {/* The crumb names the parent menu; the copy under it belongs to the tab
+          you are actually on, not to "Account" as a whole. */}
+      <SubPageHeader
+        path={`/dashboard/account/${activeTab}`}
+        description={t(`tabs.${activeTab}.description`)}
+        shortDescription={t(`tabs.${activeTab}.short`)}
+      />
 
       {activeTab === 'profile' && <ProfileSettings />}
       {activeTab === 'store' && <MagazinSettings />}

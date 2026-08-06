@@ -108,17 +108,15 @@ function ChangePasswordCard() {
             <Input id="old-password" type="password" autoComplete="current-password" {...register('oldPassword')} />
             {errors.oldPassword && <p className="text-xs text-red-500" role="alert">{errors.oldPassword.message}</p>}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">{t('security.password.new')}</Label>
-              <Input id="new-password" type="password" autoComplete="new-password" {...register('newPassword')} />
-              {errors.newPassword && <p className="text-xs text-red-500" role="alert">{errors.newPassword.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">{t('security.password.confirm')}</Label>
-              <Input id="confirm-password" type="password" autoComplete="new-password" {...register('confirmPassword')} />
-              {errors.confirmPassword && <p className="text-xs text-red-500" role="alert">{errors.confirmPassword.message}</p>}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">{t('security.password.new')}</Label>
+            <Input id="new-password" type="password" autoComplete="new-password" {...register('newPassword')} />
+            {errors.newPassword && <p className="text-xs text-red-500" role="alert">{errors.newPassword.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">{t('security.password.confirm')}</Label>
+            <Input id="confirm-password" type="password" autoComplete="new-password" {...register('confirmPassword')} />
+            {errors.confirmPassword && <p className="text-xs text-red-500" role="alert">{errors.confirmPassword.message}</p>}
           </div>
           <p className="text-xs text-muted-foreground">{t('security.password.rules')}</p>
           <div className="flex justify-end">

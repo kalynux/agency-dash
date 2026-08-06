@@ -2,57 +2,33 @@ import { useCallback, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, Smartphone, Building2, Star, CreditCard, Phone, User, Hash, Globe2 } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, Smartphone, Building2, Star, CreditCard, User, Hash, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
-import { buildPayoutSchema, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
+import { buildPayoutSchema, toSubmittablePayoutDetails, type PayoutFormValues, type PayoutMethodType } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { PhoneInput } from '@/components/common/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
+import { countryOptions } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 
 // Operator brands — the same in every language.
 const MOBILE_MONEY_PROVIDERS = ['MTN Mobile Money', 'Orange Money', 'Wave', 'Moov Money', 'Airtel Money'];
 
-/**
- * Bank countries. The VALUE is what the backend stores, so it stays the English
- * name; the label is localised through `Intl.DisplayNames`, which already knows
- * every country in every language.
- */
-const COUNTRY_CODES = ['CM', 'CI', 'SN', 'NG', 'GH', 'KE', 'TZ', 'UG', 'RW', 'ZA', 'FR', 'GB', 'US'];
-
-const COUNTRY_VALUES: Record<string, string> = {
-    CM: 'Cameroon', CI: "Côte d'Ivoire", SN: 'Senegal', NG: 'Nigeria', GH: 'Ghana',
-    KE: 'Kenya', TZ: 'Tanzania', UG: 'Uganda', RW: 'Rwanda', ZA: 'South Africa',
-    FR: 'France', GB: 'United Kingdom', US: 'United States',
-};
-
-function countryOptions(language: string): { value: string; label: string }[] {
-    let display: Intl.DisplayNames | null = null;
-    try {
-        display = new Intl.DisplayNames([language], { type: 'region' });
-    } catch {
-        // A runtime without DisplayNames falls back to the stored English name.
-    }
-    return COUNTRY_CODES.map((code) => ({
-        value: COUNTRY_VALUES[code],
-        label: display?.of(code) ?? COUNTRY_VALUES[code],
-    }));
-}
-
 const EMPTY_MOBILE_MONEY = { method: 'mobile_money' as const, mobile_money: { provider: '', phone_number: '', account_name: '' }, bank: null };
 const EMPTY_BANK = { method: 'bank' as const, bank: { bank_name: '', account_number: '', account_name: '', country: '' }, mobile_money: null };
 
-function FieldRow({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function FieldRow({ label, htmlFor, required, error, children }: { label: string; htmlFor?: string; required?: boolean; error?: string; children: React.ReactNode }) {
     return (
         <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 {label}{required && <span className="text-red-500 ml-0.5">*</span>}
             </label>
             {children}
-            {error && <p className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
+            {error && <p id={htmlFor && `${htmlFor}-error`} className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
         </div>
     );
 }
@@ -153,7 +129,10 @@ export function Step2Payout() {
         // Save raw form values BEFORE the API call.
         saveDraft(2, values);
         try {
-            await submitPayout({ payout_details: values.payout_details, version: roleEntity?.version });
+            await submitPayout({
+                payout_details: toSubmittablePayoutDetails(values.payout_details),
+                version: roleEntity?.version,
+            });
             toast.success(t('payout.saved'));
         } catch (err) {
             if (err instanceof ApiError) {
@@ -198,6 +177,12 @@ export function Step2Payout() {
                 {fields.map((field, index) => {
                     const currentMethod = payoutDetails?.[index]?.method ?? 'mobile_money';
                     const isPreferred = index === 0;
+                    // `payout_details` is a discriminated union, so RHF's error type
+                    // for an entry doesn't name either branch's fields — same reason
+                    // the `register` paths below are cast.
+                    const phoneError = (errors.payout_details?.[index] as
+                        | { mobile_money?: { phone_number?: { message?: string } } }
+                        | undefined)?.mobile_money?.phone_number?.message;
 
                     return (
                         <div key={field.id} className={cn('rounded-xl border-2 overflow-hidden', isPreferred ? 'border-primary/25' : 'border-slate-200 dark:border-zinc-700')}>
@@ -244,9 +229,20 @@ export function Step2Payout() {
                                                     </Select>
                                                 )} />
                                         </FieldRow>
-                                        <FieldRow label={t('payout.phoneNumber')} required>
-                                            <IconInput icon={Phone} type="tel" inputMode="tel" placeholder={t('payout.phonePlaceholder')}
-                                                {...register(`payout_details.${index}.mobile_money.phone_number` as never)} />
+                                        <FieldRow label={t('payout.phoneNumber')} htmlFor={`payout-${index}-phone`} required error={phoneError}>
+                                            <Controller control={control} name={`payout_details.${index}.mobile_money.phone_number` as `payout_details.${number}.mobile_money.phone_number`}
+                                                render={({ field: f }) => (
+                                                    <PhoneInput
+                                                        variant="onboarding"
+                                                        id={`payout-${index}-phone`}
+                                                        value={f.value ?? ''}
+                                                        onChange={f.onChange}
+                                                        onBlur={f.onBlur}
+                                                        required
+                                                        hasError={!!phoneError}
+                                                        describedBy={phoneError ? `payout-${index}-phone-error` : undefined}
+                                                    />
+                                                )} />
                                         </FieldRow>
                                         <FieldRow label={t('payout.accountName')} required>
                                             <IconInput icon={User} type="text" placeholder={t('payout.mobileAccountNamePlaceholder')}

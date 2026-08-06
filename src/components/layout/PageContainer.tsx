@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react';
 import { InfoHint } from '@/components/common/InfoHint';
+import { findNavTrail } from '@/config/navigation';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 /**
@@ -8,8 +12,9 @@ import { cn } from '@/lib/utils';
  * `PageHeader` fixes the title → description → actions rhythm in one place so
  * every page reads with the same cadence: title and its description sit tight
  * together (a single group), page actions align to the baseline on wide screens
- * and stack below on narrow ones. It intentionally has no eyebrow/kicker — the
- * title carries its own weight.
+ * and stack below on narrow ones. It has no eyebrow/kicker — the title carries
+ * its own weight — but it does take a `parent` crumb, for the routes that are
+ * one submenu of a menu (see `SubPageHeader`).
  *
  * `PageSection` gives a labelled block a consistent header-to-content gap when a
  * page needs internal sections; use it instead of one-off margins.
@@ -22,6 +27,13 @@ import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: string;
+  /**
+   * Name of the menu this route sits under, rendered as a plain crumb before
+   * the title ("Account › Profile"). Deliberately not a link: it names where
+   * you are, and the parent has no page of its own to go back to — every one of
+   * them redirects straight to its first submenu.
+   */
+  parent?: string;
   description?: string;
   /**
    * Mobile stand-in for `description` — about five words. When set, the full
@@ -36,11 +48,13 @@ interface PageHeaderProps {
 
 export function PageHeader({
   title,
+  parent,
   description,
   shortDescription,
   actions,
   className,
 }: PageHeaderProps) {
+  const { t } = useTranslation('common');
   return (
     <div
       className={cn(
@@ -49,10 +63,27 @@ export function PageHeader({
       )}
     >
       <div className="space-y-1">
-        <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1
+          className={cn(
+            'flex flex-wrap items-center gap-x-1.5 text-2xl font-bold tracking-tight',
+            // A crumb is two names on one line, so it skips the desktop size
+            // step: "Cash Management › Discrepancies" at 3xl wraps on anything
+            // narrower than a wide laptop.
+            !parent && 'sm:text-3xl',
+          )}
+        >
+          {parent && (
+            <>
+              <span className="text-muted-foreground">{parent}</span>
+              <ChevronRight
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-muted-foreground/60 rtl:-scale-x-100"
+              />
+            </>
+          )}
           {title}
           {description && shortDescription && (
-            <InfoHint className="md:hidden" label={`About ${title}`}>
+            <InfoHint className="md:hidden" label={t('form.aboutSection', { title })}>
               {description}
             </InfoHint>
           )}
@@ -68,6 +99,37 @@ export function PageHeader({
       </div>
       {actions && <div className="flex flex-shrink-0 items-center gap-2">{actions}</div>}
     </div>
+  );
+}
+
+interface SubPageHeaderProps extends Omit<PageHeaderProps, 'title' | 'parent'> {
+  /**
+   * The *resolved* submenu route. Pages that fall back to a default tab must
+   * pass that tab's path rather than `location.pathname`: on bare
+   * `/dashboard/account` the crumb would otherwise stop at "Account" while the
+   * content below it is already Profile.
+   */
+  path: string;
+}
+
+/**
+ * `PageHeader` for a route that is one submenu of a menu.
+ *
+ * Both names come out of `config/navigation.ts`, so the crumb can never drift
+ * from the sidebar entry the user clicked — the page only supplies the
+ * description, which belongs to the submenu and not to its parent.
+ */
+export function SubPageHeader({ path, ...rest }: SubPageHeaderProps) {
+  const { t } = useTranslation('nav');
+  const trail = findNavTrail(path);
+  if (!trail) return null;
+  const { parent, child } = trail;
+  return (
+    <PageHeader
+      parent={child && tx(t, parent.labelKey)}
+      title={tx(t, (child ?? parent).labelKey)}
+      {...rest}
+    />
   );
 }
 

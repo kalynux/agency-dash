@@ -2,17 +2,19 @@ import { useCallback, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Phone, Mail, Building, Tag } from 'lucide-react';
+import { Loader2, ChevronRight, Plus, Trash2, MapPin, Globe, Mail, Building, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingLayout } from '@/onboarding/OnboardingLayout';
 import { buildLogisticsSchema, type LogisticsFormValues, type HeadquartersAddressFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
+import { PhoneInput } from '@/components/common/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
+import { toSubmittablePhone } from '@/lib/phone';
 import { regionsFor, DEFAULT_COUNTRY, type RegionEntry } from '@/lib/regions';
 import type { GeoAddress } from '@/types/geo.types';
 
@@ -34,11 +36,11 @@ const EMPTY_HQ = {
     geo: null,
 } as unknown as HeadquartersAddressFormValues;
 
-function FieldRow({ label, required, optional, error, children }: { label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
+function FieldRow({ label, htmlFor, required, optional, error, children }: { label: string; htmlFor?: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
     const { t } = useTranslation('common');
     return (
         <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 {label}{required && <span className="text-red-500 ml-0.5">*</span>}
                 {optional && (
                     <span className="text-slate-400 normal-case font-normal ml-1">
@@ -47,7 +49,7 @@ function FieldRow({ label, required, optional, error, children }: { label: strin
                 )}
             </label>
             {children}
-            {error && <p className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
+            {error && <p id={htmlFor && `${htmlFor}-error`} className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
         </div>
     );
 }
@@ -116,7 +118,11 @@ export function Step1Logistics() {
                         label: addr.label.trim(),
                         address_description: addr.address_description.trim(),
                         // Clearable field: empty input → explicit null (see api-doc/agency/profile.md).
-                        support_contact: { phone, email: email?.trim() || null },
+                        // The phone always goes out as E.164 — see lib/phone.ts.
+                        support_contact: {
+                            phone: toSubmittablePhone(phone, AGENCY_COUNTRY),
+                            email: email?.trim() || null,
+                        },
                         // `location`, `region` and `city` are all derived from `geo`
                         // server-side — region/city go out only where the geocode
                         // named neither and the agency typed one in.
@@ -229,6 +235,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
     const geo = watch(`headquarters_addresses.${index}.geo`);
     const region = watch(`headquarters_addresses.${index}.region`);
     const city = watch(`headquarters_addresses.${index}.city`);
+    const phoneId = `hq-${index}-phone`;
 
     /**
      * Selecting a candidate is what makes this entry storable — and what fills it
@@ -322,10 +329,23 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
 
                 <div className="border-t border-dashed border-slate-200 dark:border-zinc-700 pt-3 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('logistics.locationContact')}</p>
-                    <FieldRow label={t('logistics.phone')} required error={addrErrors?.support_contact?.phone?.message}>
-                        <IconInput icon={Phone} type="tel" inputMode="tel" placeholder={t('logistics.phonePlaceholder')}
-                            hasError={!!addrErrors?.support_contact?.phone}
-                            {...register(`headquarters_addresses.${index}.support_contact.phone`)} />
+                    <FieldRow label={t('logistics.phone')} htmlFor={phoneId} required error={addrErrors?.support_contact?.phone?.message}>
+                        {/* The country the agency is signing up in is the sensible
+                            starting point — the profile has none yet, this step is
+                            what sets it. */}
+                        <Controller control={control} name={`headquarters_addresses.${index}.support_contact.phone`} render={({ field }) => (
+                            <PhoneInput
+                                variant="onboarding"
+                                id={phoneId}
+                                value={field.value ?? ''}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                defaultCountry={AGENCY_COUNTRY}
+                                required
+                                hasError={!!addrErrors?.support_contact?.phone}
+                                describedBy={addrErrors?.support_contact?.phone ? `${phoneId}-error` : undefined}
+                            />
+                        )} />
                     </FieldRow>
                     <FieldRow label={t('logistics.email')} optional error={addrErrors?.support_contact?.email?.message}>
                         <IconInput icon={Mail} type="email" inputMode="email" placeholder={t('logistics.emailPlaceholder')}

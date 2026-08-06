@@ -531,6 +531,8 @@
     "FORBIDDEN": "You don't have permission to perform this action.",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "FILE_TOO_LARGE": "That file is too large.",
-    "NETWORK_ERROR": "We couldn't reach the server. Check your connection and try again."
+    "NETWORK_ERROR": "We couldn't reach the server. Check your connection and try again.",
+    "PARSE_ERROR": "We couldn't read the server's response. Please try again.",
+    "ABORTED": "Upload cancelled."
   }
 }

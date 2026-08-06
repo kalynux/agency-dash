@@ -41,7 +41,6 @@ src/
 │   ├── schemas/        # Zod schemas for onboarding forms
 │   └── steps/          # Step page components
 ├── types/               # Shared TypeScript types
-├── data/                # Mock data (used by all stores)
 └── constants/           # locations.json, onboarding-steps.ts
 ```
 
@@ -55,20 +54,28 @@ src/
 
 ### State Management
 
-All state is React Context (Zustand is installed but unused). All contexts live in [src/store/index.tsx](src/store/index.tsx) and are composed into a single `StoreProvider`:
+All state is React Context (Zustand is installed but unused).
 
-| Context | Manages |
-|---|---|
-| `AuthStoreContext` | `user`, `isAuthenticated`, `login()`, `logout()` |
-| `UIStoreContext` | `sidebarCollapsed`, `theme`, `settingsTab` |
-| `ProductStoreContext` | Products CRUD + selection |
-| `OrderStoreContext` | Orders + status filters |
-| `VendorStoreContext` | Vendor approval/suspension/commission |
-| `NotificationStoreContext` | Notifications + unread count |
-| `AnalyticsStoreContext` | Metrics, sales data, date range |
-| `MediaStoreContext` | File/folder management, view mode |
+[src/store/index.tsx](src/store/index.tsx) holds `StoreProvider` / `useUIStore`, which
+owns only the theme (`theme`, `resolvedTheme`, `setTheme`) plus sidebar collapse.
+Note the layout's sidebar state actually comes from `UIContext` in
+[src/App.tsx](src/App.tsx), not from this store.
 
-**All stores currently use mock data** from [src/data/mockData.ts](src/data/mockData.ts) with simulated async delays.
+Every feature store is its own file and calls the real API:
+
+| Provider | File | Manages |
+|---|---|---|
+| `ShipmentsProvider` | `store/shipments.store.tsx` | Shipments + assignment |
+| `AgentsRosterProvider` | `store/agents.store.tsx` | Agent roster + contracts |
+| `NotificationsProvider` | `store/notifications.store.tsx` | Notifications + unread count |
+| `VendorConnectionsProvider` | `store/vendorConnections.store.tsx` | Vendor connections |
+| `MagazinProvider` | `store/magazin.store.tsx` | Store (magazin) profile |
+
+They are mounted in [src/App.tsx](src/App.tsx). The mock product/order/vendor/
+analytics/ticket/storage stores and `src/data/mockData.ts` were deleted once no
+screen read them; several types in [src/types/index.ts](src/types/index.ts)
+(`Order`, `Customer`, `AnalyticsMetrics`, `StorageItem`, …) are leftovers from
+that era and have no consumer.
 
 The onboarding subsystem has its own context at [src/onboarding/store/onboarding.store.tsx](src/onboarding/store/onboarding.store.tsx). It caches form drafts before API calls to support back-navigation without data loss.
 
@@ -88,7 +95,8 @@ api.put<T>(path, body?)
 api.delete<T>(path)
 ```
 
-Only the onboarding service ([src/services/onboarding.service.ts](src/services/onboarding.service.ts)) and auth service ([src/services/auth.service.ts](src/services/auth.service.ts)) currently call the real API. Dashboard stores still use mock data.
+Every service and feature store calls the real API — there is no mock data left
+in the app.
 
 ### Legacy Compatibility Layer
 

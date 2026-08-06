@@ -1,9 +1,13 @@
 {
-  "page": {
-    "title": "Agents",
-    "description": "Manage the delivery agents contracted to your agency — only contracted agents can take your shipments",
-    "descriptionShort": "Manage your agent contracts",
-    "aboutLabel": "About agent contracts"
+  "tabs": {
+    "connections": {
+      "description": "Every agent contract your agency has, past and present — only contracted agents can take your shipments",
+      "short": "Your agent contracts"
+    },
+    "browse": {
+      "description": "Every agent on the platform who could take your shipments",
+      "short": "Find agents to contract"
+    }
   },
   "agentStatus": {
     "active": "Active",

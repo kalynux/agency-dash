@@ -1,13 +1,19 @@
 {
-  "page": {
-    "title": "Settings",
-    "description": "Manage your delivery policies and dashboard preferences",
-    "descriptionShort": "Policies and preferences",
-    "aboutLabel": "About the Settings section"
+  "tabs": {
+    "policies": {
+      "description": "Pricing, returns and damage rules — they apply to every vendor and customer you deliver for",
+      "short": "Applies to every vendor"
+    },
+    "notifications": {
+      "description": "Choose how, where, and for which events you are notified",
+      "short": "How you're notified"
+    },
+    "preferences": {
+      "description": "Personalize how the dashboard looks",
+      "short": "Theme and appearance"
+    }
   },
   "preferences": {
-    "title": "Preferences",
-    "description": "Personalize how the dashboard looks",
     "theme": "Theme",
     "themeHint": "Choose your preferred theme",
     "themeFollowingDevice": "Following your device — currently {{theme}}",
@@ -45,7 +51,6 @@
       "email": "Support email",
       "emailPlaceholder": "support@youragency.com",
       "phone": "Support phone",
-      "phonePlaceholder": "+2376…",
       "whatsapp": "WhatsApp"
     },
     "explainer": {
@@ -62,17 +67,13 @@
     "validation": {
       "nameMin": "Business name must be at least 2 characters.",
       "nameMax": "Business name must be at most 100 characters.",
-      "email": "Enter a valid email address.",
-      "phoneLength": "Must be between 8 and 20 characters."
+      "email": "Enter a valid email address."
     }
   },
   "locations": {
     "loading": "Loading coverage & locations…",
     "saved": "Coverage & locations saved",
     "conflict": "Your locations were updated elsewhere. Refreshed — please re-apply your changes.",
-    "title": "Coverage & Locations",
-    "description": "The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency.",
-    "short": "Where you operate",
     "coverageLabel": "Coverage Regions",
     "noRegions": "No region data is available for your operating country yet.",
     "coverageHint": "Only regions of your operating country can be selected.",
@@ -104,12 +105,15 @@
     "regionPlaceholder": "Littoral",
     "regionNotNamed": "The map result named no region — add one if it helps.",
     "supportPhone": "Support Phone",
-    "supportPhonePlaceholder": "+237 6XX XXX XXX",
     "supportEmail": "Support Email (optional)",
     "supportEmailPlaceholder": "support@youragency.com",
     "countryNote": "Your operating country was set during onboarding and can't be changed. Coverage regions and addresses must both fall inside it.",
     "removeTitle": "Remove this location?",
     "removeDescription": "Vendors and drivers routing to this address will lose it once you save. Deliveries already assigned to it aren't affected.",
+    "removePinnedDescription": "This location is pinned on the map. Removing it discards the pin — you'd have to search for the address again.",
+    "clearPinTitle": "Remove this pin?",
+    "clearPinDescription": "This is the pin vendors and drivers route to. Clearing it means searching for the address again before this page can be saved.",
+    "clearPinAction": "Remove pin",
     "validation": {
       "coverageRequired": "Select at least one coverage region.",
       "addressRequired": "At least one headquarters address is required.",
@@ -118,8 +122,6 @@
       "geoRequired": "Search for and select this location’s address.",
       "streetRequired": "Street address is required.",
       "streetMax": "Max 200 characters.",
-      "phoneLength": "Phone must be between 6 and 20 characters.",
-      "phoneFormat": "Use digits, +, spaces, hyphens or parentheses.",
       "email": "Enter a valid email address."
     }
   },
@@ -137,9 +139,6 @@
     "clearAddress": "Clear address"
   },
   "policies": {
-    "title": "Pricing, Returns & Damage Policies",
-    "description": "These policies apply to every vendor and customer you deliver for",
-    "short": "Applies to every vendor",
     "saved": "Policies saved!",
     "aboutField": "About this field",
     "aboutSetting": "About this setting",
@@ -232,9 +231,6 @@
     }
   },
   "notifications": {
-    "title": "Notification Preferences",
-    "description": "Choose how, where, and for which events you are notified",
-    "short": "How you're notified",
     "loadFailed": "Could not load notification settings.",
     "saved": "Notification settings saved",
     "notVerified": "That channel must be verified before it can be enabled.",
@@ -269,7 +265,10 @@
       "unconfigured": "Push messaging is not configured for this deployment.",
       "denied": "Notifications are blocked in your browser settings.",
       "enable": "Enable",
-      "disable": "Disable"
+      "disable": "Disable",
+      "toastEnabled": "Push notifications enabled on this device.",
+      "toastDisabled": "Push notifications disabled on this device.",
+      "toastTokenFailed": "Could not obtain a push token on this device."
     },
     "language": {
       "title": "Language",

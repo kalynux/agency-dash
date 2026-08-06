@@ -7,8 +7,6 @@
     "descriptionShort": "Money and credit movements"
   },
   "transactions": {
-    "title": "Transactions",
-    "description": "Every money and credit movement on your account — plan purchases, credit top-ups and usage, and delivery-fee earnings.",
     "searchPlaceholder": "Search transactions…",
     "searchLabel": "Search this page by description or category",
     "filterDescription": "Category filters the whole ledger; search looks at the page you're on.",
@@ -158,7 +156,6 @@
       "description": "Save a method to speed up checkout. We never store full card numbers or CVV.",
       "type": "Type",
       "phone": "Mobile money number",
-      "phonePlaceholder": "+237650000000",
       "operator": "Operator",
       "holderNameMobile": "Account holder name (optional)",
       "holderNameMobilePlaceholder": "Account holder",
@@ -168,8 +165,7 @@
       "setAsDefault": "Set as default",
       "setAsDefaultHint": "Pre-selected at checkout.",
       "submit": "Save method",
-      "added": "Payment method added",
-      "invalidPhone": "Enter a valid phone number (e.g. +237650000000)."
+      "added": "Payment method added"
     }
   },
   "settings": {
@@ -199,7 +195,6 @@
     "newMethod": "New",
     "payWith": "Pay with",
     "phone": "Mobile money number",
-    "phonePlaceholder": "+237650000000",
     "operator": "Operator",
     "usdNotice": "Card payments are processed in <strong>USD</strong>; your bank may apply its own conversion. We'll show the exact dollar amount on the next step.",
     "usdNoticeShort": "Charged in USD; your bank may apply its own currency conversion.",
@@ -208,7 +203,6 @@
     "receiptEmail": "Email for receipt (optional)",
     "receiptEmailPlaceholder": "agency@example.com",
     "invalidEmail": "Enter a valid email, or leave it blank.",
-    "invalidPhone": "Enter a valid phone number (e.g. +237650000000).",
     "continueToCard": "Continue to card",
     "confirmPayment": "Confirm payment · {{amount}}",
     "youWillBeCharged": "You'll be charged",

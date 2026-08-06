@@ -32,6 +32,10 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { tx } from '@/i18n/tx';
+import { PhoneInput } from '@/components/common/PhoneInput';
+import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
+import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
+import { phoneErrorMessage } from '@/lib/validation-schemas';
 import type {
   PaymentChannel,
   PaymentGateway,
@@ -86,7 +90,6 @@ export interface PaymentDialogProps {
   successLabel?: string;
 }
 
-const PHONE_RE = /^\+?\d{8,15}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Gateways selectable in the checkout (Stripe hidden when not configured). */
@@ -132,6 +135,7 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const { t } = useTranslation(['billing', 'common']);
   const gateways = availableGateways();
+  const phoneCountry = useDefaultPhoneCountry();
   // Callers name what succeeded ("Plan purchased"); fall back to the generic line.
   const successText = successLabel ?? t('checkout.successTitle');
 
@@ -265,12 +269,14 @@ export function PaymentDialog({
       if (holderName.trim()) channel.customerName = holderName.trim();
       return channel;
     }
-    // Mobile money — phone + operator are required.
-    if (!PHONE_RE.test(phone.trim())) {
-      setFormError(t('checkout.invalidPhone'));
+    // Mobile money — phone + operator are required. The number goes to the
+    // gateway as E.164, validated for the country its picker names.
+    const issue = phoneIssue(phone, { required: true, country: phoneCountry });
+    if (issue) {
+      setFormError(phoneErrorMessage(t, issue));
       return null;
     }
-    return { phoneNumber: phone.trim(), phoneOperator: operator };
+    return { phoneNumber: toSubmittablePhone(phone, phoneCountry), phoneOperator: operator };
   }
 
   /** Step 1: initiate the payment server-side. */
@@ -454,13 +460,12 @@ export function PaymentDialog({
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="pay-phone">{t('checkout.phone')}</Label>
-                  <Input
+                  <PhoneInput
                     id="pay-phone"
-                    inputMode="tel"
-                    placeholder={t('checkout.phonePlaceholder')}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    aria-invalid={!!formError}
+                    onChange={setPhone}
+                    required
+                    hasError={!!formError}
                   />
                 </div>
                 <div className="space-y-1.5">

@@ -91,6 +91,8 @@
     "discrepancy_other": "discrepancies",
     "file_one": "file",
     "file_other": "files",
+    "item_one": "item",
+    "item_other": "items",
     "notification_one": "notification",
     "notification_other": "notifications",
     "remittance_one": "remittance",
@@ -136,6 +138,11 @@
     "moreInformation": "More information",
     "aboutSection": "About {{title}}"
   },
+  "phone": {
+    "countryFor": "Country code: {{country}} ({{code}}). Change country",
+    "searchCountry": "Search country or code…",
+    "noCountry": "No matching country"
+  },
   "values": {
     "notAvailable": "—",
     "yes": "Yes",
@@ -177,7 +184,15 @@
     "km": "{{value}} km",
     "percent": "{{value}}%",
     "items_one": "{{count}} item",
-    "items_other": "{{count}} items"
+    "items_other": "{{count}} items",
+    "_bytesComment": "Byte units are localized: English uses B/KB/MB, French uses the octet scale (o/Ko/Mo).",
+    "bytes": {
+      "b": "{{value}} B",
+      "kb": "{{value}} KB",
+      "mb": "{{value}} MB",
+      "gb": "{{value}} GB",
+      "tb": "{{value}} TB"
+    }
   },
   "media": {
     "changePhoto": "Change photo",

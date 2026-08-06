@@ -9,6 +9,8 @@ import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { AnyTFunction } from '@/i18n/tx';
 import { regionsFor } from '@/lib/regions';
+import { phoneIssue, toPhoneCountry, toSubmittablePhone, type CountryCode } from '@/lib/phone';
+import { phoneErrorMessage } from '@/lib/validation-schemas';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
 import type {
@@ -20,9 +22,10 @@ import type {
 import type { GeoAddress } from '@/types/geo.types';
 
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
+import { PhoneInput } from '@/components/common/PhoneInput';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
-import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
+import { InfoHint } from '@/components/common/InfoHint';
 import { noteSurfaceClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,6 +132,18 @@ function placeKey(geo: GeoAddress | null): string {
 }
 
 /**
+ * Is the pin currently shown the one the backend actually stores?
+ *
+ * Clearing THAT pin is destructive — it is the coordinate vendors and drivers
+ * route to, and the row can't be saved again until a new candidate is picked.
+ * Clearing a pin the agency just placed by hand costs them nothing, so only the
+ * stored one is worth a confirmation.
+ */
+function isStoredPin(entry: HqFormEntry): boolean {
+  return !!entry.geo && placeKey(entry.geo) === placeKey(entry.original?.geo ?? null);
+}
+
+/**
  * Does this row need a freshly-picked `geo` before it can be saved?
  *
  * An entry is "unchanged" — and so grandfathered past `ADDRESS_GEO_REQUIRED` —
@@ -151,12 +166,14 @@ function requiresGeo(entry: HqFormEntry): boolean {
  * Note `headquarters_addresses` is a FULL REPLACE, so every row is written on
  * every save — including ones the agency never touched.
  */
-function toAddressPayload(entry: HqFormEntry): MagazinHeadquartersAddressInput {
+function toAddressPayload(entry: HqFormEntry, country: CountryCode | null): MagazinHeadquartersAddressInput {
   const payload: MagazinHeadquartersAddressInput = {
     label: entry.label.trim(),
     address_description: entry.address_description.trim(),
     support_contact: {
-      phone: entry.phone.trim(),
+      // Always E.164 — a legacy row stored in local format is upgraded here
+      // rather than written back as-is. See lib/phone.ts.
+      phone: toSubmittablePhone(entry.phone, country),
       // Clearable field: empty input → explicit null.
       email: entry.email.trim() || null,
     },
@@ -173,7 +190,14 @@ function sameCoverage(a: string[], b: string[]): boolean {
 
 type FieldErrors = Record<string, string>;
 
-function validate(form: FormState, t: AnyTFunction): FieldErrors {
+/**
+ * A destructive click waiting on the agency's confirmation. Both kinds throw a
+ * pinned location away: `remove` drops the whole row, `clearPin` drops just the
+ * coordinates and leaves the row un-saveable until a new candidate is picked.
+ */
+type PendingConfirm = { kind: 'remove' | 'clearPin'; index: number };
+
+function validate(form: FormState, t: AnyTFunction, country: CountryCode | null): FieldErrors {
   const errors: FieldErrors = {};
   const v = (key: string) => t(`settings:locations.validation.${key}` as never) as unknown as string;
 
@@ -199,12 +223,9 @@ function validate(form: FormState, t: AnyTFunction): FieldErrors {
     const desc = entry.address_description.trim();
     if (!desc) errors[`${index}.address_description`] = v('streetRequired');
     else if (desc.length > 200) errors[`${index}.address_description`] = v('streetMax');
-    const phone = entry.phone.trim();
-    if (phone.length < 6 || phone.length > 20) {
-      errors[`${index}.phone`] = v('phoneLength');
-    } else if (!/^\+?[0-9\s\-()]+$/.test(phone)) {
-      errors[`${index}.phone`] = v('phoneFormat');
-    }
+    // `country` interprets a legacy row stored before numbers were E.164.
+    const phone = phoneIssue(entry.phone, { required: true, country });
+    if (phone) errors[`${index}.phone`] = phoneErrorMessage(t, phone);
     const email = entry.email.trim();
     if (email && !/^\S+@\S+\.\S+$/.test(email)) {
       errors[`${index}.email`] = v('email');
@@ -212,6 +233,62 @@ function validate(form: FormState, t: AnyTFunction): FieldErrors {
   });
 
   return errors;
+}
+
+/**
+ * The heading of one address card — a titled band, not a field label.
+ *
+ * Each card holds a whole address (pin, label, street, support contacts), so its
+ * top row is a section header in its own right: it spans the card's full width,
+ * sits on a tinted band and is closed off by a rule, the same shape a settings
+ * section uses. The agency's own label is the title; the row's place in the list
+ * ("Primary Headquarters", "Branch Address 2") drops to a sub-line, and stands
+ * in as the title for rows saved before labels existed.
+ */
+function AddressRowHeading({
+  index,
+  label,
+  onRemove,
+}: {
+  index: number;
+  label: string;
+  /** Omitted for the last remaining address — there must always be one. */
+  onRemove?: () => void;
+}) {
+  const { t } = useTranslation('settings');
+  const name = label.trim();
+  const role =
+    index === 0
+      ? t('locations.primaryHeadquarters')
+      : t('locations.branchAddress', { number: index + 1 });
+
+  return (
+    // Negative margins pull the band out to the card's own `p-4` edges.
+    <div className="-mx-4 -mt-4 flex items-center justify-between gap-2 rounded-t-lg border-b bg-muted/40 px-4 py-2.5">
+      <span className="flex min-w-0 items-center gap-2">
+        <Building className="w-4 h-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold leading-tight">{name || role}</span>
+          {name && (
+            <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+              {role}
+            </span>
+          )}
+        </span>
+      </span>
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={t('locations.removeAddress')}
+          onClick={onRemove}
+          // 32px hit area, pulled flush with the band's right padding.
+          className="-mr-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function LocationsSettings() {
@@ -235,13 +312,17 @@ export function LocationsSettings() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Removing an already-saved address is confirmed first — it may still be
-  // referenced by assignments, so it's worth a deliberate click.
-  const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
+  // Throwing away a saved row — or any pin — is confirmed first: the address may
+  // still be referenced by assignments, and the pin is what vendors and drivers
+  // route to, so both are worth a deliberate click.
+  const [pending, setPending] = useState<PendingConfirm | null>(null);
 
   // Region labels come out of locations.json in the active language.
   const regions = useMemo(() => regionsFor(country, i18n.language), [country, i18n.language]);
   const geoBias = (country ?? '').toLowerCase() || undefined;
+  // Also the phone picker's starting country, and how a legacy support number
+  // stored without a `+` is read back.
+  const phoneCountry = useMemo(() => toPhoneCountry(country), [country]);
 
   // (Re)seed the form whenever the underlying magazin changes (load / save).
   useEffect(() => {
@@ -303,6 +384,28 @@ export function LocationsSettings() {
     );
   }, []);
 
+  /**
+   * A row that is stored, or that carries a pin, is worth asking about. A blank
+   * row the agency just added has nothing to lose, so it goes straight away.
+   */
+  const requestRemove = useCallback((index: number, entry: HqFormEntry) => {
+    if (entry.original || entry.geo) setPending({ kind: 'remove', index });
+    else removeAddress(index);
+  }, [removeAddress]);
+
+  /** Clearing the *stored* pin is confirmed; clearing a just-picked one is not. */
+  const requestClearPin = useCallback((index: number, entry: HqFormEntry) => {
+    if (isStoredPin(entry)) setPending({ kind: 'clearPin', index });
+    else patchEntry(index, { geo: null });
+  }, [patchEntry]);
+
+  const confirmPending = useCallback(() => {
+    if (!pending) return;
+    if (pending.kind === 'remove') removeAddress(pending.index);
+    else patchEntry(pending.index, { geo: null });
+    setPending(null);
+  }, [pending, removeAddress, patchEntry]);
+
   const dirty = useMemo(() => {
     if (!magazin || !form) return false;
     if (!sameCoverage(form.coverageAreas, magazin.coverageAreas ?? [])) return true;
@@ -321,7 +424,7 @@ export function LocationsSettings() {
   const handleSave = useCallback(async () => {
     if (!magazin || !form) return;
 
-    const errors = validate(form, t);
+    const errors = validate(form, t, phoneCountry);
     if (Object.values(errors).some(Boolean)) {
       setFieldErrors(errors);
       setSaveError(t('common.fixHighlighted'));
@@ -332,7 +435,7 @@ export function LocationsSettings() {
     const payload: MagazinUpdatePayload = {
       version: magazin.version,
       coverage_areas: form.coverageAreas,
-      headquarters_addresses: form.addresses.map(toAddressPayload),
+      headquarters_addresses: form.addresses.map((entry) => toAddressPayload(entry, phoneCountry)),
     };
 
     setSaving(true);
@@ -352,7 +455,7 @@ export function LocationsSettings() {
     } finally {
       setSaving(false);
     }
-  }, [magazin, form, setData, refetch, t]);
+  }, [magazin, form, setData, refetch, t, phoneCountry]);
 
   if (isLoading && !magazin) return <LoadingState label={t('locations.loading')} />;
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
@@ -371,12 +474,9 @@ export function LocationsSettings() {
       )}
 
       {/* ─── Coverage regions ──────────────────────────────────────────────── */}
+      {/* No section heading: the page header above already names this tab and
+          carries the same sentence. */}
       <Card className={sectionSurfaceClass}>
-        <SectionHeading
-          title={t('locations.title')}
-          description={t('locations.description')}
-          short={t('locations.short')}
-        />
         <CardContent className="space-y-6 max-md:px-0">
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -437,33 +537,18 @@ export function LocationsSettings() {
             <div className="space-y-4">
               {form.addresses.map((entry, index) => (
                 <div key={entry.uid} className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                      <Building className="w-3.5 h-3.5" />
-                      {/* Entries saved before labels existed read back null. */}
-                      {entry.label.trim() ||
-                        (index === 0
-                          ? t('locations.primaryHeadquarters')
-                          : t('locations.branchAddress', { number: index + 1 }))}
-                    </span>
-                    {form.addresses.length > 1 && (
-                      <button
-                        type="button"
-                        aria-label={t('locations.removeAddress')}
-                        onClick={() =>
-                          entry.original ? setConfirmRemove(index) : removeAddress(index)
-                        }
-                        className="text-muted-foreground transition-colors hover:text-destructive"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  <AddressRowHeading
+                    index={index}
+                    label={entry.label}
+                    onRemove={
+                      form.addresses.length > 1 ? () => requestRemove(index, entry) : undefined
+                    }
+                  />
 
                   {/* Address search — fills everything below and pins the coordinates */}
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5">
-                      {t('locations.findAddress')}
+                      {/* {t('locations.findAddress')} */}
                       <InfoHint className="md:hidden" label={t('locations.findAddressAboutLabel')}>
                         {t('locations.findAddressHint')}
                       </InfoHint>
@@ -474,7 +559,7 @@ export function LocationsSettings() {
                       hasError={!!fieldErrors[`${index}.geo`]}
                       placeholder={t('locations.searchPlaceholder')}
                       onSelect={(address) => handleGeoSelect(index, address)}
-                      onClear={() => patchEntry(index, { geo: null })}
+                      onClear={() => requestClearPin(index, entry)}
                     />
                     {fieldErrors[`${index}.geo`] ? (
                       <p className="text-xs text-destructive">{fieldErrors[`${index}.geo`]}</p>
@@ -535,21 +620,16 @@ export function LocationsSettings() {
                         {fieldErrors[`${index}.address_description`]}
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground max-md:hidden">
-                        {t('locations.streetHint')}
-                      </p>
+                      entry.geo && (entry.city || entry.region) && (
+                        <p className="text-xs text-muted-foreground">
+                          {t('locations.regionOptional')}: {entry.region || t('locations.regionNotNamed')} | {t('locations.cityOptional')}: {entry.city || t('locations.cityNotNamed')}
+                          <span className="ml-1 opacity-70">{t('locations.fromMapResult')}</span>
+                        </p>
+                      )
                     )}
                   </div>
 
-                  {/* City / region are derived from `geo` server-side. We echo what the
-                      map result named, and offer an optional input only where it named
-                      nothing — `null` is a valid answer for a rural or landmark place. */}
-                  {entry.geo && (entry.city || entry.region) && (
-                    <p className="text-xs text-muted-foreground">
-                      {[entry.city, entry.region].filter(Boolean).join(', ')}
-                      <span className="ml-1 opacity-70">{t('locations.fromMapResult')}</span>
-                    </p>
-                  )}
+
 
                   {entry.geo && (!entry.city || !entry.region) && (
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -591,16 +671,24 @@ export function LocationsSettings() {
                       <Label htmlFor={`hq-phone-${entry.uid}`}>
                         {t('locations.supportPhone')} <span className="text-destructive">*</span>
                       </Label>
-                      <Input
+                      <PhoneInput
                         id={`hq-phone-${entry.uid}`}
                         value={entry.phone}
-                        maxLength={20}
-                        placeholder={t('locations.supportPhonePlaceholder')}
-                        className={cn(fieldErrors[`${index}.phone`] && 'border-destructive')}
-                        onChange={(e) => patchEntry(index, { phone: e.target.value })}
+                        onChange={(phone) => patchEntry(index, { phone })}
+                        // This screen already holds the profile's own country —
+                        // the authoritative answer, so don't make the picker
+                        // infer it from the session.
+                        defaultCountry={country}
+                        required
+                        hasError={!!fieldErrors[`${index}.phone`]}
+                        describedBy={
+                          fieldErrors[`${index}.phone`] ? `hq-phone-${entry.uid}-error` : undefined
+                        }
                       />
                       {fieldErrors[`${index}.phone`] && (
-                        <p className="text-xs text-destructive">{fieldErrors[`${index}.phone`]}</p>
+                        <p id={`hq-phone-${entry.uid}-error`} className="text-xs text-destructive">
+                          {fieldErrors[`${index}.phone`]}
+                        </p>
                       )}
                     </div>
                     <div className="space-y-1.5">
@@ -632,25 +720,34 @@ export function LocationsSettings() {
         </CardContent>
       </Card>
 
-      <AlertDialog
-        open={confirmRemove !== null}
-        onOpenChange={(open) => !open && setConfirmRemove(null)}
-      >
+      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('locations.removeTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('locations.removeDescription')}</AlertDialogDescription>
+            <AlertDialogTitle>
+              {pending?.kind === 'clearPin'
+                ? t('locations.clearPinTitle')
+                : t('locations.removeTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pending?.kind === 'clearPin'
+                ? t('locations.clearPinDescription')
+                : // A stored row is already live for vendors and drivers; an
+                  // unsaved one only costs the pin the agency just placed.
+                  pending && form.addresses[pending.index]?.original
+                  ? t('locations.removeDescription')
+                  : t('locations.removePinnedDescription')}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel type="button">{t('common:actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               type="button"
-              onClick={() => {
-                if (confirmRemove !== null) removeAddress(confirmRemove);
-                setConfirmRemove(null);
-              }}
+              onClick={confirmPending}
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {t('common:actions.remove')}
+              {pending?.kind === 'clearPin'
+                ? t('locations.clearPinAction')
+                : t('common:actions.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

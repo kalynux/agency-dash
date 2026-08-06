@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Truck,
+  Boxes,
   Bell,
   Ticket,
   Users,
@@ -67,6 +68,9 @@ export const PRIMARY_NAV: NavItem[] = [
   { labelKey: 'nav:primary.overview', path: '/dashboard', icon: LayoutDashboard },
   { labelKey: 'nav:primary.shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
   { labelKey: 'nav:primary.tracking', path: '/dashboard/tracking', icon: Radio },
+  // Sits next to the shipment surfaces on purpose: storage-based stock is what
+  // those shipments are picked from.
+  { labelKey: 'nav:primary.inventory', path: '/dashboard/inventory', icon: Boxes },
   { labelKey: 'nav:primary.media', path: '/dashboard/media', icon: Image },
   { labelKey: 'nav:primary.transactions', path: '/dashboard/transactions', icon: Receipt },
   {
@@ -133,3 +137,43 @@ export const FOOTER_NAV: NavItem[] = [
 ];
 
 export const ALL_NAV: NavItem[] = [...PRIMARY_NAV, ...FOOTER_NAV];
+
+// ─── Route → menu lookup ──────────────────────────────────────────────────────
+
+export interface NavTrail {
+  parent: NavItem;
+  /** Absent when the route is a top-level menu with no submenu of its own. */
+  child?: NavChild;
+}
+
+/**
+ * The menu (and submenu) a route belongs to — what a page header renders as its
+ * breadcrumb, so the crumb always reads exactly like the sidebar entry the user
+ * clicked.
+ *
+ * Longest match wins, so `/dashboard/account/profile` resolves to the Profile
+ * child rather than to its Account parent. Only an entry that *has* children
+ * matches by prefix; otherwise Overview (`/dashboard`) would swallow every route
+ * in the app. A deep link below a leaf (`…/agents/connections/{id}`) still
+ * resolves, because the leaf it hangs off is a child of one that has children.
+ */
+export function findNavTrail(pathname: string): NavTrail | null {
+  const path = pathname.replace(/\/+$/, '') || '/dashboard';
+
+  let best: NavTrail | null = null;
+  let bestLength = -1;
+  const consider = (candidate: string, byPrefix: boolean, trail: NavTrail) => {
+    const hit = path === candidate || (byPrefix && path.startsWith(`${candidate}/`));
+    if (hit && candidate.length > bestLength) {
+      bestLength = candidate.length;
+      best = trail;
+    }
+  };
+
+  for (const parent of ALL_NAV) {
+    const children = parent.children ?? [];
+    for (const child of children) consider(child.path, true, { parent, child });
+    consider(parent.path, children.length > 0, { parent });
+  }
+  return best;
+}

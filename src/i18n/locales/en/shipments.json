@@ -15,6 +15,7 @@
     "shipment": "Shipment",
     "vendor": "Vendor",
     "customer": "Customer",
+    "money": "Money",
     "date": "Date",
     "status": "Status",
     "agent": "Agent",
@@ -90,6 +91,7 @@
   "assignment": {
     "title": "Agent Assignment",
     "codHint": "Cash-on-delivery shipments need an agent to accept before pickup — they hold the cash and the offer is gated on their cash-risk profile.",
+    "codHintAmount": "Whoever accepts will be holding {{amount}} in cash — the offer is gated on their cash-risk profile and re-checked when they accept.",
     "accepted": "Accepted",
     "trackOnMap": "Track on map",
     "reassign": "Reassign",
@@ -147,6 +149,32 @@
     "submit": "Reassign",
     "success": "Shipment released and offered to the replacement."
   },
+  "money": {
+    "cashToCollect": "Cash to collect",
+    "codSnapshotHint": "Cash the agent takes from the customer at the door.",
+    "codProjectedHint": "Nobody has taken this delivery yet, so this is a projection of the cash due at the door — item prices × quantity. It's locked in the moment an agent accepts.",
+    "codProjectedCaption": "Projected — no agent has taken this yet",
+    "payment": "Payment",
+    "prepaid": "Prepaid",
+    "prepaidCaption": "Paid online — nothing to collect at the door.",
+    "youEarnTitle": "You earn (est.)",
+    "approx": "≈ {{amount}}",
+    "deliveryFee": "Delivery fee",
+    "agentCut": "Agent's cut",
+    "codHandlingFee": "COD handling fee",
+    "youKeep": "You keep",
+    "estimateCaveat": "An estimate: the agent's split is read again when the money is actually paid out, so changing their contract before delivery changes this.",
+    "orderValue": "Order value {{amount}} — the whole order, which can split across several shipments and agencies.",
+    "setPricing": "Set your delivery pricing",
+    "unavailableShort": {
+      "no_agent": "Once an agent accepts",
+      "no_agency_policy": "Pricing not set"
+    },
+    "unavailable": {
+      "no_agent": "Your net can't be quoted until an agent accepts — their contracted cut comes out of the delivery fee, so any figure shown now would only drop once somebody takes it.",
+      "no_agency_policy": "Your delivery pricing isn't configured, so there's no fee to divide."
+    }
+  },
   "detail": {
     "srTitle": "Shipment details",
     "loading": "Loading shipment…",
@@ -156,7 +184,7 @@
     "sku": "SKU: {{sku}}",
     "inStorage": "In your storage — ",
     "pickUpFrom": "Pick up from ",
-    "cashCollection": "Cash Collection",
+    "money": "Money",
     "vendor": "Vendor",
     "customer": "Customer",
     "trackingNumber": "Tracking Number",

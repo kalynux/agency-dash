@@ -7,6 +7,7 @@ import {
   Lock,
   ShieldCheck,
   Store as StoreIcon,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,12 +15,14 @@ import { useResource } from '@/hooks/useResource';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { useLanguage } from '@/i18n/useLanguage';
+import { formatPhoneDisplay, toPhoneCountry } from '@/lib/phone';
 import { normalizeLanguage, type LanguageCode } from '@/i18n/config';
 import type {
   DeliveryAgencyProfile,
   UpdateAgencyProfilePayload,
 } from '@/types/agency-profile.types';
 
+import { TIMEZONES } from '@/lib/timezones';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
@@ -38,14 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const TIMEZONES = [
-  { value: 'Africa/Douala', label: 'Douala (WAT, UTC+1)' },
-  { value: 'Africa/Lagos', label: 'Lagos (WAT, UTC+1)' },
-  { value: 'Africa/Abidjan', label: 'Abidjan (GMT, UTC+0)' },
-  { value: 'Africa/Nairobi', label: 'Nairobi (EAT, UTC+3)' },
-  { value: 'Europe/Paris', label: 'Paris (CET, UTC+1)' },
-];
 
 /**
  * `preferred_language` is one setting with two effects: the language the backend
@@ -226,24 +221,36 @@ export function ProfileSettings() {
         <CardContent className="space-y-6 max-md:px-0">
           {/* Avatar — the picture itself opens the media library. */}
           <div className="flex items-center gap-6">
-            <MediaPickerTrigger
-              label={t('common:media.changePhoto')}
-              acceptedTypes={['image']}
-              onSelect={(media) => set('avatar', media)}
-              className="rounded-full ring-2 ring-border"
-            >
-              <Avatar className="w-24 h-24">
-                {avatarUrl && (
-                  <AvatarImage
-                    src={avatarUrl}
-                    alt={displayName}
-                    crossOrigin="use-credentials"
-                    className="object-cover"
-                  />
-                )}
-                <AvatarFallback className="text-2xl font-medium">{initialsFrom(displayName)}</AvatarFallback>
-              </Avatar>
-            </MediaPickerTrigger>
+            <div className="relative shrink-0">
+              <MediaPickerTrigger
+                label={t('common:media.changePhoto')}
+                acceptedTypes={['image']}
+                onSelect={(media) => set('avatar', media)}
+                className="rounded-full ring-2 ring-border"
+              >
+                <Avatar className="w-24 h-24">
+                  {avatarUrl && (
+                    <AvatarImage
+                      src={avatarUrl}
+                      alt={displayName}
+                      crossOrigin="use-credentials"
+                      className="object-cover"
+                    />
+                  )}
+                  <AvatarFallback className="text-2xl font-medium">{initialsFrom(displayName)}</AvatarFallback>
+                </Avatar>
+              </MediaPickerTrigger>
+              {form.avatar && (
+                <button
+                  type="button"
+                  aria-label={t('common:media.removePhoto')}
+                  onClick={() => set('avatar', null)}
+                  className="absolute right-0 top-0 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
             <div className="space-y-1">
               <p className="font-medium">{displayName}</p>
               <p className="text-sm text-muted-foreground">{profile.email ?? '—'}</p>
@@ -251,18 +258,7 @@ export function ProfileSettings() {
                 <StoreIcon className="w-3 h-3" />
                 {t('profile.identity.storeHint')}
               </p>
-              <div className="flex items-center gap-3 pt-1">
-                <p className="text-xs text-muted-foreground">{t('profile.identity.avatarHint')}</p>
-                {form.avatar && (
-                  <button
-                    type="button"
-                    onClick={() => set('avatar', null)}
-                    className="text-xs text-destructive hover:underline"
-                  >
-                    {t('common:media.removePhoto')}
-                  </button>
-                )}
-              </div>
+              <p className="pt-1 text-xs text-muted-foreground">{t('profile.identity.avatarHint')}</p>
             </div>
           </div>
 
@@ -296,7 +292,9 @@ export function ProfileSettings() {
               <div className="relative">
                 <Input
                   id="phone"
-                  value={profile.phone ?? ''}
+                  // Read-only here (it is the login identity), but shown in the
+                  // same international grouping every editable phone field uses.
+                  value={formatPhoneDisplay(profile.phone, toPhoneCountry(profile.country))}
                   readOnly
                   disabled
                   placeholder={t('profile.identity.phonePlaceholder')}
@@ -377,7 +375,7 @@ export function ProfileSettings() {
       </Card>
 
       {/* ─── KYC / Verification ───────────────────────────────────────────── */}
-      <Card className={sectionSurfaceClass}>
+      {/* <Card className={sectionSurfaceClass}>
         <SectionHeading
           icon={ShieldCheck}
           title={t('profile.kyc.title')}
@@ -407,7 +405,7 @@ export function ProfileSettings() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       <UnsavedChangesBar
         visible={dirty || saving}

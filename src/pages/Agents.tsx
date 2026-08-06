@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAgentsRoster } from '@/store/agents.store';
 import { ConnectionsTab } from '@/components/agents/ConnectionsTab';
 import { BrowseTab } from '@/components/agents/BrowseTab';
-import { InfoHint } from '@/components/common/InfoHint';
+import { SubPageHeader } from '@/components/layout/PageContainer';
 
 const VALID_TABS = ['connections', 'browse'] as const;
 type AgentsTab = typeof VALID_TABS[number];
@@ -25,16 +25,11 @@ export function Agents() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-          {t('page.title')}
-          <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
-            {t('page.description')}
-          </InfoHint>
-        </h1>
-        <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
-        <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
-      </div>
+      <SubPageHeader
+        path={`/dashboard/agents/${activeTab}`}
+        description={t(`tabs.${activeTab}.description`)}
+        shortDescription={t(`tabs.${activeTab}.short`)}
+      />
 
       {activeTab === 'connections' && (
         <ConnectionsTab onContractChange={refetch} openContractId={openContractId} />

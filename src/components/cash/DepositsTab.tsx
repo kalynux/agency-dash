@@ -169,10 +169,13 @@ export function DepositsTab() {
       <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium">{t('deposits.recordTitle')}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
             <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('deposits.selectAgent')} />
+              <SelectTrigger className="h-10 w-full min-w-0">
+                {/* Only the name in the trigger — the held amount stays in the options, which have room for it. */}
+                <SelectValue placeholder={t('deposits.selectAgent')}>
+                  {agentId ? agentName(agentId) : null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {agents.map((a) => (

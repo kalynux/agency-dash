@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 // Aliased: `tx` is already the row variable in this file's map callbacks.
@@ -96,16 +96,11 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
       )
     : rows;
 
+  // No header of its own: the page above already states the title and the
+  // description, and repeating them here read as the same block printed twice.
   return (
     <Card className={cn(listSurfaceClass, 'gap-4 md:gap-6')}>
-      {/* On a phone this sits directly under a page header that already says
-          the same thing — two near-identical paragraphs stacked. Only the
-          heading survives there; the page header's ⓘ carries the detail. */}
-      <CardHeader className="px-4 pt-4 md:px-6 md:pt-0">
-        <CardTitle>{t('transactions.title')}</CardTitle>
-        <CardDescription className="max-md:hidden">{t('transactions.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 px-4 pb-4 md:px-6 md:pb-0">
+      <CardContent className="space-y-4 px-4 py-4 md:px-6 md:py-0">
         <SearchFilterBar
           value={search}
           onChange={setSearch}

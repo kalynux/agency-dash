@@ -1,9 +1,13 @@
 {
-  "page": {
-    "title": "Vendeurs",
-    "description": "Gérez vos partenariats vendeurs — vous ne recevez de commandes que des vendeurs connectés",
-    "descriptionShort": "Gérez vos partenariats vendeurs",
-    "aboutLabel": "À propos des partenariats vendeurs"
+  "tabs": {
+    "connections": {
+      "description": "Toutes les relations vendeurs de votre agence, passées et présentes — vous ne recevez de commandes que des vendeurs connectés",
+      "short": "Vos connexions vendeurs"
+    },
+    "browse": {
+      "description": "Trouvez des vendeurs auxquels demander une connexion",
+      "short": "Vendeurs à connecter"
+    }
   },
   "status": {
     "pending": "En attente",

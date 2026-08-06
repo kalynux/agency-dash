@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 // Dashboard pages
 import { Overview } from '@/pages/Overview';
 import { Shipments } from '@/pages/Shipments';
+import { Inventory } from '@/pages/Inventory';
 import { LiveTracking } from '@/pages/LiveTracking';
 import { Notifications } from '@/pages/Notifications';
 import { Tickets } from '@/pages/Tickets';
@@ -153,6 +154,7 @@ function DashboardShell() {
                 <Routes>
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
+                  <Route path="inventory" element={<Inventory />} />
                   <Route path="tracking" element={<LiveTracking />} />
                   <Route path="media" element={<MediaLibrary />} />
                   {/* Legacy alias — earnings now live under Account → Payout. */}

@@ -646,40 +646,11 @@ export function MediaLibrary() {
         )}
 
         {/* Overview */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard
-              icon={Layers}
-              label={t('stats.totalFiles')}
-              value={pagination ? String(pagination.total) : t('common:values.notAvailable')}
-            />
-            <StatCard
-              icon={HardDrive}
-              label={t('stats.storageUsed')}
-              value={
-                storage
-                  ? storage.limitBytes !== null
-                    ? t('stats.storageUsedOfLimit', {
-                        used: formatFileSize(storage.usedBytes),
-                        limit: formatFileSize(storage.limitBytes),
-                      })
-                    : formatFileSize(storage.usedBytes)
-                  : t('common:values.notAvailable')
-              }
-            />
-            <StatCard
-              icon={Link2}
-              label={t('stats.attachedOnPage')}
-              value={pageStats.resolved ? String(pageStats.attached) : t('common:values.notAvailable')}
-            />
-            <StatCard
-              icon={Inbox}
-              label={t('stats.unusedOnPage')}
-              value={pageStats.resolved ? String(pageStats.unused) : t('common:values.notAvailable')}
-            />
-          </div>
-          {storage && storage.limitBytes !== null && <StorageBar storage={storage} />}
-        </div>
+        <LibraryOverview
+          total={pagination ? pagination.total : null}
+          pageStats={pageStats}
+          storage={storage}
+        />
 
         {/* Toolbar */}
         <SearchFilterBar
@@ -1002,38 +973,99 @@ export function MediaLibrary() {
   );
 }
 
-// ─── Storage + stats ──────────────────────────────────────────────────────────
+// ─── Overview strip ───────────────────────────────────────────────────────────
 
-function StorageBar({ storage }: { storage: StorageUsage }) {
-  const { t } = useTranslation('media');
-  const pct = storagePercent(storage.usedBytes, storage.limitBytes);
+/**
+ * The library's headline figures as one strip. Four tiles plus a full-width bar
+ * cost ~250px before the first thumbnail — on a page whose whole point is the
+ * grid below it. The counts are what the agency reads, so they keep the type
+ * scale; storage is the only figure with a ceiling, so it is the only one that
+ * gets a gauge, shrunk to a hairline under its own number instead of a band
+ * across the page.
+ */
+function LibraryOverview({
+  total,
+  pageStats,
+  storage,
+}: {
+  total: number | null;
+  pageStats: { attached: number; unused: number; resolved: number };
+  storage: StorageUsage | null;
+}) {
+  const { t } = useTranslation(['media', 'common']);
+  const na = t('common:values.notAvailable');
+  const resolved = pageStats.resolved > 0;
+  // `limitBytes: null` is an uncapped plan — a bar with no ceiling means nothing,
+  // so that case shows the figure alone.
+  const capped = !!storage && storage.limitBytes !== null;
+  const pct = storage ? storagePercent(storage.usedBytes, storage.limitBytes) : 0;
+
   return (
-    <Card className="max-md:rounded-lg max-md:py-0 max-md:shadow-none">
-      <CardContent className="space-y-2 p-4 max-md:px-3 max-md:py-2.5 max-md:text-xs">
-        <div className="flex items-center justify-between text-sm max-md:text-xs">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <HardDrive className="h-4 w-4 max-md:h-3.5 max-md:w-3.5" /> {t('storage.title')}
-          </span>
-          <span className="font-medium">
-            {t('storage.usage', {
-              used: formatFileSize(storage.usedBytes),
-              limit: formatFileSize(storage.limitBytes ?? 0),
-              percent: pct,
-            })}
-          </span>
+    <Card className="py-0 max-md:rounded-lg max-md:shadow-none">
+      <CardContent className="flex flex-col gap-3 p-4 max-md:px-3 max-md:py-2.5 md:flex-row md:items-center md:gap-6">
+        <div className="grid grid-cols-3 gap-2 md:flex md:items-center md:gap-6">
+          <OverviewMetric
+            icon={Layers}
+            label={t('stats.totalFiles')}
+            value={total === null ? na : String(total)}
+          />
+          <OverviewMetric
+            icon={Link2}
+            label={t('stats.attachedOnPage')}
+            value={resolved ? String(pageStats.attached) : na}
+          />
+          <OverviewMetric
+            icon={Inbox}
+            label={t('stats.unusedOnPage')}
+            value={resolved ? String(pageStats.unused) : na}
+          />
         </div>
-        <Progress value={pct} indicatorClassName={storageBarColor(pct)} />
-        {pct >= 80 && (
-          <p className="text-xs text-muted-foreground">
-            {pct >= 100 ? t('storage.full') : t('storage.nearlyFull')}
-          </p>
-        )}
+
+        <div className="min-w-0 flex-1 border-t pt-3 md:border-s md:border-t-0 md:ps-6 md:pt-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+              <HardDrive className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('storage.title')}</span>
+            </span>
+            {/* The number never truncates — it is the part they came for. */}
+            <span className="shrink-0 text-sm font-semibold tabular-nums">
+              {!storage
+                ? na
+                : capped
+                  ? t('storage.usage', {
+                      used: formatFileSize(storage.usedBytes),
+                      limit: formatFileSize(storage.limitBytes ?? 0),
+                      percent: pct,
+                    })
+                  : formatFileSize(storage.usedBytes)}
+            </span>
+          </div>
+          {capped && (
+            <>
+              <Progress
+                value={pct}
+                className="mt-2 h-1.5"
+                indicatorClassName={storageBarColor(pct)}
+              />
+              {pct >= 80 && (
+                <p
+                  className={cn(
+                    'mt-1.5 text-[11px]',
+                    pct >= 90 ? 'text-destructive' : 'text-amber-600',
+                  )}
+                >
+                  {pct >= 100 ? t('storage.full') : t('storage.nearlyFull')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function StatCard({
+function OverviewMetric({
   icon: Icon,
   label,
   value,
@@ -1042,22 +1074,17 @@ function StatCard({
   label: string;
   value: string;
 }) {
-  // On a phone these four are reference figures, not the point of the page —
-  // the Card's `py-6` on top of the content's `p-4` made each one ~124px tall,
-  // pushing the library itself off the first screen. Below `md` the label and
-  // value share one line and the tile lands at roughly a button's height.
   return (
-    <Card className="max-md:rounded-lg max-md:py-0 max-md:shadow-none">
-      <CardContent className="flex items-center gap-3 p-4 max-md:gap-2 max-md:px-3 max-md:py-2">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary max-md:p-1.5">
-          <Icon className="h-5 w-5 max-md:h-3.5 max-md:w-3.5" />
-        </div>
-        <div className="min-w-0 max-md:flex max-md:flex-1 max-md:items-baseline max-md:justify-between max-md:gap-2">
-          <p className="truncate text-xs text-muted-foreground max-md:text-[11px]">{label}</p>
-          <p className="text-lg font-semibold max-md:shrink-0 max-md:text-sm">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex min-w-0 items-center gap-2.5">
+      {/* Three labels plus three chips don't fit a phone's width — the labels win. */}
+      <span className="rounded-md bg-primary/10 p-1.5 text-primary max-md:hidden">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block text-base font-semibold tabular-nums md:text-lg">{value}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">{label}</span>
+      </span>
+    </div>
   );
 }
 

@@ -35,16 +35,80 @@ export type ShipmentRejectionReason =
 export type ChangedByRole = 'system' | 'agency' | 'vendor' | 'customer' | 'admin';
 
 /** How the parent order was paid. Drives COD-specific shipment rules — see shipments.md. */
-export type ShipmentPaymentMethod = 'cash_on_delivery' | 'prepaid';
+export type ShipmentPaymentMethod = 'cash_on_delivery' | 'online';
 
 export type ShipmentCodStatus = 'pending' | 'collected' | 'cancelled';
 
-/** Present on shipment detail once picked up, for cash_on_delivery shipments only. Never contains the customer's delivery code. */
+/**
+ * The cash the agent has to take at the door. On the list *and* the detail for
+ * every `cash_on_delivery` shipment, `null` when prepaid. Never contains the
+ * customer's delivery code.
+ */
 export interface ShipmentCodInfo {
+  /**
+   * A snapshot once a collection record exists, a **projection** before one does
+   * — Σ (item price × quantity), the same arithmetic acceptance will snapshot.
+   */
   expectedAmount: number;
   currency: string;
-  status: ShipmentCodStatus;
+  /**
+   * `null` until an agent accepts: the collection record is only created then.
+   * Read it as "nobody has taken this yet" — which is exactly when you're
+   * deciding who to send, and how much cash a run involves is part of that.
+   */
+  status: ShipmentCodStatus | null;
   collectedAt: string | null;
+}
+
+/** How the agency's cut was derived — the bound agent's contract `fee_split` model. */
+export type AgencyEarningBasis = 'contract_percentage' | 'contract_flat';
+
+/**
+ * What this delivery is expected to pay the agency, with the agent's cut already
+ * taken out. Itemised because each part moves independently.
+ *
+ * ⚠️ An estimate, not a promise: the contract's `fee_split` is read live again
+ * when the money is actually split, so renegotiating it before delivery changes
+ * what is paid. A prepaid shipment's `deliveryFee` is firm (snapshotted when the
+ * order was paid); a COD shipment's is recomputed from the agency's live
+ * `policies.pricing` at collection.
+ */
+export interface AgencyEarning {
+  /** What you keep: `earnedFee − agentCut + codHandlingFee`. */
+  amount: number;
+  currency: string;
+  /** Always `true` — see the caveat above. */
+  estimated: boolean;
+  /** The gross fee, before anything is carved out. */
+  deliveryFee: number;
+  /** What this run earns out of it — the same figure unless the shipment already `returned`, when it is the agency's `rto_fee` instead. */
+  earnedFee: number;
+  /** The bound agent's share under their contract's `fee_split`. Legitimately `0` (no contract → you keep the whole fee). */
+  agentCut: number;
+  /** The agency's COD handling fee, kept whole and never shared. `0` on a prepaid shipment. */
+  codHandlingFee: number;
+  basis: AgencyEarningBasis;
+}
+
+/**
+ * Why `agencyEarning` could not be quoted. A **missing contract is not** one of
+ * these: `agentCut` is then `0` and the agency keeps the whole fee, which is a
+ * real answer and exactly what the split will do.
+ */
+export type AgencyEarningUnavailableReason =
+  /** No agent has accepted yet, so there is no `fee_split` to subtract. */
+  | 'no_agent'
+  /** `policies.pricing` is not configured, so there is no delivery fee to divide. */
+  | 'no_agency_policy';
+
+/**
+ * The value of the **whole order** — detail only, and *not* the same as
+ * `cod.expectedAmount`: an order can split into several shipments across several
+ * agencies, and the COD figure is only this shipment's share of the cash.
+ */
+export interface ShipmentOrderValue {
+  total: number;
+  currency: string;
 }
 
 export interface ShipmentVendorSummary {
@@ -112,6 +176,14 @@ export interface ShipmentListItem {
   createdAt: string;
   updatedAt: string;
   orderNumber: string;
+  /** Whether the agent has to take money at the door. */
+  paymentMethod?: ShipmentPaymentMethod;
+  /** The cash to collect; `null` when prepaid. */
+  cod?: ShipmentCodInfo | null;
+  /** What this run pays the agency, net of the agent's cut. `null` when it can't be quoted. */
+  agencyEarning?: AgencyEarning | null;
+  /** Why `agencyEarning` is `null`. */
+  agencyEarningUnavailable?: AgencyEarningUnavailableReason | null;
   vendor: ShipmentVendorSummary;
   customer: ShipmentCustomerSummary;
   /** The true number of items — `itemImages` is capped well below it. */
@@ -162,6 +234,20 @@ export interface ShipmentItem {
 
 export interface ShipmentVendorDetail extends ShipmentVendorSummary {
   email: string;
+}
+
+/**
+ * The shipment's own agency. On this dashboard it simply echoes you — it is on
+ * the payload because the agency and agent detail views are one response, and
+ * the agent (who serves several agencies) needs it.
+ */
+export interface ShipmentAgencySummary {
+  id: string;
+  name: string;
+  logo: FileRef | null;
+  supportPhone: string | null;
+  supportEmail: string | null;
+  supportWhatsapp: string | null;
 }
 
 export interface ShipmentCustomerDetail extends ShipmentCustomerSummary {
@@ -248,10 +334,18 @@ export interface ShipmentDetail {
   agentId: string | null;
   status: ShipmentStatus;
   paymentMethod: ShipmentPaymentMethod;
-  /** Present once picked up, cash_on_delivery shipments only. */
+  /** The cash to collect; `null` when prepaid. */
   cod: ShipmentCodInfo | null;
+  /** The whole order's value — never conflate it with `cod.expectedAmount`. */
+  orderValue?: ShipmentOrderValue | null;
+  /** What this run pays the agency, net of the agent's cut. `null` when it can't be quoted. */
+  agencyEarning?: AgencyEarning | null;
+  /** Why `agencyEarning` is `null`. */
+  agencyEarningUnavailable?: AgencyEarningUnavailableReason | null;
   trackingNumber: string | null;
   items: ShipmentItem[];
+  /** This shipment's agency — your own name, logo and support contacts. */
+  agency?: ShipmentAgencySummary;
   vendor: ShipmentVendorDetail;
   customer: ShipmentCustomerDetail;
   agent: ShipmentAgent | null;

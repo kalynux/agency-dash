@@ -22,7 +22,11 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { tx, txStatic } from '@/i18n/tx';
+import { tx } from '@/i18n/tx';
+import { PhoneInput } from '@/components/common/PhoneInput';
+import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
+import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
+import { phoneErrorMessage } from '@/lib/validation-schemas';
 import type { PaymentGateway, PhoneOperator } from '@/types/billing.types';
 import type { AddPaymentMethodPayload, SavedPaymentMethod } from '@/types/payment-method.types';
 import { isStripeConfigured } from '@/lib/stripe';
@@ -39,8 +43,6 @@ export interface AddPaymentMethodDialogProps {
   onAdded: (method: SavedPaymentMethod) => void;
 }
 
-const PHONE_RE = /^\+?\d{8,15}$/;
-
 function gatewayOptions() {
   return GATEWAYS.filter((g) => g.methodType !== 'card' || isStripeConfigured);
 }
@@ -53,6 +55,7 @@ export function AddPaymentMethodDialog({
 }: AddPaymentMethodDialogProps) {
   const { t } = useTranslation(['billing', 'common']);
   const gateways = gatewayOptions();
+  const phoneCountry = useDefaultPhoneCountry();
 
   const [gateway, setGateway] = useState<PaymentGateway>(gateways[0]?.value ?? 'NOTCHPAY');
   const [phone, setPhone] = useState('');
@@ -108,12 +111,14 @@ export function AddPaymentMethodDialog({
     // Mobile money — no client SDK to tokenise; store display metadata + provider.
     // The phone reference stands in for the gateway token ids until real tokenisation
     // is wired (charging a saved method is a future backend step per the docs).
-    if (!PHONE_RE.test(phone.trim())) {
-      throw new Error(txStatic('billing:methods.add.invalidPhone'));
-    }
+    const issue = phoneIssue(phone, { required: true, country: phoneCountry });
+    if (issue) throw new Error(phoneErrorMessage(t, issue));
+    // E.164 is what the reference is keyed on, so the same wallet saved from two
+    // screens produces the same id.
+    const e164 = toSubmittablePhone(phone, phoneCountry);
     const provider = gateway.toLowerCase();
-    const last4 = phone.trim().slice(-4);
-    const ref = `${provider}:${phone.trim()}`;
+    const last4 = e164.slice(-4);
+    const ref = `${provider}:${e164}`;
     return {
       provider,
       gateway_customer_id: ref,
@@ -186,13 +191,12 @@ export function AddPaymentMethodDialog({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="add-phone">{t('methods.add.phone')}</Label>
-                <Input
+                <PhoneInput
                   id="add-phone"
-                  inputMode="tel"
-                  placeholder={t('methods.add.phonePlaceholder')}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  aria-invalid={!!error}
+                  onChange={setPhone}
+                  required
+                  hasError={!!error}
                 />
               </div>
               <div className="space-y-1.5">

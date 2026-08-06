@@ -63,7 +63,6 @@
     "regionNotNamed": "Le résultat de la carte n'a nommé aucune région — ajoutez-en une si cela aide.",
     "locationContact": "Contact du site",
     "phone": "Téléphone",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "email": "E-mail",
     "emailPlaceholder": "support@monagence.com"
   },
@@ -82,7 +81,6 @@
     "provider": "Opérateur",
     "providerPlaceholder": "Choisir un opérateur",
     "phoneNumber": "Numéro de téléphone",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "accountName": "Nom du titulaire",
     "mobileAccountNamePlaceholder": "Nom sur le compte mobile money",
     "bankDetails": "Informations bancaires",

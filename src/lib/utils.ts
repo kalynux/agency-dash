@@ -1,17 +1,37 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatCurrency, formatDate as formatDateBase } from "@/lib/format"
+import i18n from "@/i18n"
+import { formatCurrency, formatDate as formatDateBase, formatNumber } from "@/lib/format"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Byte-unit keys, smallest first. Listed as literals rather than built from the
+ * unit name so the paths still type-check against `en/common.json`.
+ *
+ * The unit itself is translated, not just the number: French counts in octets
+ * (o/Ko/Mo), so a hard-coded "MB" would be wrong there even though the digits
+ * are identical.
+ */
+const BYTE_UNIT_KEYS = [
+  'common:units.bytes.b',
+  'common:units.bytes.kb',
+  'common:units.bytes.mb',
+  'common:units.bytes.gb',
+  'common:units.bytes.tb',
+] as const;
+
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  const value = (n: number, unit: (typeof BYTE_UNIT_KEYS)[number]) =>
+    i18n.t(unit, { value: formatNumber(n) });
+
+  if (!Number.isFinite(bytes) || bytes <= 0) return value(0, BYTE_UNIT_KEYS[0]);
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // Clamp so a petabyte-scale number lands on TB instead of running off the end.
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), BYTE_UNIT_KEYS.length - 1);
+  return value(parseFloat((bytes / Math.pow(k, i)).toFixed(2)), BYTE_UNIT_KEYS[i]);
 }
 
 // ─── Storage usage helpers (api-doc/agency/storage.md) ───────────────────────

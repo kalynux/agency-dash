@@ -63,7 +63,6 @@
     "regionNotNamed": "The map result named no region — add one if it helps.",
     "locationContact": "Location Contact",
     "phone": "Phone",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "email": "Email",
     "emailPlaceholder": "support@youragency.com"
   },
@@ -82,7 +81,6 @@
     "provider": "Provider",
     "providerPlaceholder": "Select provider",
     "phoneNumber": "Phone Number",
-    "phonePlaceholder": "+237 6XX XXX XXX",
     "accountName": "Account Name",
     "mobileAccountNamePlaceholder": "Name on the mobile money account",
     "bankDetails": "Bank Account Details",

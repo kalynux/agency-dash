@@ -4,6 +4,7 @@ import { SummaryTab } from '@/components/cash/SummaryTab';
 import { DepositsTab } from '@/components/cash/DepositsTab';
 import { RemittancesTab } from '@/components/cash/RemittancesTab';
 import { DiscrepanciesTab } from '@/components/cash/DiscrepanciesTab';
+import { SubPageHeader } from '@/components/layout/PageContainer';
 
 const VALID_TABS = ['summary', 'deposits', 'remittances', 'discrepancies'] as const;
 type CashTab = typeof VALID_TABS[number];
@@ -17,10 +18,11 @@ export function CashManagement() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">{t('page.title')}</h1>
-        <p className="text-muted-foreground">{t('page.description')}</p>
-      </div>
+      <SubPageHeader
+        path={`/dashboard/cash/${activeTab}`}
+        description={t(`tabs.${activeTab}.description`)}
+        shortDescription={t(`tabs.${activeTab}.short`)}
+      />
 
       {activeTab === 'summary' && <SummaryTab />}
       {activeTab === 'deposits' && <DepositsTab />}

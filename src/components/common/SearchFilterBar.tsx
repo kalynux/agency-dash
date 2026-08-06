@@ -10,6 +10,13 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
@@ -17,11 +24,17 @@ import { cn } from '@/lib/utils';
  * The one search-and-filter control every listing in the dashboard uses.
  *
  * A single row — a search field that takes the width, and a filter button beside
- * it — with every filter living in a bottom sheet behind that button instead of
+ * it — with every filter living in a sheet behind that button instead of
  * spilling across the page as a row of selects. That keeps the top of every list
  * the same height and the same shape regardless of how many filters the surface
  * actually has, and gives phones the full width for the one control they use
  * most (search).
+ *
+ * The sheet is a bottom drawer on phones and a right-side panel from `md` up —
+ * same body, same footer, matching the ticket sheets. On a wide screen a
+ * bottom drawer wastes the horizontal room and drags the eye down from the list
+ * it filters; a side panel sits beside the results, which stay visible as
+ * filters apply live.
  *
  * Filters apply live: changing one inside the sheet refetches behind it, so the
  * sheet's footer button is a dismiss ("Show results"), never an "Apply" the user
@@ -85,10 +98,81 @@ export function SearchFilterBar({
 }: SearchFilterBarProps) {
   const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
   const hasFilters = Boolean(children);
 
   const searchPlaceholder = placeholder ?? t('filters.searchPlaceholder');
   const title = filterTitle ?? t('filters.title');
+
+  // Both containers are Radix dialogs, but each labels itself through its own
+  // Title/Description — so the pair is picked alongside the container, not
+  // shared across them.
+  const PanelTitle = isMobile ? DrawerTitle : SheetTitle;
+  const PanelDescription = isMobile ? DrawerDescription : SheetDescription;
+
+  const panel = (
+    <>
+      {/* On mobile `DrawerContent` draws the grab handle above this row, which
+          is why the top padding is tighter there. */}
+      <div className={cn('flex items-start justify-between gap-3 px-5 pb-3', isMobile ? 'pt-2' : 'pt-4')}>
+        <div className="min-w-0 text-start">
+          <PanelTitle className="flex items-center gap-2 text-base">
+            {title}
+            {activeCount > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                {activeCount}
+              </span>
+            )}
+          </PanelTitle>
+          <PanelDescription className={cn('mt-0.5 text-xs', !filterDescription && 'sr-only')}>
+            {filterDescription ?? t('filters.description')}
+          </PanelDescription>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {onReset && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              disabled={activeCount === 0}
+              className="h-8 gap-1.5 text-muted-foreground disabled:opacity-40"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {t('filters.reset')}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setOpen(false)}
+            aria-label={t('filters.close')}
+            className="text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain border-t px-5">
+        {children}
+      </div>
+
+      <div className="border-t bg-background px-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-3.5">
+        <Button type="button" className="h-11 w-full rounded-xl" onClick={() => setOpen(false)}>
+          {typeof resultCount === 'number'
+            ? t('filters.showResults', {
+                count: resultCount,
+                noun: resultNounKey
+                  ? tx(t, resultNounKey, { count: resultCount })
+                  : t('filters.resultNoun', { count: resultCount }),
+              })
+            : t('filters.showResults')}
+        </Button>
+      </div>
+    </>
+  );
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -145,70 +229,24 @@ export function SearchFilterBar({
 
       {hint && <p className="px-1 text-xs text-muted-foreground">{hint}</p>}
 
-      {hasFilters && (
-        <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerContent className="mx-auto max-w-2xl rounded-t-2xl">
-            {/* `DrawerContent` already draws the grab handle above this row. */}
-            <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-2">
-              <div className="min-w-0 text-start">
-                <DrawerTitle className="flex items-center gap-2 text-base">
-                  {title}
-                  {activeCount > 0 && (
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      {activeCount}
-                    </span>
-                  )}
-                </DrawerTitle>
-                <DrawerDescription className={cn('mt-0.5 text-xs', !filterDescription && 'sr-only')}>
-                  {filterDescription ?? t('filters.description')}
-                </DrawerDescription>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-1">
-                {onReset && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={onReset}
-                    disabled={activeCount === 0}
-                    className="h-8 gap-1.5 text-muted-foreground disabled:opacity-40"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    {t('filters.reset')}
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setOpen(false)}
-                  aria-label={t('filters.close')}
-                  className="text-muted-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain border-t px-5">
-              {children}
-            </div>
-
-            <div className="border-t bg-background px-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-3.5">
-              <Button type="button" className="h-11 w-full rounded-xl" onClick={() => setOpen(false)}>
-                {typeof resultCount === 'number'
-                  ? t('filters.showResults', {
-                      count: resultCount,
-                      noun: resultNounKey
-                        ? tx(t, resultNounKey, { count: resultCount })
-                        : t('filters.resultNoun', { count: resultCount }),
-                    })
-                  : t('filters.showResults')}
-              </Button>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      )}
+      {hasFilters &&
+        (isMobile ? (
+          <Drawer open={open} onOpenChange={setOpen}>
+            <DrawerContent className="mx-auto max-w-2xl rounded-t-2xl">{panel}</DrawerContent>
+          </Drawer>
+        ) : (
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetContent
+              side="right"
+              // `[&>button]:hidden` drops `SheetContent`'s own corner close —
+              // the header row already carries one next to Reset, and the two
+              // would sit on top of each other.
+              className="flex w-full flex-col gap-0 p-0 sm:max-w-md [&>button]:hidden"
+            >
+              {panel}
+            </SheetContent>
+          </Sheet>
+        ))}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { AnyTFunction } from '@/i18n/tx';
+import { phoneIssue, type CountryCode, type PhoneIssue } from '@/lib/phone';
 
 /**
  * Zod schemas whose messages are localized.
@@ -43,5 +44,38 @@ export function buildPasswordSchema(t: T) {
 }
 
 export type PasswordFormValues = z.infer<ReturnType<typeof buildPasswordSchema>>;
+
+// ─── Phone (E.164 — see lib/phone.ts) ─────────────────────────────────────────
+
+/**
+ * The message for a rejected phone number. Every phone field in the app renders
+ * this one — a hand-rolled form calls it with `phoneIssue(...)`, a Zod form gets
+ * it through `buildPhoneSchema` — so "what's wrong with this number" reads the
+ * same in onboarding, settings and checkout.
+ */
+export function phoneErrorMessage(t: T, issue: PhoneIssue): string {
+  return v(t, `phone.${issue}`);
+}
+
+/**
+ * A phone field, validated against the numbering rules of the country the value
+ * names. The value is E.164; `country` only interprets a legacy row stored
+ * without a `+` before this was so.
+ *
+ * `required: false` lets `''` through, which is how a clearable field is emptied
+ * — a non-empty value is checked either way.
+ */
+export function buildPhoneSchema(
+  t: T,
+  options: { required?: boolean; country?: CountryCode | null } = {},
+) {
+  const { required = true, country = null } = options;
+  return z.string().superRefine((value, ctx) => {
+    const issue = phoneIssue(value, { required, country });
+    if (issue) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: phoneErrorMessage(t, issue) });
+    }
+  });
+}
 
 export { v as validationMessage };

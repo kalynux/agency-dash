@@ -12,8 +12,6 @@ import {
   X,
   Store as StoreIcon,
   Mail,
-  Phone,
-  MessageCircle,
   CalendarDays,
   LifeBuoy,
   Info,
@@ -27,9 +25,13 @@ import { useMagazin } from '@/store/magazin.store';
 import { magazinService } from '@/services/magazin.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { AnyTFunction } from '@/i18n/tx';
+import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
+import { phoneIssue, toSubmittablePhone, type CountryCode } from '@/lib/phone';
+import { phoneErrorMessage } from '@/lib/validation-schemas';
 import { ApiError } from '@/types/api';
 import type { AgencyMagazin, MagazinUpdatePayload } from '@/types/magazin.types';
 
+import { PhoneInput } from '@/components/common/PhoneInput';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
@@ -90,12 +92,27 @@ function norm(v: string): string | null {
   return t === '' ? null : t;
 }
 
+/** The two support contacts that are phone numbers, normalized to E.164 or `null`. */
+const PHONE_FIELDS = new Set<EditableKey>(['supportPhone', 'supportWhatsapp']);
+
+function normPhone(v: string | null | undefined, country: CountryCode | null): string | null {
+  return toSubmittablePhone(v, country) || null;
+}
+
 /**
  * Build the PATCH payload from the diff between the edited form and the stored
  * magazin, always including `version`. Only changed fields are sent (partial
  * update). `name` is sent as-is (required); every other field is null-normalized.
+ *
+ * Phone fields are compared *after* normalization on both sides, so a legacy
+ * number stored in local format doesn't read as an edit the moment the page
+ * loads — and once one is actually touched, E.164 is what goes out.
  */
-function buildPayload(form: FormState, magazin: AgencyMagazin): MagazinUpdatePayload {
+function buildPayload(
+  form: FormState,
+  magazin: AgencyMagazin,
+  country: CountryCode | null,
+): MagazinUpdatePayload {
   const payload: MagazinUpdatePayload = { version: magazin.version };
 
   if (form.name.trim() !== (magazin.name ?? '')) payload.name = form.name.trim();
@@ -107,8 +124,10 @@ function buildPayload(form: FormState, magazin: AgencyMagazin): MagazinUpdatePay
     'supportWhatsapp',
   ];
   for (const key of stringFields) {
-    const next = norm(form[key]);
-    if (next !== (magazin[key] ?? null)) payload[key] = next;
+    const isPhone = PHONE_FIELDS.has(key);
+    const next = isPhone ? normPhone(form[key], country) : norm(form[key]);
+    const stored = isPhone ? normPhone(magazin[key], country) : (magazin[key] ?? null);
+    if (next !== stored) payload[key] = next;
   }
 
   // Send the file id (or `null` to detach) only when the selected logo changed.
@@ -120,7 +139,7 @@ function buildPayload(form: FormState, magazin: AgencyMagazin): MagazinUpdatePay
 }
 
 /** Client-side validation mirroring the PATCH /agency/magazin constraints. */
-function validateForm(form: FormState, t: AnyTFunction): FieldErrors {
+function validateForm(form: FormState, t: AnyTFunction, country: CountryCode | null): FieldErrors {
   const errors: FieldErrors = {};
 
   const name = form.name.trim();
@@ -132,11 +151,11 @@ function validateForm(form: FormState, t: AnyTFunction): FieldErrors {
     errors.supportEmail = t('settings:store.validation.email');
   }
 
+  // Both are optional and clearable — but a number that IS given has to be one
+  // someone could actually call.
   for (const key of ['supportPhone', 'supportWhatsapp'] as const) {
-    const value = form[key].trim();
-    if (value && (value.length < 8 || value.length > 20)) {
-      errors[key] = t('settings:store.validation.phoneLength');
-    }
+    const issue = phoneIssue(form[key], { required: false, country });
+    if (issue) errors[key] = phoneErrorMessage(t, issue);
   }
 
   return errors;
@@ -147,6 +166,9 @@ export function MagazinSettings() {
   // Shared with the app chrome (sidebar identity block) — saving through `setData`
   // updates the business name and logo everywhere without a refetch.
   const { data: magazin, isLoading, error, refetch, setData } = useMagazin();
+  // Where the support-number pickers open, and how a legacy number stored
+  // without a `+` is read back.
+  const phoneCountry = useDefaultPhoneCountry();
 
   const [form, setForm] = useState<FormState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -169,8 +191,8 @@ export function MagazinSettings() {
 
   const dirty = useMemo(() => {
     if (!magazin || !form) return false;
-    return Object.keys(buildPayload(form, magazin)).length > 1; // more than just `version`
-  }, [magazin, form]);
+    return Object.keys(buildPayload(form, magazin, phoneCountry)).length > 1; // more than just `version`
+  }, [magazin, form, phoneCountry]);
 
   const handleDiscard = useCallback(() => {
     if (magazin) {
@@ -183,7 +205,7 @@ export function MagazinSettings() {
   const handleSave = useCallback(async () => {
     if (!magazin || !form) return;
 
-    const errors = validateForm(form, t);
+    const errors = validateForm(form, t, phoneCountry);
     if (Object.values(errors).some(Boolean)) {
       setFieldErrors(errors);
       setSaveError(t('common.fixHighlighted'));
@@ -193,7 +215,7 @@ export function MagazinSettings() {
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await magazinService.updateMagazin(buildPayload(form, magazin));
+      const updated = await magazinService.updateMagazin(buildPayload(form, magazin, phoneCountry));
       setData(updated);
       toast.success(t('store.saved'));
     } catch (err) {
@@ -207,7 +229,7 @@ export function MagazinSettings() {
     } finally {
       setSaving(false);
     }
-  }, [magazin, form, setData, refetch, t]);
+  }, [magazin, form, setData, refetch, t, phoneCountry]);
 
   if (isLoading && !magazin) return <LoadingState label={t('store.loading')} />;
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
@@ -352,29 +374,25 @@ export function MagazinSettings() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="magazin-phone">{t('store.support.phone')}</Label>
-                  <IconInput
-                    icon={Phone}
+                  <PhoneInput
                     id="magazin-phone"
                     value={form.supportPhone}
-                    maxLength={20}
-                    aria-invalid={!!fieldErrors.supportPhone}
-                    onChange={(e) => set('supportPhone', e.target.value)}
-                    placeholder={t('store.support.phonePlaceholder')}
+                    onChange={(phone) => set('supportPhone', phone)}
+                    hasError={!!fieldErrors.supportPhone}
+                    describedBy={fieldErrors.supportPhone ? 'magazin-phone-error' : undefined}
                   />
-                  <FieldError message={fieldErrors.supportPhone} />
+                  <FieldError id="magazin-phone-error" message={fieldErrors.supportPhone} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="magazin-wa">{t('store.support.whatsapp')}</Label>
-                  <IconInput
-                    icon={MessageCircle}
+                  <PhoneInput
                     id="magazin-wa"
                     value={form.supportWhatsapp}
-                    maxLength={20}
-                    aria-invalid={!!fieldErrors.supportWhatsapp}
-                    onChange={(e) => set('supportWhatsapp', e.target.value)}
-                    placeholder={t('store.support.phonePlaceholder')}
+                    onChange={(phone) => set('supportWhatsapp', phone)}
+                    hasError={!!fieldErrors.supportWhatsapp}
+                    describedBy={fieldErrors.supportWhatsapp ? 'magazin-wa-error' : undefined}
                   />
-                  <FieldError message={fieldErrors.supportWhatsapp} />
+                  <FieldError id="magazin-wa-error" message={fieldErrors.supportWhatsapp} />
                 </div>
               </div>
             </CardContent>
@@ -445,9 +463,9 @@ function IconInput({ icon: Icon, className, ...props }: ComponentProps<typeof In
   );
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ id, message }: { id?: string; message?: string }) {
   if (!message) return null;
-  return <p className="text-xs text-destructive">{message}</p>;
+  return <p id={id} className="text-xs text-destructive">{message}</p>;
 }
 
 /** Labeled read-only row in the "Details" card. */

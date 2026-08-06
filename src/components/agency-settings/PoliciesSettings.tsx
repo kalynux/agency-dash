@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
+import { InfoHint } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
@@ -269,12 +269,9 @@ export function PoliciesSettings() {
 
   return (
     <>
+    {/* No section heading: the page header above already names this tab and
+        states the same rule, so one here would print it twice. */}
     <Card className={sectionSurfaceClass}>
-      <SectionHeading
-        title={t('policies.title')}
-        description={t('policies.description')}
-        short={t('policies.short')}
-      />
       <CardContent className="space-y-8 max-md:px-0">
         {apiError && <div role="alert" className="p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}
 

@@ -124,15 +124,15 @@ export function DiscrepanciesTab() {
       <Card className="py-0 md:py-6">
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-medium">{t('discrepancies.raiseTitle')}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
             <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger><SelectValue placeholder={t('discrepancies.selectAgent')} /></SelectTrigger>
+              <SelectTrigger className="h-10 w-full min-w-0"><SelectValue placeholder={t('discrepancies.selectAgent')} /></SelectTrigger>
               <SelectContent>
                 {agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={type} onValueChange={(v) => setType(v as CodDiscrepancyType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="cash_shortfall">{t('discrepancyType.cash_shortfall')}</SelectItem>
                 <SelectItem value="other">{t('discrepancyType.other')}</SelectItem>
@@ -140,7 +140,7 @@ export function DiscrepanciesTab() {
             </Select>
             <Input type="number" min={0} placeholder={t('discrepancies.amountPlaceholder')} value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder={t('discrepancies.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button variant="destructive" className="gap-2" disabled={!agentId || isSubmitting} onClick={handleSubmit}>
+            <Button variant="destructive" className="gap-2 sm:col-span-2 lg:col-span-1" disabled={!agentId || isSubmitting} onClick={handleSubmit}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
               {t('discrepancies.raise')}
             </Button>

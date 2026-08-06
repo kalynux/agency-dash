@@ -1,9 +1,13 @@
 {
-  "page": {
-    "title": "Livreurs",
-    "description": "Gérez les livreurs sous contrat avec votre agence — seuls les livreurs sous contrat peuvent prendre vos expéditions",
-    "descriptionShort": "Gérez vos contrats de livreurs",
-    "aboutLabel": "À propos des contrats de livreurs"
+  "tabs": {
+    "connections": {
+      "description": "Tous les contrats de livreurs de votre agence, passés et présents — seuls les livreurs sous contrat peuvent prendre vos expéditions",
+      "short": "Vos contrats de livreurs"
+    },
+    "browse": {
+      "description": "Tous les livreurs de la plateforme susceptibles de prendre vos expéditions",
+      "short": "Trouver des livreurs"
+    }
   },
   "agentStatus": {
     "active": "Actif",

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { GeoAddress } from '@/types/geo.types';
 import type { AnyTFunction } from '@/i18n/tx';
-import { validationMessage as v } from '@/lib/validation-schemas';
+import { buildPhoneSchema, validationMessage as v } from '@/lib/validation-schemas';
+import { toSubmittablePhone, type CountryCode } from '@/lib/phone';
 
 /**
  * Onboarding + settings form schemas.
@@ -18,19 +19,13 @@ import { validationMessage as v } from '@/lib/validation-schemas';
 
 type T = AnyTFunction;
 
-// ─── Phone regex (matches backend) ───────────────────────────────────────────
-
-const phoneRegex = /^\+?[0-9\s\-()]+$/;
-
 // ─── Step 1: Logistics Setup ──────────────────────────────────────────────────
 
 function supportContactSchema(t: T) {
     return z.object({
-        phone: z
-            .string()
-            .min(6, v(t, 'phone.tooShort', { count: 6 }))
-            .max(20, v(t, 'phone.tooLong', { count: 20 }))
-            .regex(phoneRegex, v(t, 'phone.format')),
+        // E.164, produced by `PhoneInput` and checked against the numbering rules
+        // of the country it names — see lib/phone.ts.
+        phone: buildPhoneSchema(t),
         email: z
             .string()
             .email(v(t, 'email'))
@@ -117,12 +112,8 @@ export type HeadquartersAddressFormValues = z.infer<
 function mobileMoneySchema(t: T) {
     return z.object({
         provider: z.string().min(1, v(t, 'payout.providerRequired')).trim(),
-        phone_number: z
-            .string()
-            .min(6, v(t, 'phone.tooShort', { count: 6 }))
-            .max(20, v(t, 'phone.tooLong', { count: 20 }))
-            .regex(phoneRegex, v(t, 'phone.format'))
-            .trim(),
+        /** E.164 — the wallet's own number, validated for its country. */
+        phone_number: buildPhoneSchema(t),
         account_name: z.string().min(1, v(t, 'payout.accountNameRequired')).trim(),
     });
 }
@@ -187,6 +178,32 @@ export function buildPayoutSchema(t: T) {
 }
 
 export type PayoutFormValues = z.infer<ReturnType<typeof buildPayoutSchema>>;
+
+/**
+ * Payout methods, ready for the wire: every mobile-money number as E.164.
+ *
+ * Onboarding and Account → Payout both edit this array, and both seed it from
+ * whatever is already stored — which, for an agency that signed up before phone
+ * numbers were normalized, is a local-format string the user may never touch.
+ * Running the array through here on submit upgrades those rows on the next save
+ * instead of writing the legacy shape straight back.
+ */
+export function toSubmittablePayoutDetails(
+    methods: PayoutFormValues['payout_details'],
+    country?: CountryCode | null,
+): PayoutFormValues['payout_details'] {
+    return methods.map((method) =>
+        method.method === 'mobile_money' && method.mobile_money
+            ? {
+                ...method,
+                mobile_money: {
+                    ...method.mobile_money,
+                    phone_number: toSubmittablePhone(method.mobile_money.phone_number, country),
+                },
+            }
+            : method,
+    );
+}
 
 // ─── Step 3: Branding Setup (Optional / Skippable) ───────────────────────────
 
