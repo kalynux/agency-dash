@@ -12,25 +12,81 @@ export interface ApiUser {
 
 // ─── Payout Details (ordered array — first entry = preferred method) ──────────
 
+/**
+ * Payout secrets are **write-mostly**: what a read returns is a mask, not the
+ * stored value, so a saved entry can never be edited by round-tripping it —
+ * the raw field has to be re-collected. See api-doc/agency/payout-methods.md
+ * ("Reading it back"). That is why each secret is a *pair* of optional fields
+ * rather than one required one.
+ */
 export interface MobileMoneyDetails {
   provider: string;
-  phone_number: string;
+  /** E.164. Sent, never returned. */
+  phone_number?: string;
+  /** Returned, never sent — e.g. "••••0000". */
+  phone_number_masked?: string;
   account_name: string;
 }
 
 export interface BankDetails {
   bank_name: string;
-  account_number: string;
+  /** Sent, never returned. */
+  account_number?: string;
+  /** Returned, never sent. */
+  account_number_masked?: string;
   account_name: string;
   /** Full country name, e.g. "Cameroon" */
   country: string;
 }
 
-export type PayoutMethod =
-  | { method: 'mobile_money'; mobile_money: MobileMoneyDetails; bank?: null; is_preferred?: boolean }
-  | { method: 'bank'; bank: BankDetails; mobile_money?: null; is_preferred?: boolean };
+/** The networks the API accepts, lowercased. Anything else is a 400. */
+export type CardBrand =
+  | 'visa'
+  | 'mastercard'
+  | 'amex'
+  | 'discover'
+  | 'unionpay'
+  | 'jcb'
+  | 'diners'
+  | 'verve'
+  | 'other';
 
-/** Ordered array — index 0 is the preferred/default payout method. */
+/**
+ * A card payout destination. There is no `number` and no `cvv` — not optional,
+ * ABSENT: the API refuses `number`/`card_number`/`pan`/`account_number`/`cvv`/
+ * `cvc`/`cvn`/`security_code` with a 400 rather than dropping them, so a 200 can
+ * never be misread as "the number is on file". Nothing here is masked on read,
+ * because nothing sensitive was ever stored.
+ */
+export interface CardDetails {
+  brand: CardBrand;
+  /** Exactly 4 digits — taken client-side, the only part of the number that exists. */
+  last4: string;
+  /** Rendered from `last4` by the server; response-only. */
+  number_masked?: string;
+  card_holder_name: string;
+  /** 1–12. */
+  expiry_month: number;
+  /** 4-digit. The card must not already be past its last valid day. */
+  expiry_year: number;
+  country: string;
+  issuing_bank?: string | null;
+  /** Sent, never returned — the gateway that produced `gateway_token`. */
+  gateway_provider?: string | null;
+  /** Sent, never returned. The handle an automated push-to-card transfer will use. */
+  gateway_token?: string | null;
+}
+
+export type PayoutMethod =
+  | { method: 'mobile_money'; mobile_money: MobileMoneyDetails; bank?: null; card?: null; is_preferred?: boolean }
+  | { method: 'bank'; bank: BankDetails; mobile_money?: null; card?: null; is_preferred?: boolean }
+  | { method: 'card'; card: CardDetails; mobile_money?: null; bank?: null; is_preferred?: boolean };
+
+/**
+ * Ordered array — index 0 is the preferred/default payout method. 1–3 entries,
+ * any mix of kinds including duplicates. A write REPLACES the list wholesale;
+ * there is no per-entry endpoint. `is_preferred` is read-only — never sent.
+ */
 export type PayoutDetails = PayoutMethod[];
 
 // ─── Support Contact & HQ Addresses ──────────────────────────────────────────
@@ -302,7 +358,7 @@ export interface LogisticsPayload {
 
 /** PUT /api/agency/onboarding/payout */
 export interface PayoutPayload {
-  /** Ordered array — index 0 is the preferred method. Min 1, max 2 entries, no duplicate method types. */
+  /** Ordered array — index 0 is the preferred method. 1–3 entries; duplicate method types are allowed. */
   payout_details: PayoutMethod[];
   version?: number;
 }

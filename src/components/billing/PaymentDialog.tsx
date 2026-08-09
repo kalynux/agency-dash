@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   Loader2,
@@ -33,6 +33,11 @@ import {
 import { cn } from '@/lib/utils';
 import { tx } from '@/i18n/tx';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { PaymentOptionGroup } from '@/components/common/PaymentOptionGroup';
+import { PaymentOptionSelect } from '@/components/common/PaymentOptionSelect';
+import { brandOptions, type PaymentOption } from '@/components/common/payment-options';
+import { PaymentMethodMark } from '@/components/common/PaymentBrandLogo';
+import { CARD_BRANDS, MOBILE_MONEY_BRANDS, resolveBrand } from '@/lib/payment-brands';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
 import { phoneErrorMessage } from '@/lib/validation-schemas';
@@ -48,20 +53,26 @@ import { isStripeConfigured } from '@/lib/stripe';
 import { fetchPaymentMethods } from '@/services/payment-methods.service';
 import { StripePaymentElement, type StripePaymentElementHandle } from './StripePaymentElement';
 import { CardPreview } from './CardPreview';
+import { ProviderNote } from './ProviderNote';
 import {
-  PHONE_OPERATORS,
   GATEWAYS,
+  CARD_GATEWAY,
+  MOBILE_MONEY_GATEWAY,
   PAYMENT_POLL_INTERVAL_MS,
   PAYMENT_POLL_TIMEOUT_MS,
   billingErrorMessage,
   formatMoney,
   formatCharged,
+  gatewayLabel,
   saveStripeResume,
   clearStripeResume,
   type StripeResumeKind,
 } from './billing.constants';
 
 type Phase = 'form' | 'card' | 'processing' | 'success' | 'failed' | 'timeout';
+
+/** The top-level choice: a card Stripe collects, or a phone wallet. */
+type Channel = 'card' | 'mobile_money';
 
 /** Stripe init details carried from `form` into the `card` (Payment Element) phase. */
 interface StripeInit {
@@ -92,10 +103,12 @@ export interface PaymentDialogProps {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Gateways selectable in the checkout (Stripe hidden when not configured). */
-function availableGateways() {
-  return GATEWAYS.filter((g) => g.methodType !== 'card' || isStripeConfigured);
-}
+/**
+ * The processors that collect a mobile-money charge. Which one runs it is a
+ * back-office detail — it is offered, quietly, below the operator the agency
+ * actually cares about, and only when there is more than one to pick from.
+ */
+const MOBILE_MONEY_GATEWAYS = GATEWAYS.filter((g) => g.methodType === 'mobile_money');
 
 /** Map a saved method's provider to the gateway used to charge it. */
 function providerToGateway(provider: string): PaymentGateway | null {
@@ -109,15 +122,6 @@ function providerToGateway(provider: string): PaymentGateway | null {
     default:
       return null;
   }
-}
-
-/** Map a saved mobile-money brand to a known operator, if it matches. */
-function brandToOperator(brand: string | null): PhoneOperator | null {
-  const b = (brand ?? '').toUpperCase();
-  if (b.includes('MTN')) return 'MTN';
-  if (b.includes('ORANGE')) return 'ORANGE';
-  if (b.includes('MOOV')) return 'MOOV';
-  return null;
 }
 
 export function PaymentDialog({
@@ -134,12 +138,15 @@ export function PaymentDialog({
   successLabel,
 }: PaymentDialogProps) {
   const { t } = useTranslation(['billing', 'common']);
-  const gateways = availableGateways();
   const phoneCountry = useDefaultPhoneCountry();
   // Callers name what succeeded ("Plan purchased"); fall back to the generic line.
   const successText = successLabel ?? t('checkout.successTitle');
 
-  const [gateway, setGateway] = useState<PaymentGateway>(gateways[0]?.value ?? 'NOTCHPAY');
+  // Mobile money leads: it is how most agencies here pay, and it is the only
+  // channel that survives Stripe being unconfigured.
+  const [channel, setChannel] = useState<Channel>('mobile_money');
+  /** Which processor runs a mobile-money charge. Irrelevant on the card path. */
+  const [mobileGateway, setMobileGateway] = useState<PaymentGateway>(MOBILE_MONEY_GATEWAY);
   const [phone, setPhone] = useState('');
   const [operator, setOperator] = useState<PhoneOperator>('MTN');
   const [holderName, setHolderName] = useState('');
@@ -161,13 +168,52 @@ export function PaymentDialog({
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollDeadline = useRef<number>(0);
 
-  const methodType = gateways.find((g) => g.value === gateway)?.methodType ?? 'mobile_money';
-  const isStripe = methodType === 'card';
+  const isStripe = channel === 'card';
+  const gateway: PaymentGateway = isStripe ? CARD_GATEWAY : mobileGateway;
+
+  const channelOptions = useMemo<PaymentOption[]>(() => {
+    const cardMeta = GATEWAYS.find((g) => g.value === CARD_GATEWAY);
+    const mobileMeta = GATEWAYS.find((g) => g.value === MOBILE_MONEY_GATEWAY);
+    const options: PaymentOption[] = [
+      {
+        value: 'mobile_money',
+        label: t('channels.mobileMoney.name'),
+        description: t('channels.mobileMoney.description'),
+        icon: Smartphone,
+        meta: mobileMeta?.chargeCurrency,
+      },
+    ];
+    // No publishable key means no card form to mount, so don't offer the choice.
+    if (isStripeConfigured) {
+      options.push({
+        value: 'card',
+        label: t('channels.card.name'),
+        description: t('channels.card.description'),
+        icon: CreditCard,
+        meta: cardMeta?.chargeCurrency,
+      });
+    }
+    return options;
+  }, [t]);
+
+  // Airtel and Wave are real operators, but the gateway has no enum member for
+  // them yet — shown so the roster is honest, disabled so a charge can't be
+  // started against something the API would reject.
+  const operatorOptions = useMemo(
+    () =>
+      brandOptions(MOBILE_MONEY_BRANDS, {
+        valueOf: (b) => b.operator ?? b.id,
+        disabled: (b) => b.operator == null,
+        badgeFor: (b) => (b.operator == null ? t('channels.comingSoon') : undefined),
+      }),
+    [t],
+  );
 
   // Reset everything when the dialog is (re)opened or closed.
   useEffect(() => {
     if (open) {
-      setGateway(gateways[0]?.value ?? 'NOTCHPAY');
+      setChannel('mobile_money');
+      setMobileGateway(MOBILE_MONEY_GATEWAY);
       setPhone('');
       setOperator('MTN');
       setHolderName('');
@@ -183,7 +229,6 @@ export function PaymentDialog({
       setSelectedSavedId(null);
     }
     return stopPolling;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Load saved methods for the quick-select row (best-effort — autofill only).
@@ -237,15 +282,22 @@ export function PaymentDialog({
     }, PAYMENT_POLL_INTERVAL_MS);
   }
 
-  /** Quick-select a saved method: switch gateway + prefill what we can. */
+  /** Quick-select a saved method: switch channel + prefill what we can. */
   function selectSaved(method: SavedPaymentMethod) {
     setSelectedSavedId(method.id);
     setFormError(null);
     const gw = providerToGateway(method.provider);
-    if (gw && gateways.some((g) => g.value === gw)) setGateway(gw);
+    if (gw === 'STRIPE') {
+      if (isStripeConfigured) setChannel('card');
+    } else {
+      setChannel('mobile_money');
+      if (gw && MOBILE_MONEY_GATEWAYS.some((g) => g.value === gw)) setMobileGateway(gw);
+    }
     if (method.holder_name) setHolderName(method.holder_name);
     if (method.method_type === 'mobile_money') {
-      const op = brandToOperator(method.brand);
+      // A wallet saved for an operator we can't charge (Airtel, Wave) leaves the
+      // current pick alone rather than silently paying through the wrong one.
+      const op = resolveBrand(method.brand)?.operator;
       if (op) setOperator(op);
     }
   }
@@ -383,8 +435,12 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
+      {/*
+        Header and footer stay put and only the middle scrolls, so "Pay" is never
+        pushed below the fold by a card form on a phone.
+      */}
+      <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left sm:px-6">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {summary} ·{' '}
@@ -393,138 +449,164 @@ export function PaymentDialog({
         </DialogHeader>
 
         {phase === 'form' && (
-          <div className="space-y-4">
-            {/* Saved-method quick-select row */}
-            {savedMethods.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>{t('checkout.savedMethod')}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {savedMethods.map((m) => (
-                    <SavedChip
-                      key={m.id}
-                      method={m}
-                      active={selectedSavedId === m.id}
-                      onClick={() => selectSaved(m)}
-                    />
-                  ))}
-                  <button
-                    type="button"
-                    onClick={clearSaved}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition',
-                      !selectedSavedId
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-border text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    <Plus className="h-4 w-4" /> {t('checkout.newMethod')}
-                  </button>
+          <>
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+              {/* Saved-method quick-select row */}
+              {savedMethods.length > 0 && (
+                <div className="space-y-2">
+                  <Label asChild>
+                    <p>{t('checkout.savedMethod')}</p>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {savedMethods.map((m) => (
+                      <SavedChip
+                        key={m.id}
+                        method={m}
+                        active={selectedSavedId === m.id}
+                        onClick={() => selectSaved(m)}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      onClick={clearSaved}
+                      aria-pressed={!selectedSavedId}
+                      className={cn(
+                        'flex min-h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        !selectedSavedId
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-border text-muted-foreground [@media(hover:hover)]:hover:bg-accent/40',
+                      )}
+                    >
+                      <Plus className="h-4 w-4" /> {t('checkout.newMethod')}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Gateway-first selection */}
-            <div className="space-y-1.5">
-              <Label>{t('checkout.payWith')}</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {gateways.map((g) => (
-                  <button
-                    key={g.value}
-                    type="button"
-                    onClick={() => {
-                      setGateway(g.value);
+              {channelOptions.length > 1 && (
+                <PaymentOptionGroup
+                  label={t('checkout.payWith')}
+                  labelTone="section"
+                  layout="stacked"
+                  value={channel}
+                  onValueChange={(v) => {
+                    setChannel(v as Channel);
+                    setFormError(null);
+                  }}
+                  options={channelOptions}
+                />
+              )}
+
+              {!isStripe ? (
+                <div className="space-y-4">
+                  {/* A dropdown, not a grid of tiles: the operator is rarely the
+                      thing being changed, and the amount to confirm is below. */}
+                  <PaymentOptionSelect
+                    id="pay-operator"
+                    label={t('checkout.operator')}
+                    placeholder={t('channels.operatorPlaceholder')}
+                    note={t('channels.comingSoonHint')}
+                    value={operator}
+                    onValueChange={(v) => {
+                      setOperator(v as PhoneOperator);
                       setFormError(null);
                     }}
-                    className={cn(
-                      'flex flex-col items-center justify-center gap-1 rounded-md border px-2 py-2.5 text-xs font-medium transition',
-                      gateway === g.value
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-border text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    {g.methodType === 'card' ? (
-                      <CreditCard className="h-4 w-4" />
-                    ) : (
-                      <Smartphone className="h-4 w-4" />
-                    )}
-                    {tx(t, g.labelKey)}
-                    <span className="text-[10px] font-normal text-muted-foreground">
-                      {g.chargeCurrency}
+                    options={operatorOptions}
+                  />
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pay-phone">{t('checkout.phone')}</Label>
+                    <PhoneInput
+                      id="pay-phone"
+                      value={phone}
+                      onChange={setPhone}
+                      required
+                      hasError={!!formError}
+                    />
+                  </div>
+
+                  {/* Which processor runs the charge — a detail, so it sits last and small. */}
+                  {MOBILE_MONEY_GATEWAYS.length > 1 && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pay-processor" className="text-xs text-muted-foreground">
+                        {t('checkout.processedBy')}
+                      </Label>
+                      <Select
+                        value={mobileGateway}
+                        onValueChange={(v) => setMobileGateway(v as PaymentGateway)}
+                      >
+                        <SelectTrigger id="pay-processor">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MOBILE_MONEY_GATEWAYS.map((g) => (
+                            <SelectItem key={g.value} value={g.value}>
+                              {tx(t, g.labelKey)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <ProviderNote
+                    provider={gatewayLabel(CARD_GATEWAY)}
+                    note={t('checkout.stripeNote')}
+                    brands={CARD_BRANDS}
+                  />
+
+                  {/* Card payments are charged in USD — make that explicit up front. */}
+                  <div className="flex gap-2 rounded-xl border border-info-500/30 bg-info-500/5 p-3 text-xs text-muted-foreground">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-info-600" />
+                    <span>
+                      <Trans
+                        ns="billing"
+                        i18nKey="checkout.usdNotice"
+                        components={{ strong: <span className="font-medium text-foreground" /> }}
+                      />
                     </span>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pay-name">{t('checkout.nameOnCard')}</Label>
+                    <Input
+                      id="pay-name"
+                      placeholder={t('checkout.nameOnCardPlaceholder')}
+                      value={holderName}
+                      onChange={(e) => setHolderName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pay-email">{t('checkout.receiptEmail')}</Label>
+                    <Input
+                      id="pay-email"
+                      type="email"
+                      inputMode="email"
+                      placeholder={t('checkout.receiptEmailPlaceholder')}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      aria-invalid={!!formError}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {formError}
+                </p>
+              )}
             </div>
 
-            {methodType === 'mobile_money' ? (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pay-phone">{t('checkout.phone')}</Label>
-                  <PhoneInput
-                    id="pay-phone"
-                    value={phone}
-                    onChange={setPhone}
-                    required
-                    hasError={!!formError}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pay-operator">{t('checkout.operator')}</Label>
-                  <Select value={operator} onValueChange={(v) => setOperator(v as PhoneOperator)}>
-                    <SelectTrigger id="pay-operator">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PHONE_OPERATORS.map((op) => (
-                        <SelectItem key={op.value} value={op.value}>
-                          {op.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Card payments are charged in USD — make that explicit up front. */}
-                <div className="flex gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-muted-foreground">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                  <span>
-                    <Trans
-                      ns="billing"
-                      i18nKey="checkout.usdNotice"
-                      components={{ strong: <span className="font-medium text-foreground" /> }}
-                    />
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pay-name">{t('checkout.nameOnCard')}</Label>
-                  <Input
-                    id="pay-name"
-                    placeholder={t('checkout.nameOnCardPlaceholder')}
-                    value={holderName}
-                    onChange={(e) => setHolderName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pay-email">{t('checkout.receiptEmail')}</Label>
-                  <Input
-                    id="pay-email"
-                    type="email"
-                    inputMode="email"
-                    placeholder={t('checkout.receiptEmailPlaceholder')}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    aria-invalid={!!formError}
-                  />
-                </div>
-              </div>
-            )}
-
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => handleClose(false)} disabled={submitting}>
+            <DialogFooter className="shrink-0 gap-2 border-t px-5 py-3 sm:px-6">
+              <Button
+                variant="outline"
+                className="sm:min-w-24"
+                onClick={() => handleClose(false)}
+                disabled={submitting}
+              >
                 {t('common:actions.cancel')}
               </Button>
               <Button onClick={handleInitiate} disabled={submitting}>
@@ -534,54 +616,60 @@ export function PaymentDialog({
                   : t('checkout.confirmPayment', { amount: formatMoney(amount, currency) })}
               </Button>
             </DialogFooter>
-          </div>
+          </>
         )}
 
         {phase === 'card' && stripeInit && (
-          <div className="space-y-4">
-            <CardPreview holderName={holderName} />
+          <>
+            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
+              <CardPreview holderName={holderName} className="mx-auto max-w-sm" />
 
-            {/* The exact USD charge from the server — never computed on the frontend. */}
-            <div className="rounded-lg border bg-muted/30 p-3 text-center">
-              {chargedLine ? (
-                <>
-                  <p className="text-sm text-muted-foreground">{t('checkout.youWillBeCharged')}</p>
-                  <p className="text-2xl font-bold">{chargedLine}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('checkout.chargedFor', {
+              {/* The exact USD charge from the server — never computed on the frontend. */}
+              <div className="rounded-xl border bg-muted/30 p-3 text-center">
+                {chargedLine ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">{t('checkout.youWillBeCharged')}</p>
+                    <p className="text-2xl font-bold">{chargedLine}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('checkout.chargedFor', {
+                        summary,
+                        amount: formatMoney(amount, currency),
+                      })}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t('checkout.completingFor', {
                       summary,
                       amount: formatMoney(amount, currency),
                     })}
                   </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t('checkout.completingFor', {
-                    summary,
-                    amount: formatMoney(amount, currency),
-                  })}
+                )}
+              </div>
+
+              <div className="flex gap-2 rounded-xl border border-info-500/30 bg-info-500/5 p-3 text-xs text-muted-foreground">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-info-600" />
+                <span>{t('checkout.usdNoticeShort')}</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>{t('checkout.cardDetails')}</Label>
+                <StripePaymentElement
+                  ref={cardRef}
+                  clientSecret={stripeInit.clientSecret}
+                  disabled={submitting}
+                  onReady={() => setCardReady(true)}
+                />
+              </div>
+
+              {cardError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {cardError}
                 </p>
               )}
             </div>
 
-            <div className="flex gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-              <span>{t('checkout.usdNoticeShort')}</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('checkout.cardDetails')}</Label>
-              <StripePaymentElement
-                ref={cardRef}
-                clientSecret={stripeInit.clientSecret}
-                disabled={submitting}
-                onReady={() => setCardReady(true)}
-              />
-            </div>
-
-            {cardError && <p className="text-sm text-destructive">{cardError}</p>}
-
-            <DialogFooter>
+            <DialogFooter className="shrink-0 gap-2 border-t px-5 py-3 sm:px-6">
               <Button variant="outline" onClick={backToForm} disabled={submitting}>
                 <ArrowLeft className="mr-1 h-4 w-4" /> {t('common:actions.back')}
               </Button>
@@ -590,11 +678,11 @@ export function PaymentDialog({
                 {chargedLine ? t('checkout.pay', { amount: chargedLine }) : t('checkout.payNow')}
               </Button>
             </DialogFooter>
-          </div>
+          </>
         )}
 
         {phase === 'processing' && (
-          <div className="space-y-4 py-2 text-center">
+          <div className="space-y-4 px-5 py-6 text-center sm:px-6">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
             <div className="space-y-1">
               <p className="font-medium">{t('checkout.waiting')}</p>
@@ -619,7 +707,7 @@ export function PaymentDialog({
 
         {phase === 'success' && (
           <ResultState
-            icon={<CheckCircle2 className="mx-auto h-10 w-10 text-green-600" />}
+            icon={<CheckCircle2 className="mx-auto h-10 w-10 text-success" />}
             title={successText}
             description={t('checkout.successDescription')}
             action={<Button onClick={() => handleClose(false)}>{t('common:actions.done')}</Button>}
@@ -644,7 +732,7 @@ export function PaymentDialog({
 
         {phase === 'timeout' && (
           <ResultState
-            icon={<Clock className="mx-auto h-10 w-10 text-amber-500" />}
+            icon={<Clock className="mx-auto h-10 w-10 text-warning" />}
             title={t('checkout.timeoutTitle')}
             description={t('checkout.timeoutDescription')}
             action={
@@ -675,19 +763,17 @@ function SavedChip({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition',
+        'flex min-h-11 items-center gap-2 rounded-xl border px-2.5 text-sm font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         active
           ? 'border-primary bg-primary/5 text-primary'
-          : 'border-border text-muted-foreground hover:bg-muted',
+          : 'border-border text-muted-foreground [@media(hover:hover)]:hover:bg-accent/40',
       )}
       title={method.display_label}
     >
-      {method.method_type === 'card' ? (
-        <CreditCard className="h-4 w-4" />
-      ) : (
-        <Smartphone className="h-4 w-4" />
-      )}
+      <PaymentMethodMark brand={method.brand} methodType={method.method_type} size="sm" />
       <span className="max-w-[8rem] truncate">{method.display_label}</span>
     </button>
   );
@@ -705,7 +791,7 @@ function ResultState({
   action: React.ReactNode;
 }) {
   return (
-    <div className="space-y-4 py-2 text-center">
+    <div className="space-y-4 px-5 py-6 text-center sm:px-6">
       {icon}
       <div className="space-y-1">
         <p className="font-medium">{title}</p>

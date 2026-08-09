@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet';
@@ -362,6 +362,12 @@ export function CreateTicketSheet({ open, onOpenChange, onCreated }: CreateTicke
               max={5}
               label={t('create.addAttachment')}
             />
+            {attachments.length > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {t('create.attachmentsHint')}
+              </p>
+            )}
           </div>
         </div>
 

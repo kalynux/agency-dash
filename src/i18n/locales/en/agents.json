@@ -46,7 +46,29 @@
     "van": "Van",
     "truck": "Truck",
     "on_foot": "On foot",
-    "foot": "On foot"
+    "foot": "On foot",
+    "_colorsComment": "Lowercase English tokens from the agent's profile. Free text is accepted at their end, so an unknown one falls back to its title-cased form and gets no swatch.",
+    "colors": {
+      "black": "Black",
+      "white": "White",
+      "grey": "Grey",
+      "gray": "Grey",
+      "silver": "Silver",
+      "red": "Red",
+      "dark_red": "Dark red",
+      "blue": "Blue",
+      "dark_blue": "Dark blue",
+      "light_blue": "Light blue",
+      "green": "Green",
+      "dark_green": "Dark green",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "brown": "Brown",
+      "beige": "Beige",
+      "gold": "Gold",
+      "purple": "Purple",
+      "pink": "Pink"
+    }
   },
   "_originComment": "How a contract began. An open union server-side, so an unknown token falls back to its humanized form.",
   "origin": {
@@ -241,6 +263,8 @@
       "email": "Email",
       "phone": "Phone",
       "vehicle": "Vehicle",
+      "vehiclePhoto": "Vehicle photo",
+      "vehiclePhotoAlt": "The agent's vehicle",
       "trustScore": "Trust score",
       "trustOutOf": "/ 100",
       "activeJobs": "Active jobs",
@@ -427,7 +451,7 @@
       "remittanceHint": "How often the agent hands over the cash they collect. Tightening it needs their agreement — the cadence feeds a trust penalty, so a change they never signed would start docking their score.",
       "coverage": "Coverage & limits",
       "regions": "Coverage regions",
-      "regionsHint": "Comma-separated. Where this agent works for you — it cannot exceed the area they agreed to cover. Leave empty for no restriction.",
+      "regionsHint": "Where this agent works for you. Pick from your country's regions — you can name one you're expanding into, not only the ones you already serve. Select none to place no restriction at all.",
       "regionsPlaceholder": "Douala, Bonabéri",
       "ceiling": "Shipment value ceiling",
       "ceilingHint": "The most this agent may carry on one shipment. Leave empty for no cap.",
@@ -463,7 +487,13 @@
       "noCap": "No cap",
       "notSet": "Not set",
       "none": "None",
+      "allRegions": "All regions — no restriction",
       "mapArea": "A map area"
+    },
+    "coverage": {
+      "yoursBadge": "Yours",
+      "invalidTitle": "Some regions weren't accepted",
+      "invalidBody": "A coverage region has to be a region of your country — a city or a misspelling won't do. The rejected ones are shown below; the list has been refreshed from what the server accepts."
     }
   },
   "toasts": {

@@ -42,6 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { SectionHeading } from '@/components/common/InfoHint';
 import {
+  compactCardContentClass,
   noteSurfaceClass,
   sectionGroupClass,
   sectionRuleClass,
@@ -243,14 +244,18 @@ export function MagazinSettings() {
       {/* Keeps a surface on mobile: it has no heading, so de-carded it would
           read as stray text at the top of the page rather than as a block. */}
       <Card className={noteSurfaceClass}>
-        <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center max-md:px-4">
-          {/* The logo box itself is the click target — it opens the media library. */}
+        <CardContent
+          className={cn(compactCardContentClass, 'flex flex-col gap-4 sm:flex-row sm:items-center')}
+        >
+          {/* The logo box itself is the click target — it opens the media library.
+              64px keeps it a comfortable target while letting the hero stand only
+              as tall as the three lines of text beside it. */}
           <div className="relative shrink-0">
             <MediaPickerTrigger
               label={form.logo ? t('store.changeLogo') : t('store.addLogo')}
               acceptedTypes={['image']}
               onSelect={(media) => set('logo', media)}
-              className="h-20 w-20 rounded-xl border bg-muted shadow-sm"
+              className="h-16 w-16 rounded-xl border bg-muted shadow-sm"
             >
               {form.logo ? (
                 <img
@@ -261,7 +266,7 @@ export function MagazinSettings() {
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center">
-                  <StoreIcon className="w-8 h-8 text-muted-foreground" />
+                  <StoreIcon className="w-7 h-7 text-muted-foreground" />
                 </span>
               )}
             </MediaPickerTrigger>
@@ -277,8 +282,8 @@ export function MagazinSettings() {
             )}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-1">
-            <h2 className="truncate text-xl font-bold leading-tight">{previewName}</h2>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <h2 className="truncate text-lg font-bold leading-tight sm:text-xl">{previewName}</h2>
             <p className="text-sm text-muted-foreground max-md:hidden">{t('store.heroDescription')}</p>
             <p className="text-xs text-muted-foreground">{t('store.heroHint')}</p>
           </div>

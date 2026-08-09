@@ -16,6 +16,15 @@ export interface UseAgentActionsOptions {
   /** Called with the updated contract after a directory-level mutation (request/withdraw/approve/reject). */
   onContractChanged?: (agentId: string, contract: AgentMembership) => void;
   onRosterChanged?: () => void;
+  /**
+   * The raw failure, alongside the toast the runner already shows.
+   *
+   * Exists because some errors carry a repair rather than just a message:
+   * `CONTRACT_COVERAGE_REGION_INVALID` ships `details.allowedRegions`, the full
+   * catalogue, so a screen can rebuild its picker from the rejection instead of
+   * asking the user to guess. The toast is unaffected.
+   */
+  onError?: (err: unknown) => void;
 }
 
 /**
@@ -31,20 +40,24 @@ export interface UseAgentActionsOptions {
  * `contractOffer`) on the contract, and `availableActions` on a request or
  * proposal — both are computed from the same guards the service enforces.
  */
-export function useAgentActions({ onContractChanged, onRosterChanged }: UseAgentActionsOptions = {}) {
+export function useAgentActions({
+  onContractChanged,
+  onRosterChanged,
+  onError,
+}: UseAgentActionsOptions = {}) {
   const { t } = useTranslation('agents');
   const { pendingKey, run } = useActionRunner();
 
   const runContract = useCallback(
     (key: string, agentId: string, action: () => Promise<{ data: AgentMembership }>, success: string) =>
-      run(key, async () => (await action()).data, { success }).then((contract) => {
+      run(key, async () => (await action()).data, { success, onError }).then((contract) => {
         if (contract) {
           onContractChanged?.(agentId, contract);
           onRosterChanged?.();
         }
         return contract;
       }),
-    [run, onContractChanged, onRosterChanged],
+    [run, onContractChanged, onRosterChanged, onError],
   );
 
   // ── The handshake ───────────────────────────────────────────────────────────

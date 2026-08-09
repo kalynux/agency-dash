@@ -5,7 +5,6 @@ import {
   Clock,
   Globe,
   Lock,
-  ShieldCheck,
   Store as StoreIcon,
   X,
 } from 'lucide-react';
@@ -29,7 +28,7 @@ import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
 import { SectionHeading } from '@/components/common/InfoHint';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge'; // with the commented-out KycBadge below
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -417,18 +416,20 @@ export function ProfileSettings() {
   );
 }
 
-function KycBadge({ verified }: { verified: boolean }) {
-  const { t } = useTranslation(['account', 'common']);
-  if (verified) {
-    return (
-      <Badge variant="outline" className="gap-1 border-green-200 text-green-600">
-        <CheckCircle2 className="w-3 h-3" /> {t('profile.kyc.verified')}
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="border-amber-200 text-amber-600">
-      {t('profile.kyc.pending')}
-    </Badge>
-  );
-}
+// Commented out alongside the KYC card above — kept together so restoring the
+// section is one uncomment, not a rewrite. Re-add the `ShieldCheck` import with it.
+// function KycBadge({ verified }: { verified: boolean }) {
+//   const { t } = useTranslation(['account', 'common']);
+//   if (verified) {
+//     return (
+//       <Badge variant="outline" className="gap-1 border-green-200 text-green-600">
+//         <CheckCircle2 className="w-3 h-3" /> {t('profile.kyc.verified')}
+//       </Badge>
+//     );
+//   }
+//   return (
+//     <Badge variant="outline" className="border-amber-200 text-amber-600">
+//       {t('profile.kyc.pending')}
+//     </Badge>
+//   );
+// }

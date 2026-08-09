@@ -74,6 +74,12 @@
     "loading": "Chargement de la couverture et des sites…",
     "saved": "Couverture et sites enregistrés",
     "conflict": "Vos sites ont été modifiés ailleurs. Page actualisée — veuillez réappliquer vos modifications.",
+    "locationInUse": "Rien n'a été enregistré : vous avez supprimé un site qui entrepose encore des produits de vendeurs — {{locations}}. Rattachez ces produits à un autre site (ou demandez-le au vendeur) avant de le supprimer.",
+    "locationInUseEntry": "{{label}} ({{count}} SKU)",
+    "locationInUseEntry_one": "{{label}} ({{count}} SKU)",
+    "locationInUseEntry_many": "{{label}} ({{count}} SKU)",
+    "locationInUseEntry_other": "{{label}} ({{count}} SKU)",
+    "unnamedLocation": "Site sans nom",
     "coverageLabel": "Régions couvertes",
     "noRegions": "Aucune donnée de région n'est encore disponible pour votre pays d'exploitation.",
     "coverageHint": "Seules les régions de votre pays d'exploitation peuvent être sélectionnées.",
@@ -109,7 +115,7 @@
     "supportEmailPlaceholder": "support@monagence.com",
     "countryNote": "Votre pays d'exploitation a été défini lors de l'intégration et ne peut pas être modifié. Les régions couvertes et les adresses doivent toutes s'y trouver.",
     "removeTitle": "Supprimer ce site ?",
-    "removeDescription": "Les vendeurs et livreurs qui se rendent à cette adresse la perdront dès l'enregistrement. Les livraisons déjà affectées ne sont pas concernées.",
+    "removeDescription": "Les vendeurs et livreurs qui se rendent à cette adresse la perdront dès l'enregistrement. Les livraisons déjà affectées ne sont pas concernées, et l'enregistrement est refusé si des produits de vendeurs y sont encore entreposés.",
     "removePinnedDescription": "Ce site est repéré sur la carte. Le supprimer efface le repère — il faudrait rechercher l'adresse à nouveau.",
     "clearPinTitle": "Retirer ce repère ?",
     "clearPinDescription": "C'est le repère vers lequel les vendeurs et livreurs se dirigent. L'effacer oblige à rechercher l'adresse à nouveau avant de pouvoir enregistrer cette page.",
@@ -292,8 +298,11 @@
       "codDepositUpdatesCaveat": "Désactiver cette option n'arrête pas le délai de 2 jours — une déclaration sans réponse gèle toujours vos libérations de réserve.",
       "planUpdates": "Mises à jour du forfait",
       "planUpdatesDescription": "Lorsque votre forfait approche de son expiration, a expiré, ou que vous dépassez votre plafond d'expéditions.",
-      "storageAlert": "Alertes de stockage",
-      "storageAlertDescription": "Lorsque votre stockage média dépasse 80 %, 90 % ou 100 % de la limite de votre forfait."
+      "stockRequestUpdates": "Demandes de modification de stock",
+      "stockRequestUpdatesDescription": "Lorsqu'un vendeur propose une nouvelle quantité pour un SKU que vous entreposez, ou répond à une proposition que vous avez faite.",
+      "stockRequestUpdatesCaveat": "Il s'agit des marchandises sur vos étagères — pas de l'alerte de stockage média ci-dessous. Désactiver cette option coupe la notification, pas l'obligation : la demande du vendeur reste dans votre boîte en attente de réponse.",
+      "storageAlert": "Alertes de stockage média",
+      "storageAlertDescription": "Lorsque vos fichiers envoyés — images produits, preuves de livraison — dépassent 80 %, 90 % ou 100 % de la limite de votre forfait. Rien à voir avec l'entreposage."
     }
   },
   "channelSetup": {

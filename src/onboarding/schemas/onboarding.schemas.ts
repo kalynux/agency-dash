@@ -129,8 +129,86 @@ function bankSchema(t: T) {
 }
 
 /**
+ * The card networks the API accepts (api-doc/agency/payout-methods.md#card).
+ * Stored lowercase; the server upper/lower-cases on the way in, we don't rely on it.
+ */
+export const CARD_BRANDS = [
+    'visa',
+    'mastercard',
+    'amex',
+    'discover',
+    'unionpay',
+    'jcb',
+    'diners',
+    'verve',
+    'other',
+] as const;
+
+export type CardBrandValue = (typeof CARD_BRANDS)[number];
+
+/** Years a card may still expire in — the picker's range, not a server rule. */
+export const CARD_EXPIRY_YEARS = 20;
+
+/**
+ * A card payout destination.
+ *
+ * There is no `number` and no `cvv` field, deliberately: the API *refuses* them
+ * (400), it does not ignore them, so collecting either here would be building a
+ * form whose successful path is a rejected request. Only the last 4 are taken,
+ * client-side.
+ */
+function cardSchema(t: T) {
+    return z
+        .object({
+            brand: z.enum(CARD_BRANDS, v(t, 'payout.cardBrandRequired')),
+            last4: z
+                .string()
+                .trim()
+                .regex(/^\d{4}$/, v(t, 'payout.cardLast4Invalid')),
+            card_holder_name: z.string().min(1, v(t, 'payout.cardHolderRequired')).trim(),
+            expiry_month: z.coerce
+                .number(v(t, 'payout.cardExpiryRequired'))
+                .int()
+                .min(1, v(t, 'payout.cardExpiryRequired'))
+                .max(12, v(t, 'payout.cardExpiryRequired')),
+            expiry_year: z.coerce
+                .number(v(t, 'payout.cardExpiryRequired'))
+                .int()
+                .min(2000, v(t, 'payout.cardExpiryRequired'))
+                .max(2100, v(t, 'payout.cardExpiryRequired')),
+            country: z.string().min(1, v(t, 'payout.countryRequired')).trim(),
+            /** Optional, max 100. `''` is normalized to `null` — the API clears it either way. */
+            issuing_bank: z
+                .string()
+                .max(100, v(t, 'payout.issuingBankTooLong'))
+                .trim()
+                .nullable()
+                .optional()
+                .transform((value) => (value ? value : null)),
+        })
+        // A card is valid *through* the last day of its expiry month, so the
+        // current month passes and last month does not. The server checks this at
+        // write time on purpose — by payout time nobody is around to fix it — so
+        // checking it here too is the difference between an inline message and a 400.
+        .refine(
+            (card) => {
+                const now = new Date();
+                return (
+                    card.expiry_year > now.getFullYear() ||
+                    (card.expiry_year === now.getFullYear() && card.expiry_month >= now.getMonth() + 1)
+                );
+            },
+            { message: v(t, 'payout.cardExpired'), path: ['expiry_month'] },
+        );
+}
+
+/**
  * A single payout method entry (discriminated union by `method`).
  * The `payout_details` array is an ordered list of these.
+ *
+ * The two branches a given entry is *not* are pinned to `null` rather than left
+ * absent: the API normalizes them to `null` anyway, and a populated sub-object
+ * that disagrees with `method` is a 400.
  */
 export function buildPayoutMethodSchema(t: T) {
     return z.discriminatedUnion('method', [
@@ -138,41 +216,41 @@ export function buildPayoutMethodSchema(t: T) {
             method: z.literal('mobile_money'),
             mobile_money: mobileMoneySchema(t),
             bank: z.null().optional(),
+            card: z.null().optional(),
         }),
         z.object({
             method: z.literal('bank'),
             bank: bankSchema(t),
             mobile_money: z.null().optional(),
+            card: z.null().optional(),
+        }),
+        z.object({
+            method: z.literal('card'),
+            card: cardSchema(t),
+            mobile_money: z.null().optional(),
+            bank: z.null().optional(),
         }),
     ]);
 }
 
 export type PayoutMethodFormValue = z.infer<ReturnType<typeof buildPayoutMethodSchema>>;
-export type PayoutMethodType = 'mobile_money' | 'bank';
+export type PayoutMethodType = 'mobile_money' | 'bank' | 'card';
+
+/** Backend cap on `payout_details` — see api-doc/agency/payout-methods.md. */
+export const MAX_PAYOUT_METHODS = 3;
 
 /**
- * Full payout payload schema — ordered array, min 1, max 2 entries, no duplicate
- * method types (at most one mobile_money and one bank). Index 0 is preferred.
+ * Full payout payload schema — ordered array, 1–3 entries, index 0 preferred.
+ *
+ * Any mix of kinds is allowed, duplicates included (three cards is a valid
+ * list): nothing dedupes by `method`, so neither does this.
  */
 export function buildPayoutSchema(t: T) {
     return z.object({
         payout_details: z
             .array(buildPayoutMethodSchema(t))
             .min(1, v(t, 'payout.atLeastOne'))
-            .max(2, v(t, 'payout.atMostTwo'))
-            .superRefine((methods, ctx) => {
-                const seen = new Set<string>();
-                for (const m of methods) {
-                    if (seen.has(m.method)) {
-                        ctx.addIssue({
-                            code: z.ZodIssueCode.custom,
-                            message: v(t, 'payout.duplicateType'),
-                        });
-                        break;
-                    }
-                    seen.add(m.method);
-                }
-            }),
+            .max(MAX_PAYOUT_METHODS, v(t, 'payout.atMostThree')),
         version: z.number().int().optional(),
     });
 }

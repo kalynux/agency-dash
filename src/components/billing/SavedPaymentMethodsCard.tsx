@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, Smartphone, Plus, Trash2, Star, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Star, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { InfoHint } from '@/components/common/InfoHint';
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PaymentMethodMark } from '@/components/common/PaymentBrandLogo';
 import type { SavedPaymentMethod } from '@/types/payment-method.types';
 import {
   fetchPaymentMethods,
@@ -130,18 +131,17 @@ export function SavedPaymentMethodsCard() {
         ) : (
           <ul className="divide-y">
             {methods.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-muted/40">
-                  {m.method_type === 'card' ? (
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Smartphone className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
+              <li key={m.id} className="flex min-h-14 items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                <PaymentMethodMark brand={m.brand} methodType={m.method_type} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate font-medium">{m.display_label}</span>
-                    {m.is_default && <Badge variant="secondary">{t('methods.default')}</Badge>}
+                    {m.is_default && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Star className="h-3 w-3 fill-current" aria-hidden="true" />
+                        {t('methods.default')}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {methodTypeLabel(m.method_type)}
@@ -153,27 +153,27 @@ export function SavedPaymentMethodsCard() {
                       : ''}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                {/* Both actions clear the 44px touch minimum; only the label folds away. */}
+                <div className="flex shrink-0 items-center gap-0.5">
                   {!m.is_default && (
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="gap-1"
+                      className="h-11 gap-1.5 px-2.5 max-sm:w-11 max-sm:px-0"
                       onClick={() => handleSetDefault(m.id)}
                       disabled={pendingDefaultId === m.id}
+                      aria-label={t('methods.setDefault')}
                     >
                       {pendingDefaultId === m.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Star className="h-4 w-4" />
                       )}
-                      <span className="hidden sm:inline">{t('methods.setDefault')}</span>
+                      <span className="max-sm:hidden">{t('methods.setDefault')}</span>
                     </Button>
                   )}
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive"
+                    className="h-11 w-11 p-0 text-muted-foreground hover:text-destructive"
                     onClick={() => setDeleteTarget(m)}
                     aria-label={t('methods.remove')}
                   >

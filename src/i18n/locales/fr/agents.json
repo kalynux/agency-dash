@@ -46,7 +46,29 @@
     "van": "Fourgon",
     "truck": "Camion",
     "on_foot": "À pied",
-    "foot": "À pied"
+    "foot": "À pied",
+    "_colorsComment": "Jetons en anglais minuscule issus du profil du livreur. Le texte libre est accepté de leur côté : un jeton inconnu retombe sur sa forme capitalisée et n'obtient pas de pastille.",
+    "colors": {
+      "black": "Noir",
+      "white": "Blanc",
+      "grey": "Gris",
+      "gray": "Gris",
+      "silver": "Argent",
+      "red": "Rouge",
+      "dark_red": "Rouge foncé",
+      "blue": "Bleu",
+      "dark_blue": "Bleu foncé",
+      "light_blue": "Bleu clair",
+      "green": "Vert",
+      "dark_green": "Vert foncé",
+      "yellow": "Jaune",
+      "orange": "Orange",
+      "brown": "Marron",
+      "beige": "Beige",
+      "gold": "Doré",
+      "purple": "Violet",
+      "pink": "Rose"
+    }
   },
   "origin": {
     "invitation": "Offre de l'agence",
@@ -239,6 +261,8 @@
       "email": "E-mail",
       "phone": "Téléphone",
       "vehicle": "Véhicule",
+      "vehiclePhoto": "Photo du véhicule",
+      "vehiclePhotoAlt": "Le véhicule du livreur",
       "trustScore": "Score de confiance",
       "trustOutOf": "/ 100",
       "activeJobs": "Courses en cours",
@@ -424,7 +448,7 @@
       "remittanceHint": "À quelle fréquence le livreur remet les espèces qu'il encaisse. Un resserrement nécessite son accord — la fréquence alimente une pénalité de confiance, donc un changement non signé commencerait à faire baisser son score.",
       "coverage": "Couverture et limites",
       "regions": "Régions couvertes",
-      "regionsHint": "Séparées par des virgules. Où ce livreur travaille pour vous — cela ne peut pas dépasser la zone qu'il a acceptée. Laissez vide pour aucune restriction.",
+      "regionsHint": "Où ce livreur travaille pour vous. Choisissez parmi les régions de votre pays — vous pouvez désigner une région où vous vous développez, pas seulement celles que vous desservez déjà. N'en sélectionnez aucune pour ne poser aucune restriction.",
       "regionsPlaceholder": "Douala, Bonabéri",
       "ceiling": "Plafond par expédition",
       "ceilingHint": "Le montant maximal que ce livreur peut transporter sur une expédition. Laissez vide pour aucun plafond.",
@@ -459,7 +483,13 @@
       "noCap": "Aucun plafond",
       "notSet": "Non défini",
       "none": "Aucune",
+      "allRegions": "Toutes les régions — aucune restriction",
       "mapArea": "Une zone sur la carte"
+    },
+    "coverage": {
+      "yoursBadge": "Vous",
+      "invalidTitle": "Certaines régions ont été refusées",
+      "invalidBody": "Une région de couverture doit être une région de votre pays — une ville ou une faute d'orthographe ne conviendra pas. Les régions refusées sont indiquées ci-dessous ; la liste a été actualisée avec ce que le serveur accepte."
     }
   },
   "toasts": {

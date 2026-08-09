@@ -13,7 +13,12 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import {
+  compactCardClass,
+  compactCardContentClass,
+  listSurfaceClass,
+} from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { CodListMeta, CodRemittance, CodRemittanceStatus } from '@/types/cod-cash.types';
 
@@ -99,8 +104,8 @@ export function RemittancesTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="py-0 md:py-6">
-        <CardContent className="p-4 space-y-3">
+      <Card className={compactCardClass}>
+        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
           <p className="text-sm font-medium">{t('remittances.declareTitle')}</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
             <Input type="number" min={1} placeholder={t('remittances.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />

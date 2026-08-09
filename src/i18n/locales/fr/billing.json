@@ -154,7 +154,6 @@
     "add": {
       "title": "Ajouter un moyen de paiement",
       "description": "Enregistrez un moyen de paiement pour accélérer le paiement. Nous ne stockons jamais le numéro complet de carte ni le CVV.",
-      "type": "Type",
       "phone": "Numéro mobile money",
       "operator": "Opérateur",
       "holderNameMobile": "Nom du titulaire (facultatif)",
@@ -165,7 +164,9 @@
       "setAsDefault": "Définir par défaut",
       "setAsDefaultHint": "Présélectionné lors du paiement.",
       "submit": "Enregistrer",
-      "added": "Moyen de paiement ajouté"
+      "added": "Moyen de paiement ajouté",
+      "channel": "Moyen de paiement",
+      "secureNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs."
     }
   },
   "settings": {
@@ -226,7 +227,9 @@
     "failedDescription": "Le paiement n'a pas abouti. Aucun montant n'a été débité — vous pouvez réessayer.",
     "timeoutTitle": "Traitement en cours",
     "timeoutDescription": "Nous n'avons pas pu confirmer le paiement à temps. Si vous l'avez finalisé, votre solde sera mis à jour sous peu — consultez votre historique.",
-    "startOver": "Recommencer"
+    "startOver": "Recommencer",
+    "processedBy": "Traité par",
+    "stripeNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",
@@ -248,5 +251,23 @@
     "validateFailed": "Impossible de valider la carte.",
     "chargeFailed": "Votre carte n'a pas pu être débitée. Veuillez réessayer.",
     "notCompleted": "Le paiement par carte n'a pas abouti. Veuillez réessayer."
+  },
+  "brands": {
+    "bank": "Paiements bancaires"
+  },
+  "channels": {
+    "card": {
+      "name": "Paiement par carte",
+      "description": "Sécurisé par Stripe"
+    },
+    "mobileMoney": {
+      "name": "Mobile Money",
+      "description": "Validez sur votre téléphone"
+    },
+    "poweredBy": "Assuré par {{provider}}",
+    "processedBy": "Traité par",
+    "operatorPlaceholder": "Choisir un opérateur",
+    "comingSoon": "Bientôt",
+    "comingSoonHint": "Airtel Money et Wave arrivent bientôt — choisissez un autre opérateur pour l'instant."
   }
 }

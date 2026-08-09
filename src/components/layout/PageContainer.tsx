@@ -102,6 +102,16 @@ export function PageHeader({
   );
 }
 
+/**
+ * Handed down to a tab component so it can supply the page header's actions.
+ *
+ * The header belongs to the page (only it knows the crumb and the description),
+ * but the button that reloads a tab belongs to the tab — it closes over that
+ * tab's own `load` and its in-flight state. Rather than lift that state up, the
+ * page passes down a renderer and the tab decides what goes in the action slot.
+ */
+export type RenderPageHeader = (actions?: ReactNode) => ReactNode;
+
 interface SubPageHeaderProps extends Omit<PageHeaderProps, 'title' | 'parent'> {
   /**
    * The *resolved* submenu route. Pages that fall back to a default tab must
@@ -230,9 +240,36 @@ export const sectionGroupClass =
 export const sectionRuleClass = 'max-md:border-t max-md:border-border/70 max-md:pt-6';
 
 /**
+ * Surface for the small blocks that sit ABOVE a page's real content — a stat
+ * tile, an inline "record …" form, a banner.
+ *
+ * The base `Card` is sized for a section someone reads: `py-6` on the card plus
+ * `px-6` on its content. A block that only carries a label, a figure and a hint
+ * pays that box twice — the card's `py-6` *and* its content's own `p-4` — so
+ * ~80px of a ~150px tile is whitespace and a row of three tiles pushes the table
+ * they summarise off the fold. This gives the card no box of its own (padding,
+ * and the 24px flex gap that would otherwise separate a header from content),
+ * leaving the padding to the content, applied once.
+ *
+ * Pair with `compactCardContentClass`.
+ */
+export const compactCardClass = 'gap-0 py-0';
+
+/**
+ * Content padding for a `compactCardClass` card. One step up on wide screens,
+ * where the room is there to spend; on a phone the gutter is already doing half
+ * this job. Compose with `cn` when the block needs its own layout classes.
+ */
+export const compactCardContentClass = 'p-4 sm:p-5';
+
+/**
  * A small "note" block that keeps a surface on mobile instead of de-carding.
  * A section with no heading — a standalone explanatory paragraph — reads as
  * stray text once its frame is gone, so it gets a soft tinted panel instead.
+ *
+ * Padding belongs to the content here too (see `compactCardClass`) — a note is
+ * one paragraph, and a 24px box around it on top of its own padding reads as a
+ * gap rather than as breathing room.
  */
 export const noteSurfaceClass =
-  'max-md:rounded-lg max-md:border max-md:bg-muted/40 max-md:py-4 max-md:shadow-none';
+  compactCardClass + ' max-md:rounded-lg max-md:border max-md:bg-muted/40 max-md:shadow-none';

@@ -1,15 +1,19 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RegionPicker } from '@/components/common/RegionPicker';
 import {
   EMPLOYMENT_TYPES,
   REMITTANCE_CADENCES,
   cadenceLabel,
   employmentTypeLabel,
+  parseRegions,
+  splitRegions,
   type TermsForm,
 } from '@/components/agents/contractTerms';
+import type { RegionEntry } from '@/lib/regions';
 import type { EmploymentType, FeeSplitModel, RemittanceCadence } from '@/types/agent.types';
 
 /**
@@ -57,6 +61,24 @@ export interface ContractTermsFieldsProps {
    * disappears the moment the select is cleared.
    */
   seed?: TermsForm;
+  /**
+   * The agency's registered country, from `session.role_entity.country`. Drives
+   * the region catalogue. `null` on a legacy agency, which the backend exempts
+   * from region validation — so the field falls back to free text there.
+   */
+  country?: string | null;
+  /**
+   * The agency's OWN declared `coverage_areas`, from the magazin. Marked in the
+   * list so both parties can see which of the picked regions we actually serve —
+   * never used to restrict the choice.
+   */
+  coverageAreas?: string[];
+  /**
+   * The catalogue to offer instead of the country's. Set from
+   * `CONTRACT_COVERAGE_REGION_INVALID`'s `details.allowedRegions` so a rejected
+   * save can be repaired from the error itself.
+   */
+  allowedRegions?: RegionEntry[];
 }
 
 export function ContractTermsFields({
@@ -65,10 +87,21 @@ export function ContractTermsFields({
   disabled = false,
   includeEmployment = false,
   seed,
+  country,
+  coverageAreas,
+  allowedRegions,
 }: ContractTermsFieldsProps) {
   const { t } = useTranslation('agents');
   const cadence = form.cadence || seed?.cadence || '';
   const feeModel = form.feeModel || seed?.feeModel || '';
+  // Stored values split into what the catalogue recognises and what it doesn't.
+  // Legacy contracts hold free text like "Douala"; it is shown as a removable
+  // chip rather than dropped, because the agency should see what is about to
+  // stop being valid.
+  const { known, unknown } = useMemo(
+    () => splitRegions(form.regions, country),
+    [form.regions, country],
+  );
 
   return (
     <div className="space-y-5">
@@ -229,12 +262,37 @@ export function ContractTermsFields({
 
       <FieldGroup title={t('terms.fields.coverage')}>
         <FormField label={t('terms.fields.regions')} hint={t('terms.fields.regionsHint')}>
-          <Input
-            value={form.regions}
-            disabled={disabled}
-            onChange={(e) => onChange('regions', e.target.value)}
-            placeholder={t('terms.fields.regionsPlaceholder')}
-          />
+          {country || allowedRegions ? (
+            <RegionPicker
+              value={known}
+              onChange={(next) => onChange('regions', [...next, ...unknown])}
+              country={country}
+              disabled={disabled}
+              options={allowedRegions}
+              // Scoped to the COUNTRY, not to what we already serve: an agency
+              // contracts agents for a region it is expanding into before it
+              // declares it. So our own areas are marked, and the rest stay
+              // clickable.
+              highlightKeys={coverageAreas}
+              highlightLabel={t('terms.coverage.yoursBadge')}
+              unknownValues={unknown}
+              onRemoveUnknown={(raw) =>
+                onChange('regions', form.regions.filter((r) => r !== raw))
+              }
+              emptyHint={t('terms.values.allRegions')}
+            />
+          ) : (
+            // A legacy agency with no `country` on file skips the backend's
+            // region check entirely, so there is no catalogue to pick from —
+            // free text is the only honest control. Uncontrolled, or a trailing
+            // ", " would be eaten mid-typing.
+            <Input
+              defaultValue={form.regions.join(', ')}
+              disabled={disabled}
+              onChange={(e) => onChange('regions', parseRegions(e.target.value))}
+              placeholder={t('terms.fields.regionsPlaceholder')}
+            />
+          )}
         </FormField>
         <FormField label={t('terms.fields.ceiling')} hint={t('terms.fields.ceilingHint')}>
           <Input

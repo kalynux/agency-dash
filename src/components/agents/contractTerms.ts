@@ -18,6 +18,8 @@
 
 import { readContractTerms } from '@/types/agent.types';
 import { txStatic } from '@/i18n/tx';
+import { regionsFor } from '@/lib/regions';
+import { ApiError } from '@/types/api';
 import type {
   AgentMembership,
   EmploymentType,
@@ -73,8 +75,17 @@ export interface TermsForm {
   dayOfWeek: string;
   dayOfMonth: string;
   graceHours: string;
-  /** `coverage.regions`, comma-separated. The polygon `area` is not editable here. */
-  regions: string;
+  /**
+   * `coverage.regions` — region KEYS of the agency's country, picked from the
+   * same `locations.json` catalogue the magazin's own coverage areas use. `[]`
+   * means NO RESTRICTION (covers everywhere), which is the default on every
+   * contract; it does not mean "nowhere".
+   *
+   * An array rather than the comma-separated string this used to be: a checkbox
+   * grid's natural value is a set, and a string round-trip makes any ordering
+   * difference look like an edit. The polygon `area` is still not editable here.
+   */
+  regions: string[];
   ceiling: string;
 }
 
@@ -82,9 +93,78 @@ function num(value: number | null | undefined): string {
   return value == null ? '' : String(value);
 }
 
-/** Split a comma-separated region list into trimmed, non-empty names. */
+/**
+ * Split a comma-separated region list into trimmed, non-empty names.
+ *
+ * Only used by the free-text fallback for a legacy agency with no `country` on
+ * file — the backend skips region validation entirely for those, so there is no
+ * catalogue to pick from.
+ */
 export function parseRegions(value: string): string[] {
   return value.split(',').map((r) => r.trim()).filter(Boolean);
+}
+
+/**
+ * Order-insensitive identity for a region selection.
+ *
+ * The payload builders diff against the seeded form, and arrays are never `===`.
+ * Comparing on this instead means an untouched picker sends no `coverage` key at
+ * all — without it, every terms save would ship a coverage change the agency
+ * never made.
+ */
+function regionsKey(regions: string[]): string {
+  return [...regions].sort().join('|');
+}
+
+/**
+ * Split a stored selection into catalogue keys and legacy free text.
+ *
+ * Rows written before regions were picked may hold `"Douala"` or `"Yaoundé"`.
+ * Reading is unaffected — the assignment gate still resolves them loosely — but
+ * the first save of such a contract must send valid keys, so the UI shows the
+ * strays as removable chips rather than dropping them silently.
+ */
+export function splitRegions(
+  regions: string[],
+  country: string | null | undefined,
+): { known: string[]; unknown: string[] } {
+  const catalogue = new Set(regionsFor(country).map((r) => r.key));
+  // An empty catalogue means an unknown country, where nothing can be judged
+  // stray — treat everything as known rather than flagging the whole list.
+  if (catalogue.size === 0) return { known: regions, unknown: [] };
+  return {
+    known: regions.filter((r) => catalogue.has(r)),
+    unknown: regions.filter((r) => !catalogue.has(r)),
+  };
+}
+
+/** A region key as its localized label, falling back to the raw value. */
+export function regionLabel(key: string, country: string | null | undefined): string {
+  return regionsFor(country).find((r) => r.key === key)?.label ?? key;
+}
+
+/**
+ * The repair payload behind `400 CONTRACT_COVERAGE_REGION_INVALID`.
+ *
+ * `allowedRegions` is the server's FULL catalogue, which is the point: a picker
+ * built from a stale or missing country can be rebuilt from the error itself,
+ * without a second request. Parsed here beside the payload builders because the
+ * two dialogs that write terms both need it and neither owns the shape.
+ */
+export interface CoverageRegionRepair {
+  invalid: string[];
+  requiredCountry: string;
+  allowedRegions: string[];
+}
+
+export function coverageRegionRepair(err: unknown): CoverageRegionRepair | null {
+  if (!(err instanceof ApiError) || err.code !== 'CONTRACT_COVERAGE_REGION_INVALID') return null;
+  const details = err.details as Partial<CoverageRegionRepair> | undefined;
+  return {
+    invalid: details?.invalid ?? [],
+    requiredCountry: details?.requiredCountry ?? '',
+    allowedRegions: details?.allowedRegions ?? [],
+  };
 }
 
 export function seedTermsForm(membership: AgentMembership): TermsForm {
@@ -102,7 +182,7 @@ export function seedTermsForm(membership: AgentMembership): TermsForm {
     dayOfWeek: num(remittanceTerms.dayOfWeek),
     dayOfMonth: num(remittanceTerms.dayOfMonth),
     graceHours: num(remittanceTerms.graceHours),
-    regions: coverage.regions.join(', '),
+    regions: coverage.regions,
     ceiling: num(shipmentValueCeiling),
   };
 }
@@ -126,7 +206,7 @@ export function blankTermsForm(): TermsForm {
     dayOfWeek: '',
     dayOfMonth: '',
     graceHours: '',
-    regions: '',
+    regions: [],
     ceiling: '',
   };
 }
@@ -171,10 +251,15 @@ export function buildNegotiablePayload(form: TermsForm, seed: TermsForm): Negoti
   }
   if (Object.keys(remittance).length > 0) payload.remittance_terms = remittance;
 
-  // `area` is deliberately left alone — a polygon is not something this text
-  // editor can express, and omitting the key keeps whatever is stored.
-  if (form.regions !== seed.regions) {
-    payload.coverage = { regions: parseRegions(form.regions) };
+  // `area` is deliberately left alone — a polygon is not something this editor
+  // can express, and omitting the key keeps whatever is stored.
+  //
+  // Compared on `regionsKey`, NOT with `!==`: these are arrays, so a reference
+  // comparison is always true and would ship a coverage change on every single
+  // save. Clearing a seeded list still sends `[]`, which the API reads as "no
+  // restriction" — a legitimate edit, not a no-op.
+  if (regionsKey(form.regions) !== regionsKey(seed.regions)) {
+    payload.coverage = { regions: form.regions };
   }
 
   // Nullable on purpose — an emptied ceiling means "no per-shipment cap".
@@ -213,8 +298,9 @@ export function buildOfferPayload(form: TermsForm): NegotiableTermsPayload {
     payload.remittance_terms = remittance;
   }
 
-  const regions = parseRegions(form.regions);
-  if (regions.length > 0) payload.coverage = { regions };
+  // Omitted when empty rather than sent as `[]`: on a brand-new offer both mean
+  // "no restriction", and not sending the group keeps the server's default.
+  if (form.regions.length > 0) payload.coverage = { regions: form.regions };
 
   if (form.ceiling.trim() !== '') payload.shipment_value_ceiling = Number(form.ceiling);
 
@@ -271,15 +357,31 @@ export function termPathLabel(path: string): string {
   return translated === key ? path.replace(/[._]/g, ' ') : translated;
 }
 
-/** A diff leaf as display text. Nulls read as their meaning, not as "null". */
-export function termValueText(path: string, value: unknown): string {
+/**
+ * A diff leaf as display text. Nulls read as their meaning, not as "null".
+ *
+ * `country` is optional so the two dialogs can render region KEYS as the same
+ * localized labels the picker shows — without it a proposal diff would read
+ * "far_north" while the checkbox above it says "Far North".
+ */
+export function termValueText(path: string, value: unknown, country?: string | null): string {
   if (value == null || value === '') {
     return path === 'shipment_value_ceiling'
       ? txStatic('agents:terms.values.noCap')
       : txStatic('agents:terms.values.notSet');
   }
   if (Array.isArray(value)) {
-    return value.length > 0 ? value.join(', ') : txStatic('agents:terms.values.none');
+    // An empty coverage list is "everywhere", not "nowhere" — the opposite of
+    // what a bare "None" would tell the agency.
+    if (value.length === 0) {
+      return path === 'coverage.regions'
+        ? txStatic('agents:terms.values.allRegions')
+        : txStatic('agents:terms.values.none');
+    }
+    if (path === 'coverage.regions') {
+      return value.map((v) => regionLabel(String(v), country)).join(', ');
+    }
+    return value.join(', ');
   }
   if (path === 'remittance_terms.cadence') return cadenceLabel(String(value));
   if (typeof value === 'object') return txStatic('agents:terms.values.mapArea');

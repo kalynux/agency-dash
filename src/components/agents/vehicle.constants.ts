@@ -45,3 +45,60 @@ export function formatVehicleType(vehicleType: string | undefined | null): strin
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(' ');
 }
+
+// ─── Colour ───────────────────────────────────────────────────────────────────
+// `vehicleInfo.color` is a lowercase English token, but free text is accepted at
+// the agent's end — so this is the same shape as `formatVehicleType`: translate
+// what we know, title-case what we don't.
+
+/**
+ * A CSS colour for the swatch, for tokens we recognise.
+ *
+ * Deliberately NOT a guess for anything else. Mapping an unknown token to a
+ * plausible hex would print a confident colour nobody verified, on a field an
+ * agency uses to pick a vehicle out of a car park — a neutral swatch that says
+ * "we were told something we can't draw" is the honest rendering.
+ */
+const VEHICLE_COLOR_MAP: Record<string, string> = {
+  black: '#111827',
+  white: '#f9fafb',
+  grey: '#9ca3af',
+  gray: '#9ca3af',
+  silver: '#d1d5db',
+  red: '#dc2626',
+  dark_red: '#991b1b',
+  blue: '#2563eb',
+  dark_blue: '#1e3a8a',
+  light_blue: '#60a5fa',
+  green: '#16a34a',
+  dark_green: '#166534',
+  yellow: '#eab308',
+  orange: '#ea580c',
+  brown: '#78350f',
+  beige: '#e7d9c3',
+  gold: '#ca8a04',
+  purple: '#7c3aed',
+  pink: '#ec4899',
+};
+
+/** The swatch colour, or `null` when the token is not one we can draw. */
+export function vehicleColorSwatch(color: string | undefined | null): string | null {
+  if (!color) return null;
+  return VEHICLE_COLOR_MAP[color.toLowerCase().replace(/[\s-]+/g, '_')] ?? null;
+}
+
+/** A readable colour name — `agents:vehicle.colors.<token>`, else title-cased. */
+export function formatVehicleColor(color: string | undefined | null): string {
+  if (!color) return txStatic('agents:vehicle.unknown');
+
+  const token = color.toLowerCase().replace(/[\s-]+/g, '_');
+  const key = `agents:vehicle.colors.${token}`;
+  const translated = txStatic(key);
+  if (translated !== key) return translated;
+
+  return color
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ');
+}

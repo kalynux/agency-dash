@@ -74,6 +74,11 @@
     "loading": "Loading coverage & locations…",
     "saved": "Coverage & locations saved",
     "conflict": "Your locations were updated elsewhere. Refreshed — please re-apply your changes.",
+    "locationInUse": "Nothing was saved: you removed a location that still stores vendor products — {{locations}}. Re-point those products to another location (or ask the vendor to) before removing it.",
+    "locationInUseEntry": "{{label}} ({{count}} SKU)",
+    "locationInUseEntry_one": "{{label}} ({{count}} SKU)",
+    "locationInUseEntry_other": "{{label}} ({{count}} SKUs)",
+    "unnamedLocation": "Unnamed location",
     "coverageLabel": "Coverage Regions",
     "noRegions": "No region data is available for your operating country yet.",
     "coverageHint": "Only regions of your operating country can be selected.",
@@ -109,7 +114,7 @@
     "supportEmailPlaceholder": "support@youragency.com",
     "countryNote": "Your operating country was set during onboarding and can't be changed. Coverage regions and addresses must both fall inside it.",
     "removeTitle": "Remove this location?",
-    "removeDescription": "Vendors and drivers routing to this address will lose it once you save. Deliveries already assigned to it aren't affected.",
+    "removeDescription": "Vendors and drivers routing to this address will lose it once you save. Deliveries already assigned to it aren't affected, and the save is refused outright if vendor products are still stored here.",
     "removePinnedDescription": "This location is pinned on the map. Removing it discards the pin — you'd have to search for the address again.",
     "clearPinTitle": "Remove this pin?",
     "clearPinDescription": "This is the pin vendors and drivers route to. Clearing it means searching for the address again before this page can be saved.",
@@ -292,8 +297,11 @@
       "codDepositUpdatesCaveat": "Turning this off does not stop the 2-day clock — an unanswered declaration still freezes your rolling-reserve releases.",
       "planUpdates": "Plan updates",
       "planUpdatesDescription": "When your subscription plan is nearing expiry, has expired, or you cross your shipment cap.",
-      "storageAlert": "Storage alerts",
-      "storageAlertDescription": "When your media storage passes 80%, 90% or 100% of your plan's limit."
+      "stockRequestUpdates": "Stock change requests",
+      "stockRequestUpdatesDescription": "When a vendor proposes a new quantity for a SKU you warehouse, or answers one you proposed.",
+      "stockRequestUpdatesCaveat": "This is about goods on your shelves — not the media-storage alert below. Turning it off silences the notification, not the obligation: a vendor's request still sits in your inbox waiting for an answer.",
+      "storageAlert": "Media storage alerts",
+      "storageAlertDescription": "When your uploaded files — product images, delivery proofs — pass 80%, 90% or 100% of your plan's limit. Nothing to do with warehousing."
     }
   },
   "channelSetup": {

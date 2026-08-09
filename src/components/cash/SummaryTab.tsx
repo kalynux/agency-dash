@@ -9,7 +9,12 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import {
+  compactCardClass,
+  compactCardContentClass,
+  listSurfaceClass,
+} from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { codCashService } from '@/services/cod-cash.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { CodSummary } from '@/types/cod-cash.types';
@@ -18,14 +23,14 @@ type HoldingFilter = 'all' | 'holding' | 'settled';
 
 function StatCard({ icon: Icon, label, value, hint }: { icon: React.ElementType; label: string; value: string; hint?: string }) {
   return (
-    <Card className="py-0 md:py-6">
-      <CardContent className="p-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold mt-1">{value}</p>
-          {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+    <Card className={compactCardClass}>
+      <CardContent className={cn(compactCardContentClass, 'flex items-start justify-between gap-3')}>
+        <div className="min-w-0">
+          <p className="text-sm leading-snug text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold leading-tight mt-0.5">{value}</p>
+          {hint && <p className="text-xs leading-snug text-muted-foreground mt-1">{hint}</p>}
         </div>
-        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Icon className="w-4 h-4 text-primary" />
         </div>
       </CardContent>
@@ -95,7 +100,7 @@ export function SummaryTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           icon={Wallet}
           label={t('summary.owedToPlatform')}

@@ -214,6 +214,7 @@
     "trackingOptionMeta": "{{agency}} · {{status}}",
     "attachments": "Attachments",
     "addAttachment": "Add attachment",
+    "attachmentsHint": "Once the ticket is created, these files stay attached to it — they can't be detached until the ticket is closed.",
     "submit": "Create ticket",
     "errors": {
       "subjectTooShort": "Subject must be at least 3 characters.",
@@ -249,6 +250,7 @@
     "public": "Public",
     "private": "Private",
     "add": "Add attachment",
+    "permanentWarning": "Once attached, a file can't be detached from this ticket until the ticket is closed.",
     "attaching": "Attaching…",
     "closed": "This ticket is closed.",
     "atLimit": "Maximum of {{max}} attachments reached",

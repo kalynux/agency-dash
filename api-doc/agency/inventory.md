@@ -1,354 +1,510 @@
-# Agency Inventory — **PROPOSED, NOT YET IMPLEMENTED**
+# Agency Inventory
 
-> [!WARNING]
-> **None of this exists on the backend yet.** This document is a *request*, written
-> from the agency dashboard's Inventory screen (`/dashboard/inventory`), which is
-> built and shipped against this contract. Until the endpoints below exist the
-> screen renders its error state.
->
-> This is not a thin read over existing data — see [§0 Why this needs new
-> data](#0-why-this-needs-new-data). The single biggest ask is a **stock record
-> with a location dimension**, which the platform does not currently have.
+Which SKUs this agency warehouses, at which depot, what they should be costing in
+storage rent, and the two things the agency can do about them. Backs the agency
+dashboard's inventory screen.
+
+> Related docs: [Magazin](./magazin.md) (the depots themselves) ·
+> [Stock requests](./stock-requests.md) (changing a recorded quantity) ·
+> [Vendor → Delivery Agencies](../vendor/delivery-agencies.md#list-an-agencys-pickup-locations)
+> (how a vendor picks a depot) · [Earnings](./earnings.md) ·
+> [Front-end changelog](../FRONTEND-CHANGELOG-agency-storage.md).
 
 ## Base Path
-
 ```
 /api/agency/inventory
 ```
 
 ## Authentication
+Bearer token (or cookie session) with the **agency** role. Identity flows
+token → agency; there is no `agencyId` in any path, and every query is scoped to
+the caller.
 
-Bearer token (or cookie session) with the **agency** role. Every endpoint is
-scoped to the authenticated agency — an agency can only ever read stock it holds.
+## Endpoints
 
-> Related docs: [Magazin](./magazin.md) (the HQ addresses stock is placed at) ·
-> [Shipments](./shipments.md) (`items[].pickupLocation.mode: "storage_based"`) ·
-> [Products](./products.md) (the current flat product list) ·
-> [Onboarding → policies](./onboarding.md) (`pricing.storage_based`) ·
-> [Vendor Inventory](../vendor/inventory.md) (the vendor-side stock model this
-> extends).
-
----
-
-## 0. Why this needs new data
-
-The dashboard needs three things per line: **what** we hold, **where** in our
-network it sits, and **how much is left**. Today the platform can answer only the
-first, and only partly.
-
-| What the screen needs | What exists today | Verdict |
-|---|---|---|
-| Which SKUs an agency holds | Nothing. `delivery.pickup_location.source: "agency_storage"` on a product is a **routing flag** — "collect from the agency's HQ, not the vendor's shop". No record is created, no quantity is tracked. | **New** |
-| Quantity per SKU | `ProductVariant.stock` — a single global scalar owned by the vendor. | **Needs a location dimension** |
-| Quantity per location | Nothing. No warehouse/stock-level/bin model exists anywhere. | **New** |
-| Which of our addresses holds it | `magazin.headquarters_addresses[]` exists and is `_id`-addressable, but **every consumer hardcodes `[0]`** — shipments, handover pickup, assignment candidates all read the first entry. A second warehouse is currently invisible to the platform. | **New link + fix `[0]`** |
-| Reserved / available split | `StockReservation` exists, has no location, and is **never written** — the reservation/commit/release services are implemented but unwired. | **Needs wiring** |
-| Movement history | `StockAuditLog` exists, is append-only, has **no location dimension**, and is only ever written by `PATCH /api/vendor/inventory/bulk-update`. Its `order` and `reservation` enum values are never emitted. | **Needs location + wiring** |
-
-Two further findings worth flagging before any of this is designed:
-
-1. **Stock is never decremented by the order or shipment pipeline.** Grepping
-   `src/modules` for `stock` outside `catalog/` returns nothing relevant;
-   `unpaid-order-cancel.worker.ts` states it outright ("Stock is not reserved at
-   order creation"). So "amount left" is not merely *unlocated* today — for a
-   storage-based line it is **not decremented at all** when goods leave our
-   shelf. Fixing this is a prerequisite for the numbers on this screen to mean
-   anything.
-2. **`Shipment.items[]` carries `product_id` and `quantity` but no `variant_id`
-   and no `sku`.** Stock lives on the *variant*. As things stand, a delivered
-   shipment cannot tell you which variant left the warehouse, so the decrement in
-   (1) cannot be implemented without adding `variant_id` to the shipment item.
-   The order item already snapshots `variant_id` + `sku`, so the value is
-   available at shipment-creation time.
-
-### Business context — this is already billed for
-
-`policies.pricing.storage_based.monthly_storage_fee_per_sku` is a per-SKU,
-per-month rent an agency sets during onboarding. It is currently **never
-charged** — `earnings-quote.service.ts` carries an explicit
-`TODO(earnings): monthly_storage_fee_per_sku — intentionally EXCLUDED`, deferring
-it to "a separate recurring job". That job cannot be written until something
-records *which SKUs an agency stores*. The same record this screen reads is the
-record that unblocks that billing.
+| | |
+|---|---|
+| [`GET /`](#1-list-inventory) | the roster |
+| [`GET /summary`](#2-summary) | whole-magazine totals for the screen header |
+| [`GET /:id`](#3-inventory-detail) | one row |
+| [`PATCH /products/:productId/depot`](#4-move-a-product-to-another-depot) | re-point a stored product |
+| [`POST /products/:productId/suspend`](#5-suspend--unsuspend) | take it off the storefront |
+| [`POST /products/:productId/unsuspend`](#5-suspend--unsuspend) | put it back |
 
 ---
 
-## 1. Data model — the minimum new shape
-
-The dashboard does not care how this is stored, only that the endpoints below can
-be served. The smallest thing that works:
-
-```ts
-// collection: agency_stock_levels
-{
-  _id: ObjectId,
-  agency_id:   ObjectId,   // ref DeliveryAgency — the scope of every query here
-  location_id: ObjectId,   // an _id from magazin.headquarters_addresses[]
-  vendor_id:   ObjectId,   // denormalised; every list query filters/groups by it
-  product_id:  ObjectId,
-  variant_id:  ObjectId | null,   // null for a product with no variants
-  quantity:    Number,     // units of this variant at THIS location
-  stored_since: Date,
-  updated_at:  Date,
-}
-// unique index: { agency_id, location_id, variant_id }
-// index:        { agency_id, vendor_id }
-```
-
-Notes on the shape:
-
-- **The unit is the variant, not the product.** A product with three sizes is
-  three lines, because three separate counts are what a warehouse holds and what
-  `monthly_storage_fee_per_sku` bills. `SKU` is already globally unique
-  (`ProductVariantSchema.index({ sku: 1 }, { unique: true })`), so it is a safe
-  display key but **not** a safe grouping key across vendors — group by
-  `variant_id`.
-- **A line's `onHand` is the sum of its rows across locations.** Do not also
-  store the total; a second copy of a number is a second thing to be wrong.
-- `location_id` **must** be a real `magazin.headquarters_addresses[]._id`. The
-  screen's location filter is built from the magazin the app already has loaded,
-  so an id that isn't in that array filters to nothing.
-- Movements want the same location dimension — either add
-  `location_id` + `agency_id` to `StockAuditLog`, or add a parallel
-  `agency_stock_movements` collection. Either is fine; §3 only needs the read.
+> [!IMPORTANT]
+> ## Two different quantities live on every row. Do not merge them.
+>
+> | Field | What it is | Real today? |
+> |---|---|---|
+> | `catalogStock.quantity` | the **agreed** quantity for this SKU — the vendor's catalogue number, which on a warehoused SKU neither party can now change alone | **yes** |
+> | `quantityOnHand` / `quantityReserved` | the **counted** quantity — what somebody physically verified on a shelf | **no, always `0`** |
+>
+> `countsAreDerived: true` and per-row `source: "derived"` still describe the second
+> pair only. Phase 1 has no intake flow, stock does not move on delivery, and nothing
+> counts a shelf — so those two remain zero and the honest label for them is still
+> "not counted".
+>
+> What *has* changed is that the first one is now meaningful to you: it is the number
+> the two of you jointly govern (see [Stock requests](./stock-requests.md)), it is
+> guaranteed finite, and it is what the storage fee is quoted against. Label the two
+> distinctly on screen — something like **"Agreed"** vs **"Counted on hand"**.
 
 ---
 
-## 2. `GET /api/agency/inventory`
+## 1. List inventory
 
-One row per stored **variant**, aggregated across every location that holds it.
+### GET /api/agency/inventory
 
-### Query parameters
+**Query parameters** (all optional):
 
 | Param | Type | Default | Notes |
 |---|---|---|---|
-| `q` | string | — | Free text over product title, variant title, SKU, and vendor business name. Ignore anything under 2 characters (the client already does). |
-| `locationId` | string | — | A `magazin.headquarters_addresses[]._id`. Returns lines with ≥1 unit **there**; `locations[]` still lists every location holding the line. |
-| `vendorId` | string | — | Filter to one vendor. |
-| `stockState` | enum | — | `in_stock` \| `low` \| `out_of_stock`. Omit for all. |
-| `page` | integer | 1 | |
-| `limit` | integer | 20 | Max 100. |
+| `page` | integer ≥ 1 | `1` | |
+| `limit` | integer 1–100 | `20` | |
+| `locationId` | depot id \| `"unassigned"` | — | Filter to one depot. See the note on `unassigned` below. |
+| `vendorId` | ObjectId | — | Filter to one vendor's SKUs. |
+| `search` | string, 1–100 | — | Case-insensitive, over variant **SKU** and product **title**. |
+| `sortBy` | `createdAt` \| `quantityOnHand` \| `lastReconciledAt` | `createdAt` | |
+| `sortDir` | `asc` \| `desc` | `desc` | |
 
-### Success `200`
+Unknown query parameters are rejected (`400 VALIDATION_ERROR`).
+
+**Success Response** — `200 OK`:
 
 ```json
 {
   "success": true,
+  "countsAreDerived": true,
   "data": [
     {
-      "id": "66a1f0c2e4b0a1d2c3e4f501",
-      "productId": "507f1f77bcf86cd799439066",
-      "variantId": "507f1f77bcf86cd799439060",
-      "title": "Blue T-Shirt",
-      "variantTitle": "Black / M",
-      "sku": "SHIRT-BLK-M",
+      "id": "665a1f77bcf86cd799439011",
+      "sku": "NIKE-AIR-MAX-90-BLK-42",
+      "productTitle": "Nike Air Max 90",
+      "variantTitle": "Black / 42",
       "image": {
-        "id": "507f1f77bcf86cd799439030",
-        "key": "products/2026/07/tshirt.jpg",
-        "url": "https://cdn.example.com/products/tshirt.jpg",
+        "id": "6f1a2b3c4d5e6f7a8b9c0d1e",
+        "key": "products/abc.jpg",
+        "url": "https://cdn.example.com/products/abc.jpg",
         "mimeType": "image/jpeg",
-        "size": 88110,
-        "originalName": "tshirt-front.jpg"
+        "size": 245678,
+        "originalName": "airmax.jpg"
       },
-      "vendor": {
-        "id": "507f1f77bcf86cd799439aaa",
-        "businessName": "Acme Store",
-        "phone": "+237670000001",
-        "email": "acme@example.com"
+      "vendor": { "id": "664b...21", "businessName": "SneakerHub SARL" },
+      "location": {
+        "id": "6641abc123def458",
+        "label": "Bonabéri branch",
+        "city": "Douala",
+        "isPrimary": false
       },
-      "onHand": 42,
-      "reserved": 3,
-      "available": 39,
-      "lowStockThreshold": 5,
-      "stockState": "in_stock",
-      "locations": [
-        { "locationId": "6641abc123def457", "label": "Douala HQ",      "city": "Douala",  "region": "Littoral", "quantity": 30 },
-        { "locationId": "6641abc123def458", "label": "Yaoundé Branch", "city": "Yaoundé", "region": "Centre",   "quantity": 12 }
-      ],
-      "updatedAt": "2026-08-01T09:12:00.000Z"
+
+      "quantityOnHand": 0,
+      "quantityReserved": 0,
+      "quantityAvailable": 0,
+      "source": "derived",
+      "lastReconciledAt": "2026-08-06T09:12:00.000Z",
+
+      "catalogStock": {
+        "quantity": 120,
+        "isInfinite": false,
+        "pendingRequest": null
+      },
+      "storageFee": {
+        "basis": "per_sku_monthly",
+        "storageBasedEnabled": true,
+        "monthlyRatePerSku": 500,
+        "quantity": 120,
+        "monthlyEstimate": 60000,
+        "size": {
+          "lengthCm": 30, "widthCm": 20, "heightCm": 12,
+          "volumeCm3": 7200, "weightG": 850,
+          "source": "variant"
+        }
+      },
+      "suspension": null,
+      "productStatus": "active"
     }
   ],
-  "meta": {
-    "total": 128,
-    "page": 1,
-    "limit": 20,
-    "pages": 7,
-    "summary": {
-      "skuCount": 128,
-      "unitCount": 4310,
-      "lowStockCount": 9,
-      "outOfStockCount": 2,
-      "vendorCount": 11
-    }
+  "meta": { "total": 137, "page": 1, "limit": 20, "totalPages": 7 }
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | The stock-level **row** id — pass to the detail endpoint. Not a variant id. |
+| `sku` / `productTitle` / `variantTitle` | string \| null | From the variant and product. `null` if either was deleted after the row was derived. |
+| `image` | FileDetail \| null | The thumbnail — `images[0]` from the detail view. |
+| `vendor.businessName` | string \| null | From the vendor's Store, resolved live. |
+| `location` | object \| null | The depot. **Null means unresolved** — see below. |
+| `location.isPrimary` | boolean | `true` for the agency's first depot, which is where a product that names none is collected from. |
+| `quantityOnHand` / `quantityReserved` | number | Always `0`. See the banner above. |
+| `quantityAvailable` | number | `max(0, onHand − reserved)`. Never negative. |
+| `source` | `"derived"` \| `"counted"` | Describes the two counters above only. |
+| `lastReconciledAt` | ISO date | When the roster last confirmed this row against the catalog. |
+| `catalogStock` | object | [§1a](#1a-catalogstock) |
+| `storageFee` | object | [§1b](#1b-storagefee) |
+| `suspension` | object \| null | [§1c](#1c-suspension) |
+| `productStatus` | string \| null | The product's own status, so you need not infer it. |
+
+> **One row is one SKU at one depot.** The same variant stored at two depots is
+> two rows with two different `id`s.
+
+### `location: null` — the unassigned bucket
+
+A row resolves to `null` when the product names a depot **you have since
+deleted**. The goods exist; the platform no longer knows which building. Find
+them with `?locationId=unassigned` and re-point the product — you can now do that
+yourself, with [`PATCH /products/:productId/depot`](#4-move-a-product-to-another-depot).
+
+This is deliberately **not** silently folded into your primary depot. Delivery
+*routing* does fall back to the primary in that situation — an agent still has to
+be sent somewhere — but attributing one warehouse's goods to another on an
+inventory screen would be a number nobody can go and verify.
+
+A product that simply **names no depot** is a different case: it is genuinely
+collected from your primary, so it is recorded there, with `isPrimary: true`.
+
+---
+
+### 1a. `catalogStock`
+
+```json
+"catalogStock": {
+  "quantity": 120,
+  "isInfinite": false,
+  "pendingRequest": {
+    "id": "665a1f77bcf86cd799439061",
+    "requestedQuantity": 90,
+    "requestedByRole": "vendor",
+    "awaitingMyDecision": true,
+    "requestedAt": "2026-08-06T09:12:00.000Z",
+    "note": "Sold 30 through another channel"
   }
 }
 ```
 
-### Field notes
-
 | Field | Notes |
 |---|---|
-| `id` | Stable identity of the line; what `GET /:id` takes. A composite (`agencyId:variantId`) is fine — the client treats it as opaque. |
-| `title` / `sku` / `variantTitle` | **Nullable.** Read live from the catalogue; null when the product or variant can no longer be resolved. The client renders "Unnamed product" and keeps the row — a line we physically hold must not vanish because its catalogue entry did. |
-| `image` | The standard file object (`{ id, key, url, mimeType, size, originalName }`) or `null` — never a bare URL string. Variant's own picture, else the product's first. |
-| `onHand` | Physical units across every location. Sum of `locations[].quantity`. |
-| `reserved` | Units locked by in-flight orders. `0` until reservations are wired (§0) — send `0`, not `null`. |
-| `available` | `onHand − reserved`. Sent, not computed client-side, so the list, badge and filter can never disagree. |
-| `lowStockThreshold` | The **vendor's** `low_stock_threshold` for the variant, or `null`. (Note the existing snake/camel split: schema field is `low_stock_threshold`, the vendor API sends `lowStockThreshold`. Please send camel here.) |
-| `stockState` | Derived server-side: `available <= 0` → `out_of_stock`; else `threshold !== null && available <= threshold` → `low`; else `in_stock`. A line with no threshold is never `low` — same rule as `GET /api/vendor/inventory/alerts`. |
-| `locations[]` | Only locations holding **≥1 unit**. `label`/`city`/`region` are **denormalised onto the payload**, not looked up client-side: magazin labels are nullable and editable, and a count that outlives a renamed or deleted HQ entry still has to print something truthful. |
-| `meta.summary` | Totals for the **whole filtered set**, not the page — the summary strip has to keep counting past page 1. |
+| `quantity` | `ProductVariant.stock`. `null` if the variant was deleted. |
+| `isInfinite` | Effectively always `false` for a live warehoused SKU — unlimited stock blocks activation for `agency_storage` products. It can be `true` only on a legacy or suspended row. |
+| `pendingRequest` | The one open stock-adjustment request for this SKU, or `null`. At most one can be open. |
+
+`pendingRequest.awaitingMyDecision` is `true` when the **vendor** raised it — i.e. it is
+yours to answer. Use it to badge the row and link to
+[the request](./stock-requests.md).
 
 ---
 
-## 3. `GET /api/agency/inventory/:id`
+### 1b. `storageFee`
 
-Everything the list row has, plus the per-location breakdown and the movement
-trail. Powers the detail sheet.
+```json
+"storageFee": {
+  "basis": "per_sku_monthly",
+  "storageBasedEnabled": true,
+  "monthlyRatePerSku": 500,
+  "quantity": 120,
+  "monthlyEstimate": 60000,
+  "size": { "lengthCm": 30, "widthCm": 20, "heightCm": 12, "volumeCm3": 7200, "weightG": 850, "source": "variant" }
+}
+```
 
-### Success `200`
+> [!WARNING]
+> **The platform does not track storage payment.** It does not invoice this, does not
+> know whether it was paid, and never acts on it. This is *what you should be
+> charging*, computed from your own policy so you do not have to. Collection is
+> out-of-band, and the only platform lever attached to it is your own manual
+> [suspension](#5-suspend--unsuspend).
+>
+> Do not label this "due", "overdue", "outstanding" or "invoice".
+
+| Field | Notes |
+|---|---|
+| `basis` | `"per_sku_monthly"` — the only basis today. Named so a future volumetric basis is additive. |
+| `storageBasedEnabled` | Your `policies.pricing.storage_based.enabled`. When `false`, `monthlyEstimate` is `0` and the screen should say "storage not offered" rather than showing a rate. |
+| `monthlyRatePerSku` | Your `policies.pricing.storage_based.monthly_storage_fee_per_sku`. |
+| `quantity` | The billable count — `catalogStock.quantity`, clamped at 0, and `0` for an unlimited-stock SKU (inventing a quantity for one would be a fabricated charge). |
+| `monthlyEstimate` | `monthlyRatePerSku × quantity`. |
+| `size` | Dimensions, and the volume derived from them. `null` when neither the variant nor the product carries any. |
+
+**Size is displayed, not priced.** The rate is flat per SKU because that is the only
+rate your policy holds — a pallet and an envelope cost the same. `size` is there so you
+can sanity-check the rate against what you are actually shelving (and renegotiate it
+out-of-band if it is wrong). **A client must not multiply by it.**
+
+`size.source` is `"variant"` when the variant carries its own dimensions,
+`"product_default"` when they came from the product's shipping config, `"unknown"` when
+neither does. `volumeCm3` is `null` unless all three dimensions are known — render "—",
+never `0`, because `0` reads as a claim that the item has no volume.
+
+To change the rate, edit `policies.pricing.storage_based` on your
+[profile](./profile.md). Note that changing your policies bumps `policy_version` and
+moves active vendor connections to `paused_reapproval` — a fee change already requires
+the vendor's re-consent.
+
+---
+
+### 1c. `suspension`
+
+```json
+"suspension": {
+  "note": "Storage unpaid since June",
+  "suspendedAt": "2026-08-06T10:00:00.000Z",
+  "previousStatus": "active"
+}
+```
+
+Non-null **only for a suspension you applied yourself**. `previousStatus` is what the
+product returns to when you lift it.
+
+A product suspended for some other reason (the vendor's delivery agency went inactive,
+their connection needs re-approval) reports `suspension: null` with
+`productStatus: "suspended"`. Show it as suspended but **hide your unsuspend button** —
+that suspension is not yours to lift, and the endpoint will `422`.
+
+---
+
+## 2. Summary
+
+### GET /api/agency/inventory/summary
+
+The screen header. Takes the **same filters as the list** (`locationId`, `vendorId`,
+`search`) and totals the whole filtered set — not the visible page.
+
+```json
+{
+  "success": true,
+  "countsAreDerived": true,
+  "data": {
+    "skuCount": 137,
+    "unassignedCount": 1,
+    "suspendedCount": 3,
+    "totalMonthlyEstimate": 4120000
+  }
+}
+```
+
+| Field | Notes |
+|---|---|
+| `skuCount` | Rows matching the filter. |
+| `unassignedCount` | Rows whose depot you have deleted (`location: null`). Your re-homing to-do list. |
+| `suspendedCount` | Distinct **products** you have suspended — a product with three variants is one suspension, not three. |
+| `totalMonthlyEstimate` | Σ of every row's `storageFee.monthlyEstimate`. `0` when `storage_based.enabled` is false. |
+
+A separate endpoint rather than a field on the list, deliberately: the totals span the
+entire filtered set, so folding them in would make every page load pay for a
+full-collection aggregation it usually does not need.
+
+---
+
+## 3. Inventory detail
+
+### GET /api/agency/inventory/:id
+
+`:id` is the **stock-level row id** from the list — not a variant id, because the
+same variant at two depots is two rows and this drills into one shelf.
+
+**Success Response** — `200 OK`: everything from the list row, plus:
+
+| Field | Type | Notes |
+|---|---|---|
+| `productId` / `variantId` | string | The underlying catalog ids. **`productId` is what the three write endpoints below take.** |
+| `locationAddress` | AddressDetail \| null | The depot's full address — `label`, `formattedAddress`, `addressLine1/2`, `city`, `state`, `country`, `coordinates: { lat, lng }`. Resolved **live** from your magazin, so a corrected address shows here immediately. `null` when `location` is null. |
+| `images` | FileDetail[] | Every image, thumbnail first. The list's `image` is `images[0]`. |
+
+### Error Responses
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | Bad query param, or `:id` is not an ObjectId |
+| `UNAUTHORIZED` | 401 | Missing or invalid token |
+| `FORBIDDEN` | 403 | Wrong role |
+| `INVENTORY_STOCK_LEVEL_NOT_FOUND` | 404 | No such row **for this agency** — another agency's row 404s rather than 403s |
+
+---
+
+## 4. Move a product to another depot
+
+### PATCH /api/agency/inventory/products/:productId/depot
+
+```json
+{ "locationId": "6641abc123def458" }
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `locationId` | ObjectId \| `null` | One of **your own** depots, from `GET /api/agency/magazin` → `headquarters_addresses[].id`. `null` means "track my primary depot". |
+
+**`null` is a real answer, not a missing one.** It means the product follows
+`headquarters_addresses[0]`, and keeps following it if you later reorder your depots.
+Every product written before the depot picker existed is in that state.
+
+**Success Response** — `200 OK`:
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "66a1f0c2e4b0a1d2c3e4f501",
-    "productId": "507f1f77bcf86cd799439066",
-    "variantId": "507f1f77bcf86cd799439060",
-    "title": "Blue T-Shirt",
-    "variantTitle": "Black / M",
-    "sku": "SHIRT-BLK-M",
-    "image": { "id": "…", "key": "…", "url": "…", "mimeType": "image/jpeg", "size": 88110, "originalName": "tshirt-front.jpg" },
-    "images": [
-      { "id": "…", "key": "…", "url": "…", "mimeType": "image/jpeg", "size": 88110, "originalName": "tshirt-front.jpg" }
-    ],
-    "vendor": { "id": "…", "businessName": "Acme Store", "phone": "+237670000001", "email": "acme@example.com" },
-    "onHand": 42,
-    "reserved": 3,
-    "available": 39,
-    "lowStockThreshold": 5,
-    "stockState": "in_stock",
-    "category": "apparel",
-    "weightGrams": 220,
-    "barcode": "5901234123457",
-    "productStatus": "active",
-    "storedSince": "2026-03-14T08:00:00.000Z",
-    "openShipmentCount": 2,
-    "updatedAt": "2026-08-01T09:12:00.000Z",
-    "locations": [
-      {
-        "locationId": "6641abc123def457",
-        "label": "Douala HQ",
-        "city": "Douala",
-        "region": "Littoral",
-        "quantity": 30,
-        "lastMovementAt": "2026-08-01T09:12:00.000Z",
-        "address": {
-          "label": "Douala HQ",
-          "formattedAddress": "Akwa, Douala, Cameroon",
-          "addressLine1": "Akwa, Rue Sylvani, immeuble ABC",
-          "addressLine2": null,
-          "city": "Douala",
-          "state": "Littoral",
-          "country": "Cameroon",
-          "coordinates": { "lat": 4.0511, "lng": 9.7043 }
-        }
-      }
-    ],
-    "movements": [
-      {
-        "id": "66a1f0c2e4b0a1d2c3e4f777",
-        "delta": -2,
-        "previousQuantity": 32,
-        "newQuantity": 30,
-        "operation": "order",
-        "locationId": "6641abc123def457",
-        "occurredAt": "2026-08-01T09:12:00.000Z",
-        "metadata": { "orderId": "507f1f77bcf86cd799439001", "shipmentId": "507f1f77bcf86cd799439aa1" }
-      }
-    ]
+    "productId": "664c1f77bcf86cd799439031",
+    "locationId": "6641abc123def458",
+    "locationLabel": "Bonabéri branch",
+    "affectedRows": 3
+  },
+  "message": "Pickup depot updated. The vendor has been notified."
+}
+```
+
+`affectedRows` is how many of your stock rows moved — one per active variant, because
+the depot is named once on the product.
+
+**Keyed on `productId`, not the row id.** The depot lives on
+`product.delivery.pickup_location`, so the move is per product by construction. A
+row-keyed endpoint would invite the reading that one variant could sit in a different
+building from its siblings, which the model cannot express.
+
+**Applies immediately. No vendor confirmation.** That asymmetry with the stock flow is
+deliberate: which of *your* buildings holds the goods is your record to state, which is
+exactly why checkout snapshots only the depot **choice** for `agency_storage` and
+resolves the address live on every read. The vendor gets a `storage.depot_changed`
+notification.
+
+> [!WARNING]
+> Because that address resolves live, re-pointing a product **redirects collection for
+> shipments already in flight** — an agent yet to collect will be routed to the new
+> building. That is the intended behaviour (it is what makes a corrected typo fix every
+> in-flight shipment), but say so in your UI before confirming.
+
+**Errors**
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `INVENTORY_PRODUCT_NOT_STORED_HERE` | 404 | You do not warehouse this product |
+| `INVENTORY_LOCATION_UNKNOWN` | 422 | `locationId` is not one of your depots. `details.locationId` |
+
+---
+
+## 5. Suspend / unsuspend
+
+```
+POST /api/agency/inventory/products/:productId/suspend      { "note": "Storage unpaid since June" }
+POST /api/agency/inventory/products/:productId/unsuspend
+```
+
+Your one lever over a product you warehouse. Suspending takes it **off the storefront** —
+customers can no longer buy it — and only you can lift it.
+
+**Nothing here is automatic.** The platform does not track storage payment (see
+[§1b](#1b-storagefee)) and never suspends on your behalf. If rent goes unpaid, that is
+settled between you and the vendor; this is the button.
+
+### Suspend
+
+| Field | Type | Notes |
+|---|---|---|
+| `note` | string ≤ 500, optional | Shown to the vendor as the reason. Strongly recommended — it is the only explanation they get. |
+
+**Success** — `200 OK`, `data: { productId, status: "suspended", note }`.
+
+Only an **`active`** product can be suspended. A draft or archived one is not on sale,
+so suspending it would achieve nothing but block editing — the same rule the
+delivery-agency cascade follows. Hide the button unless `productStatus === "active"`.
+
+The product's rows **stay on this screen** with `suspension` populated. The goods are
+still in your building, so the row still counts toward
+[depot-deletion protection](#6-how-rows-appear-and-disappear) and toward your storage
+fee.
+
+### Unsuspend
+
+**Success** — `200 OK`, `data: { productId, status: "active", note: null }` (`status` is
+whatever `suspension.previousStatus` held).
+
+Unsuspending **re-runs the product's activation gate** rather than trusting it. A
+product can go stale while it is off sale: the vendor's connection may have lapsed, a
+variant may have been archived, a variant may have been flipped to unlimited stock. If
+anything blocks it you get:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVENTORY_PRODUCT_UNSUSPEND_BLOCKED",
+    "statusCode": 422,
+    "message": "This product cannot go back on sale yet — the vendor has to resolve the issues below first.",
+    "details": {
+      "blockers": [
+        { "code": "CATALOG_PRODUCT_NO_DELIVERY_AGENCY", "message": "Your connection with this delivery agency needs to be approved (or reapproved) before this product can be activated." }
+      ]
+    }
   }
 }
 ```
 
-### Field notes
-
-| Field | Notes |
-|---|---|
-| `images[]` | Every picture, thumbnail first. `image` is `images[0]` — same convention as `shipments.md` `items[].images`. |
-| `weightGrams` | Grams, from `ProductVariant.weight`. Nullable — the vendor may never have set one; we still have to store the thing. |
-| `barcode` | Nullable. Purely a picking aid; drop it from v1 if there is no field for it. |
-| `productStatus` | The vendor-side catalogue status (`active` \| `draft` \| `archived`). The sheet flags `archived` explicitly: a line we still hold whose product is archived is **dead stock** — never orderable again, still occupying a shelf, still accruing the per-SKU fee. |
-| `openShipmentCount` | Undelivered shipments already drawing on this line. The real, human-readable claim behind `reserved`. |
-| `locations[].address` | The **standard `AddressDetail` shape** already used by `shipments.md` (`label`, `formattedAddress`, `addressLine1/2`, `city`, `state`, `country`, `coordinates`) — not the raw magazin HQ entry, so one client-side formatter serves both screens. Nullable. |
-| `movements[]` | Newest first, **capped server-side** (20 is plenty). |
-| `movements[].operation` | `intake` \| `order` \| `reservation` \| `release` \| `transfer` \| `adjustment` \| `return`. A superset of the vendor audit log's values: the four that can happen to warehoused goods, plus the three that only exist once stock has a location. Unknown values render as the raw key, so adding one is not breaking. |
-| `movements[].locationId` | Nullable — a movement the ledger cannot place. |
+**Render `details.blockers`.** Each `message` is written to be shown, and it is what
+tells you what to go back to the vendor about. The product stays suspended.
 
 ### Errors
 
-| Status | Code | Reason |
+| Code | HTTP | Meaning |
 |---|---|---|
-| `401` | `UNAUTHORIZED` | Missing or invalid token |
-| `403` | `FORBIDDEN` | Caller is not an agency |
-| `404` | `INVENTORY_LINE_NOT_FOUND` | No such line, or it belongs to another agency (do not distinguish the two) |
-| `500` | `INTERNAL_ERROR` | Unexpected server error |
+| `INVENTORY_PRODUCT_NOT_STORED_HERE` | 404 | You do not warehouse this product |
+| `INVENTORY_PRODUCT_NOT_SUSPENDABLE` | 422 | Suspend: the product is not `active` |
+| `INVENTORY_PRODUCT_NOT_AGENCY_SUSPENDED` | 422 | Unsuspend: not suspended, or suspended by someone else / for another reason. `details: { status, reason }` |
+| `INVENTORY_PRODUCT_UNSUSPEND_BLOCKED` | 422 | Unsuspend: the activation gate still fails. `details.blockers` |
+
+### How it coexists with the system's own suspensions
+
+The platform also suspends products automatically when a vendor's delivery agency goes
+inactive or their connection needs re-approval. The two never interfere:
+
+- **The system cannot clear yours.** Its restore sweep is scoped to its own reasons.
+- **You cannot clear the system's.** `INVENTORY_PRODUCT_NOT_AGENCY_SUSPENDED`.
+- If the vendor's agency breaks *while* you have the product suspended, your later
+  unsuspend re-runs the gate and correctly refuses with the blocker list above.
 
 ---
 
-## 4. Ordered asks
+## 6. How rows appear and disappear
 
-Sized so each step ships something useful on its own.
+You do not create rows. The roster is **derived** from the catalog and refreshed
+when you read this endpoint (debounced, so rapid paging costs nothing). A depot change
+via [§4](#4-move-a-product-to-another-depot) forces a refresh immediately.
 
-### Phase 1 — make the screen real (unblocks everything below)
+A row appears when a vendor's product is:
+- physical, **and**
+- `active` — **or** `suspended` **by you** (§5), so your own suspension never deletes
+  the row its unsuspend button lives on, **and**
+- `delivery.pickupLocation.source === "agency_storage"`, **and**
+- fulfilled by **you** — either the product's own `delivery.agencyId` names you,
+  or the vendor's default delivery agency is you.
 
-1. `agency_stock_levels` (§1) + a way for rows to be created. Simplest honest
-   v1: a row appears the first time an `agency_storage` product of a connected
-   vendor is seen, seeded at `quantity: 0` and placed at
-   `headquarters_addresses[0]`.
-2. `GET /api/agency/inventory` (§2) and `GET /api/agency/inventory/:id` (§3).
-3. Denormalise `label`/`city`/`region` onto each location row at read time from
-   the magazin.
+One row is created per active **variant** of that product, because stock lives on
+the variant.
 
-With only this, the screen is fully functional except that `reserved` is always
-`0` and quantities only move when someone sets them.
+A row disappears (soft-deleted, so history survives) when any of those stops
+holding — the product is archived or deactivated, suspended for a *system* reason, the
+vendor switches it back to `vendor_address` pickup, or re-points it at a different
+agency. Moving a product to a **different depot** simply retires the old row and creates
+a new one.
 
-### Phase 2 — make the numbers true
-
-4. Add `variant_id` (and ideally `sku`) to `Shipment.items[]`. Blocker for
-   everything else here; the value is already on the order item.
-5. Decrement `agency_stock_levels` when a storage-based shipment is delivered,
-   and write a movement row (`operation: "order"`, with `shipmentId`).
-6. Restore on `returned` / `failed` (`operation: "return"`).
-7. Wire the existing `StockReservationService` / `StockCommitService` /
-   `StockReleaseService` so `reserved` and `available` stop being placeholders.
-
-### Phase 3 — multi-location, properly
-
-8. Replace the `headquarters_addresses[0]` hardcodes (`magazin.repository.ts:127`,
-   `shipment.service.ts:818`, `handover-pickup.service.ts:163`,
-   `assignment-candidate.service.ts:391`, `delivery-agency.repository.ts:298`)
-   with the location that actually holds the stock. Until this lands, a second
-   warehouse can be *displayed* but shipments will still be routed to the first.
-9. An intake flow (goods physically arrive → `operation: "intake"`) and a
-   transfer between our own locations (`operation: "transfer"`).
-
-### Phase 4 — bill for it
-
-10. The recurring `monthly_storage_fee_per_sku` job the earnings service already
-    has a TODO for. `COUNT(DISTINCT variant_id) WHERE agency_id = …` is now a
-    query that can be written.
+> **Deleting a depot that holds stock is refused.** `PATCH /api/agency/magazin`
+> returns `409 MAGAZIN_LOCATION_IN_USE`, listing the offending locations and how
+> many SKUs each holds. Re-point those products first — you can do that yourself
+> now — or ask the vendor to. See [Magazin](./magazin.md).
 
 ---
 
-## 5. Explicitly out of scope
+## 7. Not yet available
 
-The dashboard screen is **read-only** and there is no ask for write endpoints
-here. Stock is vendor-owned truth; an agency correcting a count is a real
-workflow but it needs a dispute/approval story (who wins when the agency counts
-40 and the vendor's catalogue says 42?) that should be designed on its own rather
-than bolted onto a listing screen.
+Deliberately absent, in the order they are planned:
 
-Also not asked for: batch/lot tracking, expiry dates, serial numbers, bin-level
-placement within a warehouse, or capacity limits per location. None of them exist
-today and none are needed for this screen.
+1. **True counted quantities** — reservation at checkout, settlement on delivery,
+   restoration on return/failure. This is what flips `source` to `"counted"` and makes
+   `quantityOnHand` real. Note this is now the *only* missing quantity: the agreed
+   quantity (`catalogStock`) is live, and it is the one the fee is quoted against.
+2. **Intake and transfer** — recording what physically arrived, and moving stock
+   between your depots. (You can move a product's *routing* today; you cannot yet
+   record a physical transfer.)
+3. **Storage billing** — the platform still does not invoice or track
+   `monthly_storage_fee_per_sku`. `storageFee` above tells you what to charge; charging
+   it and chasing it remain yours.

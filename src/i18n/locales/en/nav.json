@@ -4,6 +4,8 @@
     "shipments": "Shipments",
     "tracking": "Live Tracking",
     "inventory": "Inventory",
+    "inventoryStock": "Stored SKUs",
+    "inventoryRequests": "Stock requests",
     "media": "Media",
     "transactions": "Transactions",
     "cash": "Cash Management",

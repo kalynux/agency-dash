@@ -8,11 +8,11 @@ import { magazinService } from '@/services/magazin.service';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { AnyTFunction } from '@/i18n/tx';
-import { regionsFor } from '@/lib/regions';
 import { phoneIssue, toPhoneCountry, toSubmittablePhone, type CountryCode } from '@/lib/phone';
 import { phoneErrorMessage } from '@/lib/validation-schemas';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
+import { getLocationsInUse } from '@/types/magazin.types';
 import type {
   AgencyMagazin,
   MagazinHeadquartersAddress,
@@ -30,7 +30,7 @@ import { noteSurfaceClass, sectionSurfaceClass } from '@/components/layout/PageC
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RegionPicker } from '@/components/common/RegionPicker';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -147,14 +147,19 @@ function isStoredPin(entry: HqFormEntry): boolean {
  * Does this row need a freshly-picked `geo` before it can be saved?
  *
  * An entry is "unchanged" — and so grandfathered past `ADDRESS_GEO_REQUIRED` —
- * while its `address_description` AND its geocoded place both still match what
- * is stored. Renaming a label or fixing a support phone is not a move, so legacy
- * rows that predate map search survive a re-save untouched.
+ * while its geocoded place still matches what is stored, plus EITHER the same
+ * `address_description` OR a matching `id`. We echo the `_id` of every kept row
+ * (see `toAddressPayload`), so for a stored entry only moving the pin counts as
+ * an edit: correcting the street text of a legacy row no longer forces a
+ * re-geocode. A row the backend never assigned an `_id` falls back to matching
+ * on the address text.
  */
 function requiresGeo(entry: HqFormEntry): boolean {
   const stored = entry.original;
   if (!stored) return true; // brand-new row
-  if (entry.address_description.trim() !== (stored.address_description ?? '')) return true;
+  if (!stored._id && entry.address_description.trim() !== (stored.address_description ?? '')) {
+    return true;
+  }
   return placeKey(entry.geo) !== placeKey(stored.geo ?? null);
 }
 
@@ -164,10 +169,15 @@ function requiresGeo(entry: HqFormEntry): boolean {
  * out only as the fallback for a place whose geocode named neither.
  *
  * Note `headquarters_addresses` is a FULL REPLACE, so every row is written on
- * every save — including ones the agency never touched.
+ * every save — including ones the agency never touched. That is why a kept row
+ * echoes its stored `id`: a depot is referenced by `_id` from outside the
+ * magazin (a vendor pins a product at one, orders carry it through to the
+ * agent's pickup address), so an entry written without it is stored as a NEW
+ * depot and every product naming the old one quietly falls back to the primary.
  */
 function toAddressPayload(entry: HqFormEntry, country: CountryCode | null): MagazinHeadquartersAddressInput {
   const payload: MagazinHeadquartersAddressInput = {
+    ...(entry.original?._id ? { id: entry.original._id } : {}),
     label: entry.label.trim(),
     address_description: entry.address_description.trim(),
     support_contact: {
@@ -292,7 +302,7 @@ function AddressRowHeading({
 }
 
 export function LocationsSettings() {
-  const { t, i18n } = useTranslation(['settings', 'common']);
+  const { t } = useTranslation(['settings', 'common']);
   const {
     data: magazin,
     isLoading,
@@ -317,8 +327,9 @@ export function LocationsSettings() {
   // route to, so both are worth a deliberate click.
   const [pending, setPending] = useState<PendingConfirm | null>(null);
 
-  // Region labels come out of locations.json in the active language.
-  const regions = useMemo(() => regionsFor(country, i18n.language), [country, i18n.language]);
+  // Region labels come out of locations.json in the active language — resolved
+  // inside `RegionPicker` now, which is shared with onboarding and the agent
+  // contract terms so all three offer the same catalogue.
   const geoBias = (country ?? '').toLowerCase() || undefined;
   // Also the phone picker's starting country, and how a legacy support number
   // stored without a `+` is read back.
@@ -332,14 +343,8 @@ export function LocationsSettings() {
     }
   }, [magazin]);
 
-  const toggleRegion = useCallback((key: string, checked: boolean) => {
-    setForm((prev) => {
-      if (!prev) return prev;
-      const next = checked
-        ? [...prev.coverageAreas, key]
-        : prev.coverageAreas.filter((k) => k !== key);
-      return { ...prev, coverageAreas: next };
-    });
+  const setCoverageAreas = useCallback((next: string[]) => {
+    setForm((prev) => (prev ? { ...prev, coverageAreas: next } : prev));
     setFieldErrors((prev) => ({ ...prev, coverage: '' }));
   }, []);
 
@@ -445,8 +450,30 @@ export function LocationsSettings() {
       setData(updated);
       toast.success(t('locations.saved'));
     } catch (err) {
-      if (err instanceof ApiError && err.isConflict) {
-        // Optimistic-locking clash — refresh so the agency edits the latest.
+      if (err instanceof ApiError && err.code === 'MAGAZIN_LOCATION_IN_USE') {
+        // A dropped depot still holds vendor stock. Nothing was saved, and
+        // retrying can't help — those products have to be re-pointed first — so
+        // this stays on screen naming the depots instead of refreshing the form
+        // and throwing the agency's other edits away.
+        const blocked = getLocationsInUse(err.details);
+        setSaveError(
+          blocked.length > 0
+            ? t('locations.locationInUse', {
+                locations: blocked
+                  .map((loc) =>
+                    t('locations.locationInUseEntry', {
+                      label: loc.label || t('locations.unnamedLocation'),
+                      count: loc.skuCount,
+                    }),
+                  )
+                  .join(' · '),
+              })
+            : getApiErrorMessage(err),
+        );
+      } else if (err instanceof ApiError && err.isConflict) {
+        // Optimistic-locking clash, or an entry carrying an `id` this magazin
+        // doesn't have (`details.unknownIds`) — either way our view of the list
+        // is stale, so refresh and let the agency re-apply.
         toast.error(t('locations.conflict'));
         await refetch();
       } else {
@@ -485,27 +512,12 @@ export function LocationsSettings() {
                 <Lock className="w-3 h-3" /> {country ?? t('common:values.notAvailable')}
               </span>
             </div>
-            {regions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('locations.noRegions')}</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                {regions.map(({ key, label }) => {
-                  const isChecked = form.coverageAreas.includes(key);
-                  return (
-                    <label
-                      key={key}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2"
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={(c) => toggleRegion(key, !!c)}
-                      />
-                      <span className="text-sm">{label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
+            <RegionPicker
+              value={form.coverageAreas}
+              onChange={setCoverageAreas}
+              country={country}
+              noRegionsLabel={t('locations.noRegions')}
+            />
             {fieldErrors.coverage && (
               <p className="mt-2 text-xs text-destructive">{fieldErrors.coverage}</p>
             )}
@@ -714,7 +726,7 @@ export function LocationsSettings() {
       </Card>
 
       <Card className={noteSurfaceClass}>
-        <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground max-md:px-3 max-md:text-xs">
+        <CardContent className="flex items-start gap-2 p-4 text-sm text-muted-foreground max-md:p-3 max-md:text-xs">
           <Info className="mt-0.5 w-4 h-4 shrink-0" />
           <p>{t('locations.countryNote')}</p>
         </CardContent>

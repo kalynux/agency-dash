@@ -67,7 +67,24 @@ Authorization: Bearer <jwt_token>
           "phone_number_masked": "••••0000",
           "account_name": "FastTrack Logistics Sarl"
         },
-        "bank": null
+        "bank": null,
+        "card": null
+      },
+      {
+        "method": "card",
+        "is_preferred": false,
+        "mobile_money": null,
+        "bank": null,
+        "card": {
+          "brand": "mastercard",
+          "last4": "1881",
+          "number_masked": "•••• •••• •••• 1881",
+          "card_holder_name": "FASTTRACK LOGISTICS",
+          "expiry_month": 11,
+          "expiry_year": 2028,
+          "issuing_bank": null,
+          "country": "CM"
+        }
       }
     ],
     "kycVerified": false,
@@ -206,7 +223,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 | `country` | `string` | Exactly 2 chars, ISO-2 (auto-uppercased) | Step 1 (Logistics) | **SET-ONCE / IMMUTABLE.** Fixed during onboarding; sending a *different* value → `403 PROFILE_COUNTRY_IMMUTABLE`. Echoing the current value is a no-op. Legacy profiles that predate the field (`country: null`) may set it once here — rejected (`400 ADDRESS_COUNTRY_MISMATCH`) if existing geocoded HQ addresses resolve elsewhere. |
 | ~~`coverage_areas`~~ | — | — | — | **Moved to the [Magazin](./magazin.md)** (`PATCH /api/agency/magazin`). |
 | ~~`headquarters_addresses`~~ | — | — | — | **Moved to the [Magazin](./magazin.md)** (`PATCH /api/agency/magazin`). |
-| `payout_details` | `object[]` | 1–2 entries, ordered (index 0 = preferred); see [Step 2 field reference](./onboarding.md#step-2-payout-setup-required) | Step 2 (Payout) | Full replace. |
+| `payout_details` | `object[]` | 1–3 entries, ordered (index 0 = preferred); `method` is `mobile_money`, `bank` or `card` — see [Step 2 field reference](./onboarding.md#step-2-payout-setup-required) or the full **[Payout methods](./payout-methods.md)** reference | Step 2 (Payout) | Full replace. Card destinations never accept a card number or CVV. |
 | `kyc_details` | `object` | `{ registration_number?, transport_license_id? }`, both nullable strings | — (general) | `legit_verified` is **admin-only** and ignored if sent. |
 | `policies` | `object` | `{ pricing, returns, damage, documents? }` — see [Step 4 field reference](./onboarding.md#step-4-policy-setup-required) | Step 4 (Policy Setup) | Full replace of the **whole** `policies` object. `damage.inspector`/`damage.investigation_fee` are preserved server-side regardless of what (if anything) you send for them. `documents` (max 2 URLs) is cleared if omitted — resend existing URLs to keep them. |
 
@@ -402,4 +419,36 @@ curl -X PATCH https://api.example.com/api/agency/profile \
       }
     ]
   }'
+
+# …or make a card the preferred destination, keeping the bank as fallback
+curl -X PATCH https://api.example.com/api/agency/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payout_details": [
+      {
+        "method": "card",
+        "card": {
+          "brand": "mastercard",
+          "last4": "1881",
+          "card_holder_name": "FASTTRACK LOGISTICS",
+          "expiry_month": 11,
+          "expiry_year": 2028,
+          "country": "CM"
+        }
+      },
+      {
+        "method": "bank",
+        "bank": {
+          "bank_name": "Afriland First Bank",
+          "account_number": "10005000123456",
+          "account_name": "FastTrack Logistics Sarl",
+          "country": "CM"
+        }
+      }
+    ]
+  }'
 ```
+
+> **Never send the card number or CVV** — there is no field for them and the request is **rejected**
+> if you include one. See **[Payout methods → card](./payout-methods.md#card)**.

@@ -21,7 +21,12 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import {
+  compactCardClass,
+  compactCardContentClass,
+  listSurfaceClass,
+} from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useCodCashActions } from '@/hooks/useCodCashActions';
 import { codCashService } from '@/services/cod-cash.service';
@@ -139,7 +144,7 @@ export function DepositsTab() {
     <div className="space-y-6">
       {/* Declarations alert */}
       {declaredCount > 0 && (
-        <Card className="border-amber-200 bg-amber-50/60 py-0 md:py-6">
+        <Card className={cn(compactCardClass, 'border-amber-200 bg-amber-50/60')}>
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -166,8 +171,8 @@ export function DepositsTab() {
       )}
 
       {/* Record form */}
-      <Card className="py-0 md:py-6">
-        <CardContent className="p-4 space-y-3">
+      <Card className={compactCardClass}>
+        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
           <p className="text-sm font-medium">{t('deposits.recordTitle')}</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
             <Select value={agentId} onValueChange={setAgentId}>

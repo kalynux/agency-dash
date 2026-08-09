@@ -1,5 +1,5 @@
 import { formatNumber, formatDate as fmtDate } from '@/lib/format';
-import { useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   Banknote,
@@ -40,17 +40,27 @@ import { ContractTermsFields } from '@/components/agents/ContractTermsFields';
 import {
   buildEmploymentPayload,
   buildNegotiablePayload,
+  coverageRegionRepair,
   feeSplitError,
+  regionLabel,
   seedTermsForm,
   summarizeTerms,
   termPathLabel,
   termValueText,
+  type CoverageRegionRepair,
   type TermsForm,
 } from '@/components/agents/contractTerms';
-import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
+import {
+  getVehicleIcon,
+  formatVehicleType,
+  formatVehicleColor,
+  vehicleColorSwatch,
+} from '@/components/agents/vehicle.constants';
 import { useAgentActions } from '@/hooks/useAgentActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAgentsRoster } from '@/store/agents.store';
+import { useMagazin } from '@/store/magazin.store';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { agentsService } from '@/services/agents.service';
 import { cn } from '@/lib/utils';
 import { txStatic } from '@/i18n/tx';
@@ -65,6 +75,7 @@ import type {
   AgentMembership,
   AgentEligibility,
   AgentHistoryEvent,
+  AgentProfile,
   ContractSettlements,
   ContractTermsProposal,
 } from '@/types/agent.types';
@@ -274,10 +285,49 @@ function MembershipBody({
   onChanged: () => void;
 }) {
   const { t } = useTranslation(['agents', 'common']);
-  const actions = useAgentActions({ onRosterChanged: onChanged });
+  // `CONTRACT_COVERAGE_REGION_INVALID` carries the server's full catalogue in
+  // `details.allowedRegions`, so a rejected save repairs the picker instead of
+  // leaving the agency to guess which entry was the bad one. The toast the runner
+  // shows is unaffected.
+  const [coverageRepair, setCoverageRepair] = useState<CoverageRegionRepair | null>(null);
+  const actions = useAgentActions({
+    onRosterChanged: onChanged,
+    onError: (err) => setCoverageRepair(coverageRegionRepair(err)),
+  });
   const { statusRequests, termsProposals } = useAgentsRoster();
-  const { membership, agent, cashHeld } = entry;
+  // Both zero-fetch: the country is on the session every route already has, and
+  // the magazin is loaded once per dashboard session.
+  const country = useOnboarding().session?.role_entity?.country ?? null;
+  const { data: magazin } = useMagazin();
+  const { membership, agent: rosterAgent, cashHeld } = entry;
   const mid = membership.id;
+
+  /**
+   * The full agent profile, which only the DETAIL endpoint resolves.
+   *
+   * The roster list returns the vehicle SUMMARY — `{ vehicle_type, plate_number,
+   * color }` with no `photo` key at all, because it will not look up a file for
+   * every row. So this fetches once on open and is merged OVER the roster copy
+   * rather than replacing it: the dialog renders instantly from data we already
+   * have, and only the photo pops in.
+   */
+  const [detailAgent, setDetailAgent] = useState<AgentProfile | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    agentsService
+      .getMembership(mid)
+      .then((res) => {
+        if (!cancelled && res.data.agent) setDetailAgent(res.data.agent);
+      })
+      // Non-fatal: everything on screen already came from the roster, and the
+      // only thing lost is the photo.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [mid]);
+
+  const agent = detailAgent ?? rosterAgent;
 
   // The pending two-party change on this contract, either direction — a break or
   // a departure the agent proposed, or a removal we did. It is read here as well
@@ -661,11 +711,55 @@ function MembershipBody({
               icon={VehicleIcon}
               label={t('membership.tiles.vehicle')}
               value={
-                agent.vehicleInfo
-                  ? formatVehicleType(agent.vehicleInfo.vehicle_type)
-                  : t('common:values.notAvailable')
+                agent.vehicleInfo ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      {formatVehicleType(agent.vehicleInfo.vehicle_type)}
+                      {agent.vehicleInfo.color && (
+                        <>
+                          {/* A swatch only when the token is one we can actually
+                              draw — never a guessed hex. */}
+                          {vehicleColorSwatch(agent.vehicleInfo.color) && (
+                            <span
+                              aria-hidden
+                              className="h-3 w-3 flex-shrink-0 rounded-full border"
+                              style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo.color)! }}
+                            />
+                          )}
+                          <span className="font-normal text-muted-foreground">
+                            {formatVehicleColor(agent.vehicleInfo.color)}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                    {/* The field an agency actually reads off a vehicle in a car
+                        park — typed since forever, never rendered until now. */}
+                    {agent.vehicleInfo.plate_number && (
+                      <span className="font-mono text-xs font-normal text-muted-foreground">
+                        {agent.vehicleInfo.plate_number}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  t('common:values.notAvailable')
+                )
               }
             />
+            {/* Only the DETAIL endpoint resolves this; the roster list omits the
+                key entirely, so its absence is normal rather than an error. */}
+            {agent.vehicleInfo?.photo && (
+              <div className="col-span-2 rounded-xl border bg-card p-3 sm:col-span-1">
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <VehicleIcon className="h-3 w-3" /> {t('membership.tiles.vehiclePhoto')}
+                </p>
+                <img
+                  src={agent.vehicleInfo.photo.url}
+                  alt={t('membership.tiles.vehiclePhotoAlt')}
+                  crossOrigin="use-credentials"
+                  className="h-24 w-full rounded-lg border object-cover"
+                />
+              </div>
+            )}
             <InfoTile
               icon={Star}
               label={t('membership.tiles.trustScore')}
@@ -768,12 +862,30 @@ function MembershipBody({
                 </div>
               )}
 
+              {coverageRepair && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                  <p className="font-medium">{t('terms.coverage.invalidTitle')}</p>
+                  <p className="mt-0.5">{t('terms.coverage.invalidBody')}</p>
+                </div>
+              )}
+
               <ContractTermsFields
                 form={terms}
                 seed={termsSeed}
                 onChange={setTerm}
                 disabled={!editable}
                 includeEmployment
+                country={country}
+                coverageAreas={magazin?.coverageAreas}
+                allowedRegions={
+                  coverageRepair
+                    ? coverageRepair.allowedRegions.map((key) => ({
+                        key,
+                        label: regionLabel(key, country),
+                        cities: [],
+                      }))
+                    : undefined
+                }
               />
 
               {/* A note only travels with a staged change — the counter endpoint
@@ -881,10 +993,12 @@ function MembershipBody({
                                 {t('membership.trail.diffEntry', { label: termPathLabel(entry.path) })}
                               </span>
                               <span className="line-through opacity-60">
-                                {termValueText(entry.path, entry.before)}
+                                {termValueText(entry.path, entry.before, country)}
                               </span>{' '}
                               <span className="inline-block rtl:-scale-x-100">→</span>{' '}
-                              <span className="font-medium">{termValueText(entry.path, entry.after)}</span>
+                              <span className="font-medium">
+                                {termValueText(entry.path, entry.after, country)}
+                              </span>
                             </li>
                           ))}
                         </ul>

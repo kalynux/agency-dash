@@ -57,6 +57,23 @@ export interface MagazinHeadquartersAddress {
  * from it server-side, so none of them are sent on a geocoded entry.
  */
 export interface MagazinHeadquartersAddressInput {
+  /**
+   * The `_id` of an entry that already exists. **Send it for every entry you are
+   * keeping**, and omit it only for a genuinely new location.
+   *
+   * `headquarters_addresses` is a full-array replace, and a depot is referenced
+   * by `_id` from outside the magazin — a vendor pins a product at one
+   * (`delivery.pickupLocation.agencyAddressId`) and orders carry that id through
+   * to the agent's pickup address. An entry written without its `id` is stored
+   * as a NEW row with a new `_id`, silently re-pointing every product that named
+   * the old one at the primary depot. There is a safety net — an entry whose
+   * `address_description` *and* geocoded place both still match an existing one
+   * inherits its `_id` — but it does not survive an edit to the address text.
+   *
+   * Two entries sharing one `id` → `400`; an `id` that isn't on this magazin →
+   * `409 MAGAZIN_CONFLICT` (`details.unknownIds`), i.e. refetch.
+   */
+  id?: string;
   /** 1–50 chars, required on every entry written. */
   label: string;
   address_description: string;
@@ -65,9 +82,10 @@ export interface MagazinHeadquartersAddressInput {
    * Required on every new or edited entry, and must resolve inside the agency's
    * `country` — else `400 ADDRESS_GEO_REQUIRED` / `400 ADDRESS_COUNTRY_MISMATCH`.
    *
-   * "Edited" means a changed `address_description` or a changed geocoded place.
-   * Renaming a `label` or touching a support contact is NOT a move, so legacy
-   * `geo`-less entries keep working across a re-save.
+   * "Unchanged" — and so grandfathered past `ADDRESS_GEO_REQUIRED` — means the
+   * same geocoded place, plus EITHER the same `address_description` OR a
+   * matching `id`. So with an `id` echoed back, correcting the address text is
+   * not an edit; moving the pin always is, `id` or not.
    */
   geo?: GeoAddress | null;
   /** Fallback only, for a place whose geocode names no region. `geo` wins when it has one. */
@@ -126,4 +144,37 @@ export interface MagazinResponse {
   success: boolean;
   data: AgencyMagazin;
   message?: string;
+}
+
+// ─── 409 MAGAZIN_LOCATION_IN_USE ──────────────────────────────────────────────
+
+/** One depot that still holds stored SKUs, from `details.locations[]`. */
+export interface MagazinLocationInUse {
+  id: string;
+  label: string | null;
+  /** How many stored SKUs still name this depot. See api-doc/agency/inventory.md. */
+  skuCount: number;
+}
+
+/**
+ * The depots a refused save tried to drop while they still hold stock.
+ *
+ * Unlike the other 409 on this endpoint, retrying does NOT help — the products
+ * have to be re-pointed (or cleared) first — so this is worth naming rather than
+ * folding into the optimistic-locking refresh path.
+ */
+export function getLocationsInUse(details: unknown): MagazinLocationInUse[] {
+  const raw = (details as { locations?: unknown } | null | undefined)?.locations;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const { id, label, skuCount } = entry as Record<string, unknown>;
+    return [
+      {
+        id: String(id ?? ''),
+        label: typeof label === 'string' ? label : null,
+        skuCount: typeof skuCount === 'number' ? skuCount : 0,
+      },
+    ];
+  });
 }

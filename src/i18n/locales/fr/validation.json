@@ -46,8 +46,13 @@
     "accountNumberRequired": "Le numéro de compte est obligatoire",
     "countryRequired": "Le pays est obligatoire",
     "atLeastOne": "Au moins un moyen de versement est obligatoire",
-    "atMostTwo": "Vous pouvez ajouter au maximum 2 moyens de versement (un mobile money et un bancaire)",
-    "duplicateType": "Vous ne pouvez ajouter qu'un seul moyen de chaque type (mobile money / bancaire)."
+    "atMostThree": "Vous pouvez enregistrer au maximum 3 moyens de versement",
+    "cardBrandRequired": "Choisissez le réseau de la carte",
+    "cardLast4Invalid": "Saisissez les 4 derniers chiffres de la carte",
+    "cardHolderRequired": "Le nom du titulaire de la carte est obligatoire",
+    "cardExpiryRequired": "Choisissez le mois et l’année d’expiration",
+    "cardExpired": "Cette carte a déjà expiré",
+    "issuingBankTooLong": "La banque émettrice ne doit pas dépasser 100 caractères"
   },
   "policies": {
     "codFeeTypeRequired": "Le type de frais COD est obligatoire",

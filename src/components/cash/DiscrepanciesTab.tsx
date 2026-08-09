@@ -15,7 +15,12 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import {
+  compactCardClass,
+  compactCardContentClass,
+  listSurfaceClass,
+} from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
 import type {
   CodDiscrepancy,
@@ -121,8 +126,8 @@ export function DiscrepanciesTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="py-0 md:py-6">
-        <CardContent className="p-4 space-y-3">
+      <Card className={compactCardClass}>
+        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
           <p className="text-sm font-medium">{t('discrepancies.raiseTitle')}</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
             <Select value={agentId} onValueChange={setAgentId}>

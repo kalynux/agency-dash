@@ -19,6 +19,8 @@ import {
   type TermsForm,
 } from '@/components/agents/contractTerms';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useMagazin } from '@/store/magazin.store';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import type { AgentDirectoryItem, NegotiableTermsPayload } from '@/types/agent.types';
 
 /**
@@ -92,6 +94,11 @@ function RequestBody({
   const { t } = useTranslation(['agents', 'common']);
   const [form, setForm] = useState<TermsForm>(blankTermsForm);
   const [error, setError] = useState<string | null>(null);
+  // Both zero-fetch — the country rides on the session, the magazin is loaded
+  // once per dashboard session. A blank offer never holds legacy free text, so
+  // this dialog needs no repair path: there is nothing stored to be rejected.
+  const country = useOnboarding().session?.role_entity?.country ?? null;
+  const { data: magazin } = useMagazin();
 
   const setTerm = <K extends keyof TermsForm>(key: K, value: TermsForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -118,7 +125,13 @@ function RequestBody({
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
-        <ContractTermsFields form={form} onChange={setTerm} seed={blankTermsForm()} />
+        <ContractTermsFields
+          form={form}
+          onChange={setTerm}
+          seed={blankTermsForm()}
+          country={country}
+          coverageAreas={magazin?.coverageAreas}
+        />
       </div>
 
       <DialogFooter className="flex-shrink-0 gap-2 border-t bg-muted/20 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4 sm:pb-4">

@@ -79,8 +79,25 @@ export interface NotificationEventPreferences {
   codDepositUpdates: boolean;
   /** Billing: plan nearing expiry / expired, or shipment soft-cap exceeded. */
   planUpdates: boolean;
-  /** Media storage crossed 80 / 90 / 100% of the plan cap (`storage.alert`). */
+  /**
+   * **Media-file quota.** Product images and delivery proofs crossed 80 / 90 / 100%
+   * of the plan cap (`storage.alert`). Nothing to do with warehousing — see
+   * {@link NotificationEventPreferences.stockRequestUpdates}, which shares only the
+   * word "storage".
+   */
   storageAlert: boolean;
+  /**
+   * **Physical goods on our shelves.** A stock adjustment on a SKU we warehouse:
+   * the vendor proposed a quantity (ours to answer), or answered one we proposed —
+   * `storage.stock_request.received` / `.approved` / `.rejected`. Nothing fires for
+   * `withdrawn`.
+   *
+   * Switching it off silences the push, **not the obligation**: a vendor's request
+   * still sits in the inbox awaiting an answer, the same way opting out of
+   * `codDepositUpdates` does not stop the deposit clock. Label it distinctly from
+   * `storageAlert` above or an agency will switch off the wrong one.
+   */
+  stockRequestUpdates: boolean;
 }
 
 export type NotificationEventKey = keyof NotificationEventPreferences;

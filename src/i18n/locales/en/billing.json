@@ -154,9 +154,8 @@
     "add": {
       "title": "Add payment method",
       "description": "Save a method to speed up checkout. We never store full card numbers or CVV.",
-      "type": "Type",
       "phone": "Mobile money number",
-      "operator": "Operator",
+      "operator": "Provider",
       "holderNameMobile": "Account holder name (optional)",
       "holderNameMobilePlaceholder": "Account holder",
       "holderNameCard": "Card holder name",
@@ -165,7 +164,9 @@
       "setAsDefault": "Set as default",
       "setAsDefaultHint": "Pre-selected at checkout.",
       "submit": "Save method",
-      "added": "Payment method added"
+      "added": "Payment method added",
+      "channel": "Payment method",
+      "secureNote": "Card details go straight to Stripe — they never touch our servers."
     }
   },
   "settings": {
@@ -195,7 +196,7 @@
     "newMethod": "New",
     "payWith": "Pay with",
     "phone": "Mobile money number",
-    "operator": "Operator",
+    "operator": "Provider",
     "usdNotice": "Card payments are processed in <strong>USD</strong>; your bank may apply its own conversion. We'll show the exact dollar amount on the next step.",
     "usdNoticeShort": "Charged in USD; your bank may apply its own currency conversion.",
     "nameOnCard": "Name on card (optional)",
@@ -226,7 +227,9 @@
     "failedDescription": "The payment was not completed. No charge was made — you can try again.",
     "timeoutTitle": "Still processing",
     "timeoutDescription": "We couldn't confirm the payment in time. If you completed it, your balance will update shortly — check your history.",
-    "startOver": "Start over"
+    "startOver": "Start over",
+    "processedBy": "Processed by",
+    "stripeNote": "Card details go straight to Stripe — they never touch our servers."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",
@@ -248,5 +251,23 @@
     "validateFailed": "Could not validate the card.",
     "chargeFailed": "Your card could not be charged. Please try again.",
     "notCompleted": "The card payment was not completed. Please try again."
+  },
+  "brands": {
+    "bank": "Bank payments"
+  },
+  "channels": {
+    "card": {
+      "name": "Card payment",
+      "description": "Secured by Stripe"
+    },
+    "mobileMoney": {
+      "name": "Mobile Money",
+      "description": "Approve on your phone"
+    },
+    "poweredBy": "Powered by {{provider}}",
+    "processedBy": "Processed by",
+    "operatorPlaceholder": "Choose an operator",
+    "comingSoon": "Soon",
+    "comingSoonHint": "Airtel Money and Wave are coming soon — pick another operator for now."
   }
 }

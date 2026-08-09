@@ -25,6 +25,7 @@ import {
   CreditCard,
   Receipt,
   Image,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,7 +41,12 @@ import {
  * render with `tx(t, item.labelKey)`.
  */
 
-export type NavBadge = 'shipments' | 'notifications' | 'vendorConnections' | 'agentContracts';
+export type NavBadge =
+  | 'shipments'
+  | 'notifications'
+  | 'vendorConnections'
+  | 'agentContracts'
+  | 'stockRequests';
 
 export interface NavChild {
   /** `nav:` namespace key, resolved at render. */
@@ -69,8 +75,24 @@ export const PRIMARY_NAV: NavItem[] = [
   { labelKey: 'nav:primary.shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
   { labelKey: 'nav:primary.tracking', path: '/dashboard/tracking', icon: Radio },
   // Sits next to the shipment surfaces on purpose: storage-based stock is what
-  // those shipments are picked from.
-  { labelKey: 'nav:primary.inventory', path: '/dashboard/inventory', icon: Boxes },
+  // those shipments are picked from. The requests child is the agency half of the
+  // two-signature stock flow — a SKU's quantity cannot move without an answer
+  // there, so it badges.
+  {
+    labelKey: 'nav:primary.inventory',
+    path: '/dashboard/inventory',
+    icon: Boxes,
+    badge: 'stockRequests',
+    children: [
+      { labelKey: 'nav:primary.inventoryStock', path: '/dashboard/inventory/stock', icon: Boxes },
+      {
+        labelKey: 'nav:primary.inventoryRequests',
+        path: '/dashboard/inventory/requests',
+        icon: ClipboardList,
+        badge: 'stockRequests',
+      },
+    ],
+  },
   { labelKey: 'nav:primary.media', path: '/dashboard/media', icon: Image },
   { labelKey: 'nav:primary.transactions', path: '/dashboard/transactions', icon: Receipt },
   {

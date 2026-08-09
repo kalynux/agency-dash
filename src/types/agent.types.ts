@@ -41,7 +41,19 @@ export type EmploymentType = 'employee' | 'contractor' | 'freelancer';
 export interface AgentVehicleInfo {
   vehicle_type: string;
   plate_number: string;
+  /**
+   * A lowercase English token (`red`, `dark_blue`). Render a localized label and a
+   * swatch — never the raw token, and never a guessed hex for one we don't know.
+   */
   color: string;
+  /**
+   * OPTIONAL BY CONTRACT, not by laziness. The roster LIST returns the vehicle
+   * summary with no `photo` key at all — it omits it rather than reporting
+   * `photo: null` for a file it never looked up. Only the detail endpoint
+   * (`GET /agency/agents/:membershipId`) resolves it. Making this required would
+   * turn every `RosterEntry` into a type lie.
+   */
+  photo?: FileRef | null;
 }
 
 export interface AgentEmployment {

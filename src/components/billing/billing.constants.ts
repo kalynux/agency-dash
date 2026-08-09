@@ -3,11 +3,7 @@
 import { formatNumber } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { txStatic } from '@/i18n/tx';
-import type {
-  PaymentGateway,
-  PhoneOperator,
-  SubscriberPlanStatus,
-} from '@/types/billing.types';
+import type { PaymentGateway, SubscriberPlanStatus } from '@/types/billing.types';
 import type { PaymentMethodType } from '@/types/payment-method.types';
 
 // Re-export the generic formatters so billing components have a single import surface.
@@ -26,13 +22,8 @@ export const PAYMENT_POLL_INTERVAL_MS = 4000;
 export const PAYMENT_POLL_TIMEOUT_MS = 3 * 60 * 1000;
 
 // ─── Mobile-money operators ──────────────────────────────────────────────────────
-
-// Operator names are brands — the same in every language, so they stay literals.
-export const PHONE_OPERATORS: { value: PhoneOperator; label: string }[] = [
-  { value: 'MTN', label: 'MTN Mobile Money' },
-  { value: 'ORANGE', label: 'Orange Money' },
-  { value: 'MOOV', label: 'Moov Money' },
-];
+// The operator roster and its logos live in `lib/payment-brands` — one registry
+// shared with checkout, the saved-methods list and payout setup.
 
 /** Gateway used for mobile-money charges (default operator gateway). */
 export const MOBILE_MONEY_GATEWAY: PaymentGateway = 'NOTCHPAY';

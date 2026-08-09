@@ -15,7 +15,11 @@ import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge
 import { AgentMembershipDialog } from '@/components/agents/AgentMembershipDialog';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
-import { getVehicleIcon, formatVehicleType } from '@/components/agents/vehicle.constants';
+import {
+  getVehicleIcon,
+  formatVehicleType,
+  vehicleColorSwatch,
+} from '@/components/agents/vehicle.constants';
 import {
   agentAvatarUrl,
   contractOffer,
@@ -263,6 +267,18 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                           {agent.vehicleInfo
                             ? formatVehicleType(agent.vehicleInfo.vehicle_type)
                             : t('common:values.notAvailable')}
+                          {/* The plate is what picks one bike out of five in a
+                              yard; the swatch only when we can actually draw it. */}
+                          {vehicleColorSwatch(agent.vehicleInfo?.color) && (
+                            <span
+                              aria-hidden
+                              className="h-2.5 w-2.5 flex-shrink-0 rounded-full border"
+                              style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo?.color)! }}
+                            />
+                          )}
+                          {agent.vehicleInfo?.plate_number && (
+                            <span className="font-mono">{agent.vehicleInfo.plate_number}</span>
+                          )}
                         </span>
                         <span className="flex items-center gap-1">
                           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />

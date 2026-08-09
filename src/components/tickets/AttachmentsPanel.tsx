@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Upload, FileText, ImageIcon, Download, Globe, Lock } from 'lucide-react';
+import { AlertTriangle, Loader2, Upload, FileText, ImageIcon, Download, Globe, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -151,6 +151,13 @@ export function AttachmentsPanel({
               <FollowerSelect followers={followers} value={viewerIds} onChange={setViewerIds} />
             )}
           </div>
+
+          {/* Attaching is one-way for us: the backend keeps ticket attachments
+              immutable and only admins can delete them (api-doc/agency/tickets.md). */}
+          <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {t('attachments.permanentWarning')}
+          </p>
 
           <button
             type="button"

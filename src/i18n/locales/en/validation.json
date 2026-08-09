@@ -46,8 +46,13 @@
     "accountNumberRequired": "Account number is required",
     "countryRequired": "Country is required",
     "atLeastOne": "At least one payout method is required",
-    "atMostTwo": "You may add at most 2 payout methods (one mobile money and one bank)",
-    "duplicateType": "You can only add one method of each type (mobile money / bank)."
+    "atMostThree": "You may save at most 3 payout methods",
+    "cardBrandRequired": "Pick the card network",
+    "cardLast4Invalid": "Enter the last 4 digits of the card",
+    "cardHolderRequired": "Cardholder name is required",
+    "cardExpiryRequired": "Select the card's expiry month and year",
+    "cardExpired": "That card has already expired",
+    "issuingBankTooLong": "Issuing bank must be 100 characters or fewer"
   },
   "policies": {
     "codFeeTypeRequired": "COD fee type is required",

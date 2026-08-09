@@ -48,10 +48,28 @@ import { cn } from '@/lib/utils';
  */
 
 export interface SearchFilterBarProps {
-  /** Current search text. */
-  value: string;
-  onChange: (value: string) => void;
+  /**
+   * Current search text. Omit BOTH this and `onChange` for a filter-only bar —
+   * the search box is then hidden entirely rather than rendered inert. Some lists
+   * genuinely have no text to search (the stock-request inbox filters by status
+   * and direction only, and its endpoint takes no `search`), and a dead search box
+   * invites a query that can never match.
+   */
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
+  /**
+   * Fills the space the search box would occupy, on a filter-only bar. Ignored
+   * when `onChange` is set — the field owns that half of the row wherever it
+   * exists, and no list gets both.
+   *
+   * A row that is one button and a stretch of nothing reads as a row that failed
+   * to render, so a surface with no text search may promote its single most-used
+   * filter into that space (the stock-request inbox puts "waiting on you"
+   * there). The row keeps its height and its shape; only the dead half changes.
+   * Anything more than one control belongs in the sheet with the rest.
+   */
+  leading?: ReactNode;
   /** Filter controls for the bottom sheet. Without them the filter button is hidden. */
   children?: ReactNode;
   /** How many filters differ from their default — badge count and Reset gating. */
@@ -84,6 +102,7 @@ export function SearchFilterBar({
   value,
   onChange,
   placeholder,
+  leading,
   children,
   activeCount = 0,
   onReset,
@@ -100,6 +119,7 @@ export function SearchFilterBar({
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const hasFilters = Boolean(children);
+  const hasSearch = onChange !== undefined;
 
   const searchPlaceholder = placeholder ?? t('filters.searchPlaceholder');
   const title = filterTitle ?? t('filters.title');
@@ -177,27 +197,34 @@ export function SearchFilterBar({
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchLabel ?? searchPlaceholder}
-            className="h-11 rounded-xl pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange('')}
-              aria-label={t('filters.clearSearch')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        {hasSearch ? (
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={value ?? ''}
+              onChange={(e) => onChange?.(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchLabel ?? searchPlaceholder}
+              className="h-11 rounded-xl pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange?.('')}
+                aria-label={t('filters.clearSearch')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          // Keeps the filter button on the same edge as every other list, so a
+          // filter-only bar does not read as a different control. Empty unless
+          // the surface passed a `leading` control to stand in for the field.
+          <div className="flex min-w-0 flex-1 items-center">{leading}</div>
+        )}
 
         {hasFilters && (
           <Button

@@ -1,4 +1,4 @@
-import { Bell, Truck, Wallet, Handshake, UserCheck, Banknote, CalendarClock, HardDrive, type LucideIcon } from 'lucide-react';
+import { Bell, Truck, Wallet, Handshake, UserCheck, Banknote, CalendarClock, HardDrive, Boxes, type LucideIcon } from 'lucide-react';
 import type { AgencyNotificationAction } from '@/types/notification.types';
 
 export interface NotificationVisual {
@@ -12,6 +12,13 @@ export function notificationVisual(type: string): NotificationVisual {
   // Billing/plan events first — `shipment.cap.exceeded` is a plan alert, not a shipment.
   if (type.startsWith('plan') || type === 'shipment.cap.exceeded')
     return { icon: CalendarClock, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };
+  // WAREHOUSING, before the media-quota branch below — `storage.*` covers both
+  // families and the two mean entirely different things. A stock request is a
+  // decision to make, not a quota alarm, so it takes the Inventory nav's own icon
+  // (which is where it deep-links) rather than the amber warning language shared
+  // by `plan` and `cod`.
+  if (type.startsWith('storage.stock_request') || type === 'storage.depot_changed')
+    return { icon: Boxes, dot: 'bg-violet-500', chip: 'bg-violet-100 text-violet-600' };
   // Media storage crossed an 80/90/100% band (see api-doc/agency/storage.md §4).
   if (type.startsWith('storage'))
     return { icon: HardDrive, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };

@@ -1,39 +1,31 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Smartphone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
-import { tx } from '@/i18n/tx';
+import { ResponsiveModal } from '@/components/common/ResponsiveModal';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { PaymentOptionGroup } from '@/components/common/PaymentOptionGroup';
+import { PaymentOptionSelect } from '@/components/common/PaymentOptionSelect';
+import { brandOptions, type PaymentOption } from '@/components/common/payment-options';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
 import { phoneErrorMessage } from '@/lib/validation-schemas';
-import type { PaymentGateway, PhoneOperator } from '@/types/billing.types';
+import { MOBILE_MONEY_BRANDS } from '@/lib/payment-brands';
+import type { PhoneOperator } from '@/types/billing.types';
 import type { AddPaymentMethodPayload, SavedPaymentMethod } from '@/types/payment-method.types';
 import { isStripeConfigured } from '@/lib/stripe';
 import { addPaymentMethod } from '@/services/payment-methods.service';
 import { StripeCardField, type StripeCardFieldHandle } from './StripeCardField';
 import { CardPreview } from './CardPreview';
-import { PHONE_OPERATORS, GATEWAYS, billingErrorMessage } from './billing.constants';
+import { GatewayBadge } from './ProviderNote';
+import { CARD_GATEWAY, MOBILE_MONEY_GATEWAY, billingErrorMessage } from './billing.constants';
+
+/** The top-level choice: a card Stripe tokenises, or a phone wallet. */
+type Channel = 'card' | 'mobile_money';
 
 export interface AddPaymentMethodDialogProps {
   open: boolean;
@@ -43,10 +35,6 @@ export interface AddPaymentMethodDialogProps {
   onAdded: (method: SavedPaymentMethod) => void;
 }
 
-function gatewayOptions() {
-  return GATEWAYS.filter((g) => g.methodType !== 'card' || isStripeConfigured);
-}
-
 export function AddPaymentMethodDialog({
   open,
   onOpenChange,
@@ -54,10 +42,11 @@ export function AddPaymentMethodDialog({
   onAdded,
 }: AddPaymentMethodDialogProps) {
   const { t } = useTranslation(['billing', 'common']);
-  const gateways = gatewayOptions();
   const phoneCountry = useDefaultPhoneCountry();
 
-  const [gateway, setGateway] = useState<PaymentGateway>(gateways[0]?.value ?? 'NOTCHPAY');
+  // Mobile money leads: it is how most agencies here actually pay, and it is the
+  // only channel that survives Stripe being unconfigured.
+  const [channel, setChannel] = useState<Channel>('mobile_money');
   const [phone, setPhone] = useState('');
   const [operator, setOperator] = useState<PhoneOperator>('MTN');
   const [holderName, setHolderName] = useState('');
@@ -66,11 +55,48 @@ export function AddPaymentMethodDialog({
   const [error, setError] = useState<string | null>(null);
 
   const cardRef = useRef<StripeCardFieldHandle>(null);
-  const methodType = gateways.find((g) => g.value === gateway)?.methodType ?? 'mobile_money';
+
+  const channelOptions = useMemo<PaymentOption[]>(() => {
+    const options: PaymentOption[] = [
+      {
+        value: 'mobile_money',
+        label: t('channels.mobileMoney.name'),
+        description: t('channels.mobileMoney.description'),
+        icon: Smartphone,
+        // Saving a wallet always tokenises through the one processor that can
+        // debit it — so it is stated here rather than taking up a field the
+        // agency cannot change.
+        footer: <GatewayBadge gateway={MOBILE_MONEY_GATEWAY} />,
+      },
+    ];
+    // No publishable key means no card form to mount, so don't offer the choice.
+    if (isStripeConfigured) {
+      options.push({
+        value: 'card',
+        label: t('channels.card.name'),
+        description: t('channels.card.description'),
+        icon: CreditCard,
+      });
+    }
+    return options;
+  }, [t]);
+
+  // Airtel and Wave are real operators we can pay *out* to, but the payments
+  // gateway has no enum member for them yet — show them, don't let them be
+  // saved as something we could never charge.
+  const operatorOptions = useMemo(
+    () =>
+      brandOptions(MOBILE_MONEY_BRANDS, {
+        valueOf: (b) => b.operator ?? b.id,
+        disabled: (b) => b.operator == null,
+        badgeFor: (b) => (b.operator == null ? t('channels.comingSoon') : undefined),
+      }),
+    [t],
+  );
 
   useEffect(() => {
     if (open) {
-      setGateway(gateways[0]?.value ?? 'NOTCHPAY');
+      setChannel('mobile_money');
       setPhone('');
       setOperator('MTN');
       setHolderName('');
@@ -78,20 +104,19 @@ export function AddPaymentMethodDialog({
       setSubmitting(false);
       setError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function buildPayload(): Promise<AddPaymentMethodPayload> {
     const isDefault = forceDefault || makeDefault;
 
-    if (methodType === 'card') {
+    if (channel === 'card') {
       // Stripe gives us a reusable PaymentMethod (instrument) + card metadata.
       const card = await cardRef.current!.createPaymentMethod(holderName.trim() || undefined);
       const brand = card.brand;
       const last4 = card.last4;
       const label = `${(brand ?? 'CARD').toUpperCase()} •••• ${last4 ?? '••••'}`;
       return {
-        provider: 'stripe',
+        provider: CARD_GATEWAY.toLowerCase(),
         // No customer id is available client-side with a publishable key; the backend
         // resolves/creates it. We send the instrument id as a non-empty placeholder to
         // satisfy the contract (best-effort id mapping).
@@ -116,7 +141,7 @@ export function AddPaymentMethodDialog({
     // E.164 is what the reference is keyed on, so the same wallet saved from two
     // screens produces the same id.
     const e164 = toSubmittablePhone(phone, phoneCountry);
-    const provider = gateway.toLowerCase();
+    const provider = MOBILE_MONEY_GATEWAY.toLowerCase();
     const last4 = e164.slice(-4);
     const ref = `${provider}:${e164}`;
     return {
@@ -149,123 +174,116 @@ export function AddPaymentMethodDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('methods.add.title')}</DialogTitle>
-          <DialogDescription>{t('methods.add.description')}</DialogDescription>
-        </DialogHeader>
+    <ResponsiveModal
+      open={open}
+      onOpenChange={onOpenChange}
+      disableClose={submitting}
+      title={t('methods.add.title')}
+      description={t('methods.add.description')}
+      // The form is short — let the sheet size to it instead of standing at the
+      // full height a phone-sized panel would otherwise take.
+      mobileClassName="h-auto max-h-[92dvh]"
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting} className="sm:min-w-24">
+            {t('common:actions.cancel')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting} className="sm:min-w-36">
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('methods.add.submit')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {channelOptions.length > 1 && (
+          <PaymentOptionGroup
+            label={t('methods.add.channel')}
+            labelTone="section"
+            layout="stacked"
+            value={channel}
+            onValueChange={(v) => {
+              setChannel(v as Channel);
+              setError(null);
+            }}
+            options={channelOptions}
+          />
+        )}
 
-        <div className="space-y-4">
-          {/* Gateway / method selection */}
-          <div className="space-y-1.5">
-            <Label>{t('methods.add.type')}</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {gateways.map((g) => (
-                <button
-                  key={g.value}
-                  type="button"
-                  onClick={() => {
-                    setGateway(g.value);
-                    setError(null);
-                  }}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-1 rounded-md border px-2 py-2.5 text-xs font-medium transition',
-                    gateway === g.value
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-border text-muted-foreground hover:bg-muted',
-                  )}
-                >
-                  {g.methodType === 'card' ? (
-                    <CreditCard className="h-4 w-4" />
-                  ) : (
-                    <Smartphone className="h-4 w-4" />
-                  )}
-                  {tx(t, g.labelKey)}
-                </button>
-              ))}
+        {channel === 'mobile_money' ? (
+          <section className="space-y-4">
+            {/* A dropdown, not a grid of tiles: the operator is one field of
+                three here, and the number below it is the one being typed. */}
+            <PaymentOptionSelect
+              id="add-operator"
+              label={t('methods.add.operator')}
+              placeholder={t('channels.operatorPlaceholder')}
+              note={t('channels.comingSoonHint')}
+              value={operator}
+              onValueChange={(v) => {
+                setOperator(v as PhoneOperator);
+                setError(null);
+              }}
+              options={operatorOptions}
+            />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="add-phone">{t('methods.add.phone')}</Label>
+              <PhoneInput id="add-phone" value={phone} onChange={setPhone} required hasError={!!error} />
             </div>
-          </div>
 
-          {methodType === 'mobile_money' ? (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="add-phone">{t('methods.add.phone')}</Label>
-                <PhoneInput
-                  id="add-phone"
-                  value={phone}
-                  onChange={setPhone}
-                  required
-                  hasError={!!error}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="add-operator">{t('methods.add.operator')}</Label>
-                <Select value={operator} onValueChange={(v) => setOperator(v as PhoneOperator)}>
-                  <SelectTrigger id="add-operator">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PHONE_OPERATORS.map((op) => (
-                      <SelectItem key={op.value} value={op.value}>
-                        {op.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="add-holder-mm">{t('methods.add.holderNameMobile')}</Label>
-                <Input
-                  id="add-holder-mm"
-                  placeholder={t('methods.add.holderNameMobilePlaceholder')}
-                  value={holderName}
-                  onChange={(e) => setHolderName(e.target.value)}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="add-holder-mm">{t('methods.add.holderNameMobile')}</Label>
+              <Input
+                id="add-holder-mm"
+                placeholder={t('methods.add.holderNameMobilePlaceholder')}
+                value={holderName}
+                onChange={(e) => setHolderName(e.target.value)}
+              />
             </div>
-          ) : (
-            <div className="space-y-3">
-              <CardPreview holderName={holderName} />
-              <div className="space-y-1.5">
-                <Label htmlFor="add-holder">{t('methods.add.holderNameCard')}</Label>
-                <Input
-                  id="add-holder"
-                  placeholder={t('methods.add.holderNameCardPlaceholder')}
-                  value={holderName}
-                  onChange={(e) => setHolderName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('methods.add.cardDetails')}</Label>
-                <StripeCardField ref={cardRef} disabled={submitting} />
-              </div>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            {/* No provider note above the preview: the card that opened this
+                branch already says who secures it, and the reassurance reads as
+                boilerplate the second time. */}
+            <CardPreview holderName={holderName} className="mx-auto max-w-sm" />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="add-holder">{t('methods.add.holderNameCard')}</Label>
+              <Input
+                id="add-holder"
+                placeholder={t('methods.add.holderNameCardPlaceholder')}
+                value={holderName}
+                onChange={(e) => setHolderName(e.target.value)}
+              />
             </div>
-          )}
 
-          {!forceDefault && (
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{t('methods.add.setAsDefault')}</p>
-                <p className="text-xs text-muted-foreground">{t('methods.add.setAsDefaultHint')}</p>
-              </div>
-              <Switch checked={makeDefault} onCheckedChange={setMakeDefault} />
+            <div className="space-y-1.5">
+              <Label>{t('methods.add.cardDetails')}</Label>
+              <StripeCardField ref={cardRef} disabled={submitting} />
             </div>
-          )}
+          </section>
+        )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        {!forceDefault && (
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-3 transition-colors [@media(hover:hover)]:hover:bg-accent/40">
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">{t('methods.add.setAsDefault')}</span>
+              <span className="block text-xs text-muted-foreground">
+                {t('methods.add.setAsDefaultHint')}
+              </span>
+            </span>
+            <Switch checked={makeDefault} onCheckedChange={setMakeDefault} />
+          </label>
+        )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              {t('common:actions.cancel')}
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('methods.add.submit')}
-            </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    </ResponsiveModal>
   );
 }

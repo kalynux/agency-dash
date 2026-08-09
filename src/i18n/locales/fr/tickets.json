@@ -212,6 +212,7 @@
     "trackingOptionMeta": "{{agency}} · {{status}}",
     "attachments": "Pièces jointes",
     "addAttachment": "Ajouter une pièce jointe",
+    "attachmentsHint": "Une fois le ticket créé, ces fichiers y restent attachés : ils ne pourront pas être détachés tant que le ticket n'est pas fermé.",
     "submit": "Créer le ticket",
     "errors": {
       "subjectTooShort": "Le sujet doit contenir au moins 3 caractères.",
@@ -248,6 +249,7 @@
     "public": "Public",
     "private": "Privé",
     "add": "Ajouter une pièce jointe",
+    "permanentWarning": "Une fois ajouté, un fichier ne peut pas être détaché de ce ticket tant que celui-ci n'est pas fermé.",
     "attaching": "Ajout en cours…",
     "closed": "Ce ticket est fermé.",
     "atLimit": "Maximum de {{max}} pièces jointes atteint",

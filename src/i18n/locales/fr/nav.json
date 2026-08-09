@@ -4,6 +4,8 @@
     "shipments": "Expéditions",
     "tracking": "Suivi en direct",
     "inventory": "Stock",
+    "inventoryStock": "SKU entreposés",
+    "inventoryRequests": "Demandes de stock",
     "media": "Médias",
     "transactions": "Transactions",
     "cash": "Gestion des espèces",

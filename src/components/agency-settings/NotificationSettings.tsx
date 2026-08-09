@@ -13,6 +13,7 @@ import {
   Banknote,
   CalendarClock,
   HardDrive,
+  Boxes,
   CheckCircle2,
   ShieldCheck,
   ShieldAlert,
@@ -98,22 +99,27 @@ const SECONDARY_CHANNELS: ChannelMeta[] = [
 ];
 
 /**
- * `storageAlert` and `contractUpdated` are newer than some deployed backends.
- * Default them to the documented `true` so their switches are never
- * uncontrolled — applied on every read so the dirty-check snapshot and the
+ * `storageAlert`, `contractUpdated` and `stockRequestUpdates` are newer than some
+ * deployed backends. Default them to the documented `true` so their switches are
+ * never uncontrolled — applied on every read so the dirty-check snapshot and the
  * editable copy always agree.
+ *
+ * Miss one here and its Switch goes uncontrolled the moment it meets a backend
+ * that predates the field: React logs a controlled→uncontrolled warning and the
+ * toggle silently stops saving.
  */
 function withEventDefaults(data: NotificationPreferences): NotificationPreferences {
-  // Both are declared required, so leading literal defaults would be dead code
-  // to the compiler. Destructure instead: at runtime an older backend omits the
-  // keys entirely, and `?? true` is what actually fills them in.
-  const { storageAlert, contractUpdated, ...rest } = data.preferences;
+  // All three are declared required, so leading literal defaults would be dead
+  // code to the compiler. Destructure instead: at runtime an older backend omits
+  // the keys entirely, and `?? true` is what actually fills them in.
+  const { storageAlert, contractUpdated, stockRequestUpdates, ...rest } = data.preferences;
   return {
     ...data,
     preferences: {
       ...rest,
       storageAlert: storageAlert ?? true,
       contractUpdated: contractUpdated ?? true,
+      stockRequestUpdates: stockRequestUpdates ?? true,
     },
   };
 }
@@ -137,6 +143,12 @@ const EVENTS: EventMeta[] = [
   { key: 'payoutUpdates', Icon: Wallet },
   { key: 'codDepositUpdates', hasCaveat: true, Icon: Banknote },
   { key: 'planUpdates', Icon: CalendarClock },
+  // Deliberately adjacent to `storageAlert`, and deliberately first: the two
+  // share the word "storage" and nothing else — one is the media-file quota, the
+  // other is physical goods on our shelves. Sitting side by side is what makes
+  // the labels get read against each other instead of one being switched off in
+  // mistake for the other.
+  { key: 'stockRequestUpdates', hasCaveat: true, Icon: Boxes },
   { key: 'storageAlert', Icon: HardDrive },
 ];
 

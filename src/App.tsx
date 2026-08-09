@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from '@/components/ui/sonner';
@@ -46,6 +46,7 @@ import { NotificationsProvider } from '@/store/notifications.store';
 
 // Magazin (real API — business name + logo shown in the app chrome)
 import { MagazinProvider } from '@/store/magazin.store';
+import { StockRequestsProvider } from '@/store/stockRequests.store';
 
 // ─── Shared content-frame width ──────────────────────────────────────────────
 // The header and the main content share one centered column so their edges line
@@ -123,6 +124,17 @@ function LoginRedirectScreen() {
   );
 }
 
+// ─── Stock-request deep link ──────────────────────────────────────────────────
+// The backend deep-links stock-request notifications to `stock-requests/{id}`
+// (see api-doc/agency/notifications.md), but the inbox lives as a tab under
+// Inventory. Without this the `*` catch-all would swallow every one of those
+// notifications to /dashboard with no error at all.
+
+function StockRequestDeepLink() {
+  const { requestId } = useParams<{ requestId: string }>();
+  return <Navigate to={`/dashboard/inventory/requests?open=${requestId ?? ''}`} replace />;
+}
+
 // ─── Dashboard shell ──────────────────────────────────────────────────────────
 
 function DashboardShell() {
@@ -135,6 +147,7 @@ function DashboardShell() {
         <NotificationsProvider>
         <VendorConnectionsProvider>
         <MagazinProvider>
+        <StockRequestsProvider>
           <div className="min-h-screen bg-background">
             {!isMobile && <Sidebar />}
             <div
@@ -154,7 +167,12 @@ function DashboardShell() {
                 <Routes>
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
-                  <Route path="inventory" element={<Inventory />} />
+                  <Route path="inventory" element={<Navigate to="/dashboard/inventory/stock" replace />} />
+                  <Route path="inventory/:tab" element={<Inventory />} />
+                  {/* The stock-request inbox is a tab under Inventory; these two
+                      keep the backend's notification deep-link resolving. */}
+                  <Route path="stock-requests" element={<Navigate to="/dashboard/inventory/requests" replace />} />
+                  <Route path="stock-requests/:requestId" element={<StockRequestDeepLink />} />
                   <Route path="tracking" element={<LiveTracking />} />
                   <Route path="media" element={<MediaLibrary />} />
                   {/* Legacy alias — earnings now live under Account → Payout. */}
@@ -186,6 +204,7 @@ function DashboardShell() {
             </div>
             {isMobile && <MobileTabBar />}
           </div>
+        </StockRequestsProvider>
         </MagazinProvider>
         </VendorConnectionsProvider>
         </NotificationsProvider>
