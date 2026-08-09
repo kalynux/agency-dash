@@ -7,15 +7,15 @@ anything on this page:
 
 | Service | Owns |
 |---|---|
-| **jovi-mall** (this repo) | Whether tracking is **allowed** — the business policy |
+| **wimall** (this repo) | Whether tracking is **allowed** — the business policy |
 | **geo-tracker** | Tracking **execution** — connections, positions, fan-out, ETA |
 
-jovi-mall decides; geo-tracker enforces. geo-tracker must never reimplement the policy, and
-jovi-mall must never serve a live position. If an endpoint here starts answering *"where is this
+wimall decides; geo-tracker enforces. geo-tracker must never reimplement the policy, and
+wimall must never serve a live position. If an endpoint here starts answering *"where is this
 agent?"*, the boundary has been broken.
 
 Related: [live-tracking](./live-tracking.md) answers *who may watch whom*. This page answers
-*may this agent be tracked at all*. Both live in jovi-mall for the same reason.
+*may this agent be tracked at all*. Both live in wimall for the same reason.
 
 ---
 
@@ -91,7 +91,7 @@ without reproducing the logic.
 
 ---
 
-# Internal API (geo-tracker → jovi-mall)
+# Internal API (geo-tracker → wimall)
 
 ## Base Path
 
@@ -149,7 +149,7 @@ human reason from whoever flipped the flag.
 ### POST /api/internal/agents/tracking-policies
 
 **Description**: Batch resolution — geo-tracker resolves a whole watch-set on connect, and N round
-trips per viewer would put jovi-mall on its latency path.
+trips per viewer would put wimall on its latency path.
 
 **Request Body**:
 ```json

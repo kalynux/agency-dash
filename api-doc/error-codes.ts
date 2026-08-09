@@ -393,7 +393,7 @@ export const ERROR_CODES = Object.freeze({
     // Availability / working state
     AGENT_AVAILABILITY_INVALID_TRANSITION: 'AGENT_AVAILABILITY_INVALID_TRANSITION',
     AGENT_AT_CAPACITY: 'AGENT_AT_CAPACITY',
-    // Tracking (business flag — geo-tracker enforces, jovi-mall owns)
+    // Tracking (business flag — geo-tracker enforces, wimall owns)
     AGENT_TRACKING_NOT_ALLOWED: 'AGENT_TRACKING_NOT_ALLOWED',
     AGENT_DEVICE_LOCATION_DISABLED: 'AGENT_DEVICE_LOCATION_DISABLED',
     AGENT_DEVICE_STATE_UNKNOWN: 'AGENT_DEVICE_STATE_UNKNOWN',
@@ -441,7 +441,7 @@ export const ERROR_CODES = Object.freeze({
     AGENT_KYC_NOT_VERIFIED: 'AGENT_KYC_NOT_VERIFIED',
     AGENT_PLATFORM_BANNED: 'AGENT_PLATFORM_BANNED',
     AGENT_PAYOUT_DETAILS_MISSING: 'AGENT_PAYOUT_DETAILS_MISSING',
-    // Service-to-service auth (geo-tracker → jovi-mall)
+    // Service-to-service auth (geo-tracker → wimall)
     AGENT_SERVICE_TOKEN_INVALID: 'AGENT_SERVICE_TOKEN_INVALID',
     AGENT_SERVICE_TOKEN_NOT_CONFIGURED: 'AGENT_SERVICE_TOKEN_NOT_CONFIGURED',
 

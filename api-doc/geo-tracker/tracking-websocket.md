@@ -14,7 +14,7 @@ no sessions — they watch, they are not tracked.
 > ### What this socket cannot do: start or end a tracking session
 >
 > A **tracking session is one shipment's** tracking lifecycle. It is opened by
-> jovi-mall reporting the shipment active, and closed only by jovi-mall reporting
+> wimall reporting the shipment active, and closed only by wimall reporting
 > it terminal (see [webhooks.md](./webhooks.md)). This socket only *binds* to
 > sessions that already exist.
 >
@@ -57,8 +57,8 @@ GET /ws/track
 
 ## Authentication
 
-Present your **jovi-mall access token** — the same one you use against the
-jovi-mall API. Browsers cannot set `Authorization` on a WebSocket, so the token
+Present your **wimall access token** — the same one you use against the
+wimall API. Browsers cannot set `Authorization` on a WebSocket, so the token
 rides the subprotocol header:
 
 ```
@@ -78,7 +78,7 @@ Browser clients are additionally origin-checked against `ALLOWED_ORIGINS`.
 | No/invalid/expired token | `401` |
 | Role is `vendor` | `403` — vendors have no tracking access |
 | Role is `agent` but no agent profile resolves | `403` |
-| jovi-mall unreachable while resolving an agent's identity | `502` |
+| wimall unreachable while resolving an agent's identity | `502` |
 
 ## Message envelope
 
@@ -167,7 +167,7 @@ waits for the socket.
 > { "type": "error", "payload": { "message": "tracking cannot be disabled while you have an active shipment" } }
 > ```
 >
-> jovi-mall only dispatches to agents who have granted Tracking Allow, so allowing
+> wimall only dispatches to agents who have granted Tracking Allow, so allowing
 > an opt-out mid-delivery would strand a shipment that was assigned on that
 > promise. With no delivery in flight the same frame is accepted normally.
 

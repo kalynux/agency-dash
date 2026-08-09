@@ -32,7 +32,7 @@ send; approval is a Meta-side step.
 - **Header:** static `TEXT` (no variables).
 - **Button:** a single dynamic **URL** button. Configure the button URL base as
   your `VENDOR_APP_URL` value with a trailing `{{1}}`, e.g.
-  `https://app.jovimall.com/{{1}}`. The backend sends the path suffix (e.g.
+  `https://app.wimall.com/{{1}}`. The backend sends the path suffix (e.g.
   `orders/ORDER_ID`) as the button parameter.
 - In-window sends use the same copy as **free-form text / interactive CTA** (no
   approval needed); the localized strings live in

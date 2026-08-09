@@ -17,8 +17,8 @@ Precedence (highest wins): `.env.development.local` → `.env.development` → `
 
 | Variable | Required? | Default | Notes |
 |----------|-----------|---------|-------|
-| `VITE_API_BASE_URL` | ✅ | `http://localhost:8022/api` | jovi-mall backend. Must end in `/api`. |
-| `VITE_APP_NAME` | — | `Jovi Mall Agency` | Display name. |
+| `VITE_API_BASE_URL` | ✅ | `http://localhost:8022/api` | wimall backend. Must end in `/api`. |
+| `VITE_APP_NAME` | — | `WiMall Agency` | Display name. |
 | `VITE_GEO_TRACKER_WS_URL` | — | `ws://localhost:8090/ws/track` | geo-tracker live-tracking WebSocket. |
 | `VITE_GEO_TRACKER_URL` | — | *(the WS URL's origin)* | geo-tracker **HTTP** origin, for the travelled-path trail (`/tracking/sessions/:id/checkpoints`) and road routing (`/routing/route`). Same service as the socket, so the default derives it from `VITE_GEO_TRACKER_WS_URL`; set it only when the two are genuinely split. |
 | `VITE_GEO_TRACKER_TOKEN` | — (cross-site only) | *(empty)* | Bearer-token **override** for the WS. Normally unneeded: the browser forwards the httpOnly `access_token` cookie on the same-site WS handshake (like `credentials:'include'`). Only set it when geo-tracker is on a different site/domain. |

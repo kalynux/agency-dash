@@ -126,7 +126,7 @@ un-dialable number is a payout instruction nobody can execute.
 > + expiry**, and nothing more.
 >
 > This is the same rule the pay-in side already follows: full PANs and CVVs live at the payment
-> gateway, never in jovi-mall's database. Storing one here would put every collection in PCI-DSS
+> gateway, never in wimall's database. Storing one here would put every collection in PCI-DSS
 > scope for no product benefit.
 
 | Field | Type | Required? | Validation |

@@ -11,14 +11,14 @@ This plan outlines the frontend changes required to integrate the new "Policy Se
 
 ### Types & Schemas
 
-#### [MODIFY] [api.ts](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/types/api.ts)
+#### [MODIFY] [api.ts](../src/types/api.ts)
 - Update `AgencyOnboardingStep` type to `0 | 1 | 2 | 3 | 4`.
 - Define new interfaces: `StorageBasedPricing`, `PickupBasedPricing`, `AdditionalFees`, `AgencyPricingPolicy`, `AgencyReturnsPolicy`, `AgencyDamagePolicy`, and `AgencyPolicies`.
 - Add `policies: AgencyPolicies | null` to `AgencyRoleEntity`.
 - Add `PoliciesPayload` interface for the `PUT` request.
 - Update `OnboardingStepPayload` to include `PoliciesPayload`.
 
-#### [MODIFY] [onboarding.schemas.ts](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/onboarding/schemas/onboarding.schemas.ts)
+#### [MODIFY] [onboarding.schemas.ts](../src/onboarding/schemas/onboarding.schemas.ts)
 - Add Zod schemas for the policies payload:
   - `pricingSchema`: storage-based, pickup-based, additional fees, notes.
   - `returnsSchema`: payer, handling fee, return window, free returns, notes.
@@ -30,10 +30,10 @@ This plan outlines the frontend changes required to integrate the new "Policy Se
 
 ### Service & State Management
 
-#### [MODIFY] [onboarding.service.ts](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/services/onboarding.service.ts)
+#### [MODIFY] [onboarding.service.ts](../src/services/onboarding.service.ts)
 - Add `submitPolicies(payload: PoliciesPayload): Promise<OnboardingStepResponse>` which calls `PUT /api/agency/onboarding/policies`.
 
-#### [MODIFY] [onboarding.store.tsx](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/onboarding/store/onboarding.store.tsx)
+#### [MODIFY] [onboarding.store.tsx](../src/onboarding/store/onboarding.store.tsx)
 - Update `stepToRoute` to map step `4` to `/onboarding/policies`.
 - Add `policies` draft state to `StepDrafts`.
 - Update `saveDraft` signature and implementation to handle step `4`.
@@ -43,11 +43,11 @@ This plan outlines the frontend changes required to integrate the new "Policy Se
 
 ### Routing & Layout
 
-#### [MODIFY] [OnboardingLayout.tsx](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/onboarding/OnboardingLayout.tsx)
+#### [MODIFY] [OnboardingLayout.tsx](../src/onboarding/OnboardingLayout.tsx)
 - Update the `STEPS` array to include: `{ step: 4, label: 'Policies' }`.
 - Ensure the horizontal progress stepper can handle 4 steps seamlessly.
 
-#### [MODIFY] [OnboardingRouter.tsx](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/onboarding/OnboardingRouter.tsx)
+#### [MODIFY] [OnboardingRouter.tsx](../src/onboarding/OnboardingRouter.tsx)
 - Add route `<Route path="policies" element={<StepGuard minRequired={4}><Step4Policies /></StepGuard>} />`.
 - Update `StepGuard`'s `minRequired` type to `1 | 2 | 3 | 4`.
 - Update `stepPath` helper for step `4`.
@@ -56,7 +56,7 @@ This plan outlines the frontend changes required to integrate the new "Policy Se
 
 ### UI Components
 
-#### [NEW] [Step4Policies.tsx](file:///c:/Users/Fante/Desktop/projects/jovi-mall-front/agency-dash/src/onboarding/steps/Step4Policies.tsx)
+#### [NEW] [Step4Policies.tsx](../src/onboarding/steps/Step4Policies.tsx)
 - Implement the "Policy Setup" form using `react-hook-form` and `@hookform/resolvers/zod`.
 - **Pricing Section**: Inputs for storage fees, pickup rates, and additional fees (COD, RTO, failed delivery).
 - **Returns Section**: Select for payer (`vendor`, `agency`, `customer`), and number inputs for handling fee and window days. Switch/Checkbox for free returns.

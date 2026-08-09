@@ -3,7 +3,7 @@
 ## HTTP endpoints
 
 Errors are returned as **plain text** via Go's `http.Error`, not the structured
-envelope jovi-mall uses:
+envelope wimall uses:
 
 ```
 HTTP/1.1 401 Unauthorized
@@ -15,7 +15,7 @@ invalid or expired token
 The exception is the routing module, which returns JSON:
 `{"error":"active provider does not support geocode"}`.
 
-**Branch on the HTTP status code**, not the body. Aligning on jovi-mall's
+**Branch on the HTTP status code**, not the body. Aligning on wimall's
 `{"success":false,"error":{"code",...}}` contract is a known gap — there are
 not yet distinct domain error codes worth encoding here.
 
@@ -32,7 +32,7 @@ not yet distinct domain error codes worth encoding here.
 | `404` | Not found **or** not authorized to see it (deliberately identical, so existence never leaks) | `/locations/{agentID}` |
 | `500` | Unhandled panic (recovered), or a failed lookup/event processing | any |
 | `501` | The active routing provider lacks this capability (e.g. OSRM geocoding) | `/routing/*` |
-| `502` | An upstream failed: routing provider, or jovi-mall while verifying authorization (fails closed) | `/routing/*`, `/locations/*`, `/ws/track` |
+| `502` | An upstream failed: routing provider, or wimall while verifying authorization (fails closed) | `/routing/*`, `/locations/*`, `/ws/track` |
 | `503` | A required dependency isn't configured (e.g. webhook secret) or isn't reachable | `/webhooks/node`, `/readyz` |
 
 ## WebSocket

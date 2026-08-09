@@ -140,7 +140,7 @@ and `errors` only and fall back to English per key — a normal, shippable state
 
 ### Deliberately not translated
 
-- **Brand and product names** — `Jovi Mall`, `MTN Mobile Money`, `NotchPay`,
+- **Brand and product names** — `WiMall`, `MTN Mobile Money`, `NotchPay`,
   `Stripe`, `Telegram`, storage-provider names.
 - **Language names** in the notification-language picker: each is written in
   its own language (`Français`, `العربية`), never translated into the current one.

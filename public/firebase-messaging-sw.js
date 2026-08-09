@@ -24,7 +24,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   if (payload.notification) return;
   const data = payload.data || {};
-  self.registration.showNotification(data.title || 'Jovi Mall Agency', {
+  self.registration.showNotification(data.title || 'WiMall Agency', {
     body: data.body || '',
     tag: data.notificationId || undefined, // collapse duplicate deliveries
     data: { url: data.url || '/' },

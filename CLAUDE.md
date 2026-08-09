@@ -21,7 +21,7 @@ No test runner is configured.
 
 **Environment variables:**
 - `VITE_API_BASE_URL` — backend base URL (default: `http://localhost:8022/api`)
-- `VITE_APP_NAME` — app display name (default: `"Jovi Mall"`)
+- `VITE_APP_NAME` — app display name (default: `"WiMall"`)
 
 ### App Structure
 

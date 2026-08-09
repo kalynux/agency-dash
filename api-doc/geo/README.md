@@ -1,7 +1,7 @@
 # Geospatial Addresses & Address Search
 
 > Provider-agnostic address search + the shared **GeoAddress** value object that every address in
-> jovi-mall now carries. Users keep typing free-form text; the backend turns it into map-grade
+> wimall now carries. Users keep typing free-form text; the backend turns it into map-grade
 > candidates via the active geocoding provider, and the selected candidate is stored with full
 > geospatial data — never plain text alone.
 
@@ -152,7 +152,7 @@ so a later edit to the customer's saved addresses never rewrites past orders. Di
 sequenceDiagram
     actor User
     participant FE as Frontend
-    participant API as jovi-mall (/api/geo)
+    participant API as wimall (/api/geo)
     participant P as Geocoding provider<br/>(Nominatim by default)
 
     User->>FE: types "Rue de l'Université, Yaoundé"
@@ -172,7 +172,7 @@ sequenceDiagram
 sequenceDiagram
     actor Customer
     participant FE as Frontend
-    participant API as jovi-mall
+    participant API as wimall
     participant DB as MongoDB
 
     Customer->>FE: choose saved address or search a new one
@@ -180,7 +180,7 @@ sequenceDiagram
     API->>API: resolve → GeoAddress (inline > addressId > default saved)
     API->>DB: create orders, freeze order.delivery_address (per order)
     API-->>FE: orders (each with durable geocoded drop-off)
-    note over API,DB: geo-tracker may later read the drop-off coordinate for routing —<br/>no event-shape change; jovi-mall owns geocoding, geo-tracker owns routing.
+    note over API,DB: geo-tracker may later read the drop-off coordinate for routing —<br/>no event-shape change; wimall owns geocoding, geo-tracker owns routing.
 ```
 
 ---
@@ -200,5 +200,5 @@ Selected once at boot from env (see `.env.example`). Mirrors the storage-provide
 
 The seam is `IGeocodingProvider` (`src/core/geocoding/`). Adding Google/Mapbox/HERE/Geoapify is one
 adapter file + a factory case; **no consumer changes**. Because geocoding is an address concern and
-jovi-mall owns addresses, the whole provider abstraction lives in jovi-mall — geo-tracker owns live
+wimall owns addresses, the whole provider abstraction lives in wimall — geo-tracker owns live
 positions and road networks, not address resolution.

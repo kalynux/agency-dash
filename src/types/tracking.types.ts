@@ -1,6 +1,6 @@
 // Live tracking — two services, and the split is the point:
 //
-//   jovi-mall   → WHAT TO DRAW: which agents you may watch and, per agent, their
+//   wimall   → WHAT TO DRAW: which agents you may watch and, per agent, their
 //                 active shipments with a start and an end pin.
 //                 (api-doc/agency/live-tracking.md, api-doc/tracking/live-tracking.md)
 //   geo-tracker → WHAT MOVES: the live position over a WebSocket, the durable
@@ -14,7 +14,7 @@
 import type { AddressDetail, ShipmentPickupSummary, ShipmentStatus } from '@/types/shipment.types';
 import type { FileRef } from '@/types/file.types';
 
-/** GET /api/tracking/visible-agents (jovi-mall). */
+/** GET /api/tracking/visible-agents (wimall). */
 export interface VisibleAgents {
   /** true only for admin (sees everyone); `agents` is then empty/irrelevant. */
   all: boolean;
@@ -27,7 +27,7 @@ export interface VisibleAgentsResponse {
   data: VisibleAgents;
 }
 
-// ─── The board: GET /api/agency/tracking/board (jovi-mall) ──────────────────────
+// ─── The board: GET /api/agency/tracking/board (wimall) ──────────────────────
 
 /**
  * One trackable delivery. `origin` is the **start** pin (where the parcel is

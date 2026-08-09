@@ -1,8 +1,8 @@
 # Tracking Sessions & Lifecycle (read)
 
 A **tracking session is the complete tracking lifecycle of ONE shipment**. It
-opens when jovi-mall reports the shipment active for an agent and closes only
-when jovi-mall reports it terminal. Everything else — sockets dropping, networks
+opens when wimall reports the shipment active for an agent and closes only
+when wimall reports it terminal. Everything else — sockets dropping, networks
 dying, GPS chips going dark, apps being backgrounded — moves the session between
 *health* states inside that span and can never end it.
 
@@ -37,7 +37,7 @@ So an opted-in agent with no delivery is **locatable but not tracked**: their
 `position` is live, and their `sessions` array is empty. That is the normal,
 healthy state of an idle agent, not an error.
 
-**Tracking Allow is locked during a delivery.** jovi-mall only dispatches to
+**Tracking Allow is locked during a delivery.** wimall only dispatches to
 agents who have granted it, so an attempt to switch it off while a shipment is
 active is *rejected* (see [tracking-websocket.md](./tracking-websocket.md)).
 Physically losing GPS is different and is never rejected — geo-tracker cannot
@@ -54,7 +54,7 @@ stop a phone's battery dying, so that lands in `location_disabled`, an impairmen
 | `degraded` | Connected but heartbeats have slowed past the freshness window (~30s). Still tracking, impaired. |
 | `network_lost` | Heartbeats stopped entirely (~90s) with no clean disconnect — the network likely dropped while the socket stayed open. |
 | `location_disabled` | The device reports OS location services (or the app's permission) are off — no GPS can flow. |
-| `tracking_disabled` | The device reports Tracking Allow off while a session is open. Unreachable deliberately (the opt-out is refused); it means geo-tracker's device view diverged from what jovi-mall dispatched against. |
+| `tracking_disabled` | The device reports Tracking Allow off while a session is open. Unreachable deliberately (the opt-out is refused); it means geo-tracker's device view diverged from what wimall dispatched against. |
 | `app_background` | The agent's app is backgrounded — tracking continues at reduced fidelity. |
 | `app_foreground` | The app just returned to the foreground; a heartbeat promotes it to `online`. |
 
@@ -74,18 +74,18 @@ to `offline`.
 
 geo-tracker owns the session, its connections, the lifecycle state, the device
 state, and the current GPS it surfaces. It owns **no** orders, shipments,
-payments or users — those stay in jovi-mall. It holds a shipment's **id** so a
+payments or users — those stay in wimall. It holds a shipment's **id** so a
 session can be scoped to it, and nothing else about the shipment: which statuses
-count as trackable or terminal is jovi-mall's policy, pushed here as a verdict
+count as trackable or terminal is wimall's policy, pushed here as a verdict
 (see [webhooks.md](./webhooks.md)).
 
 "Eligibility" below is **not** the authorization policy (who may *watch* an agent
-— jovi-mall's, enforced at subscribe time); it is the geo-tracker-owned question
+— wimall's, enforced at subscribe time); it is the geo-tracker-owned question
 "is this agent's device configured to allow tracking?".
 
 ## Authentication & authorization
 
-`Authorization: Bearer <jovi-mall access token>`. Authentication alone is not
+`Authorization: Bearer <wimall access token>`. Authentication alone is not
 sufficient: every endpoint enforces the same per-agent visibility rules as the
 WebSocket (see [README.md](./README.md#authorization-model)). A caller who may
 not see the agent gets `404` — deliberately indistinguishable from "no such
@@ -153,7 +153,7 @@ failing rule is reported at once, never just the first.
 
 Only an **explicit** negative signal makes an agent ineligible. An unknown device
 state (nothing reported yet) is `eligible: true` with no reasons — an unknown
-signal is never coerced to a block, matching the jovi-mall device-location
+signal is never coerced to a block, matching the wimall device-location
 contract. Eligibility is read from the agent's device state, which outlives
 sessions, so it is answerable for an agent who has never had one.
 
@@ -260,4 +260,4 @@ An agent with two deliveries in flight appears **twice**, once per shipment.
 | `401` | Missing/invalid token |
 | `404` | Not authorized to see this agent (per-agent endpoints) — indistinguishable from "no such agent" |
 | `500` | Lookup failed |
-| `502` | Could not verify authorization (jovi-mall unreachable) — fails closed |
+| `502` | Could not verify authorization (wimall unreachable) — fails closed |

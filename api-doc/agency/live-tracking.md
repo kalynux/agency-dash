@@ -5,10 +5,10 @@ point:
 
 | | Service | Carries |
 |---|---|---|
-| **What to draw** | jovi-mall (this doc) | which agents you may watch, and each of their active shipments with its **start** and **end** pins |
+| **What to draw** | wimall (this doc) | which agents you may watch, and each of their active shipments with its **start** and **end** pins |
 | **What moves** | geo-tracker | the agent's live position, over a WebSocket |
 
-jovi-mall owns the shipment/order model, so it owns the addresses. geo-tracker
+wimall owns the shipment/order model, so it owns the addresses. geo-tracker
 owns live positions and road networks. Neither grows a copy of the other's data.
 
 **This endpoint never returns a position.** The agent's last known position is

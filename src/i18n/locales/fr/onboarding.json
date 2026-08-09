@@ -1,6 +1,6 @@
 {
   "layout": {
-    "platform": "Jovi Mall",
+    "platform": "WiMall",
     "fallbackAgencyName": "Votre agence",
     "signOut": "Se déconnecter",
     "progressLabel": "Progression de l'intégration",
