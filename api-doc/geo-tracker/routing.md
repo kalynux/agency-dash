@@ -13,7 +13,7 @@ On-demand access to the active routing provider. Every endpoint is
 
 ## Authentication
 
-`Authorization: Bearer <wimall access token>` — any authenticated actor.
+`Authorization: Bearer <jovi-mall access token>` — any authenticated actor.
 
 ## Provider capability matrix
 

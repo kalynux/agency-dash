@@ -234,7 +234,7 @@ Captures the agency's payout methods. The **first entry in the array is always t
 }
 ```
 
-#### Request Body — Mobile Money (preferred) + Bank (fallback)
+#### Request Body — a preferred number + a fallback
 
 ```json
 {
@@ -249,28 +249,31 @@ Captures the agency's payout methods. The **first entry in the array is always t
       "bank": null
     },
     {
-      "method": "bank",
-      "mobile_money": null,
-      "bank": {
-        "bank_name": "UBA Cameroon",
-        "account_number": "10033000000000001",
-        "account_name": "FastTrack Logistics Sarl",
-        "country": "CM"
-      }
+      "method": "mobile_money",
+      "mobile_money": {
+        "provider": "Orange Money",
+        "phone_number": "+237690000000",
+        "account_name": "FastTrack Logistics Sarl"
+      },
+      "bank": null
     }
   ]
 }
 ```
+
+> 🚧 A `bank` or `card` fallback is what this example *will* look like once those kinds are switched
+> back on — today they are refused. See
+> [Payout methods](./payout-methods.md#availability).
 
 #### Field Reference
 
 | Field | Type | Required? | Validation | Notes |
 |-------|------|-----------|------------|-------|
 | `payout_details` | `object[]` | Yes | **Min 1 entry, Max 3 entries.** Duplicates of the same `method` are allowed. | Ordered array — index 0 is the preferred method. Full reference, including masking and what happens at payout time: **[Payout methods](./payout-methods.md)**. |
-| `payout_details[].method` | `string` | Yes | Enum: `"mobile_money"`, `"bank"` or `"card"` | Determines which sub-object is required. |
+| `payout_details[].method` | `string` | Yes | **Today: `"mobile_money"` only** — `"bank"` and `"card"` are 🚧 [switched off](./payout-methods.md#availability) | Determines which sub-object is required. |
 | `payout_details[].mobile_money` | `object \| null` | Conditional | Required if `method === "mobile_money"`, otherwise `null`. | See sub-fields below. |
-| `payout_details[].bank` | `object \| null` | Conditional | Required if `method === "bank"`, otherwise `null`. | See sub-fields below. |
-| `payout_details[].card` | `object \| null` | Conditional | Required if `method === "card"`, otherwise `null`. | See sub-fields below. |
+| `payout_details[].bank` | `object \| null` | Conditional | Required if `method === "bank"`, otherwise `null`. | 🚧 Switched off. See sub-fields below. |
+| `payout_details[].card` | `object \| null` | Conditional | Required if `method === "card"`, otherwise `null`. | 🚧 Switched off. See sub-fields below. |
 
 **`mobile_money` sub-fields:**
 
@@ -280,7 +283,8 @@ Captures the agency's payout methods. The **first entry in the array is always t
 | `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required (e.g. `+237670000000`). [Contact formats](../README.md#contact-formats-phone--email) |
 | `account_name` | `string` | Yes | Min 1 char |
 
-**`bank` sub-fields:**
+**`bank` sub-fields** — 🚧 **switched off, not configurable right now**
+([why](./payout-methods.md#availability)):
 
 | Field | Type | Required? | Validation |
 |-------|------|-----------|------------|
@@ -289,7 +293,8 @@ Captures the agency's payout methods. The **first entry in the array is always t
 | `account_name` | `string` | Yes | Min 1 char |
 | `country` | `string` | Yes | Min 1 char. ISO country code recommended (e.g. `"CM"`) |
 
-**`card` sub-fields** (Visa / Mastercard / …):
+**`card` sub-fields** (Visa / Mastercard / …) — 🚧 **switched off, not configurable right now**
+([why](./payout-methods.md#availability)):
 
 > **The API never accepts a card number or CVV** — send them and the request is **rejected**, not
 > silently ignored. Full rationale and the refused field names:
@@ -306,7 +311,9 @@ Captures the agency's payout methods. The **first entry in the array is always t
 | `issuing_bank` | `string \| null` | No | Max 100 chars |
 | `gateway_provider` / `gateway_token` | `string \| null` | No | The gateway's handle for this card, if your client tokenized it |
 
-```json
+```jsonc
+// 🚧 Refused today with 400 on payout_details.0.method — this is the shape for
+// when `card` is switched back on.
 {
   "payout_details": [
     {

@@ -7,7 +7,7 @@
 
 import { api, BASE_URL } from './api';
 import { txStatic } from '@/i18n/tx';
-import { ApiError } from '@/types/api';
+import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
 import type {
   ApiFile,
   ApiFileDetail,
@@ -270,7 +270,12 @@ function errorFromXhr(xhr: XMLHttpRequest, files: File[]): ApiError {
     `Upload failed with status ${xhr.status}`;
   const code = (error.code as string) ?? String(xhr.status || 0);
   const details = error.details;
-  const requestId = (body.requestId as string) ?? undefined;
+  const requestId =
+    (body.requestId as string) ?? xhr.getResponseHeader('X-Request-Id') ?? undefined;
+  const rawCategory = error.category;
+  const category = (ERROR_CATEGORIES as readonly string[]).includes(rawCategory as string)
+    ? (rawCategory as ErrorCategory)
+    : undefined;
 
   // `fileIndex` is scoped to this request's own file list. Because a mixed
   // selection is split across two requests, backfill each violation's filename
@@ -288,7 +293,7 @@ function errorFromXhr(xhr: XMLHttpRequest, files: File[]): ApiError {
     });
   }
 
-  return new ApiError(xhr.status, code, message, details, requestId);
+  return new ApiError(xhr.status, code, message, details, requestId, category);
 }
 
 /** Low-level XHR upload to a single route. Reports bytes loaded for aggregation. */

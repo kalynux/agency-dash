@@ -240,17 +240,43 @@ export type PayoutMethodType = 'mobile_money' | 'bank' | 'card';
 export const MAX_PAYOUT_METHODS = 3;
 
 /**
+ * The kinds the API accepts on a WRITE right now.
+ *
+ * `bank` and `card` are switched off at the write path — refused with a 400 on
+ * `payout_details[n].method` — while staying fully readable and still being paid.
+ * The union above deliberately keeps all three: an entry stored before the
+ * switch must still parse so it can be displayed and edited.
+ * See api-doc/agency/payout-methods.md#availability.
+ */
+export const SENDABLE_PAYOUT_METHODS: readonly PayoutMethodType[] = ['mobile_money'];
+
+/**
  * Full payout payload schema — ordered array, 1–3 entries, index 0 preferred.
  *
- * Any mix of kinds is allowed, duplicates included (three cards is a valid
- * list): nothing dedupes by `method`, so neither does this.
+ * Any mix of the *sendable* kinds is allowed, duplicates included (two
+ * mobile-money numbers is a valid list): nothing dedupes by `method`, so neither
+ * does this.
+ *
+ * A switched-off entry rejects the WHOLE list server-side, wherever it sits —
+ * because a write is a full replace, not a merge. Catching it here turns a 400
+ * naming an array index into a message against the row.
  */
 export function buildPayoutSchema(t: T) {
     return z.object({
         payout_details: z
             .array(buildPayoutMethodSchema(t))
             .min(1, v(t, 'payout.atLeastOne'))
-            .max(MAX_PAYOUT_METHODS, v(t, 'payout.atMostThree')),
+            .max(MAX_PAYOUT_METHODS, v(t, 'payout.atMostThree'))
+            .superRefine((methods, ctx) => {
+                methods.forEach((entry, index) => {
+                    if (SENDABLE_PAYOUT_METHODS.includes(entry.method)) return;
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: v(t, 'payout.methodUnavailable'),
+                        path: [index, 'method'],
+                    });
+                });
+            }),
         version: z.number().int().optional(),
     });
 }

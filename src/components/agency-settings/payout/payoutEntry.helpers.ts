@@ -9,6 +9,7 @@ import type { AnyTFunction } from '@/i18n/tx';
 import { formatPhoneDisplay } from '@/lib/phone';
 import type { PaymentMethodType } from '@/types/payment-method.types';
 import type { PayoutDetails } from '@/types/api';
+import { SENDABLE_PAYOUT_METHODS } from '@/onboarding/schemas/onboarding.schemas';
 import type { CardBrandValue, PayoutMethodFormValue } from '@/onboarding/schemas/onboarding.schemas';
 
 /**
@@ -97,31 +98,32 @@ export function toPayoutEntries(saved: PayoutDetails | null | undefined): Payout
 }
 
 /**
+ * Why this row cannot be saved, or `null` when it can.
+ *
+ * Two distinct blockers, and the difference matters to the user:
+ * - `switched_off` — the kind itself is refused right now. Nothing the user
+ *   types fixes it; the row has to be replaced. This is reachable only for an
+ *   entry saved BEFORE the switch, since the picker already bars choosing one
+ *   anew.
+ * - `incomplete` — a write-mostly secret came back masked and has not been
+ *   re-typed.
+ */
+export function payoutEntryBlocker(entry: PayoutEntry): 'switched_off' | 'incomplete' | null {
+  if (!SENDABLE_PAYOUT_METHODS.includes(entry.method)) return 'switched_off';
+  const mm = entry.mobile_money;
+  return mm?.provider && mm.phone_number && mm.account_name ? null : 'incomplete';
+}
+
+/**
  * Is this row sendable as it stands?
  *
- * `payout_details` is a full replace, so one row missing its re-entered secret
- * fails the whole save. The list badges those rather than letting the user find
- * out from a 400 that names an index.
+ * `payout_details` is a full replace, so ONE bad row fails the whole save —
+ * whether it is missing a re-entered secret or is a kind that is currently
+ * switched off, and wherever it sits in the list. The list badges those rather
+ * than letting the user find out from a 400 that names an index.
  */
 export function isPayoutEntryComplete(entry: PayoutEntry): boolean {
-  if (entry.method === 'mobile_money') {
-    const mm = entry.mobile_money;
-    return !!(mm?.provider && mm.phone_number && mm.account_name);
-  }
-  if (entry.method === 'bank') {
-    const bank = entry.bank;
-    return !!(bank?.bank_name && bank.account_number && bank.account_name && bank.country);
-  }
-  const card = entry.card;
-  return !!(
-    card?.brand &&
-    /^\d{4}$/.test(card.last4 ?? '') &&
-    card.card_holder_name &&
-    card.expiry_month >= 1 &&
-    card.expiry_month <= 12 &&
-    card.expiry_year >= 2000 &&
-    card.country
-  );
+  return payoutEntryBlocker(entry) === null;
 }
 
 /** What the row's mark is drawn from — the operator, the network, or the channel. */

@@ -23,6 +23,24 @@ interface Frame {
   payload?: unknown;
 }
 
+/**
+ * Error frames carry a machine `code` as well as a message. They stay non-fatal
+ * — the connection is never closed for one — and they are best-effort: the
+ * outbound buffer drops when full and frames are throttled to roughly one per
+ * five seconds, so never require one to arrive.
+ * See geo-tracker/api-doc/errors/README.md.
+ */
+export interface GeoTrackerErrorFrame {
+  code?: string;
+  message?: string;
+}
+
+/**
+ * A subscribe this viewer is not allowed to make. The board decides who is
+ * watchable, so this means our board is stale rather than that we should stop.
+ */
+const NOT_AUTHORIZED = 'TRACKING_NOT_AUTHORIZED';
+
 export interface GeoTrackerSocket {
   status: TrackingSocketStatus;
   /** Latest fix per agentId. */
@@ -37,6 +55,8 @@ export interface GeoTrackerSocket {
    * the agent), so it is the one signal worth refetching it on.
    */
   revokedAt: number | null;
+  /** The most recent `error` frame, or `null`. Advisory — never fatal. */
+  lastError: GeoTrackerErrorFrame | null;
   reconnect: () => void;
 }
 
@@ -65,6 +85,7 @@ export function useGeoTrackerSocket(
   const [trails, setTrails] = useState<Record<string, GeoPosition[]>>({});
   const [revoked, setRevoked] = useState<Set<string>>(new Set());
   const [revokedAt, setRevokedAt] = useState<number | null>(null);
+  const [lastError, setLastError] = useState<GeoTrackerErrorFrame | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
   /** agentId → the destination key currently subscribed with. */
@@ -193,8 +214,18 @@ export function useGeoTrackerSocket(
         });
         setRevoked((prev) => new Set(prev).add(p.agentId));
         setRevokedAt(Date.now());
+      } else if (frame.type === 'error') {
+        const e = (frame.payload ?? {}) as GeoTrackerErrorFrame & { agentId?: string };
+        setLastError({ code: e.code, message: e.message });
+        // A refused subscribe would otherwise sit in `subscribedRef` forever,
+        // looking subscribed — so drop it and let `syncSubscriptions` re-issue
+        // it once the board says the agent is watchable again. The rest of the
+        // catalog is the publishing agent's problem, not a viewer's.
+        if (e.code === NOT_AUTHORIZED && e.agentId) {
+          subscribedRef.current.delete(e.agentId);
+        }
       }
-      // ack / error frames are non-fatal; nothing to do.
+      // ack frames are non-fatal; nothing to do.
     };
 
     ws.onerror = () => {
@@ -216,6 +247,7 @@ export function useGeoTrackerSocket(
   const reconnect = useCallback(() => {
     attemptRef.current = 0;
     setRevoked(new Set());
+    setLastError(null);
     if (socketRef.current) {
       manualCloseRef.current = true;
       socketRef.current.close();
@@ -251,5 +283,5 @@ export function useGeoTrackerSocket(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscriptionKey]);
 
-  return { status, fixes, trails, revoked, revokedAt, reconnect };
+  return { status, fixes, trails, revoked, revokedAt, lastError, reconnect };
 }

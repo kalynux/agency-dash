@@ -69,8 +69,13 @@ Root-level fields on the agency profile response object.
 agents use. **[Payout methods](./payout-methods.md)** carries the full reference — endpoints,
 masking, card policy, and what happens at payout time.
 
+> 🚧 **Only `mobile_money` can be configured right now** — `bank` and `card` are switched off at
+> the write path (`400 VALIDATION_ERROR` on `method`). Stored entries of either kind still read
+> back and are still paid. See
+> [Payout methods](./payout-methods.md#availability).
+
 - **Minimum**: 1 entry required to complete onboarding.
-- **Maximum**: 3 entries. Duplicates of the same `method` are allowed (e.g. two cards).
+- **Maximum**: 3 entries. Duplicates of the same `method` are allowed (e.g. two mobile-money numbers).
 - **Index 0** is always the **preferred / default** payout method.
 - Sensitive values (`phone_number`, `account_number`) are **masked in all API responses**. The raw values are never returned. A `card` carries nothing sensitive to mask — see below.
 
@@ -78,7 +83,7 @@ masking, card policy, and what happens at payout time.
 
 | Field | Type | In Response? | Sendable? | Validation | Description |
 |-------|------|-------------|-----------|------------|-------------|
-| `method` | `string` | Yes | Yes | Enum: `"mobile_money"`, `"bank"` or `"card"` | Determines which sub-object is active. |
+| `method` | `string` | Yes | Yes | Readable: `"mobile_money"` · `"bank"` · `"card"`. **Sendable today: `"mobile_money"` only** (🚧 the other two are switched off) | Determines which sub-object is active. |
 | `is_preferred` | `boolean` | Yes | No (read-only) | — | `true` only for index 0. Set by the backend. Do not send this field. |
 | `mobile_money` | `object \| null` | Yes | Yes | Required if `method === "mobile_money"`, else `null` | Mobile money details. |
 | `bank` | `object \| null` | Yes | Yes | Required if `method === "bank"`, else `null` | Bank account details. |
@@ -92,7 +97,10 @@ masking, card policy, and what happens at payout time.
 | `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required ([Contact formats](../README.md#contact-formats-phone--email)) | Momo phone number. **Masked in responses** as `phone_number_masked`. |
 | `account_name` | `string` | Yes | Min 1 char | Name registered on the Momo account. |
 
-### `bank` Object
+### `bank` Object 🚧 switched off
+
+> **Not sendable right now** — see the notice at the top of this section. Readable if one was stored
+> before the switch.
 
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
@@ -101,7 +109,10 @@ masking, card policy, and what happens at payout time.
 | `account_name` | `string` | Yes | Min 1 char | Name on the bank account. |
 | `country` | `string` | Yes | Min 1 char | Country where the bank operates. ISO code recommended (e.g. `"CM"`). |
 
-### `card` Object
+### `card` Object 🚧 switched off
+
+> **Not sendable right now** — see the notice at the top of this section. Readable if one was stored
+> before the switch.
 
 > **Card numbers and CVVs are never accepted.** Sending `number`, `card_number`, `pan`,
 > `account_number`, `cvv`, `cvc`, `cvn` or `security_code` inside `card` is a `400` — refused

@@ -17,6 +17,7 @@ export interface WhatsappLinkStatusResponse {
 
 export interface WhatsappUnlinkResponse {
   success: true;
+  data: null;
   message?: string;
 }
 

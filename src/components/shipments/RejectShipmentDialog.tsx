@@ -57,7 +57,14 @@ export function RejectShipmentDialog({
 
   const handleSubmit = async () => {
     if (!shipmentId || !reason) return;
-    const result = await reject(shipmentId, reason, trimmedNote || undefined);
+    // On a status conflict the shipment moved under us — an agent picked it up,
+    // or another rejection landed first. Resending the same intent is wrong, so
+    // close and refresh instead of leaving a form open over a stale view.
+    const result = await reject(shipmentId, reason, trimmedNote || undefined, () => {
+      reset();
+      onOpenChange(false);
+      onRejected();
+    });
     if (result) {
       reset();
       onOpenChange(false);

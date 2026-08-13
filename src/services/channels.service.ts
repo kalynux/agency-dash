@@ -9,16 +9,23 @@ import type {
   TelegramDisconnectResponse,
 } from '@/types/channel.types';
 
-/** WhatsApp account linking (role-scoped). See api-doc/whatsapp/README.md. */
+/**
+ * WhatsApp account linking (role-scoped). See api-doc/whatsapp/README.md.
+ *
+ * The router is mounted at `/api/webhooks/whatsapp` — there is no `/api/whatsapp`
+ * prefix. The two authenticated link routes share that prefix with the public
+ * webhook, which also means they are exempt from rate limiting and stay
+ * reachable during a maintenance window.
+ */
 export const whatsappService = {
-  /** GET /whatsapp/link/status — current WhatsApp link status for the active role. */
+  /** GET /webhooks/whatsapp/link/status — current WhatsApp link status for the active role. */
   getStatus(): Promise<WhatsappLinkStatusResponse> {
-    return api.get<WhatsappLinkStatusResponse>('/whatsapp/link/status');
+    return api.get<WhatsappLinkStatusResponse>('/webhooks/whatsapp/link/status');
   },
 
-  /** DELETE /whatsapp/link — unlink WhatsApp for the active role. */
+  /** DELETE /webhooks/whatsapp/link — unlink WhatsApp for the active role. */
   unlink(): Promise<WhatsappUnlinkResponse> {
-    return api.delete<WhatsappUnlinkResponse>('/whatsapp/link');
+    return api.delete<WhatsappUnlinkResponse>('/webhooks/whatsapp/link');
   },
 
   /**

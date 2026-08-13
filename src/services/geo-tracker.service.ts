@@ -7,7 +7,7 @@
 // request (its CORS allows credentials), so by default we send no token at all.
 // The bearer is only an OVERRIDE for a genuinely cross-site geo-tracker.
 
-import { ApiError } from '@/types/api';
+import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
 import type { GeoPosition, RouteResult, TrackingCheckpoint } from '@/types/tracking.types';
 
 declare global {
@@ -75,12 +75,49 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    // geo-tracker answers errors as plain text (`http.Error`), not a JSON envelope.
-    const body = await res.text().catch(() => '');
-    throw new ApiError(res.status, `GEO_TRACKER_${res.status}`, body.trim() || `Request failed with status ${res.status}`);
+    throw await geoTrackerError(res);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/**
+ * geo-tracker now answers the same envelope as the main API — `{ success,
+ * requestId, error: { code, message, statusCode, category } }` — where it used
+ * to answer plain text via Go's `http.Error`. The text branch below is kept
+ * because a proxy or a panic can still produce a non-JSON body, and because
+ * `404` there means "not authorized OR no such agent" either way.
+ *
+ * `X-Request-ID` is set on every response; on a masked 5xx it is the only handle
+ * anyone has. See geo-tracker/api-doc/errors/README.md.
+ */
+async function geoTrackerError(res: Response): Promise<ApiError> {
+  const raw = await res.text().catch(() => '');
+  let body: Record<string, unknown> = {};
+  try {
+    body = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // not JSON — fall through to the text branch
+  }
+
+  const error = (body.error ?? {}) as Record<string, unknown>;
+  const requestId =
+    (body.requestId as string) ?? res.headers.get('X-Request-ID') ?? undefined;
+  const rawCategory = error.category;
+  const category = (ERROR_CATEGORIES as readonly string[]).includes(rawCategory as string)
+    ? (rawCategory as ErrorCategory)
+    : undefined;
+
+  return new ApiError(
+    res.status,
+    // Only synthesise a code when the service gave none — a real one resolves to
+    // catalogued copy, `GEO_TRACKER_502` never can.
+    (error.code as string) ?? `GEO_TRACKER_${res.status}`,
+    (error.message as string) || raw.trim() || `Request failed with status ${res.status}`,
+    error.details,
+    requestId,
+    category,
+  );
 }
 
 export interface CheckpointQuery {

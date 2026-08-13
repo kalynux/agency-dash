@@ -4,6 +4,7 @@ export {
   cardBrandLabel,
   formatCardExpiry,
   isPayoutEntryComplete,
+  payoutEntryBlocker,
   payoutEntryDetail,
   payoutEntryMark,
   payoutEntryTitle,

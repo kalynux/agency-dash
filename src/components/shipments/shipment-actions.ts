@@ -49,8 +49,14 @@ export const NEXT_ACTIONS: Partial<Record<ShipmentStatus, ShipmentNextAction[]>>
 export const TERMINAL_STATUSES: ShipmentStatus[] = ['delivered', 'returned', 'rejected'];
 
 /**
- * Fixed rejection reason set (POST .../reject). `other` requires a note.
- * The array fixes the display order; the copy lives in `shipments:reject.reasons`.
+ * The rejection reasons an AGENCY may send (POST .../reject). `other` requires
+ * a note. The array fixes the display order; the copy lives in
+ * `shipments:reject.reasons`.
+ *
+ * `platform_intervention` is deliberately absent: it exists in the API's enum as
+ * the administrator's reason for a platform cancellation, and an agency has no
+ * reason to send it. It is still a valid value to *render* on a rejection
+ * record we read back — see `ShipmentRejectionReason`.
  */
 export const REJECTION_REASONS: ShipmentRejectionReason[] = [
   'out_of_coverage_area',

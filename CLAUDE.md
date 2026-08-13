@@ -47,7 +47,7 @@ src/
 ### Routing
 
 - `/login` — redirects externally to `http://localhost:3000/login`
-- `/onboarding/*` — 3-step flow (logistics → payout → branding), gated by `OnboardingGuard` + `StepGuard`
+- `/onboarding/*` — 4-step flow (logistics → payout → branding → policies), gated by `OnboardingGuard` + `StepGuard`. Each step is its own `PUT /api/agency/onboarding/{logistics,payout,branding,policies}`; there is no `PATCH .../onboarding/step`
 - `/dashboard/*` — main app, gated by authentication + completed onboarding
 
 **Route guards:** `OnboardingGuard` checks auth; `StepGuard` prevents step skipping using server-driven `role_entity.onboarding_step`.
@@ -104,6 +104,6 @@ in the app.
 
 ### Key Data Models
 
-- `AgencyOnboardingStep` enum: `0=complete`, `1=logistics`, `2=payout`, `3=branding` — drives route guards
+- `AgencyOnboardingStep`: `0=complete`, `1=logistics`, `2=payout`, `3=branding` (skippable), `4=policies` — drives route guards
 - `AgencyRoleEntity` — full agency profile returned by `/auth/me`
 - `ApiUser` — backend user shape; `User` — frontend-normalized shape

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiErrorMessage } from '@/lib/errors';
+import { getApiErrorMessage, getErrorCode } from '@/lib/errors';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { shipmentsService } from '@/services/shipments.service';
 import type {
@@ -37,10 +37,23 @@ export function useShipmentActions() {
     [run, t],
   );
 
+  /**
+   * Decline an assigned shipment.
+   *
+   * Rejection is now guarded by a from-status compare-and-set, so it can answer
+   * `409 SHIPMENT_STATUS_CONFLICT`: the shipment moved between the read that
+   * validated the rejection and the write — an agent picked it up, or a second
+   * rejection landed first. The remedy is to reload, never to resend, so
+   * `onStale` fires for the caller to refresh its view.
+   * See api-doc/agency/shipments.md → POST .../reject.
+   */
   const reject = useCallback(
-    (id: string, reason: ShipmentRejectionReason, note?: string) =>
+    (id: string, reason: ShipmentRejectionReason, note?: string, onStale?: () => void) =>
       run(`reject:${id}`, async () => (await shipmentsService.reject(id, reason, note)).data, {
         success: t('reject.success'),
+        onError: (err) => {
+          if (getErrorCode(err) === 'SHIPMENT_STATUS_CONFLICT') onStale?.();
+        },
       }),
     [run, t],
   );

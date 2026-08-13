@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { ApiError } from '@/types/api';
+import { ApiError, type ErrorCategory } from '@/types/api';
 
 /**
  * Backend errors are resolved by `error.code`, never by `error.message`.
@@ -24,6 +24,13 @@ function translateCode(code: string, context?: Record<string, unknown>): string 
   return i18n.t(`${CODES_NS}:codes.${code}` as never, context as never) as unknown as string;
 }
 
+function translateCategory(
+  category: ErrorCategory,
+  context?: Record<string, unknown>,
+): string {
+  return i18n.t(`${CODES_NS}:categories.${category}` as never, context as never) as unknown as string;
+}
+
 export function getGenericErrorMessage(): string {
   return i18n.t('errors:generic');
 }
@@ -37,6 +44,13 @@ export function getGenericErrorMessage(): string {
  *   `namespace:key` paths.
  * @param context interpolation values passed to the resolved message, so a
  *   catalogued error can name the limit or amount it is about.
+ *
+ * Resolution is four tiers, narrowest first: per-screen override → the code's
+ * own copy → `error.category` → generic. The category tier exists because the
+ * backend registry has 547 codes and no client will ever map all of them; the
+ * category still tells the user the one thing that changes what they do next
+ * (sign in again / it's your input / it's ours / wait and retry).
+ * See api-doc/errors/README.md ("Best Practices", #3).
  */
 export function getApiErrorMessage(
   err: unknown,
@@ -48,7 +62,14 @@ export function getApiErrorMessage(
     if (override && i18n.exists(override)) {
       return i18n.t(override as never, context as never) as unknown as string;
     }
-    if (hasCode(err.code)) return translateCode(err.code, context);
+    // `retryAfterSeconds` is interpolated for free, so a rate-limit message can
+    // name the wait without every call site plumbing it through.
+    const withRetry =
+      err.retryAfterSeconds !== undefined
+        ? { seconds: err.retryAfterSeconds, ...context }
+        : context;
+    if (hasCode(err.code)) return translateCode(err.code, withRetry);
+    if (err.category) return translateCategory(err.category, withRetry);
     return getGenericErrorMessage();
   }
   // A non-API failure is almost always a network/abort error from `fetch`.
@@ -79,4 +100,18 @@ export function isAuthError(err: unknown): boolean {
 /** The backend code behind an error, when there is one. */
 export function getErrorCode(err: unknown): string | undefined {
   return err instanceof ApiError ? err.code : undefined;
+}
+
+/** The coarse kind of failure, for callers with no per-code handling. */
+export function getErrorCategory(err: unknown): ErrorCategory | undefined {
+  return err instanceof ApiError ? err.category : undefined;
+}
+
+/**
+ * True when the caller should back off rather than retry (429). Read
+ * {@link ApiError.retryAfterSeconds} for how long — retrying immediately is the
+ * reason the ceiling exists.
+ */
+export function isRateLimited(err: unknown): boolean {
+  return err instanceof ApiError && err.isRateLimited;
 }

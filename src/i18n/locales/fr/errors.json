@@ -19,7 +19,8 @@
       "MIME_TYPE_MISMATCH": "a un contenu qui ne correspond pas à son extension",
       "POLYGLOT_DETECTED": "ressemble à un fichier déguisé et a été rejeté",
       "UNDETECTABLE_TYPE": "a un type de fichier non reconnu",
-      "fallback": "a été rejeté"
+      "fallback": "a été rejeté",
+      "NO_FILES_UPLOADED": "n’a pas été reçu"
     }
   },
   "codes": {
@@ -48,7 +49,6 @@
     "AUTH_FORBIDDEN": "Vous n'avez pas la permission d'effectuer cette action.",
     "AUTH_OAUTH_STATE_INVALID": "Cette tentative de connexion n'a pas pu être vérifiée. Veuillez recommencer.",
     "AUTH_OAUTH_STATE_EXPIRED": "Cette tentative de connexion a pris trop de temps. Veuillez recommencer.",
-
     "PAYMENT_ORDER_NOT_FOUND": "Cette commande est introuvable.",
     "PAYMENT_ORDER_ALREADY_PAID": "Cette commande a déjà été payée.",
     "PAYMENT_INVALID_ORDER_STATUS": "Cette commande ne peut pas être payée dans son statut actuel.",
@@ -71,7 +71,6 @@
     "PAYMENT_REFERENCE_REQUIRED": "Une référence de paiement est requise.",
     "PAYMENT_ORDER_IS_COD": "Il s'agit d'une commande en paiement à la livraison — elle ne se règle pas en ligne.",
     "STRIPE_WEBHOOK_SIGNATURE_INVALID": "Impossible de vérifier cette notification de paiement. Contactez le support.",
-
     "REFUND_NOT_ELIGIBLE": "Cette commande n'est pas éligible à un remboursement.",
     "REFUND_WINDOW_EXPIRED": "Le délai de remboursement de cette commande est dépassé.",
     "REFUND_POLICY_DISABLED": "Les remboursements ne sont pas activés pour cette commande.",
@@ -81,7 +80,6 @@
     "REFUND_ORDER_NOT_PAID": "Cette commande n'a jamais été payée, il n'y a donc rien à rembourser.",
     "REFUND_GATEWAY_FAILED": "Le prestataire de paiement a refusé le remboursement. Veuillez réessayer.",
     "REFUND_GATEWAY_NOT_SUPPORTED": "Les remboursements ne sont pas pris en charge pour ce moyen de paiement.",
-
     "TICKET_NOT_FOUND": "Ce ticket est introuvable.",
     "TICKET_UPDATE_FAILED": "Impossible de mettre à jour ce ticket. Veuillez réessayer.",
     "TICKET_ASSIGN_FAILED": "Un utilisateur précis est requis pour ce rôle.",
@@ -100,7 +98,6 @@
     "TICKET_CUSTOMER_PRIVATE_NOTE_FORBIDDEN": "Les notes privées ne peuvent pas être ajoutées sur un ticket client.",
     "TICKET_REQUIRED_INFO_MISSING": "Il manque des informations obligatoires pour ce type de ticket.",
     "TICKET_ENTITY_NOT_FOUND": "L'élément référencé est introuvable.",
-
     "DIGITAL_INVALID_ENTITLEMENT_ID": "Cette référence de téléchargement n'est pas valide.",
     "DIGITAL_ENTITLEMENT_NOT_FOUND": "Ce téléchargement est introuvable.",
     "DIGITAL_ENTITLEMENT_UNAUTHORIZED": "Vous n'avez pas accès à ce téléchargement.",
@@ -115,7 +112,6 @@
     "DIGITAL_ASSET_IN_USE": "Ce fichier est encore utilisé et ne peut pas être supprimé.",
     "DIGITAL_ENTITLEMENT_CONFIG_MISSING": "La livraison numérique n'est pas configurée pour cet article.",
     "DIGITAL_ENTITLEMENT_CONFIG_INACTIVE": "La livraison numérique est désactivée pour cet article.",
-
     "WHATSAPP_ROLE_NOT_SUPPORTED": "Ce rôle ne prend pas en charge la liaison WhatsApp.",
     "WHATSAPP_NOT_LINKED": "Aucun compte WhatsApp n'est lié.",
     "WHATSAPP_LINK_FAILED": "Impossible de démarrer la liaison WhatsApp. Veuillez réessayer.",
@@ -126,11 +122,9 @@
     "WHATSAPP_IDEMPOTENCY_REQUIRED": "La clé d'idempotence est absente de cette requête.",
     "WHATSAPP_DUPLICATE_MESSAGE": "Ce message a déjà été envoyé.",
     "WHATSAPP_UNSUPPORTED_MESSAGE_TYPE": "Ce type de message n'est pas pris en charge sur WhatsApp.",
-
     "TELEGRAM_NOT_LINKED": "Aucun compte Telegram n'est lié.",
     "TELEGRAM_LINK_FAILED": "Impossible de démarrer la liaison Telegram. Veuillez réessayer.",
     "TELEGRAM_LINK_NOT_FOUND": "Cette liaison Telegram est introuvable.",
-
     "GOOGLE_MISSING_CLIENT_ID": "La connexion Google n'est pas configurée. Contactez le support.",
     "GOOGLE_MISSING_CLIENT_SECRET": "La connexion Google n'est pas configurée. Contactez le support.",
     "GOOGLE_MISSING_REDIRECT_URI": "La connexion Google n'est pas configurée. Contactez le support.",
@@ -143,11 +137,9 @@
     "GOOGLE_TOKEN_ENCRYPTION_KEY_MISSING": "Les intégrations ne sont pas configurées. Contactez le support.",
     "GOOGLE_TOKEN_INVALID_FORMAT": "Cette connexion Google n'est plus valide. Reconnectez-vous.",
     "INTEGRATION_UNSUPPORTED_CALENDAR_PROVIDER": "Ce fournisseur d'agenda n'est pas pris en charge.",
-
     "DATABASE_UNAVAILABLE": "Le service est temporairement indisponible. Réessayez dans un instant.",
     "DATABASE_CONNECTION_ERROR": "Le service est temporairement indisponible. Réessayez dans un instant.",
     "DATABASE_UNIQUE_CONSTRAINT_VIOLATION": "Cette valeur est déjà utilisée.",
-
     "ORDER_NOT_FOUND": "Cette commande est introuvable.",
     "ORDER_PAYMENT_FAILED": "Le paiement de cette commande a échoué.",
     "ORDER_TERMINAL_STATE": "Cette commande est terminée et ne peut plus être modifiée.",
@@ -168,7 +160,6 @@
     "ORDER_PRODUCT_NOT_FOUND": "Un produit de cette commande est introuvable.",
     "ORDER_VENDOR_NOT_FOUND": "Le vendeur de cette commande est introuvable.",
     "ORDER_NO_DELIVERY_AGENCY": "Aucune agence de livraison n'est affectée à cette commande.",
-
     "SHIPMENT_NOT_FOUND": "Cette expédition est introuvable.",
     "SHIPMENT_INVALID_STATUS_TRANSITION": "Cette expédition ne peut pas passer à ce statut depuis son statut actuel.",
     "SHIPMENT_REJECTION_NOT_ALLOWED": "Cette expédition a déjà été récupérée et ne peut plus être refusée.",
@@ -196,7 +187,6 @@
     "SHIPMENT_PROOF_NOT_ALLOWED": "La preuve de livraison ne peut être ajoutée qu'une fois la livraison terminée.",
     "SHIPMENT_PROOF_NOT_FOUND": "Cette preuve de livraison est introuvable.",
     "SHIPMENT_PROOF_FILE_REQUIRED": "Un fichier de preuve est requis.",
-
     "CONFIG_MISSING_WA_ACCESS_TOKEN": "WhatsApp n'est pas configuré. Contactez le support.",
     "CONFIG_MISSING_WA_PHONE_ID": "WhatsApp n'est pas configuré. Contactez le support.",
     "CONFIG_MISSING_STORAGE_PROVIDER": "Le stockage de fichiers n'est pas configuré. Contactez le support.",
@@ -209,21 +199,17 @@
     "STORAGE_DELETE_FAILED": "Impossible de supprimer ce fichier. Veuillez réessayer.",
     "STORAGE_QUOTA_EXCEEDED": "Vous avez atteint votre quota de stockage. Libérez de l'espace ou passez à une offre supérieure.",
     "STORAGE_CLEANUP_FAILED": "Impossible de terminer le nettoyage de ce stockage. Veuillez réessayer.",
-
     "GEO_PROVIDER_NOT_CONFIGURED": "La recherche d'adresse n'est pas configurée. Contactez le support.",
     "GEO_PROVIDER_UNAVAILABLE": "La recherche d'adresse est temporairement indisponible. Veuillez réessayer.",
     "GEO_SEARCH_FAILED": "La recherche d'adresse a échoué. Veuillez réessayer.",
     "ADDRESS_GEO_REQUIRED": "Choisissez une adresse dans les résultats de recherche pour la placer sur la carte.",
     "ADDRESS_COUNTRY_MISMATCH": "Cette adresse se trouve hors du pays d'exploitation de votre agence.",
     "PROFILE_COUNTRY_IMMUTABLE": "Votre pays d'exploitation a été défini lors de l'inscription et ne peut pas être modifié.",
-
     "MAIL_TEMPLATE_NOT_FOUND": "Ce modèle d'e-mail est introuvable.",
-
     "ANALYTICS_INVALID_DATE_RANGE": "Cette période n'est pas valide.",
     "ANALYTICS_UNSUPPORTED_TIMEZONE": "Ce fuseau horaire n'est pas pris en charge.",
     "ANALYTICS_AGGREGATION_NOT_READY": "Ces chiffres sont encore en cours de calcul. Revenez d'ici peu.",
     "ANALYTICS_DATE_RANGE_EXCEEDED": "Cette période est trop longue. Veuillez la réduire.",
-
     "DELIVERY_AGENCY_NOT_FOUND": "Le profil de votre agence est introuvable.",
     "AGENCY_COVERAGE_AREA_INVALID": "L'une des régions sélectionnées ne fait pas partie de votre pays d'exploitation.",
     "DELIVERY_AGENT_NOT_FOUND": "Ce livreur est introuvable.",
@@ -243,7 +229,6 @@
     "DELIVERY_AGENT_NOTIFICATION_NOT_FOUND": "Cette notification de livreur est introuvable.",
     "DELIVERY_AGENT_NOTIFICATION_CHANNEL_NOT_VERIFIED": "Ce livreur n'a pas encore vérifié ce canal.",
     "DELIVERY_AGENT_NOTIFICATION_DELIVERY_FAILED": "La notification a été enregistrée mais son envoi au livreur a échoué.",
-
     "AGENT_NOT_FOUND": "Ce livreur est introuvable.",
     "AGENT_NOT_ACTIVE": "Le compte de ce livreur n'est pas actif.",
     "AGENT_SUSPENDED": "Ce livreur est suspendu.",
@@ -274,7 +259,6 @@
     "AGENT_PAYOUT_DETAILS_MISSING": "Ce livreur n'a pas encore renseigné ses informations de paiement.",
     "AGENT_SERVICE_TOKEN_INVALID": "Un appel de service interne a été rejeté. Contactez le support.",
     "AGENT_SERVICE_TOKEN_NOT_CONFIGURED": "Un service interne n'est pas configuré. Contactez le support.",
-
     "CONTRACT_NOT_FOUND": "Ce contrat de livreur est introuvable.",
     "CONTRACT_INVALID_TRANSITION": "Cette modification de contrat ne s'applique plus.",
     "CONTRACT_HAS_OUTSTANDING_COD": "Ce livreur détient encore des espèces pour votre agence — enregistrez d'abord ses dépôts.",
@@ -301,7 +285,6 @@
     "CONTRACT_COD_THRESHOLD_OUT_OF_BOUNDS": "Ce plafond COD est hors des limites autorisées.",
     "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": "Cela dépasse le solde COD restant du livreur. Demandez-lui de relever son plafond global.",
     "CONTRACT_COD_THRESHOLD_BELOW_OUTSTANDING": "Vous ne pouvez pas fixer un plafond inférieur aux espèces que le livreur détient déjà pour vous.",
-
     "CONNECTION_NOT_FOUND": "Cette connexion est introuvable.",
     "CONNECTION_VENDOR_NOT_FOUND": "Ce vendeur est introuvable.",
     "CONNECTION_ALREADY_EXISTS": "Une connexion avec ce vendeur existe déjà.",
@@ -312,20 +295,15 @@
     "CONNECTION_NOT_APPROVER": "Seul l'approbateur peut faire cela.",
     "CONNECTION_WRONG_REAPPROVAL_PARTY": "Ce n'est pas à votre tour de réapprouver cette connexion.",
     "CONNECTION_NOT_ACTIVE": "Cette connexion n'est pas active.",
-
     "CUSTOMER_NOT_FOUND": "Ce client est introuvable.",
     "CUSTOMER_ADDRESS_NOT_FOUND": "Cette adresse client est introuvable.",
     "CUSTOMER_PAYMENT_METHOD_NOT_FOUND": "Ce moyen de paiement client est introuvable.",
-
     "PAYMENT_METHOD_NOT_FOUND": "Ce moyen de paiement est introuvable.",
     "PAYMENT_METHOD_LIMIT_REACHED": "Vous pouvez enregistrer au maximum 10 moyens de paiement.",
-
     "USER_NOT_FOUND": "Cet utilisateur est introuvable.",
     "USER_INVALID_PASSWORD": "Le mot de passe actuel est incorrect.",
-
     "STORE_NOT_FOUND": "Cette boutique est introuvable.",
     "STORE_SLUG_TAKEN": "Cette adresse de boutique est déjà prise.",
-
     "MAGAZIN_NOT_FOUND": "Le profil de votre entreprise est introuvable.",
     "MAGAZIN_CONFLICT": "Les informations de votre entreprise ont été modifiées ailleurs. Actualisées — veuillez réappliquer vos changements.",
     "MAGAZIN_LOCATION_IN_USE": "Un site que vous avez supprimé entrepose encore des produits de vendeurs. Rattachez d'abord ces produits à un autre site.",
@@ -335,14 +313,12 @@
     "INVENTORY_PRODUCT_NOT_SUSPENDABLE": "Seul un produit en vente peut être suspendu.",
     "INVENTORY_PRODUCT_NOT_AGENCY_SUSPENDED": "Cette suspension n'est pas la vôtre à lever — c'est la plateforme qui l'a appliquée, le plus souvent parce que l'agence de livraison ou la connexion du vendeur a expiré.",
     "INVENTORY_PRODUCT_UNSUSPEND_BLOCKED": "Ce produit ne peut pas encore repartir en vente — le vendeur doit d'abord régler les points listés.",
-
     "STOCK_REQUEST_NOT_FOUND": "Cette demande de stock est introuvable.",
     "STOCK_REQUEST_ALREADY_PENDING": "Une demande est déjà ouverte sur ce SKU. Répondez-y, ou retirez la vôtre, avant d'en émettre une autre.",
     "STOCK_REQUEST_NOT_PENDING": "Cette demande a déjà reçu une réponse — rechargez-la et lisez l'issue plutôt que de réessayer.",
     "STOCK_REQUEST_NOT_YOURS": "Cette action ne vous revient pas sur cette demande.",
     "STOCK_REQUEST_STALE": "Vous n'entreposez plus ce produit : la demande ne peut pas être appliquée.",
     "STOCK_REQUEST_NO_CHANGE": "C'est déjà la quantité enregistrée.",
-
     "VENDOR_UNSUPPORTED_FISCAL_CALENDAR": "Ce calendrier fiscal n'est pas pris en charge.",
     "VENDOR_FISCAL_CALENDAR_INVALID": "Ce calendrier fiscal n'est pas valide.",
     "VENDOR_BUSINESS_ADDRESS_IN_USE": "Cette adresse professionnelle est encore utilisée.",
@@ -358,7 +334,6 @@
     "VENDOR_CUSTOMER_FLAG_DUPLICATE": "Ce client est déjà signalé pour ce motif.",
     "VENDOR_POLICY_DOCUMENT_MISSING": "Aucun document n'a été fourni.",
     "VENDOR_POLICY_DOCUMENT_TYPE_INVALID": "Seuls les fichiers PDF sont acceptés.",
-
     "CART_VARIANT_REQUIRED": "Choisissez une variante avant d'ajouter au panier.",
     "CART_PRODUCT_NOT_FOUND": "Ce produit est introuvable.",
     "CART_SERVICE_PRODUCT_NOT_ALLOWED": "Les services se réservent, ils ne s'ajoutent pas au panier.",
@@ -369,7 +344,6 @@
     "CART_DIGITAL_LIMIT_REACHED": "Vous avez atteint la limite d'articles numériques par panier.",
     "CART_NOT_FOUND": "Ce panier est introuvable.",
     "CART_EMPTY_CHECKOUT": "Votre panier est vide.",
-
     "BOOKING_PRODUCT_NOT_FOUND": "Ce service réservable est introuvable.",
     "BOOKING_USER_NOT_FOUND": "Ce client est introuvable.",
     "BOOKING_NOT_FOUND": "Cette réservation est introuvable.",
@@ -387,17 +361,14 @@
     "BOOKING_INVALID_SLOT_ID": "Ce créneau n'est pas valide.",
     "BOOKING_NOT_RESCHEDULABLE": "Cette réservation ne peut pas être reprogrammée.",
     "BOOKING_SLOT_FULL": "Ce créneau est complet.",
-
     "AVAILABILITY_PRODUCT_NOT_FOUND": "Ce service est introuvable.",
     "AVAILABILITY_RULE_NOT_FOUND": "Cette règle de disponibilité est introuvable.",
     "AVAILABILITY_INVALID_PRODUCT_TYPE": "Les règles de disponibilité ne s'appliquent qu'aux services.",
     "AVAILABILITY_INVALID_TIME_RANGE": "Cette plage horaire n'est pas valide.",
     "AVAILABILITY_TIME_OVERLAP": "Cette plage horaire en chevauche une autre.",
     "AVAILABILITY_FORBIDDEN": "Vous n'avez pas la permission de modifier cette disponibilité.",
-
     "ADMIN_NOT_FOUND": "Cet administrateur est introuvable.",
     "ADMIN_FORBIDDEN": "Cette action est réservée aux administrateurs de la plateforme.",
-
     "BILLING_PLAN_NOT_FOUND": "Cette offre est introuvable.",
     "BILLING_PLAN_INACTIVE": "Cette offre n'est plus disponible.",
     "BILLING_PLAN_ROLE_MISMATCH": "Cette offre n'est pas disponible pour les comptes agence.",
@@ -412,7 +383,6 @@
     "BILLING_PLAN_PURCHASE_NOT_FOUND": "Cet achat d'offre est introuvable.",
     "BILLING_PLAN_NOT_PURCHASABLE": "Cette offre ne peut pas être achetée pour le moment.",
     "BILLING_PURCHASE_INVALID_STATE": "Cet achat ne peut pas être modifié dans son état actuel.",
-
     "EARNINGS_INVALID_SPLIT": "Cette répartition des revenus n'est pas valide.",
     "EARNINGS_ALLOCATION_NOT_FOUND": "Cette écriture de revenus est introuvable.",
     "EARNINGS_ALREADY_COMPLETED": "Ces revenus ont déjà été réglés.",
@@ -424,7 +394,6 @@
     "EARNINGS_PAYOUT_BELOW_MINIMUM": "Votre solde disponible est inférieur au minimum de 10 000 XAF.",
     "EARNINGS_PAYOUT_REQUEST_NOT_FOUND": "Cette demande de versement est introuvable.",
     "EARNINGS_PAYOUT_REQUEST_NOT_PENDING": "Cette demande de versement a déjà été traitée.",
-
     "COD_NOT_AVAILABLE_FOR_DIGITAL": "Le paiement à la livraison n'est pas disponible pour les articles numériques.",
     "COD_AGENCY_NOT_SUPPORTED": "Le paiement à la livraison n'est pas activé pour cette agence.",
     "COD_ORDER_AMOUNT_EXCEEDS_LIMIT": "Cette commande dépasse votre plafond de paiement à la livraison.",
@@ -451,7 +420,6 @@
     "COD_REMITTANCE_ALREADY_RESOLVED": "Ce reversement a déjà été traité.",
     "COD_DISCREPANCY_NOT_FOUND": "Cet écart est introuvable.",
     "COD_DISCREPANCY_ALREADY_RESOLVED": "Cet écart est déjà clos.",
-
     "CATALOG_INSUFFICIENT_STOCK": "Le stock est insuffisant pour cette opération.",
     "CATALOG_OVERSALE_NOT_ALLOWED": "La vente au-delà du stock disponible n'est pas autorisée pour cet article.",
     "CATALOG_INVALID_CSV_FORMAT": "Ce fichier CSV n'est pas correctement formaté.",
@@ -535,20 +503,91 @@
     "CATALOG_BULK_UPDATE_FAILED": "La mise à jour groupée a échoué. Veuillez réessayer.",
     "CATALOG_SHIPPING_NOT_FOUND": "Ce paramètre de livraison est introuvable.",
     "CATALOG_SHIPPING_ACCESS_DENIED": "Vous n'avez pas accès à ce paramètre de livraison.",
-
     "COMMAND_ALREADY_REGISTERED": "Un conflit interne est survenu. Contactez le support.",
     "COMMAND_NOT_FOUND": "Cette action n'est pas disponible. Contactez le support.",
-
     "INTERNAL_SERVER_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer.",
     "NOT_FOUND": "Nous n'avons pas trouvé ce que vous cherchiez.",
     "VALIDATION_ERROR": "Veuillez vérifier les champs signalés et réessayer.",
-
     "UNAUTHORIZED": "Votre session a expiré. Veuillez vous reconnecter.",
     "FORBIDDEN": "Vous n'avez pas la permission d'effectuer cette action.",
     "INTERNAL_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer.",
     "FILE_TOO_LARGE": "Ce fichier est trop volumineux.",
     "NETWORK_ERROR": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
     "PARSE_ERROR": "Impossible de lire la réponse du serveur. Veuillez réessayer.",
-    "ABORTED": "Envoi annulé."
+    "ABORTED": "Envoi annulé.",
+    "AUTH_PASSWORD_CHANGED": "Votre mot de passe a été modifié, ce qui a mis fin à cette session. Reconnectez-vous — si vous n’êtes pas à l’origine du changement, contactez le support.",
+    "AUTH_ACCOUNT_SUSPENDED": "Ce compte est suspendu. Contactez le support pour le réactiver.",
+    "AUTH_VENDOR_SUSPENDED": "La boutique de ce vendeur est suspendue.",
+    "RATE_LIMIT_EXCEEDED": "Trop de requêtes. Patientez un instant et réessayez.",
+    "REQUEST_BODY_INVALID": "Cette requête est mal formée et n’a pas pu être lue. Veuillez réessayer.",
+    "REQUEST_BODY_TOO_LARGE": "Cette requête est trop volumineuse. Envoyez moins de données et réessayez.",
+    "REQUEST_MEDIA_TYPE_UNSUPPORTED": "Ce type de contenu n’est pas pris en charge pour cette requête.",
+    "DELIVERY_AGENCY_STATUS_CONFLICT": "Le statut de cette agence vient de changer ailleurs. Actualisez et réessayez.",
+    "USER_STATUS_CONFLICT": "Le statut de ce compte vient de changer ailleurs. Actualisez et réessayez.",
+    "USER_CONTACT_REQUIRED": "Un compte doit conserver une adresse e-mail ou un numéro de téléphone — vous ne pouvez pas supprimer les deux.",
+    "VENDOR_NOT_FOUND": "Ce vendeur est introuvable.",
+    "VENDOR_STATUS_CONFLICT": "Le statut de ce vendeur vient de changer ailleurs. Actualisez et réessayez.",
+    "VENDOR_KYC_STATUS_CONFLICT": "La vérification de ce vendeur est déjà dans cet état.",
+    "VENDOR_PRODUCT_NOT_SUSPENDABLE": "Seul un produit actuellement en vente peut être suspendu.",
+    "VENDOR_PRODUCT_NOT_OVERSIGHT_SUSPENDED": "Ce produit n’a pas été suspendu par la plateforme, il ne peut donc pas être réactivé ici.",
+    "VENDOR_PRODUCT_UNSUSPEND_BLOCKED": "Ce produit ne peut pas encore être remis en vente. Voir les détails ci-dessous.",
+    "CATALOG_PRODUCT_VENDOR_SUSPENDED": "Le vendeur est suspendu, aucun de ses produits ne peut donc être en vente.",
+    "REFUND_ORDER_NOT_FOUND": "La commande liée à ce paiement est introuvable.",
+    "REFUND_ORDER_IS_COD": "Cette commande a été payée en espèces à la livraison : il n’y a rien à rembourser via une passerelle.",
+    "REFUND_POLICY_OVERRIDE_REQUIRED": "Ce remboursement sort de la politique du vendeur et nécessite une dérogation explicite.",
+    "ORDER_DISPUTE_NOT_ACTIVE": "Aucun litige n’est ouvert sur cette commande.",
+    "BOOKING_NO_BALANCE_DUE": "Cette réservation n’a aucun solde dû.",
+    "BOOKING_BALANCE_ALREADY_SETTLED": "Le solde de cette réservation est déjà réglé.",
+    "BOOKING_BALANCE_PAYMENT_IN_PROGRESS": "Un paiement pour ce solde est déjà en cours.",
+    "BOOKING_NOT_COMPLETED": "Cette réservation n’est pas encore terminée.",
+    "BOOKING_SLOT_UNAVAILABLE": "Ce créneau n’est plus disponible. Veuillez en choisir un autre.",
+    "BOOKING_NOT_CANCELLABLE": "Cette réservation ne peut plus être annulée.",
+    "AVAILABILITY_INVALID_TIMEZONE": "Ce fuseau horaire n’est pas reconnu.",
+    "CUSTOMER_NOTIFICATION_NOT_FOUND": "Cette notification est introuvable.",
+    "CUSTOMER_NOTIFICATION_CHANNEL_NOT_VERIFIED": "Ce canal de notification n’est pas encore vérifié.",
+    "CUSTOMER_NOTIFICATION_DELIVERY_FAILED": "Cette notification n’a pas pu être remise.",
+    "BLOG_ARTICLE_NOT_FOUND": "Cet article est introuvable.",
+    "BLOG_ARTICLE_MOVED": "Cet article a changé d’adresse.",
+    "BLOG_ARTICLE_GONE": "Cet article a été archivé et n’est plus publié.",
+    "BLOG_ARTICLE_KEY_TAKEN": "Cet identifiant d’article est déjà utilisé.",
+    "BLOG_ARTICLE_NOT_PUBLISHABLE": "Cet article n’est pas prêt à être publié. Voir les détails ci-dessous.",
+    "BLOG_ARTICLE_ALREADY_PUBLISHED": "Cet article est déjà publié.",
+    "BLOG_ARTICLE_DELETE_NOT_ALLOWED": "Cet article a été en ligne : il ne peut pas être supprimé. Archivez-le plutôt.",
+    "BLOG_SLUG_TAKEN": "Un autre article utilise déjà cette adresse.",
+    "BLOG_SLUG_RESERVED": "Cette adresse est réservée. Veuillez en choisir une autre.",
+    "BLOG_AUTHOR_NOT_FOUND": "Cet auteur est introuvable.",
+    "BLOG_AUTHOR_KEY_TAKEN": "Cet identifiant d’auteur est déjà utilisé.",
+    "BLOG_AUTHOR_IN_USE": "Cet auteur est crédité sur des articles. Réattribuez-les avant de supprimer la signature.",
+    "SYSTEM_MAINTENANCE_ACTIVE": "La plateforme est en maintenance. Veuillez réessayer sous peu.",
+    "SYSTEM_MAINTENANCE_REASON_REQUIRED": "Une période de maintenance doit indiquer un motif.",
+    "SYSTEM_CONFIG_EXPOSURE_UNSAFE": "Cette configuration ne peut pas être affichée.",
+    "SYSTEM_LOGS_UNAVAILABLE": "Les journaux sont indisponibles pour le moment.",
+    "SYSTEM_DB_INSPECT_UNAVAILABLE": "L’inspection de la base de données est indisponible pour le moment.",
+    "SYSTEM_REDIS_COMMAND_REFUSED": "Cette commande de cache a été refusée.",
+    "INTEGRATION_PROBE_FAILED": "Cette intégration n’a pas pu être jointe.",
+    "DEV_TOOLS_WORKER_UNKNOWN": "Ce processus en arrière-plan n’existe pas.",
+    "DEV_TOOLS_WORKER_BUSY": "Ce processus est déjà en cours d’exécution.",
+    "DEV_TOOLS_CACHE_DB_UNKNOWN": "Cette base de cache n’existe pas.",
+    "DEV_TOOLS_CACHE_FLUSH_REFUSED": "Ce vidage de cache a été refusé.",
+    "DEV_TOOLS_CACHE_UNAVAILABLE": "Le cache est indisponible pour le moment.",
+    "DEV_TOOLS_OUTBOX_PRUNE_REFUSED": "Ce nettoyage de la file a été refusé.",
+    "CONFIG_MISSING_JWT_SECRET": "Le serveur est mal configuré. Veuillez contacter le support.",
+    "CONFIG_METRICS_CARDINALITY_UNBOUNDED": "Le serveur est mal configuré. Veuillez contacter le support.",
+    "CONFIG_CACHE_POLICY_MISSING": "Le serveur est mal configuré. Veuillez contacter le support.",
+    "CONFIG_INVALID_ENV": "Le serveur est mal configuré. Veuillez contacter le support.",
+    "AUTH_ADMIN_CALLER_TOKEN_INVALID": "Cet appel de service n’a pas pu être authentifié.",
+    "AUTH_ADMIN_CALLER_NOT_CONFIGURED": "Cet appel de service n’a pas pu être authentifié.",
+    "AUTH_ADMIN_CALLER_ACTOR_MISSING": "Cet appel de service n’a désigné aucun administrateur."
+  },
+  "categories": {
+    "authentication": "Votre session a pris fin. Veuillez vous reconnecter.",
+    "authorization": "Vous n’avez pas l’autorisation d’effectuer cette action.",
+    "validation": "Veuillez vérifier les champs signalés et réessayer.",
+    "not_found": "Nous n’avons pas trouvé cet élément.",
+    "conflict": "Cet élément a été modifié ailleurs pendant que vous travailliez. Actualisez et réessayez.",
+    "business_rule": "Cette action n’est pas autorisée pour le moment.",
+    "rate_limit": "Trop de requêtes. Patientez un instant et réessayez.",
+    "external_service": "Un service externe n’a pas répondu. Veuillez réessayer.",
+    "internal": "Un problème est survenu de notre côté. Veuillez réessayer."
   }
 }

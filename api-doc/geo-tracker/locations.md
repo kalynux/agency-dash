@@ -10,7 +10,7 @@ downsampled checkpoint history), see
 
 ## Authentication & authorization
 
-`Authorization: Bearer <wimall access token>`.
+`Authorization: Bearer <jovi-mall access token>`.
 
 Authentication alone is **not** sufficient: this endpoint enforces the same
 per-agent visibility rules as the WebSocket (see
@@ -52,4 +52,4 @@ socket is open. See [tracking-websocket.md](./tracking-websocket.md).
 | `401` | Missing/invalid token |
 | `404` | Not authorized to see this agent — deliberately indistinguishable from "no such agent", so the endpoint never confirms an agent's existence to someone who may not see them |
 | `500` | Lookup failed |
-| `502` | Could not verify authorization (wimall unreachable) — fails closed |
+| `502` | Could not verify authorization (jovi-mall unreachable) — fails closed |

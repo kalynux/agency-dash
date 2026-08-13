@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlatformStatus } from '@/components/layout/PlatformStatus';
+import { AppLogo } from '@/components/common/AppLogo';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
 import { tx } from '@/i18n/tx';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -444,8 +445,8 @@ export function Sidebar() {
           <div className="flex justify-center py-3">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="relative w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-sm flex items-center justify-center">
-                  <Truck className="w-4 h-4 text-white" />
+                <div className="relative w-9 h-9">
+                  <AppLogo decorative />
                   <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-card p-0.5">
                     <PlatformStatus compact />
                   </span>
@@ -458,9 +459,7 @@ export function Sidebar() {
           </div>
         ) : (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-gradient shadow-brand-sm flex items-center justify-center flex-shrink-0">
-              <Truck className="w-4 h-4 text-white" />
-            </div>
+            <AppLogo decorative />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-display font-bold leading-tight tracking-tight">
                 {t('sidebar.platform')}

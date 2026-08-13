@@ -52,7 +52,8 @@
     "cardHolderRequired": "Cardholder name is required",
     "cardExpiryRequired": "Select the card's expiry month and year",
     "cardExpired": "That card has already expired",
-    "issuingBankTooLong": "Issuing bank must be 100 characters or fewer"
+    "issuingBankTooLong": "Issuing bank must be 100 characters or fewer",
+    "methodUnavailable": "Bank and card payouts are unavailable right now. Replace this destination with mobile money to save."
   },
   "policies": {
     "codFeeTypeRequired": "COD fee type is required",

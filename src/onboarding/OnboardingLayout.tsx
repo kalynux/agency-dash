@@ -2,10 +2,11 @@ import { type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Truck, LogOut, CheckCircle2 } from 'lucide-react';
+import { LogOut, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { tx } from '@/i18n/tx';
 import { Button } from '@/components/ui/button';
+import { AppLogo } from '@/components/common/AppLogo';
 import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
 import type { AgencyOnboardingStep } from '@/types/api';
 
@@ -149,9 +150,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
             {/* ── Header ── */}
             <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-                        <Truck className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <AppLogo decorative className="shadow-sm" />
                     <div className="flex flex-col leading-tight">
                         <span className="font-bold text-sm text-slate-900 dark:text-white leading-none">
                             {t('layout.platform')}

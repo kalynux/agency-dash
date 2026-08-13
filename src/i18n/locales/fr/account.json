@@ -146,7 +146,9 @@
     "cardExpiryYear": "Année",
     "cardCountry": "Pays d’émission",
     "issuingBank": "Banque émettrice (facultatif)",
-    "issuingBankPlaceholder": "ex. Afriland First Bank"
+    "issuingBankPlaceholder": "ex. Afriland First Bank",
+    "unavailableKind": "Indisponible",
+    "unavailableKindHint": "Ce type de destination ne peut pas être enregistré pour le moment. Remplacez-le par du mobile money — il reste payé d'ici là."
   },
   "earnings": {
     "title": "Revenus",

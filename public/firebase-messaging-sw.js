@@ -26,6 +26,7 @@ messaging.onBackgroundMessage((payload) => {
   const data = payload.data || {};
   self.registration.showNotification(data.title || 'WiMall Agency', {
     body: data.body || '',
+    icon: '/favicon-256.png', // without this the OS falls back to the browser's own mark
     tag: data.notificationId || undefined, // collapse duplicate deliveries
     data: { url: data.url || '/' },
   });

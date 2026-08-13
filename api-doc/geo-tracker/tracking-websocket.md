@@ -14,7 +14,7 @@ no sessions — they watch, they are not tracked.
 > ### What this socket cannot do: start or end a tracking session
 >
 > A **tracking session is one shipment's** tracking lifecycle. It is opened by
-> wimall reporting the shipment active, and closed only by wimall reporting
+> jovi-mall reporting the shipment active, and closed only by jovi-mall reporting
 > it terminal (see [webhooks.md](./webhooks.md)). This socket only *binds* to
 > sessions that already exist.
 >
@@ -57,19 +57,35 @@ GET /ws/track
 
 ## Authentication
 
-Present your **wimall access token** — the same one you use against the
-wimall API. Browsers cannot set `Authorization` on a WebSocket, so the token
-rides the subprotocol header:
+Present your **jovi-mall access token** — the same one you use against the
+jovi-mall API. There are three ways it can arrive, tried in this order:
 
-```
-Sec-WebSocket-Protocol: bearer, <access_token>
-```
+1. **httpOnly cookie (browser dashboards — the recommended path).** jovi-mall
+   sets the access token in an httpOnly `access_token` cookie the frontend JS
+   cannot read. The browser attaches it to the handshake **automatically** when
+   geo-tracker is *same-site* with jovi-mall (see below), so a browser simply
+   connects with `new WebSocket("wss://geo.example.com/ws/track")` — no token
+   handling in JS at all.
+2. **Subprotocol header** — for clients that *hold* the raw token and are not
+   bound by httpOnly (browsers cannot set `Authorization` on a WebSocket):
+   ```
+   Sec-WebSocket-Protocol: bearer, <access_token>
+   ```
+3. **Authorization header** — non-browser clients (e.g. a native agent app):
+   ```
+   Authorization: Bearer <access_token>
+   ```
 
-Non-browser clients (e.g. the agent app) may instead send:
-
-```
-Authorization: Bearer <access_token>
-```
+> **Same-site is what makes the cookie ride.** The browser sends the `access_token`
+> cookie on the handshake only when (a) the cookie's scope covers geo-tracker's
+> host — in production set jovi-mall's `AUTH_COOKIE_DOMAIN=.example.com` so it is
+> shared across `*.example.com` — and (b) the page and geo-tracker share a
+> registrable domain, so the `SameSite=Lax` cookie is not withheld. Put both
+> backends under the frontends' domain (`api.example.com`, `geo.example.com`),
+> **not** a separate one — a cross-site split (`*.backend.com`) forces
+> `SameSite=None` third-party cookies, which Safari blocks and Chrome is retiring.
+> In local dev everything is `localhost` (cookies ignore port), so this already
+> holds with no cookie config.
 
 Browser clients are additionally origin-checked against `ALLOWED_ORIGINS`.
 
@@ -78,7 +94,7 @@ Browser clients are additionally origin-checked against `ALLOWED_ORIGINS`.
 | No/invalid/expired token | `401` |
 | Role is `vendor` | `403` — vendors have no tracking access |
 | Role is `agent` but no agent profile resolves | `403` |
-| wimall unreachable while resolving an agent's identity | `502` |
+| jovi-mall unreachable while resolving an agent's identity | `502` |
 
 ## Message envelope
 
@@ -167,7 +183,7 @@ waits for the socket.
 > { "type": "error", "payload": { "message": "tracking cannot be disabled while you have an active shipment" } }
 > ```
 >
-> wimall only dispatches to agents who have granted Tracking Allow, so allowing
+> jovi-mall only dispatches to agents who have granted Tracking Allow, so allowing
 > an opt-out mid-delivery would strand a shipment that was assigned on that
 > promise. With no delivery in flight the same frame is accepted normally.
 

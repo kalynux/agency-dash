@@ -395,6 +395,28 @@ export interface FieldError {
   message: string;
 }
 
+/**
+ * The nine-value taxonomy carried on `error.category`, identical across all
+ * three backend services. It is *derived* from `(code, statusCode)`, so one code
+ * can carry different categories at different statuses — never key a lookup on
+ * the pair. Its purpose is to be the default branch: no client will ever have
+ * specific handling for all 547 codes.
+ * See api-doc/errors/README.md.
+ */
+export const ERROR_CATEGORIES = [
+  'authentication',
+  'authorization',
+  'validation',
+  'not_found',
+  'conflict',
+  'business_rule',
+  'rate_limit',
+  'external_service',
+  'internal',
+] as const;
+
+export type ErrorCategory = (typeof ERROR_CATEGORIES)[number];
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -404,9 +426,20 @@ export class ApiError extends Error {
    * - agency onboarding/profile: `[{ field, message }]`
    * - domain errors: an arbitrary context object.
    * Use {@link fieldErrors} / {@link firstFieldError} to read validation failures.
+   *
+   * **Absent on `internal` and `external_service`** — permanently, in every
+   * environment. `requestId` is the only handle on those.
    */
   readonly details?: unknown;
   readonly requestId?: string;
+  /**
+   * The coarse kind of failure. Optional only defensively — the backend always
+   * sends it now, but a client-minted error (a network abort, an unreachable
+   * geo-tracker) has none.
+   */
+  readonly category?: ErrorCategory;
+  /** How long to wait before retrying, from `Retry-After` or `details.retryAfterSeconds`. */
+  readonly retryAfterSeconds?: number;
 
   constructor(
     status: number,
@@ -414,6 +447,8 @@ export class ApiError extends Error {
     message: string,
     details?: unknown,
     requestId?: string,
+    category?: ErrorCategory,
+    extra?: { retryAfterSeconds?: number },
   ) {
     super(message);
     this.name = 'ApiError';
@@ -421,6 +456,8 @@ export class ApiError extends Error {
     this.code = code;
     this.details = details;
     this.requestId = requestId;
+    this.category = category;
+    this.retryAfterSeconds = extra?.retryAfterSeconds;
   }
 
   /**
@@ -469,6 +506,28 @@ export class ApiError extends Error {
 
   get isServer() {
     return this.status >= 500;
+  }
+
+  /** 429. Respect {@link retryAfterSeconds}; never retry immediately. */
+  get isRateLimited() {
+    return this.status === 429 || this.code === 'RATE_LIMIT_EXCEEDED';
+  }
+
+  /**
+   * A 401 no refresh can fix — the credential predates a password change, or the
+   * account is suspended. Clear local state and sign in again; do not retry.
+   */
+  get isTerminalAuth() {
+    return this.code === 'AUTH_PASSWORD_CHANGED' || this.code === 'AUTH_ACCOUNT_SUSPENDED';
+  }
+
+  /**
+   * True when the server refused to explain — `internal` / `external_service`
+   * carry a generic message and no `details` in every environment, so the
+   * `requestId` is the only thing worth showing the user.
+   */
+  get isOpaque() {
+    return this.category === 'internal' || this.category === 'external_service';
   }
 
   /** Returns true for concurrent modification (409 + specific error code). */

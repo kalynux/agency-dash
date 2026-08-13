@@ -22,6 +22,7 @@ import { Settings } from '@/pages/Settings';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
+import { AppLogo } from '@/components/common/AppLogo';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
@@ -104,13 +105,7 @@ function LoginRedirectScreen() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <div className="text-center space-y-4 max-w-sm">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
-          <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-          </svg>
-        </div>
+        <AppLogo size="lg" className="mx-auto shadow-sm" />
         <h1 className="text-2xl font-bold">{t('login.title')}</h1>
         <p className="text-muted-foreground text-sm">{t('login.description')}</p>
         <a

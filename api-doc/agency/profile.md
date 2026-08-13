@@ -141,6 +141,13 @@ Authorization: Bearer <jwt_token>
 
 See [profile-schema.md](./profile-schema.md) for the meaning and validation rules of every field above.
 
+> [!NOTE]
+> **`payoutDetails` reads back every kind, including switched-off ones.** Only `mobile_money` can be
+> *configured* right now (🚧 `bank` and `card` are off), but an entry saved before the switch — like
+> the card at index 1 above — is still returned in full and is still paid if it is index 0. Reads
+> and payouts never consult the switch; only writes do. See
+> [Payout methods](./payout-methods.md#availability).
+
 #### Error Responses
 
 **Not Found (404)**:
@@ -223,7 +230,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 | `country` | `string` | Exactly 2 chars, ISO-2 (auto-uppercased) | Step 1 (Logistics) | **SET-ONCE / IMMUTABLE.** Fixed during onboarding; sending a *different* value → `403 PROFILE_COUNTRY_IMMUTABLE`. Echoing the current value is a no-op. Legacy profiles that predate the field (`country: null`) may set it once here — rejected (`400 ADDRESS_COUNTRY_MISMATCH`) if existing geocoded HQ addresses resolve elsewhere. |
 | ~~`coverage_areas`~~ | — | — | — | **Moved to the [Magazin](./magazin.md)** (`PATCH /api/agency/magazin`). |
 | ~~`headquarters_addresses`~~ | — | — | — | **Moved to the [Magazin](./magazin.md)** (`PATCH /api/agency/magazin`). |
-| `payout_details` | `object[]` | 1–3 entries, ordered (index 0 = preferred); `method` is `mobile_money`, `bank` or `card` — see [Step 2 field reference](./onboarding.md#step-2-payout-setup-required) or the full **[Payout methods](./payout-methods.md)** reference | Step 2 (Payout) | Full replace. Card destinations never accept a card number or CVV. |
+| `payout_details` | `object[]` | 1–3 entries, ordered (index 0 = preferred). **`method` must be `"mobile_money"` today** — `"bank"` and `"card"` are 🚧 switched off; see [Step 2 field reference](./onboarding.md#step-2-payout-setup-required) or the full **[Payout methods](./payout-methods.md)** reference | Step 2 (Payout) | Full replace. Entries stored before the switch still read back and are still paid; you just cannot re-send one. |
 | `kyc_details` | `object` | `{ registration_number?, transport_license_id? }`, both nullable strings | — (general) | `legit_verified` is **admin-only** and ignored if sent. |
 | `policies` | `object` | `{ pricing, returns, damage, documents? }` — see [Step 4 field reference](./onboarding.md#step-4-policy-setup-required) | Step 4 (Policy Setup) | Full replace of the **whole** `policies` object. `damage.inspector`/`damage.investigation_fee` are preserved server-side regardless of what (if anything) you send for them. `documents` (max 2 URLs) is cleared if omitted — resend existing URLs to keep them. |
 
@@ -396,6 +403,9 @@ Authorization: Bearer <jwt_token>
 
 Onboarding is already complete, so `PUT /api/agency/onboarding/payout` would return `409 DELIVERY_ONBOARDING_ALREADY_COMPLETED`. Edit via the profile endpoint instead. Send the **complete** payout array (full replace):
 
+> 🚧 Only `mobile_money` can be configured right now — see
+> [Payout methods](./payout-methods.md#availability).
+
 ```bash
 # 1. Read current profile (not required for a version — just to see current data)
 curl -X GET https://api.example.com/api/agency/profile \
@@ -408,19 +418,19 @@ curl -X PATCH https://api.example.com/api/agency/profile \
   -d '{
     "payout_details": [
       {
-        "method": "bank",
-        "mobile_money": null,
-        "bank": {
-          "bank_name": "Afriland First Bank",
-          "account_number": "10005000123456",
-          "account_name": "FastTrack Logistics Sarl",
-          "country": "CM"
-        }
+        "method": "mobile_money",
+        "mobile_money": {
+          "provider": "MTN Mobile Money",
+          "phone_number": "+237670000000",
+          "account_name": "FastTrack Logistics Sarl"
+        },
+        "bank": null
       }
     ]
   }'
 
-# …or make a card the preferred destination, keeping the bank as fallback
+# 🚧 SWITCHED OFF — the shape for when `bank`/`card` come back on. Today this
+#    returns 400 VALIDATION_ERROR on payout_details.0.method.
 curl -X PATCH https://api.example.com/api/agency/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \

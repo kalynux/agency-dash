@@ -85,7 +85,8 @@
       "capacity_exceeded": "Capacity exceeded",
       "invalid_address": "Invalid address",
       "vendor_item_not_ready": "Vendor item not ready",
-      "other": "Other"
+      "other": "Other",
+      "platform_intervention": "Cancelled by the platform"
     }
   },
   "assignment": {

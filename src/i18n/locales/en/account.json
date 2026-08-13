@@ -146,7 +146,9 @@
     "cardExpiryYear": "Year",
     "cardCountry": "Issuing Country",
     "issuingBank": "Issuing Bank (optional)",
-    "issuingBankPlaceholder": "e.g. Afriland First Bank"
+    "issuingBankPlaceholder": "e.g. Afriland First Bank",
+    "unavailableKind": "Unavailable",
+    "unavailableKindHint": "This kind of destination cannot be saved right now. Replace it with mobile money — it is still paid until you do."
   },
   "earnings": {
     "title": "Earnings",

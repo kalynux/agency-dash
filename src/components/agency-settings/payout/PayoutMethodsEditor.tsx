@@ -18,7 +18,7 @@ import { PaymentMethodMark } from '@/components/common/PaymentBrandLogo';
 import { MAX_PAYOUT_METHODS } from '@/onboarding/schemas/onboarding.schemas';
 import { PayoutMethodDialog } from './PayoutMethodDialog';
 import {
-  isPayoutEntryComplete,
+  payoutEntryBlocker,
   payoutEntryDetail,
   payoutEntryMark,
   payoutEntryTitle,
@@ -104,7 +104,7 @@ export function PayoutMethodsEditor({ value, onChange }: PayoutMethodsEditorProp
         <ul className="divide-y">
           {value.map((entry, index) => {
             const isPreferred = index === 0;
-            const complete = isPayoutEntryComplete(entry);
+            const blocker = payoutEntryBlocker(entry);
             const label = payoutEntryTitle(entry, t);
             const detail = payoutEntryDetail(entry);
             return (
@@ -115,15 +115,22 @@ export function PayoutMethodsEditor({ value, onChange }: PayoutMethodsEditorProp
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate font-medium">{label}</span>
                     {isPreferred && <Badge variant="secondary">{t('payout.preferred')}</Badge>}
-                    {!complete && (
+                    {blocker && (
                       <Badge variant="destructive" className="gap-1">
                         <AlertCircle className="h-3 w-3" aria-hidden="true" />
-                        {t('payout.incomplete')}
+                        {blocker === 'switched_off'
+                          ? t('payout.unavailableKind')
+                          : t('payout.incomplete')}
                       </Badge>
                     )}
                   </div>
+                  {/* A switched-off kind needs its own line, not the detail: the
+                      destination is still perfectly readable, and saying so is
+                      the only way the user learns that replacing it is the fix. */}
                   <p className="truncate text-xs text-muted-foreground">
-                    {detail || t('payout.incompleteHint')}
+                    {blocker === 'switched_off'
+                      ? t('payout.unavailableKindHint')
+                      : detail || t('payout.incompleteHint')}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">

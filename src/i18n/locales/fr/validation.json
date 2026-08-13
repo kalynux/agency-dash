@@ -52,7 +52,8 @@
     "cardHolderRequired": "Le nom du titulaire de la carte est obligatoire",
     "cardExpiryRequired": "Choisissez le mois et l’année d’expiration",
     "cardExpired": "Cette carte a déjà expiré",
-    "issuingBankTooLong": "La banque émettrice ne doit pas dépasser 100 caractères"
+    "issuingBankTooLong": "La banque émettrice ne doit pas dépasser 100 caractères",
+    "methodUnavailable": "Les versements par banque et par carte sont indisponibles pour le moment. Remplacez cette destination par du mobile money pour enregistrer."
   },
   "policies": {
     "codFeeTypeRequired": "Le type de frais COD est obligatoire",

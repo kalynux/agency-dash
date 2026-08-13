@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Clock3, Inbox, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -49,7 +49,7 @@ const DIRECTIONS: StockRequestDirection[] = ['awaiting_me', 'raised_by_me'];
 
 export function StockRequestsTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
   const { t } = useTranslation(['inventory', 'common']);
-  const { awaitingCount, refetch: refetchBadge } = useStockRequests();
+  const { refetch: refetchBadge } = useStockRequests();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [requests, setRequests] = useState<StockRequest[]>([]);

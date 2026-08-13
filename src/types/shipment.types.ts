@@ -25,11 +25,21 @@ export type AssignmentState = 'unassigned' | 'offered' | 'accepted';
 /** Statuses the agency can advance a shipment to via PATCH .../status. */
 export type ShipmentActionableStatus = 'picked_up' | 'in_transit' | 'agent_delivered' | 'failed' | 'returned';
 
+/**
+ * The fixed reason set on a shipment's rejection record.
+ *
+ * `platform_intervention` is READ-ONLY here: it is the administrator's reason,
+ * recorded when the platform cancels through the internal admin API. An agency
+ * has no reason to send it, so it is absent from `REJECTION_REASONS` (the
+ * picker) while still being renderable on a record we receive.
+ * See api-doc/agency/shipments.md → POST .../reject.
+ */
 export type ShipmentRejectionReason =
   | 'out_of_coverage_area'
   | 'capacity_exceeded'
   | 'invalid_address'
   | 'vendor_item_not_ready'
+  | 'platform_intervention'
   | 'other';
 
 export type ChangedByRole = 'system' | 'agency' | 'vendor' | 'customer' | 'admin';
