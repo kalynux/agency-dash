@@ -55,9 +55,9 @@ export function TermsProposalPanel({
   const mine = proposal.proposedByRole === 'agency';
 
   return (
-    <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+    <div className="space-y-2.5 rounded-lg border bg-muted/30 p-2.5 md:space-y-3 md:p-3">
       <div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Badge variant="outline" className="gap-1">
             <FileDiff className="h-3 w-3" />
             {mine ? t('termsProposal.mineBadge') : t('termsProposal.theirsBadge')}
@@ -66,11 +66,11 @@ export function TermsProposalPanel({
             {t('termsProposal.raised', { date: formatDate(proposal.createdAt) })}
           </span>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground md:text-sm">
           {mine ? t('termsProposal.mineDescription') : t('termsProposal.theirsDescription')}
         </p>
         {proposal.note && (
-          <p className="mt-1 text-sm">{t('termsProposal.quoted', { text: proposal.note })}</p>
+          <p className="mt-1 text-xs md:text-sm">{t('termsProposal.quoted', { text: proposal.note })}</p>
         )}
       </div>
 
@@ -79,11 +79,11 @@ export function TermsProposalPanel({
       {proposal.diff.length > 0 ? (
         <div className="divide-y rounded-lg border bg-card">
           {proposal.diff.map((entry) => (
-            <div key={entry.path} className="px-3 py-2">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div key={entry.path} className="px-2.5 py-2 md:px-3">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground md:text-[11px]">
                 {termPathLabel(entry.path)}
               </p>
-              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
+              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] md:text-sm">
                 <span className="text-muted-foreground line-through">
                   {termValueText(entry.path, entry.before)}
                 </span>
@@ -107,7 +107,9 @@ export function TermsProposalPanel({
         />
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/* Two to a row on a phone, natural widths from `md` up: three buttons
+          wrapping one-per-line is what turned this panel into a wall. */}
+      <div className="flex flex-wrap gap-2 max-md:[&>*]:flex-1 max-md:[&>*]:basis-[calc(50%-0.25rem)]">
         {can('approve') && (
           <Button size="sm" className="gap-1.5" disabled={busy} onClick={() => onResolve('approve')}>
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}

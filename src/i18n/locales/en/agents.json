@@ -275,6 +275,7 @@
       "cap": "Current cap",
       "noCap": "No cap",
       "placeholder": "New COD threshold (0 = none)",
+      "editLabel": "Change the cap",
       "set": "Set",
       "hint": "A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool."
     },
@@ -377,7 +378,8 @@
       "pause": "Pause",
       "suspend": "Suspend",
       "remove": "Remove",
-      "reinstate": "Reinstate"
+      "reinstate": "Reinstate",
+      "manage": "Manage"
     }
   },
   "_historyEventsComment": "Membership-log event types. Append-only server-side, so an unrecognised token falls back to its humanized form.",

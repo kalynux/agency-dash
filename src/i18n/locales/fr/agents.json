@@ -273,6 +273,7 @@
       "cap": "Plafond actuel",
       "noCap": "Aucun plafond",
       "placeholder": "Nouveau plafond d'espèces (0 = aucun)",
+      "editLabel": "Modifier le plafond",
       "set": "Définir",
       "hint": "Une part du pool global d'espèces du livreur — une augmentation peut être refusée si d'autres agences utilisent ce pool."
     },
@@ -375,7 +376,8 @@
       "pause": "Mettre en pause",
       "suspend": "Suspendre",
       "remove": "Retirer",
-      "reinstate": "Réintégrer"
+      "reinstate": "Réintégrer",
+      "manage": "Gérer"
     }
   },
   "historyEvents": {

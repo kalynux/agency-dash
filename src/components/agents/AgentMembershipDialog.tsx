@@ -1,5 +1,5 @@
 import { formatNumber, formatDate as fmtDate } from '@/lib/format';
-import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   Banknote,
@@ -10,14 +10,17 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MoreHorizontal,
   Package,
   PauseCircle,
   Phone,
+  Save,
   ShieldAlert,
   ShieldCheck,
   Signal,
   Star,
   User,
+  UserMinus,
   XCircle,
 } from 'lucide-react';
 import {
@@ -29,10 +32,17 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
@@ -60,13 +70,14 @@ import { useAgentActions } from '@/hooks/useAgentActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useMagazin } from '@/store/magazin.store';
-import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { useAgencyCountry } from '@/hooks/useAgencyCountry';
 import { agentsService } from '@/services/agents.service';
 import { cn } from '@/lib/utils';
 import { txStatic } from '@/i18n/tx';
 import {
   agentAvatarUrl,
   contractOffer,
+  mergeAgentDetail,
   needsTermsProposal,
   HISTORY_MEMBERSHIP_STATUSES,
 } from '@/types/agent.types';
@@ -75,7 +86,7 @@ import type {
   AgentMembership,
   AgentEligibility,
   AgentHistoryEvent,
-  AgentProfile,
+  AgentProfileDetail,
   ContractSettlements,
   ContractTermsProposal,
 } from '@/types/agent.types';
@@ -137,7 +148,12 @@ function contractEnding(
 function tokenLabel(group: string, token: string): string {
   const key = `${group}.${token}`;
   const translated = txStatic(key);
-  return translated === key ? token.replace(/_/g, ' ') : translated;
+  // i18next answers a missing key with the key MINUS its namespace, so both
+  // forms have to count as "no copy for this". Comparing only against the
+  // prefixed one painted `availability.<token>` onto the screen instead of
+  // falling back.
+  const bare = key.slice(key.indexOf(':') + 1);
+  return translated === key || translated === bare ? token.replace(/_/g, ' ') : translated;
 }
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
@@ -295,9 +311,10 @@ function MembershipBody({
     onError: (err) => setCoverageRepair(coverageRegionRepair(err)),
   });
   const { statusRequests, termsProposals } = useAgentsRoster();
-  // Both zero-fetch: the country is on the session every route already has, and
-  // the magazin is loaded once per dashboard session.
-  const country = useOnboarding().session?.role_entity?.country ?? null;
+  // Both zero-fetch: the country is on the session every route already has (with
+  // the magazin's own pins as backstop), and the magazin is loaded once per
+  // dashboard session.
+  const country = useAgencyCountry();
   const { data: magazin } = useMagazin();
   const { membership, agent: rosterAgent, cashHeld } = entry;
   const mid = membership.id;
@@ -310,14 +327,18 @@ function MembershipBody({
    * every row. So this fetches once on open and is merged OVER the roster copy
    * rather than replacing it: the dialog renders instantly from data we already
    * have, and only the photo pops in.
+   *
+   * Kept raw in state and merged at render time, so a roster refetch behind an
+   * open sheet still reaches the screen instead of being pinned to whatever the
+   * row said when the fetch resolved.
    */
-  const [detailAgent, setDetailAgent] = useState<AgentProfile | null>(null);
+  const [detail, setDetail] = useState<AgentProfileDetail | null>(null);
   useEffect(() => {
     let cancelled = false;
     agentsService
       .getMembership(mid)
       .then((res) => {
-        if (!cancelled && res.data.agent) setDetailAgent(res.data.agent);
+        if (!cancelled && res.data.agent) setDetail(res.data.agent);
       })
       // Non-fatal: everything on screen already came from the roster, and the
       // only thing lost is the photo.
@@ -327,7 +348,10 @@ function MembershipBody({
     };
   }, [mid]);
 
-  const agent = detailAgent ?? rosterAgent;
+  const agent = useMemo(
+    () => (detail ? mergeAgentDetail(rosterAgent, detail) : rosterAgent),
+    [rosterAgent, detail],
+  );
 
   // The pending two-party change on this contract, either direction — a break or
   // a departure the agent proposed, or a removal we did. It is read here as well
@@ -347,8 +371,13 @@ function MembershipBody({
   const [proposalNoteOpen, setProposalNoteOpen] = useState(false);
   const [proposalNote, setProposalNote] = useState('');
 
-  // COD threshold + contract terms editors
-  const [threshold, setThreshold] = useState('');
+  // COD threshold + contract terms editors. Both are seeded from the contract
+  // and diffed against that seed, which is what lets one footer button save the
+  // sheet: an untouched group sends nothing at all.
+  const [codSeed, setCodSeed] = useState(() =>
+    membership.codThreshold > 0 ? String(membership.codThreshold) : '',
+  );
+  const [threshold, setThreshold] = useState(codSeed);
   const [termsSeed, setTermsSeed] = useState<TermsForm>(() => seedTermsForm(membership));
   const [terms, setTerms] = useState<TermsForm>(termsSeed);
   const [termsError, setTermsError] = useState<string | null>(null);
@@ -398,7 +427,15 @@ function MembershipBody({
   const negotiablePayload = buildNegotiablePayload(terms, termsSeed);
   const employmentDirty = Object.keys(employmentPayload).length > 0;
   const negotiableDirty = Object.keys(negotiablePayload).length > 0;
-  const dirty = employmentDirty || negotiableDirty;
+  // `0` and an empty box are the same instruction — no cap — so the comparison
+  // is on the number, not on the text. A half-typed `-` is neither dirty nor
+  // sendable.
+  const codValue = threshold.trim() === '' ? 0 : Number(threshold);
+  const codDirty =
+    Number.isFinite(codValue) &&
+    codValue >= 0 &&
+    codValue !== (codSeed === '' ? 0 : Number(codSeed));
+  const dirty = employmentDirty || negotiableDirty || codDirty;
 
   const resetInline = () => {
     setMode(null);
@@ -478,24 +515,22 @@ function MembershipBody({
     }
   };
 
-  const saveThreshold = async () => {
-    const value = Number(threshold);
-    if (Number.isNaN(value)) return;
-    const result = await actions.updateCodLimit(mid, value);
-    if (result) setThreshold('');
-  };
-
   /**
-   * Employment and the negotiated terms leave through different doors, because
-   * the API draws the line there and not where a single "Save" button would.
+   * The one save for this sheet — but three writes behind it, because the API
+   * draws the line there and not where a single button would.
    *
-   * Employment is the agency's own HR record — unilateral at any status via
-   * `PATCH .../employment`. The four negotiated groups are the agent's business:
-   * countered onto a `pending` contract, or staged as a proposal on a live one.
-   * Sending employment through either negotiation route is `403
-   * CONTRACT_TERMS_NOT_NEGOTIABLE`, so it is split out rather than filtered.
+   * The COD ceiling and employment are the agency's own record, unilateral at
+   * any status (`PUT .../cod-limit`, `PATCH .../employment`). The four
+   * negotiated groups are the agent's business: countered onto a `pending`
+   * contract, or staged as a proposal on a live one. Sending either unilateral
+   * group through a negotiation route is `403 CONTRACT_TERMS_NOT_NEGOTIABLE`, so
+   * they are split out rather than filtered.
+   *
+   * They run in that order and stop at the first failure: a later write going
+   * out after an earlier one was refused would leave the form claiming
+   * everything landed.
    */
-  const saveTerms = async () => {
+  const saveAll = async () => {
     if (!dirty) {
       setTermsError(t('membership.terms.nothingChanged'));
       return;
@@ -512,16 +547,22 @@ function MembershipBody({
       }
     }
 
+    if (codDirty) {
+      const saved = await actions.updateCodLimit(mid, codValue);
+      if (!saved) return;
+      setCodSeed(threshold.trim());
+    }
+
     if (employmentDirty) {
       const saved = await actions.updateEmployment(mid, employmentPayload);
-      // The negotiated half is a separate write, and pushing it after a failed
-      // employment save would leave the form claiming both went through.
       if (!saved) return;
       if (!negotiableDirty) {
         setTermsSeed(terms);
         return;
       }
     }
+
+    if (!negotiableDirty) return;
 
     const note = termsNote.trim() || undefined;
     const result = staged
@@ -559,10 +600,19 @@ function MembershipBody({
     }
   };
 
+  /** Put every editor back to what the server holds. */
+  const discardEdits = () => {
+    setTerms(termsSeed);
+    setThreshold(codSeed);
+    setTermsError(null);
+  };
+
   const pk = actions.pendingKey;
   const avatar = agentAvatarUrl(agent);
   const termsSummary = summarizeTerms(membership);
-  const termsBusy =
+  // One save, so one busy flag — whichever of the three writes is in flight.
+  const saveBusy =
+    pk === `cod-limit:${mid}` ||
     pk === `employment:${mid}` ||
     pk === `counter:${mid}` ||
     pk === `propose:${mid}` ||
@@ -578,6 +628,92 @@ function MembershipBody({
     membership.status === 'active' ||
     membership.status === 'paused' ||
     membership.status === 'suspended';
+
+  /**
+   * Everything this contract's status allows that is NOT its headline action.
+   *
+   * They share one menu because the footer's button slot belongs to the save:
+   * with pause / suspend / remove sitting in it, saving the terms meant hunting
+   * for a button inside a collapsible section halfway up the scroller.
+   */
+  const menuActions: {
+    key: string;
+    label: string;
+    icon: ComponentType<{ className?: string }>;
+    destructive?: boolean;
+    onSelect: () => void;
+  }[] = [];
+
+  if (offer === 'ours-to-answer') {
+    // Countering IS the terms editor with their figures answered, so it opens
+    // the section rather than being its own form.
+    menuActions.push({
+      key: 'counter',
+      label: t('membership.footer.counter'),
+      icon: ClipboardList,
+      onSelect: () => setTermsOpen(true),
+    });
+  }
+  if (offer === 'ours-to-answer' || offer === 'needs-terms') {
+    menuActions.push({
+      key: 'decline',
+      label: t('membership.footer.decline'),
+      icon: XCircle,
+      destructive: true,
+      onSelect: () => setMode('reject'),
+    });
+  }
+  if (membership.status === 'active') {
+    menuActions.push({
+      key: 'pause',
+      label: t('membership.footer.pause'),
+      icon: PauseCircle,
+      onSelect: () => setMode('pause'),
+    });
+    menuActions.push({
+      key: 'suspend',
+      label: t('membership.footer.suspend'),
+      icon: ShieldAlert,
+      onSelect: () => setMode('suspend'),
+    });
+  }
+  // A departure is already on the table, so offering it again would 409.
+  if (
+    !departurePending &&
+    (membership.status === 'active' ||
+      membership.status === 'paused' ||
+      membership.status === 'suspended')
+  ) {
+    menuActions.push({
+      key: 'remove',
+      label: t('membership.footer.remove'),
+      icon: UserMinus,
+      destructive: true,
+      onSelect: () => setMode('terminate'),
+    });
+  }
+
+  /** What the footer says while nothing is being saved. */
+  const footerHint =
+    offer === 'ours-to-answer'
+      ? t('membership.footer.waitingOnYou', { name: agent.name })
+      : offer === 'theirs-to-answer'
+        ? t('membership.footer.waitingOnThem', { name: agent.name })
+        : offer === 'needs-terms'
+          ? t('membership.footer.needsTerms', { name: agent.name })
+          : null;
+
+  const saveLabel = negotiableDirty
+    ? staged
+      ? canCounterProposal
+        ? t('membership.terms.sendCounterProposal')
+        : t('membership.terms.proposeToAgent')
+      : offer === 'ours-to-answer'
+        ? t('membership.terms.sendCounterOffer')
+        : t('membership.terms.sendTerms')
+    : employmentDirty && !codDirty
+      ? t('membership.terms.saveEmployment')
+      : t('common:actions.saveChanges');
 
   return (
     <>
@@ -810,24 +946,25 @@ function MembershipBody({
             </div>
 
             {editable && (
-              <>
-                <div className="mt-4 flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder={t('membership.cod.placeholder')}
-                    value={threshold}
-                    onChange={(e) => setThreshold(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button size="sm" disabled={threshold === '' || pk === `cod-limit:${mid}`} onClick={saveThreshold}>
-                    {pk === `cod-limit:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.cod.set')}
-                  </Button>
-                </div>
-                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              <div className="mt-4 space-y-1.5">
+                <Label htmlFor={`cod-${mid}`} className="text-xs text-muted-foreground">
+                  {t('membership.cod.editLabel')}
+                </Label>
+                {/* Seeded with the stored cap and empty means "no cap", the same
+                    bargain the shipment ceiling above strikes — this is an edit
+                    of the figure on screen, not a box for a delta. */}
+                <Input
+                  id={`cod-${mid}`}
+                  type="number"
+                  min={0}
+                  placeholder={t('membership.cod.noCap')}
+                  value={threshold}
+                  onChange={(e) => setThreshold(e.target.value)}
+                />
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
                   {t('membership.cod.hint')}
                 </p>
-              </>
+              </div>
             )}
           </div>
 
@@ -905,43 +1042,15 @@ function MembershipBody({
                 </div>
               )}
 
+              {/* No buttons here on purpose: this sheet saves from its footer,
+                  the way the settings tabs save from their bar. All this line
+                  owes the reader is what saving would send. */}
               {editable && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-                  <p className={termsError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
-                    {termsError ??
-                      (proposalBlocked && negotiableDirty
-                        ? t('membership.terms.proposalBlockedHint')
-                        : dirty
-                          ? t('membership.terms.unsaved')
-                          : t('membership.terms.onlyChanged'))}
-                  </p>
-                  <div className="flex gap-2">
-                    {dirty && (
-                      <Button size="sm" variant="ghost" onClick={() => { setTerms(termsSeed); setTermsError(null); }}>
-                        {t('common:actions.discard')}
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      disabled={!dirty || termsBusy || (proposalBlocked && negotiableDirty)}
-                      onClick={saveTerms}
-                    >
-                      {termsBusy ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : !negotiableDirty ? (
-                        t('membership.terms.saveEmployment')
-                      ) : staged ? (
-                        canCounterProposal
-                          ? t('membership.terms.sendCounterProposal')
-                          : t('membership.terms.proposeToAgent')
-                      ) : offer === 'ours-to-answer' ? (
-                        t('membership.terms.sendCounterOffer')
-                      ) : (
-                        t('membership.terms.sendTerms')
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                <p className="border-t pt-4 text-xs text-muted-foreground">
+                  {proposalBlocked && negotiableDirty
+                    ? t('membership.terms.proposalBlockedHint')
+                    : t('membership.terms.onlyChanged')}
+                </p>
               )}
             </div>
           </Section>
@@ -1214,87 +1323,132 @@ function MembershipBody({
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {/* The party whose terms are standing may only withdraw them; the
-                  other may accept, decline or counter. That is
-                  `awaitingDecisionFrom`, not who opened the contract — an agency
-                  that raised a request becomes the answering party the moment
-                  the agent counters, and calling the wrong verb is a 403. */}
-              {offer === 'ours-to-answer' && (
-                <>
-                  <p className="w-full text-xs text-muted-foreground">
-                    {t('membership.footer.waitingOnYou', { name: agent.name })}
-                  </p>
-                  <Button size="sm" className="flex-1" disabled={pk === `approve:${mid}`} onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}>
-                    {pk === `approve:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.acceptTerms')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setTermsOpen(true)}>
-                    {t('membership.footer.counter')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>
-                    {t('membership.footer.decline')}
-                  </Button>
-                </>
-              )}
-              {offer === 'theirs-to-answer' && (
-                <>
-                  <p className="w-full text-xs text-muted-foreground">
-                    {t('membership.footer.waitingOnThem', { name: agent.name })}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    disabled={pk === `withdraw:${mid}`}
-                    onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
-                  >
-                    {pk === `withdraw:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.withdrawOffer')}
-                  </Button>
-                </>
-              )}
-              {/* Nobody has stated terms, so there is nothing to approve —
-                  approving here is 422 CONTRACT_TERMS_NOT_PROPOSED. Not a fault
-                  with the agent: the first offer is ours to make. */}
-              {offer === 'needs-terms' && (
-                <>
-                  <p className="w-full text-xs text-muted-foreground">
-                    {t('membership.footer.needsTerms', { name: agent.name })}
-                  </p>
-                  <Button size="sm" className="flex-1" onClick={() => setTermsOpen(true)}>
-                    {t('membership.footer.proposeTerms')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setMode('reject')}>
-                    {t('membership.footer.decline')}
-                  </Button>
-                </>
-              )}
-              {membership.status === 'active' && (
-                <>
-                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('pause')}>
-                    <PauseCircle className="h-4 w-4" /> {t('membership.footer.pause')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => setMode('suspend')}>
-                    <ShieldAlert className="h-4 w-4" /> {t('membership.footer.suspend')}
-                  </Button>
-                  {!departurePending && (
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>
-                      {t('membership.footer.remove')}
-                    </Button>
+            <div className="space-y-2.5">
+              {/* One line of context, then one row of controls. While the sheet
+                  has unsaved edits that line becomes the unsaved-changes notice
+                  and the row becomes Discard / Save — the same bargain the
+                  settings tabs strike with their floating bar. */}
+              {dirty || saveBusy ? (
+                <p
+                  className={cn(
+                    'flex items-center gap-2 text-xs',
+                    termsError ? 'text-destructive' : 'text-muted-foreground',
                   )}
-                </>
+                >
+                  <span className="relative flex h-2 w-2 flex-shrink-0">
+                    <span
+                      className={cn(
+                        'absolute inline-flex h-full w-full rounded-full opacity-60',
+                        termsError ? 'bg-destructive' : 'animate-ping bg-amber-500',
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        'relative inline-flex h-2 w-2 rounded-full',
+                        termsError ? 'bg-destructive' : 'bg-amber-500',
+                      )}
+                    />
+                  </span>
+                  <span className="min-w-0">{termsError ?? t('membership.terms.unsaved')}</span>
+                </p>
+              ) : (
+                footerHint && <p className="text-xs text-muted-foreground">{footerHint}</p>
               )}
-              {(membership.status === 'paused' || membership.status === 'suspended') && (
-                <>
-                  <Button size="sm" className="flex-1" disabled={pk === `reinstate:${mid}`} onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}>
-                    {pk === `reinstate:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.reinstate')}
-                  </Button>
-                  {!departurePending && (
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => setMode('terminate')}>
-                      {t('membership.footer.remove')}
-                    </Button>
+
+              <div className="flex items-center gap-2">
+                {menuActions.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="flex-shrink-0 gap-1.5">
+                        <MoreHorizontal className="h-4 w-4" />
+                        {t('membership.footer.manage')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="w-52">
+                      {menuActions.map((action) => (
+                        <DropdownMenuItem
+                          key={action.key}
+                          variant={action.destructive ? 'destructive' : 'default'}
+                          onSelect={action.onSelect}
+                        >
+                          <action.icon className="h-4 w-4" />
+                          {action.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                <div className="flex flex-1 items-center justify-end gap-2">
+                  {dirty || saveBusy ? (
+                    <>
+                      <Button size="sm" variant="ghost" disabled={saveBusy} onClick={discardEdits}>
+                        {t('common:actions.discard')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="min-w-0 gap-1.5"
+                        disabled={!dirty || saveBusy || (proposalBlocked && negotiableDirty)}
+                        onClick={saveAll}
+                      >
+                        {saveBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-3.5 w-3.5" />
+                        )}
+                        {/* "Send counter-proposal" beside Manage and Discard is
+                            wider than a 360px footer. */}
+                        <span className="truncate">{saveLabel}</span>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* The party whose terms are standing may only withdraw
+                          them; the other may accept, decline or counter. That is
+                          `awaitingDecisionFrom`, not who opened the contract — an
+                          agency that raised a request becomes the answering party
+                          the moment the agent counters, and calling the wrong
+                          verb is a 403. */}
+                      {offer === 'ours-to-answer' && (
+                        <Button
+                          size="sm"
+                          disabled={pk === `approve:${mid}`}
+                          onClick={() => actions.approve(mid, agent.id).then((r) => r && onOpenChange(false))}
+                        >
+                          {pk === `approve:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.acceptTerms')}
+                        </Button>
+                      )}
+                      {offer === 'theirs-to-answer' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pk === `withdraw:${mid}`}
+                          onClick={() => actions.withdraw(agent.id, mid).then((r) => r && onOpenChange(false))}
+                        >
+                          {pk === `withdraw:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.withdrawOffer')}
+                        </Button>
+                      )}
+                      {/* Nobody has stated terms, so there is nothing to approve —
+                          approving here is 422 CONTRACT_TERMS_NOT_PROPOSED. Not a
+                          fault with the agent: the first offer is ours to make. */}
+                      {offer === 'needs-terms' && (
+                        <Button size="sm" onClick={() => setTermsOpen(true)}>
+                          {t('membership.footer.proposeTerms')}
+                        </Button>
+                      )}
+                      {(membership.status === 'paused' || membership.status === 'suspended') && (
+                        <Button
+                          size="sm"
+                          disabled={pk === `reinstate:${mid}`}
+                          onClick={() => actions.reinstate(mid).then((r) => r && onOpenChange(false))}
+                        >
+                          {pk === `reinstate:${mid}` ? <Loader2 className="h-4 w-4 animate-spin" /> : t('membership.footer.reinstate')}
+                        </Button>
+                      )}
+                    </>
                   )}
-                </>
-              )}
+                </div>
+              </div>
             </div>
           )}
         </div>

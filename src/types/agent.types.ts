@@ -302,6 +302,55 @@ export interface RosterEntry {
   cashHeld: number;
 }
 
+/**
+ * The `agent` half of `GET /api/agency/agents/{contractId}`.
+ *
+ * That endpoint answers with the agent's FULL profile document, not the roster's
+ * flattened row, and the two disagree on more than the vehicle photo it is
+ * fetched for: `availability` and `workingState` arrive as their whole
+ * sub-documents (`{ state, … }`), the in-flight count sits under `capacity`, and
+ * there is no trust score on it at all.
+ *
+ * So it is not an `AgentProfile` and must not be rendered as one — reading
+ * `availability` straight off it is what printed `availability.[object Object]`
+ * in the manage sheet. Fold it onto the row with {@link mergeAgentDetail}.
+ */
+export interface AgentProfileDetail
+  extends Omit<AgentProfile, 'availability' | 'workingState' | 'activeShipmentCount' | 'trustScore'> {
+  availability?: AgentAvailability | { state: AgentAvailability } | null;
+  workingState?: AgentWorkingState | { state: AgentWorkingState } | null;
+  capacity?: { activeShipmentCount?: number; maxActiveShipments?: number; remaining?: number } | null;
+  /** Flat on the roster row, absent here — kept optional so either shape parses. */
+  activeShipmentCount?: number;
+  trustScore?: number;
+}
+
+/** The state token, whether it came as the sub-document or already flattened. */
+function stateToken<T extends string>(value: T | { state: T } | null | undefined): T | undefined {
+  if (value == null) return undefined;
+  return typeof value === 'object' ? value.state : value;
+}
+
+/**
+ * Fold the detail response onto the roster row it was opened from.
+ *
+ * The row is the BASE and the detail is layered over it, never the other way
+ * round: the detail payload omits fields the row carries (the trust score) and
+ * spells three others differently, so swapping one for the other blanks tiles
+ * that were already correct.
+ */
+export function mergeAgentDetail(roster: AgentProfile, detail: AgentProfileDetail): AgentProfile {
+  return {
+    ...roster,
+    ...detail,
+    availability: stateToken(detail.availability) ?? roster.availability,
+    workingState: stateToken(detail.workingState) ?? roster.workingState,
+    activeShipmentCount:
+      detail.capacity?.activeShipmentCount ?? detail.activeShipmentCount ?? roster.activeShipmentCount,
+    trustScore: detail.trustScore ?? roster.trustScore,
+  };
+}
+
 /** The agent's picture, from whichever field the response carried it in. */
 export function agentAvatarUrl(agent: { avatar?: FileRef | null; avatarUrl?: string | null }): string | null {
   return agent.avatar?.url ?? agent.avatarUrl ?? null;
@@ -751,9 +800,14 @@ export interface ListAgentsResponse {
   meta: AgentListMeta;
 }
 
+/**
+ * The contract detail. `agent` is the full profile document rather than the
+ * roster row (see {@link AgentProfileDetail}), and there is no `cashHeld` on it —
+ * that one is a roster-list join.
+ */
 export interface AgentMembershipResponse {
   success: true;
-  data: RosterEntry;
+  data: { membership: AgentMembership; agent: AgentProfileDetail | null };
   message?: string;
 }
 

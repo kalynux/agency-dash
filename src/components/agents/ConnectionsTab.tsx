@@ -1,8 +1,9 @@
 import { formatNumber } from '@/lib/format';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2, Star, User, Users, X } from 'lucide-react';
+import { Check, ChevronRight, Loader2, Star, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -238,69 +239,97 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
             const pendingReject = actions.pendingKey === `reject:${membership.id}`;
             const pendingWithdraw = actions.pendingKey === `withdraw:${membership.id}`;
 
+            // A decision belongs to this row rather than to the sheet behind
+            // it. Those buttons take the full width on a phone instead of being
+            // squeezed beside the name; every other row opens the sheet, and
+            // there the whole row is the target and a chevron says so.
+            const decision =
+              offer === 'ours-to-answer' || offer === 'theirs-to-answer' || offer === 'needs-terms';
+
             return (
               <div
                 key={membership.id}
-                className="space-y-3 p-4 md:rounded-xl md:border md:border-border md:p-3"
+                className="space-y-2.5 px-4 py-3 md:space-y-3 md:rounded-xl md:border md:border-border md:p-3"
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
                   <button
                     type="button"
-                    className="flex items-center gap-3 min-w-0 text-start"
+                    className="-my-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1 text-start transition-colors active:bg-muted/50 md:active:bg-transparent"
                     onClick={() => setSelected(entry)}
                   >
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center md:h-9 md:w-9">
                       {avatar ? (
                         <img src={avatar} alt={agent.name} crossOrigin="use-credentials" className="w-full h-full object-cover" />
                       ) : (
                         <User className="w-4 h-4 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium truncate">{agent.name}</span>
-                        <MembershipStatusBadge status={membership.status} className="text-[10px]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium">{agent.name}</span>
+                        <MembershipStatusBadge
+                          status={membership.status}
+                          className="flex-shrink-0 text-[10px]"
+                        />
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1">
-                          <VehicleIcon className="w-3 h-3" />
+                      {/* One line, never two: the meta wrapping onto a third and
+                          fourth row is what made this list feel like a stack of
+                          blocks. The vehicle is what gives way when it is tight. */}
+                      <div className="mt-0.5 flex items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
+                        <VehicleIcon className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">
                           {agent.vehicleInfo
                             ? formatVehicleType(agent.vehicleInfo.vehicle_type)
                             : t('common:values.notAvailable')}
-                          {/* The plate is what picks one bike out of five in a
-                              yard; the swatch only when we can actually draw it. */}
-                          {vehicleColorSwatch(agent.vehicleInfo?.color) && (
-                            <span
-                              aria-hidden
-                              className="h-2.5 w-2.5 flex-shrink-0 rounded-full border"
-                              style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo?.color)! }}
-                            />
-                          )}
+                          {/* The plate is what picks one bike out of five in a yard. */}
                           {agent.vehicleInfo?.plate_number && (
-                            <span className="font-mono">{agent.vehicleInfo.plate_number}</span>
+                            <span className="ms-1 font-mono">{agent.vehicleInfo.plate_number}</span>
                           )}
                         </span>
-                        <span className="flex items-center gap-1">
+                        {/* The swatch only when we can actually draw it. */}
+                        {vehicleColorSwatch(agent.vehicleInfo?.color) && (
+                          <span
+                            aria-hidden
+                            className="h-2.5 w-2.5 flex-shrink-0 rounded-full border"
+                            style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo?.color)! }}
+                          />
+                        )}
+                        <span aria-hidden className="flex-shrink-0 opacity-40">·</span>
+                        <span className="flex flex-shrink-0 items-center gap-1">
                           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                           {agent.trustScore}
                         </span>
                         {cashHeld > 0 && (
-                          <span className="text-amber-600">
-                            {t('connections.holdsCash', { amount: formatNumber(cashHeld) })}
-                          </span>
+                          <>
+                            <span aria-hidden className="flex-shrink-0 opacity-40">·</span>
+                            <span className="flex-shrink-0 text-amber-600">
+                              {t('connections.holdsCash', { amount: formatNumber(cashHeld) })}
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>
+                    {!decision && (
+                      <ChevronRight
+                        aria-hidden
+                        className="h-4 w-4 flex-shrink-0 text-muted-foreground md:hidden"
+                      />
+                    )}
                   </button>
 
-                  <div className="flex-shrink-0">
+                  <div
+                    className={cn(
+                      'flex flex-shrink-0 items-center gap-1.5',
+                      decision && 'max-md:w-full',
+                    )}
+                  >
                     {/* The standing offer is theirs → we answer it. Countering
                         needs the terms editor, so that one lives in the sheet. */}
                     {offer === 'ours-to-answer' ? (
-                      <div className="flex items-center gap-1.5">
+                      <>
                         <Button
                           size="sm"
-                          className="gap-1"
+                          className="gap-1 max-md:flex-1"
                           disabled={pendingApprove}
                           onClick={() => actions.approve(membership.id, agent.id)}
                         >
@@ -310,19 +339,20 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                         <Button
                           size="sm"
                           variant="outline"
-                          className="gap-1"
+                          className="gap-1 max-md:flex-1"
                           disabled={pendingReject}
                           onClick={() => actions.reject(membership.id, undefined, agent.id)}
                         >
                           {pendingReject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                           {t('connections.decline')}
                         </Button>
-                      </div>
+                      </>
                     ) : offer === 'theirs-to-answer' ? (
                       // Ours is the standing offer — it is theirs to answer, ours to pull back.
                       <Button
                         size="sm"
                         variant="outline"
+                        className="max-md:flex-1"
                         disabled={pendingWithdraw}
                         onClick={() => actions.withdraw(agent.id, membership.id)}
                       >
@@ -332,16 +362,21 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                       // A bare join request: nobody has stated terms, so there is
                       // nothing to approve. Approving would be 422
                       // CONTRACT_TERMS_NOT_PROPOSED — we owe the first offer.
-                      <Button size="sm" onClick={() => setSelected(entry)}>
+                      <Button size="sm" className="max-md:flex-1" onClick={() => setSelected(entry)}>
                         {t('connections.proposeTerms')}
                       </Button>
-                    ) : HISTORY_MEMBERSHIP_STATUSES.includes(membership.status) ? (
-                      <Button size="sm" variant="ghost" onClick={() => setSelected(entry)}>
-                        {t('connections.view')}
-                      </Button>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setSelected(entry)}>
-                        {t('connections.manage')}
+                      // The row already opens this on a phone, so the label is
+                      // desktop-only rather than a second tap target beside it.
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="max-md:hidden"
+                        onClick={() => setSelected(entry)}
+                      >
+                        {HISTORY_MEMBERSHIP_STATUSES.includes(membership.status)
+                          ? t('connections.view')
+                          : t('connections.manage')}
                       </Button>
                     )}
                   </div>

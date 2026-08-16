@@ -18,7 +18,7 @@
 
 import { readContractTerms } from '@/types/agent.types';
 import { txStatic } from '@/i18n/tx';
-import { regionsFor } from '@/lib/regions';
+import { regionsFor, type RegionEntry } from '@/lib/regions';
 import { ApiError } from '@/types/api';
 import type {
   AgentMembership,
@@ -123,18 +123,23 @@ function regionsKey(regions: string[]): string {
  * Reading is unaffected — the assignment gate still resolves them loosely — but
  * the first save of such a contract must send valid keys, so the UI shows the
  * strays as removable chips rather than dropping them silently.
+ *
+ * Takes the catalogue itself rather than a country: the picker may be running on
+ * the server's `allowedRegions` after a rejected save, and judging "stray"
+ * against a different list than the one on screen would flag values the agency
+ * can see a checkbox for.
  */
 export function splitRegions(
   regions: string[],
-  country: string | null | undefined,
+  catalogue: RegionEntry[],
 ): { known: string[]; unknown: string[] } {
-  const catalogue = new Set(regionsFor(country).map((r) => r.key));
-  // An empty catalogue means an unknown country, where nothing can be judged
-  // stray — treat everything as known rather than flagging the whole list.
-  if (catalogue.size === 0) return { known: regions, unknown: [] };
+  const keys = new Set(catalogue.map((r) => r.key));
+  // An empty catalogue means a country we hold no regions for, where nothing can
+  // be judged stray — treat everything as known rather than flagging the lot.
+  if (keys.size === 0) return { known: regions, unknown: [] };
   return {
-    known: regions.filter((r) => catalogue.has(r)),
-    unknown: regions.filter((r) => !catalogue.has(r)),
+    known: regions.filter((r) => keys.has(r)),
+    unknown: regions.filter((r) => !keys.has(r)),
   };
 }
 

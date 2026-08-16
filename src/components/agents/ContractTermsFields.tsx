@@ -13,7 +13,7 @@ import {
   splitRegions,
   type TermsForm,
 } from '@/components/agents/contractTerms';
-import type { RegionEntry } from '@/lib/regions';
+import { regionsFor, type RegionEntry } from '@/lib/regions';
 import type { EmploymentType, FeeSplitModel, RemittanceCadence } from '@/types/agent.types';
 
 /**
@@ -62,9 +62,12 @@ export interface ContractTermsFieldsProps {
    */
   seed?: TermsForm;
   /**
-   * The agency's registered country, from `session.role_entity.country`. Drives
-   * the region catalogue. `null` on a legacy agency, which the backend exempts
-   * from region validation — so the field falls back to free text there.
+   * The agency's operating country, resolved through `useAgencyCountry()` —
+   * NOT read straight off the session, which is `null` on every agency
+   * provisioned before onboarding step 1 existed. Drives the region catalogue.
+   *
+   * Free text is the fallback only when this country has no regions on file at
+   * all (any non-CM code today), never merely because the profile left it blank.
    */
   country?: string | null;
   /**
@@ -91,16 +94,24 @@ export function ContractTermsFields({
   coverageAreas,
   allowedRegions,
 }: ContractTermsFieldsProps) {
-  const { t } = useTranslation('agents');
+  const { t, i18n } = useTranslation('agents');
   const cadence = form.cadence || seed?.cadence || '';
   const feeModel = form.feeModel || seed?.feeModel || '';
+  // The regions on offer. Resolved here rather than inside `RegionPicker` so the
+  // same list decides BOTH what is rendered and what counts as a stray value —
+  // and so an empty one (a country we hold no regions for) is what selects the
+  // free-text fallback, instead of a blank `country` doing it.
+  const catalogue = useMemo(
+    () => allowedRegions ?? regionsFor(country, i18n.language),
+    [allowedRegions, country, i18n.language],
+  );
   // Stored values split into what the catalogue recognises and what it doesn't.
   // Legacy contracts hold free text like "Douala"; it is shown as a removable
   // chip rather than dropped, because the agency should see what is about to
   // stop being valid.
   const { known, unknown } = useMemo(
-    () => splitRegions(form.regions, country),
-    [form.regions, country],
+    () => splitRegions(form.regions, catalogue),
+    [form.regions, catalogue],
   );
 
   return (
@@ -262,13 +273,13 @@ export function ContractTermsFields({
 
       <FieldGroup title={t('terms.fields.coverage')}>
         <FormField label={t('terms.fields.regions')} hint={t('terms.fields.regionsHint')}>
-          {country || allowedRegions ? (
+          {catalogue.length > 0 ? (
             <RegionPicker
               value={known}
               onChange={(next) => onChange('regions', [...next, ...unknown])}
               country={country}
               disabled={disabled}
-              options={allowedRegions}
+              options={catalogue}
               // Scoped to the COUNTRY, not to what we already serve: an agency
               // contracts agents for a region it is expanding into before it
               // declares it. So our own areas are marked, and the rest stay
@@ -282,10 +293,10 @@ export function ContractTermsFields({
               emptyHint={t('terms.values.allRegions')}
             />
           ) : (
-            // A legacy agency with no `country` on file skips the backend's
-            // region check entirely, so there is no catalogue to pick from —
-            // free text is the only honest control. Uncontrolled, or a trailing
-            // ", " would be eaten mid-typing.
+            // No regions on file for this country, so there is nothing to pick
+            // from — free text is the only honest control, and the backend skips
+            // its region check for exactly this case. Uncontrolled, or a
+            // trailing ", " would be eaten mid-typing.
             <Input
               defaultValue={form.regions.join(', ')}
               disabled={disabled}

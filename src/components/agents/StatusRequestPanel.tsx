@@ -75,17 +75,17 @@ export function StatusRequestPanel({
   const isBlocked = blocking != null && !blocking.clear;
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+    <div className="space-y-2.5 rounded-lg border bg-muted/30 p-2.5 md:space-y-3 md:p-3">
       <div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Badge variant="outline">{copy.label}</Badge>
           <span className="text-xs text-muted-foreground">
             {t('statusRequest.raised', { date: formatDate(request.createdAt) })}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{copy.description}</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground md:text-sm">{copy.description}</p>
         {request.reason && (
-          <p className="text-sm mt-1">{t('statusRequest.quoted', { text: request.reason })}</p>
+          <p className="mt-1 text-xs md:text-sm">{t('statusRequest.quoted', { text: request.reason })}</p>
         )}
       </div>
 
@@ -127,7 +127,8 @@ export function StatusRequestPanel({
         />
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/* Two to a row on a phone, natural widths from `md` up. */}
+      <div className="flex flex-wrap gap-2 max-md:[&>*]:flex-1 max-md:[&>*]:basis-[calc(50%-0.25rem)]">
         {can('approve') && (
           <Button size="sm" className="gap-1.5" disabled={busy} onClick={() => onResolve('approve')}>
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}

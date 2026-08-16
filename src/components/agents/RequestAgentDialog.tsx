@@ -19,8 +19,8 @@ import {
   type TermsForm,
 } from '@/components/agents/contractTerms';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAgencyCountry } from '@/hooks/useAgencyCountry';
 import { useMagazin } from '@/store/magazin.store';
-import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import type { AgentDirectoryItem, NegotiableTermsPayload } from '@/types/agent.types';
 
 /**
@@ -94,10 +94,11 @@ function RequestBody({
   const { t } = useTranslation(['agents', 'common']);
   const [form, setForm] = useState<TermsForm>(blankTermsForm);
   const [error, setError] = useState<string | null>(null);
-  // Both zero-fetch — the country rides on the session, the magazin is loaded
-  // once per dashboard session. A blank offer never holds legacy free text, so
-  // this dialog needs no repair path: there is nothing stored to be rejected.
-  const country = useOnboarding().session?.role_entity?.country ?? null;
+  // Both zero-fetch — the country rides on the session (with the magazin's own
+  // pins as backstop), the magazin is loaded once per dashboard session. A blank
+  // offer never holds legacy free text, so this dialog needs no repair path:
+  // there is nothing stored to be rejected.
+  const country = useAgencyCountry();
   const { data: magazin } = useMagazin();
 
   const setTerm = <K extends keyof TermsForm>(key: K, value: TermsForm[K]) => {
