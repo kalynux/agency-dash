@@ -106,6 +106,12 @@
     "buy": "Buy",
     "noPacks": "No credit packs available right now."
   },
+  "web": {
+    "plan": "Manage your plan on the web dashboard at {{host}}.",
+    "topup": "Top up your balance on the web dashboard at {{host}}.",
+    "method": "Add a payment method on the web dashboard at {{host}}.",
+    "open": "Open web dashboard"
+  },
   "storage": {
     "title": "Media storage",
     "usedOf": "{{used}} of {{limit}} used",

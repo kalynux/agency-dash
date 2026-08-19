@@ -17,7 +17,8 @@
     "sync:android": "npm run build:mobile && cap sync android",
     "sync:android:lan": "npm run build:mobile:lan && cross-env CAP_LAN_DEV=1 cap sync android",
     "open:android": "cap open android",
-    "run:android": "npm run sync:android:lan && cap run android"
+    "run:android": "npm run build:mobile:lan && cross-env CAP_LAN_DEV=1 cap run android",
+    "build:apk": "npm run sync:android:lan && cd android && ./gradlew assembleDebug && cd .."
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",

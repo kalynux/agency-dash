@@ -33,8 +33,10 @@ import { BillingSettingsCard } from './BillingSettingsCard';
 import { SavedPaymentMethodsCard } from './SavedPaymentMethodsCard';
 import { PaymentDialog } from './PaymentDialog';
 import { CardSkeleton, PlansSkeleton } from './BillingSkeletons';
+import { ManageOnWebNotice } from './ManageOnWebNotice';
 import { InfoHint } from '@/components/common/InfoHint';
 import { sectionRuleClass } from '@/components/layout/PageContainer';
+import { purchasesEnabled } from '@/platform/purchases';
 import { cn } from '@/lib/utils';
 import {
   formatCredits,
@@ -59,6 +61,14 @@ interface PaymentRequest {
  * the plan catalog, saved payment methods and expiry reminders — all on one page,
  * mirroring the vendor dashboard. A single PaymentDialog drives both plan purchase
  * and credit top-up. (Transaction history lives on its own top-level page.)
+ *
+ * Inside the native shell the whole page still renders, but nothing can be
+ * bought: `purchasesEnabled` is false, so the two `open*Purchase` callbacks are
+ * never handed down, no card offers a button, and PaymentDialog is never
+ * mounted (CAPACITOR-PLAN.md → Phase 5, decision D4). The purchase code below is
+ * left exactly as it is — unreachable, not deleted — because it is still the web
+ * path, and because the Stripe 3-D Secure return trip that a native build cannot
+ * complete is a topology problem, not a bug to patch out.
  */
 export function BillingTab() {
   const { t } = useTranslation(['billing', 'common']);
@@ -119,6 +129,9 @@ export function BillingTab() {
   // re-verify the purchase for immediate feedback; the Stripe webhook is the
   // authoritative finalizer, so the plan/credits apply server-side regardless.
   useEffect(() => {
+    // Native never leaves for 3-D Secure because it never starts a payment, so
+    // there is no marker to resume and nothing here to poll for.
+    if (!purchasesEnabled) return;
     const marker = readStripeResume();
     if (!marker) return;
     clearStripeResume();
@@ -219,7 +232,11 @@ export function BillingTab() {
       <div className="grid gap-6 lg:grid-cols-2">
         {current && <CurrentPlanCard data={current} />}
         {balance !== null && (
-          <CreditWalletCard balance={balance} packs={packs} onBuyPack={openPackPurchase} />
+          <CreditWalletCard
+            balance={balance}
+            packs={packs}
+            onBuyPack={purchasesEnabled ? openPackPurchase : undefined}
+          />
         )}
       </div>
 
@@ -240,14 +257,19 @@ export function BillingTab() {
           </h3>
           <p className="text-sm text-muted-foreground max-md:hidden">{t('plans.description')}</p>
         </div>
-        <PlansCatalog plans={plans} current={current} onBuy={openPlanPurchase} />
+        <PlansCatalog
+          plans={plans}
+          current={current}
+          onBuy={purchasesEnabled ? openPlanPurchase : undefined}
+        />
+        {!purchasesEnabled && <ManageOnWebNotice kind="plan" />}
       </section>
 
       <SavedPaymentMethodsCard />
 
       <BillingSettingsCard />
 
-      {payment && (
+      {purchasesEnabled && payment && (
         <PaymentDialog
           open={paymentOpen}
           onOpenChange={setPaymentOpen}

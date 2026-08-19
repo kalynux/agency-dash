@@ -106,6 +106,12 @@
     "buy": "Acheter",
     "noPacks": "Aucun pack de crédits disponible pour le moment."
   },
+  "web": {
+    "plan": "Gérez votre forfait sur le tableau de bord web, à l’adresse {{host}}.",
+    "topup": "Rechargez votre solde sur le tableau de bord web, à l’adresse {{host}}.",
+    "method": "Ajoutez un moyen de paiement sur le tableau de bord web, à l’adresse {{host}}.",
+    "open": "Ouvrir le tableau de bord web"
+  },
   "storage": {
     "title": "Stockage média",
     "usedOf": "{{used}} sur {{limit}} utilisés",

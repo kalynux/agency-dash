@@ -1,10 +1,11 @@
 # Capacitor Implementation Plan — Agency Dashboard
 
-**Status:** Phases 1, 2, 3 and 4 code complete (P1.1–P1.12, P2.1–P2.9, P3.1–P3.5,
-P4.1–P4.6). Everything verifiable off a device is verified — build, lint, 176
-unit tests, an assembling APK with 12 plugins linked. Every remaining exit
-criterion needs hardware, and all of them sit behind D2; see the checklists at
-the end of each phase.
+**Status:** Phases 1–5 code complete (P1.1–P1.12, P2.1–P2.9, P3.1–P3.5,
+P4.1–P4.6, P5.1–P5.3). Everything verifiable off a device is verified — build,
+lint, 183 unit tests, an assembling APK with 12 plugins linked (Phase 5 is
+JavaScript only and links no new plugin). Every remaining exit criterion needs
+hardware, and all of them sit behind D2; see the checklists at the end of each
+phase.
 
 Phase 4 also needs one artefact nobody can generate from this repo:
 `android/app/google-services.json` from the **messaging** Firebase project. The
@@ -819,6 +820,14 @@ back stack, a keyboard or a link through. The unit tests cover as far as logic
 can go — the overlay selector, the restore edge, the interception predicate —
 and stop exactly where the plugins begin.
 
+**`npm run run:android` defeated its own LAN setup, found in Phase 5.** It ran
+`sync:android:lan` (with `CAP_LAN_DEV=1`) and then a bare `cap run android` —
+and `cap run` re-syncs before deploying, so the second sync rewrote
+`capacitor.config.json` with `allowMixedContent: false`. Every `http://` call to
+the dev backend was then dropped by the WebView before reaching the network,
+which is indistinguishable from the backend being down. The script now sets the
+variable on `cap run` itself and syncs once.
+
 ### Found while doing Phase 3, not fixed by it
 
 **The offline banner covers the chrome it sits over.** It is `fixed top-0 z-50`,
@@ -1182,10 +1191,133 @@ behind `isNative` or `useBearerAuth`.
 
 **Branch:** `mobile/phase-5-billing`
 
-- Gate plan upgrades and credit top-ups behind `!isNative`; on native show plan status, invoices, and transactions with a clear route to complete a purchase on the web dashboard.
-- This removes the Stripe redirect problem rather than solving it: `PaymentDialog.tsx:395` sets `return_url` to `window.location.href`, which under a `capacitor://` origin has nowhere to return to. With purchase off the native path, the code stays untouched and unreachable.
-- Copy matters here. "Manage your plan on the web dashboard" is a fact; anything that reads as a workaround invites a reviewer to look harder.
-- Keep the whole billing *view* — hiding it would be a worse app for no policy benefit.
+**Landed.** The web build is the same app it was this morning: every change is
+behind one flag that is `false` in a browser. The plan's four bullets survived
+contact intact — the only thing they did not settle is named at the end.
+
+### P5.1 — The gate
+
+**New:** `src/platform/purchases.ts`
+
+```ts
+export const purchasesEnabled = !isNative;
+export const webDashboardUrl, webBillingUrl, webDashboardHost;
+```
+
+A module rather than an inline `!isNative` at three call sites, for the reason
+`env.ts` exists: the negation does not carry *why*, and here it is two whys, not
+one — store policy **and** the Stripe return trip that a custom-hostname origin
+cannot complete. Both are written down once, next to the flag.
+
+**Deliberately `!isNative`, not `!useBearerAuth`.** This is a store-policy and
+redirect-topology question, not an auth-transport one, and
+`VITE_FORCE_MOBILE_AUTH` has to leave the purchase flow reachable — a desktop
+browser is where that flow is developed. The cost is that the gated UI cannot be
+eyeballed from `npm run dev`; `purchases.test.ts` imports the module under both
+worlds instead, and a LAN build puts it on a device.
+
+**New env var: `VITE_WEB_DASHBOARD_URL`**, defaulting to
+`https://agency.wi-mall.com`. `.env.mobile` overrides it to the dev machine's
+Vite port, because the production default is a live site in front of a different
+backend — on-device the notice would otherwise send you somewhere your test
+agency does not exist.
+
+### P5.2 — What stops, and what does not
+
+`BillingTab` is the only place the gate is read. It stops handing
+`openPlanPurchase` / `openPackPurchase` down, and never mounts `PaymentDialog`.
+`PlansCatalog.onBuy` and `CreditWalletCard.onBuyPack` became optional props —
+their absence *is* the gate, so neither component learns what a platform is.
+
+What still renders on a phone, unchanged: the current plan with its shipment
+meter and at-capacity nudge, the credit balance, media storage, **every plan in
+the catalog with its price and feature list**, **every credit pack with its
+price**, **every saved payment method** with its default badge, "set as
+default" and "remove", the expiry-reminder setting, and the whole transaction
+history. The catalog loses only its per-plan button — and loses it entirely
+rather than disabling it, because a greyed-out "Choose plan" reads as something
+broken rather than as something that lives elsewhere. The two status pills stay:
+"Your plan" and "Default tier" are labels, not actions.
+
+**Adding a payment method goes with the purchases**, which is one step past
+D4's literal wording and was decided after the first pass. Managing an
+instrument that already exists is not a purchase — and being unable to delete a
+card from the device in your hand would be a worse app, not a safer one — but a
+card *form* in a build that cannot take a payment is a question a reviewer will
+ask, and the only honest answer is "so you can pay on the web". The notice says
+that without collecting a card number first. `AddPaymentMethodDialog` is not
+mounted at all on native, so the whole Stripe card field goes with it.
+
+`PaymentDialog.tsx`, `StripePaymentElement.tsx`, `StripeCardField.tsx` and
+`billing.constants.ts` are untouched, exactly as the plan asked. The one line
+that acknowledges them is in `BillingTab`'s 3-D Secure resume effect, which now
+returns early on native: a build that cannot start a payment cannot have one to
+come back to, and polling `verify` five times for a marker that can never exist
+is not free.
+
+### P5.3 — The notice
+
+**New:** `src/components/billing/ManageOnWebNotice.tsx` — one component, three
+strings, rendered under the plan catalog, under the credit packs, and under the
+saved-method list: exactly where each button was. An empty method list shows it
+*instead of* the "add one to speed up checkout" copy, which would otherwise be a
+dead end.
+
+The copy names the host so the destination is checkable ("Manage your plan on the
+web dashboard at agency.wi-mall.com") and then stops. No apology, no
+"unfortunately", no urgency. Anything that reads as a workaround for a store rule
+invites a reviewer to look harder at the rule.
+
+The link goes through `openExternal` (P3.5), so it opens a Custom Tab over the
+still-running app rather than navigating the WebView somewhere it has no way back
+from.
+
+### Phase 5 exit criteria
+
+- [x] `npm run build` clean
+- [x] `npm run lint` reports **no new problems** — the same 25 Phases 1–4
+      documented, none in a file this phase touched
+- [x] Unit tests pass: **183** across twelve files — 7 new, in
+      `platform/purchases.test.ts`, covering both sides of the gate, the
+      `VITE_FORCE_MOBILE_AUTH` exemption, and the URL derivation
+- [x] `npm run i18n:check` exits 0; French stays at 100%. 4 new keys under
+      `billing.web`, written in en and fr
+- [x] `git diff` shows **no change** to `PaymentDialog.tsx`,
+      `StripePaymentElement.tsx`, `StripeCardField.tsx`,
+      `AddPaymentMethodDialog.tsx` or `billing.constants.ts` — all four are
+      unreachable on native, none of them edited
+- [x] `npm run sync:android && ./gradlew assembleDebug` → **BUILD SUCCESSFUL**,
+      `app-debug.apk` at 13 MB carrying this bundle, the **same 12 plugins** as
+      Phase 4. Phase 5 is JavaScript only; it links nothing new and touches no
+      native source
+- [ ] On a device: the billing page renders in full, no card offers a purchase
+      button, and the notice's link opens the web dashboard in a Custom Tab —
+      behind the CORS ticket like every other device criterion
+
+### Found while doing Phase 5, not fixed by it
+
+**D4's three statements of scope name two flows; the code gates three.** The
+decision row, this phase's first bullet, and the note already sitting in
+`env/.env.mobile` each say "plan upgrades and credit top-ups". Adding a payment
+method is neither, and it works fine on native — the form tokenises in-page with
+no redirect. It is gated anyway, on the heading rather than the bullets, because
+"read-only" is what the decision is called and a card form is not read-only. If
+that is wrong, it is wrong in a way that costs an agency one trip to the web to
+save a card, and `purchasesEnabled` in `SavedPaymentMethodsCard` is the single
+line that reverses it. Worth knowing either way: neither `.env.mobile` nor
+`.env.production` ships a Stripe key today, so that dialog offered mobile money
+only on a native build regardless.
+
+**The web dashboard will ask for a second login.** Native holds bearer tokens the
+Custom Tab knows nothing about, so an agency that follows the notice signs in
+again on the web. Closing that needs a one-time-token handoff, which is a backend
+feature; the notice promises nothing else, and it is the same trip a user makes
+today from any second device.
+
+**`.env.mobile` now carries a second address that drifts.**
+`VITE_WEB_DASHBOARD_URL` has to track the same DHCP lease as
+`VITE_API_BASE_URL`; on a machine whose address has moved, both belong in
+`env/.env.mobile.local`.
 
 ---
 
@@ -1251,7 +1383,7 @@ Name the environments explicitly in the ticket. The backend has asked which ones
 ```
 src/platform/env.ts · auth/{strategy,tokens,tokenStore,secureTokenStore,refreshScheduler}.ts
               push.ts · accessToken.ts · media.ts · geolocation.ts · clipboard.ts
-              network.ts · browser.ts · permissions.ts
+              network.ts · browser.ts · permissions.ts · purchases.ts
               shell/{splash,backButton,deepLinks,keyboard,statusBar}.ts
 ```
 
@@ -1259,7 +1391,9 @@ src/platform/env.ts · auth/{strategy,tokens,tokenStore,secureTokenStore,refresh
 foresee — see P2.4 and P2.9 for why each exists. `permissions.ts` is the Phase 4
 equivalent: camera, photo library and location all need the same
 denied-vs-permanently-denied distinction, and it is the only module that imports
-`capacitor-native-settings`. See P4.3.
+`capacitor-native-settings`. See P4.3. `purchases.ts` is Phase 5's — the only
+module here that imports no plugin at all, because what it answers is a policy
+question rather than a capability one. See P5.1.
 
 Everything above now exists.
 
@@ -1269,6 +1403,8 @@ Everything above now exists.
 src/pages/{Login,Register,ForgotPassword}.tsx
 src/components/layout/OfflineBanner.tsx      the mobile half of P3.4 — see there
 src/components/common/UploadSourceSheet.tsx  the camera-first sheet (P4.3)
+src/components/billing/ManageOnWebNotice.tsx what stands where a purchase
+                                             button was (P5.3)
 ```
 
 **New — policy**
@@ -1307,8 +1443,19 @@ src/components/features/MediaPicker.tsx    Upload opens the source sheet (P4.3)
 src/pages/MediaLibrary.tsx                 same (P4.3)
 src/components/common/AddressSearchInput.tsx        native geolocation (P4.4)
 src/components/agency-settings/notifications/ChannelSetupDialog.tsx  clipboard (P4.5)
+src/components/billing/BillingTab.tsx      reads the purchase gate; no
+                                           PaymentDialog on native (P5.2)
+src/components/billing/PlansCatalog.tsx    optional onBuy — no button, no
+                                           disabled button (P5.2)
+src/components/billing/CreditWalletCard.tsx  optional onBuyPack; packs and
+                                           prices stay (P5.2)
+src/components/billing/SavedPaymentMethodsCard.tsx  no Add button and no
+                                           dialog on native; the list, default
+                                           and remove all stay (P5.2)
 src/i18n/locales/*/nav.json                3 keys, all five locales (Phase 3)
 src/i18n/locales/{en,fr}/{settings,media}.json      19 keys (Phase 4)
+src/i18n/locales/{en,fr}/billing.json               4 keys (Phase 5)
+env/.env.{development,production,mobile,example}    VITE_WEB_DASHBOARD_URL (P5.1)
 android/app/src/main/AndroidManifest.xml   intent filters, 4 runtime permissions,
                                            3 non-required features (P4.1–P4.4)
 index.html                      self-hosted fonts; theme-color, light and dark
@@ -1334,7 +1481,12 @@ be committed — the same pre-existing situation as `scripts/i18n-audit.mjs`, wh
 
 ## Rollback posture
 
-Phases 1 and 5 touch shared code and ship to web; everything else is native-only or behind `isNative`. If a phase needs reverting, Phase 1 is the only one where a revert affects web users — which is why its exit criteria demand the full web sweep in both modes before merge.
+Phase 1 is the only phase that touches shared code and ships behaviour to web; everything else is native-only or behind `isNative`. If a phase needs reverting, Phase 1 is the only one where a revert affects web users — which is why its exit criteria demand the full web sweep in both modes before merge.
+
+**Phase 5 was written down as a second exception and turned out not to be one.**
+It does edit shared billing components, but every edit is behind
+`purchasesEnabled`, and the two components it touches take an optional callback
+the web build always supplies. A revert changes nothing a browser can see.
 
 **Phase 3 is a partial exception and should be read as one.** All of its
 behaviour is either behind `isNative` or behind an `env(safe-area-inset-*)` that

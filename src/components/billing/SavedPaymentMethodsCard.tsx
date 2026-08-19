@@ -28,9 +28,24 @@ import {
 import { CardSkeleton } from './BillingSkeletons';
 import { billingErrorMessage, methodTypeLabel } from './billing.constants';
 import { AddPaymentMethodDialog } from './AddPaymentMethodDialog';
+import { ManageOnWebNotice } from './ManageOnWebNotice';
+import { purchasesEnabled } from '@/platform/purchases';
 
 const MAX_METHODS = 10;
 
+/**
+ * Saved payment methods.
+ *
+ * Read-only inside the native shell (CAPACITOR-PLAN.md → Phase 5, decision D4).
+ * The list, the default badge, "set as default" and "remove" all stay: those
+ * manage an instrument that already exists, and being unable to delete a card
+ * from the device in your hand would be a worse app, not a safer one.
+ *
+ * Adding one does not stay. A card form in an app that cannot complete a
+ * purchase is a question a store reviewer will ask, and the only answer is
+ * "so you can pay on the web" — which is the answer the notice gives directly,
+ * without collecting a card number first.
+ */
 export function SavedPaymentMethodsCard() {
   const { t } = useTranslation(['billing', 'common']);
   const [methods, setMethods] = useState<SavedPaymentMethod[]>([]);
@@ -105,15 +120,17 @@ export function SavedPaymentMethodsCard() {
           <CardDescription className="max-md:hidden">{t('methods.description')}</CardDescription>
           <CardDescription className="md:hidden">{t('methods.descriptionShort')}</CardDescription>
         </div>
-        <Button
-          size="sm"
-          className="gap-1"
-          onClick={() => setAddOpen(true)}
-          disabled={atLimit}
-          title={atLimit ? t('methods.atLimit', { count: MAX_METHODS }) : undefined}
-        >
-          <Plus className="h-4 w-4" /> {t('common:actions.add')}
-        </Button>
+        {purchasesEnabled && (
+          <Button
+            size="sm"
+            className="gap-1"
+            onClick={() => setAddOpen(true)}
+            disabled={atLimit}
+            title={atLimit ? t('methods.atLimit', { count: MAX_METHODS }) : undefined}
+          >
+            <Plus className="h-4 w-4" /> {t('common:actions.add')}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="max-md:px-0">
         {loading ? (
@@ -126,6 +143,10 @@ export function SavedPaymentMethodsCard() {
               {t('common:actions.retry')}
             </Button>
           </div>
+        ) : methods.length === 0 && !purchasesEnabled ? (
+          // The gated empty state would otherwise be a dead end: nothing saved,
+          // and no button to say what to do about it.
+          <ManageOnWebNotice kind="method" />
         ) : methods.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{t('methods.empty')}</p>
         ) : (
@@ -184,19 +205,28 @@ export function SavedPaymentMethodsCard() {
             ))}
           </ul>
         )}
+        {/* Where the Add button went. Only under a non-empty list — the empty
+            state above already carries the same notice instead of its copy. */}
+        {!purchasesEnabled && !loading && !error && methods.length > 0 && (
+          <ManageOnWebNotice kind="method" className="mt-4" />
+        )}
       </CardContent>
 
-      <AddPaymentMethodDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        forceDefault={methods.length === 0}
-        onAdded={(created) => {
-          // A new default clears the previous one locally; first method is always default.
-          setMethods((prev) =>
-            created.is_default ? [created, ...prev.map((m) => ({ ...m, is_default: false }))] : [...prev, created],
-          );
-        }}
-      />
+      {purchasesEnabled && (
+        <AddPaymentMethodDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          forceDefault={methods.length === 0}
+          onAdded={(created) => {
+            // A new default clears the previous one locally; first method is always default.
+            setMethods((prev) =>
+              created.is_default
+                ? [created, ...prev.map((m) => ({ ...m, is_default: false }))]
+                : [...prev, created],
+            );
+          }}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
