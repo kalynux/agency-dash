@@ -165,5 +165,22 @@
       "after": "Après le",
       "before": "Avant le"
     }
+  },
+  "source": {
+    "title": "Ajouter un fichier",
+    "description": "Prenez une photo, ou choisissez un élément existant.",
+    "camera": "Prendre une photo",
+    "cameraHint": "Utiliser l'appareil photo",
+    "gallery": "Photothèque",
+    "galleryHint": "Choisir parmi vos photos et vidéos",
+    "files": "Parcourir les fichiers",
+    "filesHint": "Documents et tout le reste",
+    "deniedCamera": "Autorisation d'accès à l'appareil photo refusée.",
+    "deniedGallery": "Accès aux photos refusé.",
+    "blockedCamera": "L'accès à l'appareil photo est désactivé pour cette application. Activez-le dans les réglages.",
+    "blockedGallery": "L'accès aux photos est désactivé pour cette application. Activez-le dans les réglages.",
+    "openSettings": "Ouvrir les réglages",
+    "noCamera": "Cet appareil n'a pas d'appareil photo.",
+    "failed": "Impossible de récupérer ce fichier. Veuillez réessayer."
   }
 }

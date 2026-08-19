@@ -4,9 +4,13 @@
 //
 // Auth mirrors the socket's, and for the same reason: geo-tracker accepts the
 // httpOnly `access_token` cookie the browser sends automatically on a same-site
-// request (its CORS allows credentials), so by default we send no token at all.
-// The bearer is only an OVERRIDE for a genuinely cross-site geo-tracker.
+// request (its CORS allows credentials), so on the web we send no token at all.
+// The bearer is the override — for a genuinely cross-site geo-tracker, and for
+// a native shell, which has no cookie to send at all (P4.6). There the token
+// comes from `window.wiMallGetAccessToken`, which `platform/accessToken.ts`
+// fills from the same store the rest of the auth layer uses.
 
+import { useBearerAuth } from '@/platform/env';
 import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
 import type { GeoPosition, RouteResult, TrackingCheckpoint } from '@/types/tracking.types';
 
@@ -61,7 +65,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(`${GEO_TRACKER_HTTP_URL}${path}`, {
       ...init,
-      credentials: 'include',
+      // Mirrors `authStrategy.credentials` for the main API (P4.6). On a device
+      // there is no cookie to send and the bearer header above is the whole
+      // credential, so `'include'` would only ask the WebView to attach cookies
+      // cross-origin — which a native origin cannot do anyway, and which makes
+      // geo-tracker's CORS answer stricter than it needs to be for no benefit.
+      credentials: useBearerAuth ? 'omit' : 'include',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

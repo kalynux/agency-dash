@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useKeyboardOpen } from '@/platform/shell/keyboard';
 import { cn } from '@/lib/utils';
 
 interface UnsavedChangesBarProps {
@@ -24,16 +25,24 @@ interface UnsavedChangesBarProps {
  * invisible on a phone, so the mobile offset clears the row, the inset and the
  * FAB. It lines up with the `pb-[calc(6rem+…)]` the mobile shell already
  * reserves under the content — keep the two in sync.
+ *
+ * While the on-screen keyboard is up (native only — see
+ * `platform/shell/keyboard.ts`) the tab bar hides itself, so that whole
+ * allowance would leave the pill floating in mid-screen. The offset collapses
+ * with it, which also puts Save directly above the keyboard on the settings
+ * forms where the field being edited is the reason the bar appeared at all.
  */
 export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: UnsavedChangesBarProps) {
   const { t } = useTranslation('common');
+  const keyboardOpen = useKeyboardOpen();
   if (!visible) return null;
 
   return (
     <div
       className={cn(
         'pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4',
-        'bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-6',
+        keyboardOpen ? 'bottom-4' : 'bottom-[calc(6rem+env(safe-area-inset-bottom))]',
+        'md:bottom-6',
       )}
     >
       <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border bg-background/95 py-1.5 pl-3 pr-1.5 shadow-lg backdrop-blur animate-fade-in sm:gap-3 sm:pl-4">

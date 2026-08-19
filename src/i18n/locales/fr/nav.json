@@ -47,7 +47,8 @@
     "roleLabel": "Agence",
     "openSettings": "Ouvrir les paramètres du compte",
     "quickCreate": "Créer",
-    "back": "Retour"
+    "back": "Retour",
+    "exitConfirm": "Appuyez à nouveau pour quitter"
   },
   "header": {
     "searchPlaceholderShort": "Rechercher…",
@@ -98,6 +99,8 @@
     "degraded": "Performances dégradées",
     "down": "Interruption de service",
     "checking": "Vérification de l'état…",
-    "label": "État de la plateforme"
+    "label": "État de la plateforme",
+    "offline": "Aucune connexion Internet",
+    "offlineDetail": "Certaines informations peuvent être obsolètes jusqu'à la reconnexion."
   }
 }

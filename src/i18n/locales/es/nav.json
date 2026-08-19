@@ -45,7 +45,8 @@
     "roleLabel": "Agencia",
     "openSettings": "Abrir los ajustes de la cuenta",
     "quickCreate": "Crear",
-    "back": "Atrás"
+    "back": "Atrás",
+    "exitConfirm": "Pulsa atrás otra vez para salir"
   },
   "header": {
     "searchPlaceholderShort": "Buscar…",
@@ -96,6 +97,8 @@
     "degraded": "Rendimiento degradado",
     "down": "Interrupción del servicio",
     "checking": "Comprobando el estado…",
-    "label": "Estado de la plataforma"
+    "label": "Estado de la plataforma",
+    "offline": "Sin conexión a Internet",
+    "offlineDetail": "Puede que algunos datos no estén actualizados hasta que se restablezca la conexión."
   }
 }

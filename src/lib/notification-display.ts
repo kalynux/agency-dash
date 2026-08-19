@@ -34,11 +34,21 @@ export function notificationVisual(type: string): NotificationVisual {
 }
 
 /**
- * Resolve a notification action into an in-app route. `action.path` is
- * app-relative (e.g. "shipments/{id}", "vendor-connections/{id}",
- * "tickets/{id}"), so it maps under /dashboard.
+ * Resolve an app-relative notification path into an in-app route.
+ *
+ * The backend mints these relative to the dashboard — "shipments/{id}",
+ * "vendor-connections/{id}", "tickets/{id}" — so they all map under /dashboard.
+ *
+ * Split out of {@link notificationHref} for the deep-link handler (P4.2), which
+ * receives the same paths from an FCM data payload rather than from a
+ * notification object.
  */
+export function dashboardRoute(path: string): string {
+  return `/dashboard/${path.replace(/^\/+/, '')}`;
+}
+
+/** Resolve a notification action into an in-app route. */
 export function notificationHref(action: AgencyNotificationAction | null): string {
   if (!action?.path) return '/dashboard/notifications';
-  return `/dashboard/${action.path.replace(/^\/+/, '')}`;
+  return dashboardRoute(action.path);
 }

@@ -47,7 +47,8 @@
     "roleLabel": "Agency",
     "openSettings": "Open account settings",
     "quickCreate": "Create",
-    "back": "Back"
+    "back": "Back",
+    "exitConfirm": "Press back again to exit"
   },
   "header": {
     "searchPlaceholderShort": "Search...",
@@ -98,6 +99,8 @@
     "degraded": "Degraded performance",
     "down": "Service disruption",
     "checking": "Checking status…",
-    "label": "Platform status"
+    "label": "Platform status",
+    "offline": "No internet connection",
+    "offlineDetail": "Some information may be out of date until you reconnect."
   }
 }

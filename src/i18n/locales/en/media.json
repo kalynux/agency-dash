@@ -165,5 +165,22 @@
       "after": "After",
       "before": "Before"
     }
+  },
+  "source": {
+    "title": "Add a file",
+    "description": "Take a new photo, or choose something you already have.",
+    "camera": "Take photo",
+    "cameraHint": "Use the camera",
+    "gallery": "Photo library",
+    "galleryHint": "Pick from your photos and videos",
+    "files": "Browse files",
+    "filesHint": "Documents and everything else",
+    "deniedCamera": "Camera permission denied.",
+    "deniedGallery": "Photo access denied.",
+    "blockedCamera": "Camera access is turned off for this app. Turn it on in Settings.",
+    "blockedGallery": "Photo access is turned off for this app. Turn it on in Settings.",
+    "openSettings": "Open settings",
+    "noCamera": "This device has no camera.",
+    "failed": "Could not get that file. Please try again."
   }
 }

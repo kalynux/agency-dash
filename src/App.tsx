@@ -26,9 +26,17 @@ import { ForgotPassword } from '@/pages/ForgotPassword';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
+import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
+
+// Native shell behaviour (CAPACITOR-PLAN.md → Phase 3). Both are inert on the
+// web: the hook registers nothing off Android, and the keyboard store is always
+// "closed" in a browser.
+import { useHardwareBackButton } from '@/platform/shell/backButton';
+import { useDeepLinks } from '@/platform/shell/deepLinks';
+import { useKeyboardOpen } from '@/platform/shell/keyboard';
 
 // Onboarding system
 import { OnboardingProvider } from '@/onboarding/store/onboarding.store';
@@ -113,6 +121,7 @@ function StockRequestDeepLink() {
 function DashboardShell() {
   const { sidebarCollapsed } = useUI();
   const isMobile = useIsMobile();
+  const keyboardOpen = useKeyboardOpen();
 
   return (
     <ShipmentsProvider>
@@ -134,7 +143,16 @@ function DashboardShell() {
                 className={cn(
                   CONTENT_FRAME,
                   'py-6 lg:py-8',
-                  isMobile && 'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+                  // The shell draws edge to edge on a device, so the status bar
+                  // sits *over* the top of this column (P3.3). Zero everywhere
+                  // else, including every desktop browser.
+                  isMobile && 'pt-[calc(1.5rem+env(safe-area-inset-top))]',
+                  // Room for the tab bar, its safe-area inset and the FAB that
+                  // pokes above the row — except while the keyboard is up, when
+                  // the tab bar hides itself and this would be 6rem of dead
+                  // space under the field being typed into (P3.2).
+                  isMobile &&
+                    (keyboardOpen ? 'pb-6' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'),
                 )}
               >
                 <Routes>
@@ -200,6 +218,16 @@ function AppContent() {
 
   const toggleSidebar = useCallback(() => setManualCollapsed((p) => !p), []);
 
+  // Android's hardware back button: close an open sheet, else go back, else
+  // confirm before exiting. Must be inside the Router; a no-op everywhere but
+  // Android (CAPACITOR-PLAN.md → P3.1).
+  useHardwareBackButton();
+
+  // Notification taps and App Links land on the screen they name, instead of
+  // whichever one the app happened to be on. Must be inside the Router; a no-op
+  // off native (CAPACITOR-PLAN.md → P4.2).
+  useDeepLinks();
+
   // Standardized session-expiry handling: the API layer dispatches `auth:logout`
   // when a token refresh fails. Route the user to login from a single place.
   useEffect(() => {
@@ -233,6 +261,10 @@ function AppContent() {
         {/* Theme lives on <html> (see lib/theme.ts + StoreProvider) so the body
             and every Radix portal see it too — never on a wrapper in here. */}
         <>
+          {/* Outside the routes on purpose: "you are offline" is as true on the
+              sign-in screen as it is on the dashboard, and that is the screen
+              where mistaking it for a rejected password costs the most. */}
+          <OfflineBanner />
           <OnboardingErrorBoundary>
             <OnboardingProvider>
               {/* Applies the agency's saved language as soon as the session loads. */}
@@ -272,7 +304,26 @@ function AppContent() {
               </Routes>
             </OnboardingProvider>
           </OnboardingErrorBoundary>
-          <Toaster richColors position="top-right" />
+          {/* The offsets are sonner's own defaults (24px desktop, 16px mobile)
+              plus the status-bar inset, so a toast is never posted underneath
+              the clock on a device drawing edge to edge. `env()` resolves to 0
+              in every browser, which leaves the web build exactly as it was. */}
+          <Toaster
+            richColors
+            position="top-right"
+            offset={{
+              top: 'calc(24px + env(safe-area-inset-top))',
+              right: '24px',
+              bottom: '24px',
+              left: '24px',
+            }}
+            mobileOffset={{
+              top: 'calc(16px + env(safe-area-inset-top))',
+              right: '16px',
+              bottom: '16px',
+              left: '16px',
+            }}
+          />
         </>
       </UIContext.Provider>
     </LegacyAuthContext.Provider>

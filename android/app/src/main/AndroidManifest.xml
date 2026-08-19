@@ -18,6 +18,44 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Deep links (CAPACITOR-PLAN.md → P4.2). `launchMode="singleTask"`
+                above is what makes these arrive as `appUrlOpen` on the RUNNING
+                instance instead of stacking a second copy of the app.
+
+                The custom scheme is the one that works today: it needs no
+                server-side proof, so it is what a notification payload and a
+                manual `adb shell am start -d wiagency://shipments/<id>` can both
+                rely on. Its path is dashboard-relative — `wiagency://shipments/
+                {id}` — matching the `action.path` the backend already mints.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wiagency" />
+            </intent-filter>
+
+            <!--
+                App Links for the real domain, so a link opened from an email or
+                a browser lands in the app rather than on the web dashboard.
+
+                ⚠ `autoVerify` only takes effect once
+                https://agency.wi-mall.com/.well-known/assetlinks.json exists and
+                names this package plus its signing-certificate fingerprint —
+                which cannot be produced before Phase 7 mints the release key.
+                Until then Android silently declines to verify and these links
+                keep opening the browser; nothing breaks, the app just does not
+                claim them yet. The filter is here so the ops task has something
+                concrete to point at.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="agency.wi-mall.com" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -32,4 +70,47 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Phase 4 capabilities (CAPACITOR-PLAN.md → P4.1, P4.3, P4.4). None of the
+        plugins declares its own runtime permission; each ships only the service,
+        the queries or the manifest stub it needs, so every grant below has to be
+        asked for here.
+
+        Each is requested at the point of use and never at startup — see the
+        `requestPermissions` call in the matching src/platform/ module.
+    -->
+
+    <!-- P4.1 — push. Runtime-granted from Android 13; implicit before that. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- P4.4 — "use my location" in the address picker. Coarse is enough to
+         geocode to the right neighbourhood, so a user who grants only the
+         approximate one still gets a filled address. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- P4.3 — camera and gallery.
+         READ_MEDIA_* replaced READ_EXTERNAL_STORAGE in Android 13, hence the
+         maxSdkVersion on the old one: without it the Play Console flags a
+         storage permission the app cannot use on a modern device. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!--
+        Declared NOT required, all three.
+
+        A `uses-permission` implies the matching `uses-feature` as REQUIRED
+        unless it is overridden here, and Play uses that to decide which devices
+        may install the app. Left implicit, a dashboard whose camera and GPS are
+        conveniences would be hidden from every device lacking either — and the
+        agency staff who only ever read shipments would be the ones locked out.
+    -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

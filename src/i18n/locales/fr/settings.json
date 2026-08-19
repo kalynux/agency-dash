@@ -142,7 +142,10 @@
     "permissionDenied": "Autorisation de localisation refusée.",
     "noMatches": "Aucun résultat — essayez une rue ou un point de repère à proximité.",
     "pinnedAt": "Repère à {{lat}}, {{lng}}",
-    "clearAddress": "Effacer l'adresse"
+    "clearAddress": "Effacer l'adresse",
+    "couldNotLocate": "Impossible d'obtenir votre position. Réessayez à l'extérieur ou avec un meilleur signal.",
+    "permissionBlocked": "La localisation est désactivée pour cette application. Activez-la dans les réglages.",
+    "openSettings": "Ouvrir les réglages"
   },
   "policies": {
     "saved": "Conditions enregistrées !",
@@ -331,6 +334,7 @@
       "open": "Ouvrir WhatsApp",
       "copyCommand": "Copier la commande",
       "step2": "Après la réponse du bot, actualisez ci-dessous."
-    }
+    },
+    "copyFailed": "Copie impossible. Sélectionnez la commande et copiez-la manuellement."
   }
 }

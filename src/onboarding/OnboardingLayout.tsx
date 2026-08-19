@@ -147,8 +147,12 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col">
-            {/* ── Header ── */}
-            <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
+            {/* ── Header ──
+                The padding and the matching height keep the bar 4rem tall while
+                letting its own white fill the status-bar band on a device
+                drawing edge to edge (CAPACITOR-PLAN.md → P3.3). `env()` is 0 in
+                every browser, so this is `h-16` as before on the web. */}
+            <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
                 <div className="flex items-center gap-2.5">
                     <AppLogo decorative className="shadow-sm" />
                     <div className="flex flex-col leading-tight">
@@ -195,9 +199,13 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                 )}
             </main>
 
-            {/* ── Sticky mobile CTA ── */}
+            {/* ── Sticky mobile CTA ──
+                `pb` clears the gesture bar the shell now draws behind (P3.3).
+                Capacitor zeroes the bottom inset while the keyboard is up, so
+                the button rides the keys rather than sitting a bar's width
+                above them. */}
             {ctaSlot && (
-                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 flex-shrink-0">
+                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
                     {ctaSlot}
                 </div>
             )}

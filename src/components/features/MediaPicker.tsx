@@ -60,6 +60,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn, formatFileSize } from '@/lib/utils';
 import { getApiErrorMessage } from '@/lib/errors';
 import { getUploadErrorMessage } from '@/lib/uploadErrors';
+import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
+import { nativeMediaAvailable } from '@/platform/media';
 import { tx, txStatic, type AnyTFunction } from '@/i18n/tx';
 import {
   kindFromMime,
@@ -246,6 +248,7 @@ export function MediaPicker({
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Query assembly ─────────────────────────────────────────────────────────
@@ -371,6 +374,14 @@ export function MediaPicker({
     if (e.dataTransfer.files?.length) handleUpload(e.dataTransfer.files);
   };
 
+  // On a device the Upload button opens the source sheet (camera / library /
+  // files) instead of going straight to the system file chooser; on the web it
+  // is the same click on the same hidden input it always was (P4.3).
+  const requestUpload = () => {
+    if (nativeMediaAvailable) setSourceOpen(true);
+    else fileInputRef.current?.click();
+  };
+
   // ─── Selection ──────────────────────────────────────────────────────────────
 
   const selectedCount = Object.keys(selected).length;
@@ -434,6 +445,18 @@ export function MediaPicker({
         className="hidden"
         onChange={(e) => e.target.files && handleUpload(e.target.files)}
       />
+      <UploadSourceSheet
+        open={sourceOpen}
+        onOpenChange={setSourceOpen}
+        onPicked={handleUpload}
+        onBrowseFiles={() => fileInputRef.current?.click()}
+        multiple
+        // The same ceiling `validateMediaSelection` enforces, applied at the
+        // point of selection so the user is stopped by the picker rather than
+        // by an error after choosing twelve photos.
+        limit={MAX_FILES_PER_UPLOAD}
+        allowVideo
+      />
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="gap-2">
           <SlidersHorizontal className="h-4 w-4" />
@@ -443,7 +466,7 @@ export function MediaPicker({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={requestUpload}
           disabled={uploading}
           className="gap-2"
         >

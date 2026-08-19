@@ -64,6 +64,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/common/state-views';
 import { InfoHint } from '@/components/common/InfoHint';
+import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
+import { nativeMediaAvailable } from '@/platform/media';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -334,6 +336,7 @@ export function MediaLibrary() {
   const [uploadPercent, setUploadPercent] = useState(0);
   const [uploadLabel, setUploadLabel] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
 
   const [sortBy, sortOrder] = sort.split(':') as [FileSortField, 'asc' | 'desc'];
 
@@ -476,6 +479,13 @@ export function MediaLibrary() {
     if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
   };
 
+  // On a device the Upload buttons open the source sheet (camera / library /
+  // files); on the web they click the same hidden input they always did (P4.3).
+  const requestUpload = () => {
+    if (nativeMediaAvailable) setSourceOpen(true);
+    else fileInputRef.current?.click();
+  };
+
   // ─── Inspect / mutate ───────────────────────────────────────────────────────
 
   const openInspector = useCallback(
@@ -605,6 +615,17 @@ export function MediaLibrary() {
         onDrop={onDrop}
       >
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onInputChange} />
+        <UploadSourceSheet
+          open={sourceOpen}
+          onOpenChange={setSourceOpen}
+          onPicked={handleFiles}
+          onBrowseFiles={() => fileInputRef.current?.click()}
+          multiple
+          // The same ceiling `validateMediaSelection` enforces, applied while
+          // selecting rather than after.
+          limit={MAX_FILES_PER_UPLOAD}
+          allowVideo
+        />
 
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -619,7 +640,7 @@ export function MediaLibrary() {
             <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
           </div>
           <Button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={requestUpload}
             disabled={uploading}
             className="gap-2"
           >
@@ -753,7 +774,7 @@ export function MediaLibrary() {
                       {t('filters.clear')}
                     </Button>
                   ) : (
-                    <Button onClick={() => fileInputRef.current?.click()} className="gap-2">
+                    <Button onClick={requestUpload} className="gap-2">
                       <Upload className="h-4 w-4" />
                       {t('upload.uploadFiles')}
                     </Button>

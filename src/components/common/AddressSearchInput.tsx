@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 import { geoService } from '@/services/geo.service';
+import { getCurrentPosition } from '@/platform/geolocation';
+import { canOpenAppSettings, openAppSettings } from '@/platform/permissions';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { GeoAddress, GeoCandidate } from '@/types/geo.types';
 
@@ -121,34 +123,56 @@ export function AddressSearchInput({
     [onSelect, query],
   );
 
-  const useMyLocation = useCallback(() => {
-    if (!('geolocation' in navigator)) {
-      toast.error(t('addressSearch.unsupported'));
-      return;
-    }
+  // Through the platform layer (P4.4). `navigator.geolocation` exists in an
+  // Android WebView but is bound to the app's runtime permission and cannot
+  // raise the prompt that would grant it, so on a device it fails without ever
+  // asking. The five outcomes are distinguished because they need five different
+  // things from the user — and one of them, `blocked`, needs the settings screen
+  // rather than another tap on a button that will not prompt again.
+  const useMyLocation = useCallback(async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const candidate = await geoService.reverse(pos.coords.latitude, pos.coords.longitude);
-          if (candidate) {
-            onSelect({ ...candidate, raw_input: candidate.formatted_address });
-            toast.success(t('addressSearch.filledFromLocation'));
-          } else {
-            toast.error(t('addressSearch.couldNotResolve'));
-          }
-        } catch (err) {
-          toast.error(getApiErrorMessage(err));
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
+    try {
+      const fix = await getCurrentPosition();
+
+      if (fix.status === 'unavailable') {
+        toast.error(t('addressSearch.unsupported'));
+        return;
+      }
+      if (fix.status === 'error') {
+        toast.error(t('addressSearch.couldNotLocate'));
+        return;
+      }
+      if (fix.status === 'blocked') {
+        toast.error(
+          t('addressSearch.permissionBlocked'),
+          canOpenAppSettings
+            ? {
+                action: {
+                  label: t('addressSearch.openSettings'),
+                  onClick: () => void openAppSettings(),
+                },
+              }
+            : undefined,
+        );
+        return;
+      }
+      if (fix.status === 'denied') {
         toast.error(t('addressSearch.permissionDenied'));
-        setLocating(false);
-      },
-      { timeout: 10000 },
-    );
+        return;
+      }
+
+      const candidate = await geoService.reverse(fix.latitude, fix.longitude);
+      if (candidate) {
+        onSelect({ ...candidate, raw_input: candidate.formatted_address });
+        toast.success(t('addressSearch.filledFromLocation'));
+      } else {
+        toast.error(t('addressSearch.couldNotResolve'));
+      }
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setLocating(false);
+    }
   }, [onSelect, t]);
 
   return (

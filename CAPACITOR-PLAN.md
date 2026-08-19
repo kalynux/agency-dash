@@ -1,6 +1,16 @@
 # Capacitor Implementation Plan — Agency Dashboard
 
-**Status:** Phase 2 code complete (P2.1–P2.9). Phase 1 code complete (P1.1–P1.12) — exit criteria for both partly verified, see the checklists at the end of each phase
+**Status:** Phases 1, 2, 3 and 4 code complete (P1.1–P1.12, P2.1–P2.9, P3.1–P3.5,
+P4.1–P4.6). Everything verifiable off a device is verified — build, lint, 176
+unit tests, an assembling APK with 12 plugins linked. Every remaining exit
+criterion needs hardware, and all of them sit behind D2; see the checklists at
+the end of each phase.
+
+Phase 4 also needs one artefact nobody can generate from this repo:
+`android/app/google-services.json` from the **messaging** Firebase project. The
+build succeeds without it — Capacitor's template applies the Google Services
+plugin only if the file is present — and push is the only thing that does not
+work until it lands.
 **Audit:** Phase 0 complete — see the [readiness assessment](https://claude.ai/code/artifact/e0ae9065-b533-471f-90a6-5a12e2bba9f2)
 **Target:** Android first, then iOS. Web build must remain behaviourally identical throughout.
 
@@ -601,21 +611,187 @@ and so belongs with a deploy check rather than inside this phase.
 
 **Goal:** nothing here is a feature; all of it is visible as quality.
 **Branch:** `mobile/phase-3-shell-behaviour`
+**Status:** code complete (P3.1–P3.5). Everything off-device is verified — build,
+lint, 116 unit tests, the APK assembles. The five exit criteria are all
+device-only and stay unchecked; they are also all still behind D2, since a shell
+that cannot reach the API cannot be driven far enough to judge.
 
 ### P3.1 — Android back button
 **New:** `src/platform/shell/backButton.ts` — `@capacitor/app` `backButton` → router history; confirm-to-exit at the stack root. Its absence reads as a broken app.
 
+**Landed**, with a third branch the plan did not name and that turned out to
+matter more than either of the two it did.
+
+*An open sheet has to absorb the press.* Radix dismisses on **Escape**, which is
+a keyboard event a hardware button never produces — so the plan's two-branch
+handler would have navigated the page out from underneath an open dialog while
+the dialog stayed on screen. `dismissTopLayer()` synthesises the keypress
+instead of reaching for each component's `onOpenChange`: Radix's dismissable-layer
+stack already knows which layer is topmost, which nest, and which have opted out,
+and re-deriving that from the DOM would be a second, worse copy of it that every
+future overlay would have to register with.
+
+*The selector is the whole risk.* `data-state="open"` is also on Accordion,
+Collapsible and Tabs triggers, so matching it alone would mean one expanded
+section on a page swallows **every** back press and the button simply stops
+working. It is qualified by `role="dialog"`/`role="alertdialog"`, the Radix
+popper wrapper, and vaul's drawer attribute. That is the single case
+`backButton.test.ts` spends the most assertions on.
+
+*`canGoBack` is trusted as the root signal.* Every route change in this app is a
+pushState on one document, so the WebView's own answer is false exactly when the
+user is on the entry they launched into — no parallel depth counter to drift.
+
+*Exit is two presses inside 2s*, prompted through a toast at the app's normal
+position rather than the bottom-centre an Android Toast would use: bottom-centre
+lands squarely on the tab bar, covering the navigation at the moment the user is
+deciding whether to navigate.
+
 ### P3.2 — Keyboard
 **New:** `src/platform/shell/keyboard.ts` — resize policy plus hiding `MobileTabBar` while the keyboard is up. `UnsavedChangesBar` sits in the same band and has the same problem. Verify against the onboarding forms and the ticket composer first — they are the densest.
+
+**Landed, and the resize half needed no code at all on Android.** Capacitor 8's
+built-in `SystemBars` already applies the IME inset as padding on the WebView's
+container *and* zeroes the bottom safe-area inset while the keyboard is up — so
+`fixed bottom-0` and `env(safe-area-inset-bottom)` both stay honest without
+being told. Every resize method on `@capacitor/keyboard` (`setResizeMode`,
+`setScroll`, `setStyle`, `setAccessoryBarVisible`) is **iOS-only**, including the
+`resize` key in `capacitor.config.ts`; iOS is configured explicitly in
+`initKeyboard()` and Android deliberately is not.
+
+*What did need code is the fixed bars*, which resizing does not help: a resized
+WebView re-pins `MobileTabBar` faithfully on top of the keyboard, a row of
+navigation buttons wedged between the field being typed into and the keys. Three
+consumers now read `useKeyboardOpen()` — the tab bar hides its `<nav>` (keeping
+its drawers mounted, or focusing a field inside an open sheet would close the
+sheet), `UnsavedChangesBar` drops to `bottom-4`, and the shell's `pb` allowance
+for the tab bar collapses with it.
+
+*The onboarding CTA and the ticket composer both turned out to need nothing* —
+the CTA is in flow at the bottom of a `min-h-screen` flex column and simply rides
+the resize, and the composer's actions live in a `ResponsiveModal` footer that
+already carried the bottom inset. The CTA gained the inset it was missing for
+the gesture bar (P3.3), not for the keyboard.
+
+*The browser fall-back is `false`, always.* `visualViewport` could synthesise the
+signal in a mobile browser, but it would be a behaviour change to a shipping
+surface for a problem browsers do not have: they resize the visual viewport and
+leave the layout viewport alone, so a fixed bar stays put rather than riding the
+keyboard.
 
 ### P3.3 — Status bar and edge-to-edge
 **New:** `src/platform/shell/statusBar.ts` — driven by the *same* theme signal as the existing pre-paint script in `index.html`, so light/dark stay in step. The `env(safe-area-inset-*)` CSS is already in place across 13 components and needs no change.
 
+**Landed, but the last sentence was wrong** and it was the most consequential
+thing this phase found.
+
+⚠ **The CSS was in place for the *bottom* inset only.** Of the thirteen call
+sites, exactly one — `AuthShell` — reserved `env(safe-area-inset-top)`, and it is
+a screen that did not exist before Phase 1. The shell draws edge to edge on every
+Android version this targets (the platform enforces it from 15; on older ones
+`@capacitor/status-bar` opts in by default), so the dashboard's content column,
+the onboarding header and the toaster were all being laid out underneath the
+clock and the battery. Four small additions fix it, all of them `env()`
+expressions that resolve to 0 in every browser:
+
+```
+src/App.tsx                    <main> gains pt-[calc(1.5rem+env(safe-area-inset-top))] on mobile
+src/onboarding/OnboardingLayout.tsx   the header fills the band with its own white; the mobile CTA clears the gesture bar
+src/App.tsx                    Toaster offset/mobileOffset = sonner's own defaults + the top inset
+```
+
+`MobilePageHeader` — the one component with a `sticky top-0` bar that would have
+needed its own treatment — turns out to have **no importers at all**, so it was
+left alone rather than fixed speculatively.
+
+*`SystemBars`, not `@capacitor/status-bar`, drives the styling.* Capacitor 8
+promotes it to a core plugin exported from `@capacitor/core`, and it covers
+**both** bars; `@capacitor/status-bar` only ever touches the top one, so on a
+light theme over a dark OS the gesture bar would keep white-on-white icons. The
+style is nonetheless pushed into *both* plugins, which is not redundant:
+`@capacitor/status-bar` caches the last style it was given and re-applies it on
+every configuration change, so left holding its default it would re-apply the
+**system's** theme on the next rotation and quietly undo ours.
+
+*The theme signal is the `.dark` class on `<html>`*, watched with a
+`MutationObserver` rather than subscribed from `useUIStore`. That is the same
+class the pre-paint script writes, so the bars are right in the first painted
+frame — before React mounts — and stay right through a manual switch, an OS
+switch under `system`, and any future writer. There is no second source of truth
+to drift from.
+
+*Two calls the plan implies but that must NOT be made:* `setOverlaysWebView` and
+`setBackgroundColor` are documented as unavailable on Android 15+, and this app
+targets SDK 36. Overlay is already the default and the status bar is already
+transparent; calling either would do nothing on a modern device and something
+inconsistent on an old one.
+
+`index.html`'s stale green `theme-color` (flagged in P2.9) is fixed here as the
+one-line change it was: two `prefers-color-scheme` metas carrying the same
+`#fcfdfe` / `#080c17` the splash uses.
+
 ### P3.4 — Network status
 **Modified:** `src/components/layout/PlatformStatus.tsx` — currently a placeholder with a `TODO` naming `navigator.onLine`. `@capacitor/network` makes it honest and gives the tracking socket a reconnect trigger.
 
+**Landed as `src/platform/network.ts`**, plus one component the plan did not
+anticipate needing.
+
+⚠ **`PlatformStatus` renders only inside `Sidebar`, and the sidebar is not
+rendered below 768px** — which is every phone this is being packaged for. Making
+it honest fixes the desktop and leaves the mobile build with no offline state at
+all, which is the surface the exit criterion is actually about. So
+`OfflineBanner` was added: a bar across the top of the app, above the routes, for
+as long as the device has no network. Above the routes on purpose — a failed
+sign-in on a phone with no signal is exactly the moment the user most needs to be
+told it is the network and not their password.
+
+*`'degraded'` stays unreachable and stays in the union.* It is the honest label
+for "connected, but the API is not answering", and nothing measures that yet —
+that needs a health ping, which is its own decision about how often to spend a
+request saying nothing is wrong. `'offline'` no longer maps to
+`platformStatus.down` ("Service disruption"), which pointed the finger at the
+platform for what is almost always a phone in a lift.
+
+*The socket trigger is an edge, not a level.* `subscribeNetworkRestored()` fires
+only on the offline → online transition, and `useGeoTrackerSocket` uses it to
+skip the rest of its backoff — up to 30s of a live map showing stale pins on a
+phone that came back to signal ten seconds ago. Guarded on an already-open
+socket, because the OS reports a *network* change and not a socket one: moving
+from cellular to Wi-Fi fires it while the existing connection is perfectly fine.
+
+*What `navigator.onLine` actually answers*, since the web build now shows a
+banner on it: whether a network interface is up, not whether the internet is
+reachable. It is honest about airplane mode — the case the exit criterion names —
+and optimistic about a captive portal. So `connected === false` is treated as
+proof and `connected === true` as an absence of proof: nothing here signs anyone
+out, cancels a request, or blocks a form.
+
 ### P3.5 — External links
 **New:** `src/platform/browser.ts` — every outbound link through `@capacitor/browser`. Currently latent (the Telegram/WhatsApp `window.open` calls are commented out) but must land before those features are switched on, or the shell navigates away with no route back.
+
+**Landed as two entry points, because outbound links arrive two ways.**
+`openExternal()` for code, and a capture-phase click interceptor for markup —
+which is what reaches the `<a target="_blank">` that `LiveTrackingMap` injects
+into a Leaflet popup as an **HTML string**, where no component-level fix could
+have gone. The interceptor covers the other four anchor call sites
+(`ChannelSetupDialog` ×2, `PoliciesSettings`, `AttachmentsPanel`, `MediaLibrary`)
+without touching any of them.
+
+*The predicate compares protocol + host, never `origin`.* Under iOS the document
+scheme is `capacitor:`, which `URL` does not treat as special, so
+`new URL('/dashboard', location.href).origin` is the string `"null"` — an origin
+comparison would classify every in-app route as external and hand the whole app
+to Safari. `browser.test.ts` pins this.
+
+*Non-http schemes are deliberately left alone.* `mailto:`, `tel:` and `intent:`
+are already routed to the system by Capacitor's own `WebViewClient`, which is the
+correct destination, and `Browser.open` cannot load any of them.
+
+*`window.open` is not monkey-patched.* It would have been a tidy safety net for
+the two commented-out call sites, but callers that dereference the returned
+`Window` (Stripe's hosted script among them) would get `null` from a patch that
+cannot return one. Both disabled files carry a note at the top instead, naming
+`openExternal` as what the line has to become when the channel is switched on.
 
 ### Phase 3 exit criteria
 
@@ -624,6 +800,46 @@ and so belongs with a deploy check rather than inside this phase.
 - [ ] Status bar matches the theme, including a mid-session theme switch
 - [ ] Airplane mode shows an honest offline state and recovers on reconnect
 - [ ] No link can strand the user outside the app
+- [x] `npm run build` clean; `npm run sync:android && ./gradlew assembleDebug` →
+      **BUILD SUCCESSFUL**, 7 plugins linked
+- [x] `npm run lint` reports **no new problems** — 25 problems, the same
+      20 `react-refresh/only-export-components` errors plus 5 warnings Phases 1
+      and 2 documented, none in a file this phase touched. (`react-hooks/refs`
+      caught a ref written during render in `backButton.ts` and it was fixed
+      rather than suppressed.)
+- [x] Unit tests pass: **116** across seven files — 23 new, in
+      `platform/network.test.ts`, `platform/browser.test.ts` and
+      `platform/shell/backButton.test.ts`
+- [x] `npm run i18n:check` exits 0; French stays at 100%. Three new `nav` keys,
+      written in all five locales.
+
+**All five behavioural criteria need hardware**, and all five are also still
+behind D2: the shell has to reach the API before there is enough app to drive a
+back stack, a keyboard or a link through. The unit tests cover as far as logic
+can go — the overlay selector, the restore edge, the interception predicate —
+and stop exactly where the plugins begin.
+
+### Found while doing Phase 3, not fixed by it
+
+**The offline banner covers the chrome it sits over.** It is `fixed top-0 z-50`,
+above the desktop `Header` (`sticky top-0 z-30`) and the top of the `Sidebar`
+(`z-40`). Full-width-at-the-top is the conventional shape for this and the
+alternative — putting it in flow — pushes every `min-h-screen` shell past the
+viewport and grows a scrollbar on every screen for the duration of an outage. The
+header's search and notification bell are not usable offline anyway. Worth
+revisiting only if the outage state turns out to be long-lived in practice.
+
+**The web build gains one visible behaviour**, deliberately: it now shows the
+offline banner and a red platform-status dot when `navigator.onLine` is false,
+where before it showed a green "All systems operational" dot in airplane mode.
+That is the P3.4 fix, not a side effect — but it is the only Phase 3 change a
+browser user can see, alongside the `theme-color` tint. Everything else resolves
+to `env(…) = 0` or to a listener that is never installed off native.
+
+**`dist/` is tracked in git**, so a build shows up as a source change
+(`dist/index.html` moved with `index.html` here). Same family as the
+`node_modules` accident P2.1 found, same answer: its own commit, its own
+decision.
 
 ---
 
@@ -631,6 +847,10 @@ and so belongs with a deploy check rather than inside this phase.
 
 **Goal:** the five capabilities already used through browser APIs get native implementations behind their existing call sites.
 **Branch:** `mobile/phase-4-capabilities`
+**Status:** code complete (P4.1–P4.6). Build, lint, 176 unit tests and the APK
+are all clean. Four plugins were added, plus one the plan did not anticipate
+(`capacitor-native-settings` — see P4.3). The five exit criteria are device-only
+and stay unchecked; push additionally needs `google-services.json`.
 
 ### P4.1 — Push notifications
 **New:** `src/platform/push.ts` — installs a native provider into the **existing** `window.wiMallGetPushToken` seam that `usePushRegistration` already consumes. No hook changes.
@@ -641,10 +861,128 @@ and so belongs with a deploy check rather than inside this phase.
 - Move the cached token out of `localStorage` into native storage.
 - Unregister the token **before** clearing credentials on logout — the `DELETE /agency/devices` call needs the token it is about to discard.
 
+**Landed.** The seam took the native provider exactly as designed. Everything
+else in the bullet list above turned out to live in the hook.
+
+⚠ **"No hook changes" was half right, and the wrong half was load-bearing.**
+The *token* needs none — `platform/push.ts` fills the same
+`window.wiMallGetPushToken` that `lib/push.ts` fills on web, and
+`usePushRegistration` cannot tell them apart. But everything the hook did
+*around* the token was browser API:
+
+- `'Notification' in window` is **false in an Android WebView** — the
+  Notifications API is not implemented there. Unmodified, the hook reports
+  `'unsupported'` and the settings screen offers no way to turn push on at all,
+  on the one platform this phase is for.
+- `Notification.permission` / `requestPermission()` likewise do not exist;
+  Android 13+ has its own `POST_NOTIFICATIONS` runtime grant.
+- `platform: 'web'` was hardcoded at the registration call — and it is not
+  cosmetic, it picks which credential the sender signs with (D5).
+- the token was cached in `localStorage`, which the plan explicitly moves.
+
+So four things moved behind `platform/push.ts` — support, permission, device
+platform, token cache — each falling back to precisely the old browser code when
+`isNative` is false, down to the `agency:pushToken` storage key. The web path is
+unchanged; the hook is now honest on both.
+
+*The token cache is in the Keystore, not `@capacitor/preferences`.* A push token
+is not a credential the way a refresh token is — it authorises delivery *to* this
+device, not action *as* this user — but it is a durable device identifier, WebView
+`localStorage` is world-readable on a rooted device, and `@aparajita/capacitor
+-secure-storage` was already linked for P2.4. There was no reason to reach for
+something weaker.
+
+*A deadline on the token, which the plan did not call for.* `register()` resolves
+as soon as the *request* is made; the token arrives later on the `registration`
+event, or never — no Play Services, no network, no `google-services.json` all
+look identical from JS. Without the 15s cap the settings screen spins forever on
+a case that is not rare.
+
+**A rotation path the plan did not name, and the backend cannot see.** FCM
+rotates tokens on its own schedule — a restore onto a new device, a data clear —
+and the backend then holds a token that **accepts every send and delivers
+nothing**. That is indistinguishable from push being broken, and nothing in the
+original design would ever have noticed. So the `registration` listeners are
+attached at module load rather than on first use (a rotation refreshed while the
+app was closed is delivered shortly after the next launch, when no settings
+screen is open), and **every** token is announced rather than only one that
+changed within the launch — the in-memory value starts null on a cold start, so
+comparing against it would classify exactly the important case as first sight.
+`usePushRegistration` compares against what it actually registered, which is the
+only copy that matters, and re-registers when they differ.
+
+**New:** `src/lib/pushDevice.ts`, because the ordering has two callers.
+`src/platform/` deliberately calls no services and `src/services/` knows nothing
+about a device, but both `usePushRegistration` and `authService.logout()` need
+*talk to the backend, then update the cache* done in that order — a cached token
+the server never saw shows the settings screen as registered while nothing is
+ever delivered. `logout()` now awaits `unregisterPushDevice()` **first**, before
+`stopRefreshScheduler()` and `endSession()`, since `DELETE /agency/devices`
+authenticates with the credential those two destroy.
+
+⚠ **iOS will not work as written, and it is not a bug on this side.**
+`@capacitor/push-notifications` wraps **APNs** directly on iOS, so `Token.value`
+there is an APNs token, while the backend sends through FCM. Registered as-is it
+would be accepted and never deliver — the same silent failure as a rotated token.
+Closing it needs Firebase's own iOS messaging SDK to do the APNs→FCM exchange.
+Android, which is what this phase ships, is unaffected: that token IS the FCM
+token. Tracked against Phase 6, and noted at the call site.
+
 ### P4.2 — Deep links
 **New:** `src/platform/shell/deepLinks.ts`
 
 Backend notifications carry `action.path` (e.g. `stock-requests/{id}`), and `App.tsx` already resolves those paths — nothing currently routes them *into* the app. Both `appUrlOpen` and the push-tap handler funnel into one `navigate()`. Needs Android intent filters. **Half the value of push depends on this**; shipping P4.1 without it delivers notifications that go nowhere.
+
+**Landed**, with a queue and a two-shape resolver the plan folded into one line.
+
+*The cold-start tap is the normal case, not an edge one.* Tapping a notification
+on a phone where the app is not running starts the process, and the plugin
+replays the tap as soon as the JS context exists — well before React has mounted
+and a router exists to receive it. So the listeners are attached at module scope
+and a link that arrives early is **buffered**, then flushed by `useDeepLinks` on
+mount. Attached from a React effect instead, the single most important tap in the
+feature is the one that gets dropped.
+
+*Two link shapes, two depths, and conflating them is silent.* An App Link
+(`https://agency.wi-mall.com/dashboard/shipments/123`) carries a complete app
+route in its pathname. Our own scheme (`wiagency://shipments/123`) carries the
+dashboard-relative path the notification payload already uses — and `URL` parses
+its first segment as the **host**, because a custom scheme has no authority
+component, so host and pathname have to be recombined *and* still need
+`/dashboard` in front. One rule for both produces either `/dashboard/dashboard/…`
+or a route missing its prefix; the app opens, navigates somewhere, and the
+notification looks like it worked. `deepLinks.test.ts` is mostly this table.
+
+*The origin is never compared.* The WebView serves the app from
+`agency.wi-mall.internal` while links are minted against `agency.wi-mall.com`, so
+an origin check would reject every real link. The intent filter is what vouched
+for the URL before it got here.
+
+*`notificationHref` was split rather than duplicated.* Its dashboard-prefixing
+half is now `dashboardRoute(path)` in `lib/notification-display.ts`, which both
+the notifications list and the push payload resolve through — one place that
+knows `action.path` is dashboard-relative.
+
+**Intent filters** are in `android/app/src/main/AndroidManifest.xml`, and
+`launchMode="singleTask"` (already there from the template) is what makes them
+arrive as `appUrlOpen` on the running instance instead of stacking a second copy
+of the app.
+
+⚠ **The App Link half does not work yet and cannot be made to from here.**
+`autoVerify` only takes effect once
+`https://agency.wi-mall.com/.well-known/assetlinks.json` names this package and
+its signing-certificate fingerprint — which does not exist until Phase 7 mints
+the release key. Until then Android silently declines to verify and those links
+keep opening the browser. Nothing breaks; the app just does not claim them. The
+`wiagency://` scheme needs no server-side proof and is what works today, for the
+notification payload and for
+`adb shell am start -d wiagency://shipments/<id>`.
+
+*A deep link that lands signed-out survives.* It navigates to the real route,
+`OnboardingGuard` holds the render while auth is in flight, and if there is no
+session it redirects with `state: { from: location }` — which `Login.tsx` already
+reads and returns to after sign-in. Nothing needed adding for that; it is worth
+recording that it composes.
 
 ### P4.3 — Camera and photo library
 **New:** `src/platform/media.ts`
@@ -653,24 +991,190 @@ Backend notifications carry `action.path` (e.g. `stock-requests/{id}`), and `App
 
 Handle denied, restricted, and permanently-denied distinctly — permanently-denied needs a route to system settings, not a retry button.
 
+**Landed**, and the conversion is where the sharp edges were.
+
+*The real call sites are `MediaPicker` and `MediaLibrary`.* `MediaPickerTrigger`
+only opens `MediaPicker`; the upload UI — a hidden `<input type="file">`, an
+Upload button, drag-and-drop — lives in those two, duplicated. Both keep all of
+it. The only change is that the Upload button now calls `requestUpload()`, which
+opens the source sheet on a device and clicks the same hidden input on the web.
+
+**New:** `src/components/common/UploadSourceSheet.tsx` — the one piece of new UI,
+which P4.3 authorises ("a camera-first sheet") against ground rule 1. Three rows
+on a `ResponsiveModal`: take photo, photo library, browse files. It owns only the
+*choice*; the files it produces go to the same `onPicked` the file input already
+feeds, so both screens keep their upload path, validation, progress bar and
+layout. A component-only module rather than a hook returning JSX, so it does not
+add a `react-refresh/only-export-components` error to a count the exit criteria
+track.
+
+*`webPath`, never `uri`.* `uri` is a `file://` path the WebView cannot read
+cross-origin; `webPath` is served by Capacitor's own handler on the app origin,
+so a plain `fetch` works and the bytes arrive without a base64 round trip through
+the bridge.
+
+⚠ **The filename extension is load-bearing, not decoration.**
+`validateMediaSelection` and `isVideoUpload` both fall back to the extension when
+`File.type` is empty — which is the normal case for `.mov` — so a File named
+`image` routes a QuickTime video to `/files/upload`, which rejects video
+outright. Names come from the source URI's basename when it has an extension, and
+are otherwise synthesised with a real one.
+
+**A precedence bug the tests caught.** The first version preferred `blob.type`
+over the plugin's declared `metadata.format`. Capacitor's local file handler
+answers from a static extension table and falls back to
+`application/octet-stream` for anything it does not know — which `kindFromMime`
+reads as a **document**, so a perfectly good photo would be filtered out of an
+image-only slot on the way back into `MediaPicker`. The OS's own media metadata
+is the better source and now wins.
+
+*Capture quality is 85, not the plugin's default 100.* At 100 a modern phone
+sensor produces an 8–12 MB JPEG — over the 10 MB agency image cap (storage.md
+§1), so the first photo a user took would be rejected by our own validator.
+`saveToGallery` is off: a delivery proof being uploaded is not the user's photo
+to keep.
+
+*Only the permission in use is requested.* Asking for the photo library when the
+user tapped "Take photo" is how an app teaches people to decline prompts on
+principle.
+
+**New dependency the plan did not anticipate: `capacitor-native-settings`.**
+"Permanently-denied needs a route to system settings" has no core-plugin answer —
+`@capacitor/app` has no `openSettings`, and the alternatives were an undocumented
+`intent:` URI trick or a message with no button. It is one small, purpose-built
+plugin, used from `src/platform/permissions.ts` and nowhere else.
+
+**New:** `src/platform/permissions.ts`, shared with P4.4. Camera, library and
+location fail the same four ways, and Capacitor reports "no, this time" and "no,
+and don't ask again" with the *same* `'denied'` string. The distinguishing state
+is what `checkPermissions()` said **before** prompting: `'prompt'` or
+`'prompt-with-rationale'` means a prompt was just shown and the refusal is
+this-time-only; an already-`'denied'` check means nothing was shown and nothing
+ever will be. That is the whole difference between a retry button that works and
+one that silently does nothing.
+
 ### P4.4 — Geolocation
 **New:** `src/platform/geolocation.ts` — `@capacitor/geolocation` behind the "use my location" action in `AddressSearchInput`. Permission on tap. The denied path already exists and shows a toast.
 
+**Landed**, and the existing denied path was not the one that mattered.
+
+⚠ **`navigator.geolocation` exists in an Android WebView and never prompts.** It
+is bound to the *app's* runtime permission, and a WebView cannot raise an Android
+runtime prompt on the app's behalf — so without `ACCESS_FINE_LOCATION` already
+granted it fails with `PERMISSION_DENIED` immediately. The old code's toast was
+correct and the user had no way to act on it.
+
+*Five outcomes, because they need five different things from the user*: filled,
+refused-this-time (retry), refused-for-good (settings, via P4.3's shared
+module), no capability at all, and a fix that failed with permission perfectly
+fine — indoors, hardware off, timed out. The last was previously indistinguishable
+from a refusal.
+
+*Either grant is enough.* Coarse location geocodes to the right neighbourhood, and
+refusing to proceed on a permission the user deliberately narrowed would be worse
+than an approximate address they can correct.
+
+*The browser branch never reports `'blocked'`.* There is no settings screen we can
+open there, so the distinction would only buy a button that cannot exist.
+
 ### P4.5 — Clipboard
 **New:** `src/platform/clipboard.ts` — `@capacitor/clipboard` for `ChannelSetupDialog`. `navigator.clipboard` is unreliable in WebViews.
+
+**Landed**, and it fixed a latent web bug on the way past. The old call was
+`navigator.clipboard.writeText(cmd).then(() => setCopied(true))` — no `catch`, so
+a refusal was an unhandled rejection and a "Copied!" state that simply never
+arrived. `copyText()` returns whether the copy happened, and the dialog now says
+so when it did not, because the whole step depends on the user pasting that
+command into WhatsApp.
 
 ### P4.6 — Live tracking
 **New:** `src/platform/accessToken.ts` — implements the **existing** `window.wiMallGetAccessToken` seam, which returns null today. `geo-tracker.service.ts` and `useGeoTrackerSocket.ts` already consume it; the socket already supports a `['bearer', token]` subprotocol. Also set `credentials: 'omit'` on native in `geo-tracker.service.ts`.
 
 **Then the reconnect cadence.** geo-tracker re-checks the *handshake* token on shipment lifecycle events. When that token has aged out, the subscription is dropped with `permission_revoked` and `reason: "shipment_completed"` — **which is misleading; the shipment may be fine.** Do not trust that reason string. Reconnect the socket with a fresh access token on a cadence under the 15-minute access TTL; reconnecting is cheap because the session resumes.
 
+**Landed.** The seam was the easy half; the cadence found a race.
+
+*The token is refreshed before it is handed out, not just read.* The cost of a
+stale token is asymmetric: given to `api.ts` it produces one 401 and one
+transparent retry, but given to a **WebSocket handshake** it is captured by
+geo-tracker for the life of the connection. So `getAccessToken()` refreshes when
+the token is within 60s of expiry, through P2.5's shared single-flight lock —
+coalescing onto whatever the scheduler already has in flight rather than racing
+it for the refresh token.
+
+⚠ **The re-handshake is NOT gated on the transport, deliberately.** The cookie
+build has the identical fault: a browser attaches `access_token` to the handshake
+and never again, so a web user watching one delivery for twenty minutes loses the
+subscription exactly the same way — and is told `shipment_completed` about a
+shipment that is fine. It was always a bug; Phase 4 is only where it got found.
+Ten minutes, comfortably under the 900s TTL, and only an already-OPEN socket is
+cycled: one that is connecting or sitting in backoff has a fresh handshake coming
+already, and interrupting it would restart the backoff it is halfway through.
+
+**A pre-existing race in `reconnect()` that the timer would have started
+exercising every ten minutes.** It closed the old socket and called `connect()`,
+which `await`s the token before touching any ref — so the old socket's `close`
+event could land *after* `connect()` had stored the new socket. Its `onclose`
+would then null out `socketRef` (holding the new socket) and schedule another
+reconnect on top of the connection just made: two sockets, and a subscription map
+describing neither. Manual reconnect fires rarely enough that it was survivable;
+on a ten-minute clock it would not have been. The outgoing socket's handlers are
+now detached before it is closed, which makes the ordering irrelevant rather than
+lucky.
+
 ### Phase 4 exit criteria
 
-- [ ] A push arrives on a physical device and its tap opens the correct screen
+- [ ] A push arrives on a physical device and its tap opens the correct screen —
+      **also blocked on `google-services.json`**, which no code change can supply
 - [ ] Disabling push in settings stops delivery and unregisters server-side
 - [ ] Camera and library both produce uploads; a permanently-denied permission routes to settings
 - [ ] "Use my location" fills an address
 - [ ] The live map streams positions for >20 minutes without losing its subscription
+- [x] `npm run build` clean; `npm run sync:android && ./gradlew assembleDebug` →
+      **BUILD SUCCESSFUL**, `app-debug.apk` at 12.0 MB, **12 plugins** linked
+      (7 + camera, clipboard, geolocation, push-notifications, native-settings)
+- [x] The merged debug manifest carries all four new runtime permissions, both
+      intent filters, and Firebase's `MessagingService`; `usesCleartextTraffic`
+      still appears **only** via the debug overlay, and `sync:android` still
+      bakes `allowMixedContent: false`
+- [x] `npm run lint` reports **no new problems** — 25 problems, the same 20
+      `react-refresh/only-export-components` errors plus 5 warnings Phases 1–3
+      documented, none in a file this phase touched
+- [x] Unit tests pass: **176** across eleven files — 60 new, in
+      `platform/push.test.ts`, `platform/media.test.ts`,
+      `platform/permissions.test.ts` and `platform/shell/deepLinks.test.ts`
+- [x] `npm run i18n:check` exits 0; French stays at 100%. 19 new keys across
+      `settings` and `media`, written in en and fr — the only two locales that
+      carry those namespaces (ar/es/pt hold `common`, `errors`, `nav` only and
+      fall back to en)
+
+**What the unit tests cover and where they stop.** The deep-link resolver table,
+the permission-outcome distinction, the `File` conversion (extension, MIME
+precedence, cancel/permission error codes) and the push token deadline plus
+rotation announcement are all exercised off-device. What is left needs hardware
+and a Firebase project: that a push actually arrives, that the camera returns
+bytes, that a GPS fix resolves, and that a subscription survives twenty minutes.
+
+### Found while doing Phase 4, not fixed by it
+
+**`google-services.json` is a hard external dependency for P4.1.** The Gradle
+side already handles its absence — Capacitor's `android/app/build.gradle` applies
+the Google Services plugin inside a `try` that logs and continues — so the build
+is green and push is simply inert. It must come from the **messaging** Firebase
+project, not the file-storage one; the wrong project yields a token that
+registers fine and never delivers, which looks like a client bug for as long as
+anyone is willing to look.
+
+**iOS push needs the Firebase messaging SDK, not this plugin alone** (P4.1).
+Phase 6.
+
+**App Links need `assetlinks.json` and a release signing key** (P4.2). Phase 7.
+
+**The web build gains two visible behaviours**, both bug fixes rather than
+features: the WhatsApp setup dialog now reports a failed copy instead of silently
+staying un-copied (P4.5), and the live map re-handshakes every ten minutes
+instead of losing its subscription (P4.6). Everything else in this phase is
+behind `isNative` or `useBearerAuth`.
 
 ---
 
@@ -713,8 +1217,24 @@ Handle denied, restricted, and permanently-denied distinctly — permanently-den
 |---|---|---|
 | Add `https://agency.wi-mall.internal` and `capacitor://agency.wi-mall.internal` to `ALLOWED_ORIGINS` on **wi-mall** | Backend | Phase 2 |
 | Same two origins on **geo-tracker** (same variable, no separate WebSocket knob) | Backend | Phase 4 |
-| Confirm `POST /api/agency/devices` accepts `platform: 'android' \| 'ios'` (D5) | Backend | Phase 4 |
+| ~~Confirm `POST /api/agency/devices` accepts `platform: 'android' \| 'ios'` (D5)~~ | Backend | **settled** |
+| `google-services.json` from the **messaging** Firebase project | Ops | Phase 4 push |
+| Confirm the FCM `data` payload carries `path` (or `url`) for deep links | Backend | Phase 4 push |
+| `assetlinks.json` on `agency.wi-mall.com`, once the release key exists | Ops | App Links (P4.2) |
 | ~~Confirm the final hostname string before the CORS ticket is filed~~ | Us → Backend | **settled** |
+
+**D5 is settled in the code already**: `DevicePlatform` in
+`src/types/notification.types.ts` is `'web' | 'android' | 'ios'`, which is the
+frontend's copy of the backend contract, so the value P4.1 now sends was already
+the documented one. Worth one confirming message, not a ticket.
+
+**The deep-link payload is the one genuinely open question.**
+`routeFromPushData` reads `path` (or `action_path`, or a fully-qualified `url`)
+because that mirrors `AgencyNotificationAction`, which is what the in-app
+notification carries. If the FCM `data` payload names those fields differently,
+every push opens the dashboard root instead of the screen it is about — and it
+will look like a client bug. One message resolves it; the resolver is a
+three-line change either way.
 
 **The hostname is now fixed in code** as `agency.wi-mall.internal`
 (`capacitor.config.ts`), which makes the two origins above final. The first
@@ -731,17 +1251,31 @@ Name the environments explicitly in the ticket. The backend has asked which ones
 ```
 src/platform/env.ts · auth/{strategy,tokens,tokenStore,secureTokenStore,refreshScheduler}.ts
               push.ts · accessToken.ts · media.ts · geolocation.ts · clipboard.ts
-              network.ts · browser.ts
+              network.ts · browser.ts · permissions.ts
               shell/{splash,backButton,deepLinks,keyboard,statusBar}.ts
 ```
 
 `auth/tokens.ts` and `shell/splash.ts` are Phase 2 additions the plan did not
-foresee — see P2.4 and P2.9 for why each exists.
+foresee — see P2.4 and P2.9 for why each exists. `permissions.ts` is the Phase 4
+equivalent: camera, photo library and location all need the same
+denied-vs-permanently-denied distinction, and it is the only module that imports
+`capacitor-native-settings`. See P4.3.
+
+Everything above now exists.
 
 **New — screens (the only new UI in the project)**
 
 ```
 src/pages/{Login,Register,ForgotPassword}.tsx
+src/components/layout/OfflineBanner.tsx      the mobile half of P3.4 — see there
+src/components/common/UploadSourceSheet.tsx  the camera-first sheet (P4.3)
+```
+
+**New — policy**
+
+```
+src/lib/pushDevice.ts    register/unregister ordering, shared by the settings
+                         hook and by logout (P4.1)
 ```
 
 **Modified**
@@ -749,14 +1283,41 @@ src/pages/{Login,Register,ForgotPassword}.tsx
 ```
 src/services/api.ts             strategy injection, terminal-code table
 src/services/files.service.ts   XHR auth headers
-src/services/auth.service.ts    login/register/forgot/reset, token capture
-src/services/geo-tracker.service.ts  bearer on native
+src/services/auth.service.ts    login/register/forgot/reset, token capture;
+                                unregister push before ending the session (P4.1)
+src/services/geo-tracker.service.ts  bearer + credentials:'omit' on native (P4.6)
 src/lib/push.ts                 native guard
-src/App.tsx                     public auth routes, remove the localhost redirect
+src/lib/notification-display.ts dashboardRoute() split out for deep links (P4.2)
+src/App.tsx                     public auth routes, remove the localhost redirect;
+                                back button, top inset, keyboard-aware padding,
+                                offline banner, toaster offsets (Phase 3);
+                                useDeepLinks (P4.2)
+src/main.tsx                    status bar / keyboard / link interceptor init (P3.3–P3.5);
+                                native push + access-token seams (P4.1, P4.6)
 src/onboarding/store/onboarding.store.tsx  token capture on auth-me
-src/components/layout/PlatformStatus.tsx   real network source
-index.html                      self-hosted fonts
+src/onboarding/OnboardingLayout.tsx        top + bottom safe-area insets (P3.3)
+src/components/layout/PlatformStatus.tsx   real network source (P3.4)
+src/components/layout/MobileTabBar.tsx     hides while the keyboard is up (P3.2)
+src/components/agency-settings/UnsavedChangesBar.tsx   same (P3.2)
+src/hooks/useGeoTrackerSocket.ts           reconnect on network restore (P3.4);
+                                           10-min re-handshake + a close race (P4.6)
+src/hooks/usePushRegistration.ts           permission/support/cache via the
+                                           platform layer; rotation (P4.1)
+src/components/features/MediaPicker.tsx    Upload opens the source sheet (P4.3)
+src/pages/MediaLibrary.tsx                 same (P4.3)
+src/components/common/AddressSearchInput.tsx        native geolocation (P4.4)
+src/components/agency-settings/notifications/ChannelSetupDialog.tsx  clipboard (P4.5)
+src/i18n/locales/*/nav.json                3 keys, all five locales (Phase 3)
+src/i18n/locales/{en,fr}/{settings,media}.json      19 keys (Phase 4)
+android/app/src/main/AndroidManifest.xml   intent filters, 4 runtime permissions,
+                                           3 non-required features (P4.1–P4.4)
+index.html                      self-hosted fonts; theme-color, light and dark
 ```
+
+The two commented-out channel cards
+(`components/agency-settings/notifications/{Telegram,Whatsapp}LinkCard.tsx`)
+carry a note naming `openExternal` as what their `window.open` has to become —
+they are not otherwise touched.
 
 **New — root**
 
@@ -774,3 +1335,37 @@ be committed — the same pre-existing situation as `scripts/i18n-audit.mjs`, wh
 ## Rollback posture
 
 Phases 1 and 5 touch shared code and ship to web; everything else is native-only or behind `isNative`. If a phase needs reverting, Phase 1 is the only one where a revert affects web users — which is why its exit criteria demand the full web sweep in both modes before merge.
+
+**Phase 3 is a partial exception and should be read as one.** All of its
+behaviour is either behind `isNative` or behind an `env(safe-area-inset-*)` that
+resolves to 0 in a browser — except P3.4, which deliberately ships the offline
+banner and an honest status dot to web as well, because "always green in
+airplane mode" was a bug there too. A Phase 3 revert would take those with it and
+nothing else.
+
+**Phase 4 is a partial exception for the same reason, in two places.** Almost all
+of it is behind `isNative` — the platform modules fall through to today's browser
+code, and `UploadSourceSheet` never opens on the web. The exceptions are both
+fixes rather than features, and a revert would take them with it:
+
+- **P4.5** — the WhatsApp setup dialog reports a failed copy instead of leaving
+  an unhandled promise rejection and a "Copied!" that never arrives.
+- **P4.6** — the live map re-handshakes every ten minutes on *both* transports,
+  because a browser attaches `access_token` to a WebSocket handshake exactly once
+  and the subscription otherwise dies mid-delivery with a misleading reason.
+  This one also fixed a socket-close race in `reconnect()` that predates the
+  phase.
+
+There is a **third** web-visible change, smaller but worth naming rather than
+discovering: **logout now unregisters the push device on web too.** Previously
+only the settings toggle did, so a browser where someone had enabled push kept
+receiving that account's notifications after they signed out — on a shared
+machine, a real leak. The cost is that signing back in requires re-enabling push.
+That is the plan's instruction (P4.1) and it is the right trade, but it is not a
+no-op: a web user who never enabled push sees nothing, and one who did will
+notice.
+
+The rest of what Phase 4 touched on shared code resolves to the previous
+behaviour on the web: `usePushRegistration` reads the same `Notification` API and
+the same `agency:pushToken` key through one more indirection, and the Upload
+buttons click the same hidden input they always did.

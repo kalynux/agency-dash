@@ -3,7 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0e9f6e" />
+    <!--
+      The app's own `--background`, light and dark, not the green that used to
+      be here: that predates the Dispatch Cobalt identity and painted a browser
+      chrome no colour in the app matched (noted in CAPACITOR-PLAN.md → P2.9).
+      Same two values as the splash screen in capacitor.config.ts — keep them in
+      step. This drives Chrome's address bar and an installed PWA's title bar;
+      the *native* status bar is transparent and edge-to-edge, and takes only
+      its icon colour from src/platform/shell/statusBar.ts.
+    -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfdfe" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080c17" />
     <title>Wi-Agency — Wi-Mall</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />

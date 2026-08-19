@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 import { authService } from '@/services/auth.service';
 import { telegramService, whatsappService } from '@/services/channels.service';
+import { copyText } from '@/platform/clipboard';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatTime } from '@/lib/format';
 import { tx } from '@/i18n/tx';
@@ -122,13 +123,20 @@ export function ChannelSetupDialog({
     }
   }, [onRefresh, t]);
 
-  const copyCommand = useCallback(() => {
+  // Through the platform layer (P4.5): `navigator.clipboard` is gated on a
+  // secure context and a gesture, and in a WebView it can reject or simply never
+  // settle — which here meant an unhandled rejection and a "Copied!" state that
+  // never arrived. Now a refusal is said out loud, because the whole step
+  // depends on the user pasting this command into WhatsApp.
+  const copyCommand = useCallback(async () => {
     if (!waCommand) return;
-    navigator.clipboard.writeText(waCommand).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }, [waCommand]);
+    if (!(await copyText(waCommand))) {
+      toast.error(t('channelSetup.copyFailed'));
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [waCommand, t]);
 
   if (!channel) return null;
   const label = tx(t, `notifications.channels.${channel}`);

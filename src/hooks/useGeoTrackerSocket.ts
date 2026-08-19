@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { subscribeNetworkRestored } from '@/platform/network';
 import { GEO_TRACKER_WS_URL, resolveGeoTrackerToken } from '@/services/geo-tracker.service';
 import type { AgentLiveFix, GeoPosition, LocationBroadcast, TrackingSocketStatus } from '@/types/tracking.types';
 
@@ -9,14 +10,39 @@ import type { AgentLiveFix, GeoPosition, LocationBroadcast, TrackingSocketStatus
  * localhost:5174 — cookies ignore port, and the cookie is SameSite=Lax). So by
  * default we connect WITHOUT a token and let the cookie authenticate us.
  *
- * The `bearer` subprotocol token is only an OVERRIDE for cases where the cookie
- * won't be sent — a genuinely cross-site geo-tracker in production.
+ * The `bearer` subprotocol token is the OVERRIDE for cases where the cookie
+ * won't be sent — a genuinely cross-site geo-tracker in production, and a native
+ * shell, which has no cookie at all. On a device `platform/accessToken.ts` fills
+ * `window.wiMallGetAccessToken` and this connects with the subprotocol instead
+ * (CAPACITOR-PLAN.md → P4.6).
  */
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 /** Max recent positions kept per agent for the map trail (older ones are dropped). */
 const MAX_TRAIL = 60;
+
+/**
+ * How often to re-handshake, so the credential geo-tracker captured at connect
+ * time cannot age out underneath a live subscription (CAPACITOR-PLAN.md → P4.6).
+ *
+ * A WebSocket authenticates **once**. geo-tracker keeps whatever it validated at
+ * handshake and re-checks it on shipment lifecycle events — and when that check
+ * fails on an aged-out token it drops the subscription with `permission_revoked`
+ * and `reason: "shipment_completed"`. **That reason is not to be trusted**: the
+ * shipment is usually fine, the token is not. From the user's side the map
+ * simply stops moving.
+ *
+ * Access tokens live 900s, so this sits comfortably under the TTL. Reconnecting
+ * is cheap — the session resumes and the subscriptions are re-sent by `onopen` —
+ * which is why re-handshaking on a clock beats trying to detect the failure.
+ *
+ * This is not gated on the transport. The cookie build has the identical fault:
+ * the browser attaches `access_token` to the handshake and never again, so a web
+ * user watching one delivery for twenty minutes loses the subscription the same
+ * way. It was always a bug; Phase 4 is just where it got found.
+ */
+const REHANDSHAKE_MS = 10 * 60 * 1000;
 
 interface Frame {
   type: string;
@@ -248,9 +274,22 @@ export function useGeoTrackerSocket(
     attemptRef.current = 0;
     setRevoked(new Set());
     setLastError(null);
-    if (socketRef.current) {
-      manualCloseRef.current = true;
-      socketRef.current.close();
+    // Detach the outgoing socket completely before opening the next one.
+    //
+    // `connect()` awaits the token before it touches any ref, so the old
+    // socket's `close` event can land either side of that await. If it lands
+    // AFTER, its `onclose` nulls `socketRef` — which by then holds the *new*
+    // socket — and schedules a reconnect on top of the connection we just made,
+    // leaving two sockets and a subscription map that describes neither.
+    // Clearing the handlers makes the ordering irrelevant instead of lucky.
+    const outgoing = socketRef.current;
+    if (outgoing) {
+      socketRef.current = null;
+      outgoing.onopen = null;
+      outgoing.onmessage = null;
+      outgoing.onerror = null;
+      outgoing.onclose = null;
+      outgoing.close();
     }
     void connect();
   }, [connect]);
@@ -282,6 +321,37 @@ export function useGeoTrackerSocket(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscriptionKey]);
+
+  // Reconnect the moment the device has a network again (CAPACITOR-PLAN.md →
+  // P3.4). Without this the socket sits out whatever backoff it had reached
+  // when the connection died — up to 30s of a live map showing stale pins on a
+  // phone that came back to signal ten seconds ago. Guarded on an already-open
+  // socket because the OS reports a *network* change, not a socket one: moving
+  // from cellular to Wi-Fi fires this while the existing connection is fine.
+  useEffect(
+    () =>
+      subscribeNetworkRestored(() => {
+        if (!mountedRef.current || desiredRef.current.length === 0) return;
+        if (socketRef.current?.readyState === WebSocket.OPEN) return;
+        reconnect();
+      }),
+    [reconnect],
+  );
+
+  // Re-handshake on a clock, so the credential behind an open connection is
+  // never older than the access-token TTL (P4.6 — see REHANDSHAKE_MS).
+  //
+  // Only an OPEN socket is cycled. A socket that is connecting, or sitting in
+  // backoff, already has a fresh handshake coming and interrupting it would
+  // restart the backoff it is halfway through.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!mountedRef.current || desiredRef.current.length === 0) return;
+      if (socketRef.current?.readyState !== WebSocket.OPEN) return;
+      reconnect();
+    }, REHANDSHAKE_MS);
+    return () => clearInterval(timer);
+  }, [reconnect]);
 
   return { status, fixes, trails, revoked, revokedAt, lastError, reconnect };
 }

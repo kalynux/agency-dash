@@ -141,7 +141,10 @@
     "permissionDenied": "Location permission denied.",
     "noMatches": "No matches — try a nearby street or landmark.",
     "pinnedAt": "Pinned at {{lat}}, {{lng}}",
-    "clearAddress": "Clear address"
+    "clearAddress": "Clear address",
+    "couldNotLocate": "Could not get your location. Try again outdoors or with a stronger signal.",
+    "permissionBlocked": "Location is turned off for this app. Turn it on in Settings.",
+    "openSettings": "Open settings"
   },
   "policies": {
     "saved": "Policies saved!",
@@ -330,6 +333,7 @@
       "open": "Open WhatsApp",
       "copyCommand": "Copy command",
       "step2": "After the bot replies, refresh below."
-    }
+    },
+    "copyFailed": "Could not copy. Select the command and copy it manually."
   }
 }

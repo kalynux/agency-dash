@@ -1,6 +1,7 @@
 import { api } from './api';
 import { authStrategy } from '@/platform/auth/strategy';
 import { startRefreshScheduler, stopRefreshScheduler } from '@/platform/auth/refreshScheduler';
+import { unregisterPushDevice } from '@/lib/pushDevice';
 import { ApiError, type AgencyAuthResponse, type AuthMeAgencyResponse } from '@/types/api';
 
 /**
@@ -126,11 +127,14 @@ export const authService = {
      * End the session. On cookies only the server can clear an httpOnly cookie,
      * so it is asked; on bearer, discarding the pair IS the logout and there is
      * no call to make. Best-effort in both cases — it never throws.
-     *
-     * ⚠ Phase 4: unregister the push token BEFORE calling this.
-     * `DELETE /agency/devices` authenticates with the credential this destroys.
      */
-    logout(): Promise<void> {
+    async logout(): Promise<void> {
+        // FIRST, and awaited (P4.1). `DELETE /agency/devices` is an
+        // authenticated call, so on the bearer transport it authenticates with
+        // the exact credential the next two lines destroy. Reversed, it 401s and
+        // the device stays subscribed — signed out of the app, still receiving
+        // its notifications. Never throws, so it cannot block a sign-out.
+        await unregisterPushDevice();
         // Before the credential goes, so a timer that is mid-wait cannot fire a
         // refresh against a session we just ended. (The `auth:logout` event does
         // this too, but an explicit logout does not always dispatch one.)

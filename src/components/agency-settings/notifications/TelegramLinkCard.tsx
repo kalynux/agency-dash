@@ -1,3 +1,12 @@
+// DISABLED — the Telegram channel is not switched on yet.
+//
+// When it is: the `window.open` call below must become `openExternal()` from
+// `@/platform/browser` (CAPACITOR-PLAN.md → P3.5). Inside a Capacitor WebView
+// there is no second window to open, so `window.open` either does nothing at
+// all or replaces the app with t.me and leaves no way back to it. The anchor
+// interceptor installed in main.tsx covers links written as markup, but it
+// cannot see a call made from code.
+
 // import { useState } from 'react';
 // import { Loader2, ExternalLink, X, RefreshCw } from 'lucide-react';
 // import { Button } from '@/components/ui/button';
