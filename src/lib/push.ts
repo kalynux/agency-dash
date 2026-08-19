@@ -2,7 +2,7 @@
  * Firebase Cloud Messaging bootstrap.
  *
  * Imported for its side effect in main.tsx: it installs the
- * `window.joviGetPushToken` provider that usePushRegistration consumes
+ * `window.wiMallGetPushToken` provider that usePushRegistration consumes
  * (see src/hooks/usePushRegistration.ts). Installation happens synchronously
  * at module load so the hook sees the provider on first render; Firebase
  * itself is initialised lazily, only when a token is actually requested.
@@ -13,6 +13,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, isSupported, type Messaging } from 'firebase/messaging';
+import { isNative } from '@/platform/env';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
@@ -58,6 +59,14 @@ async function getPushToken(): Promise<string | null> {
   }
 }
 
-if (configured && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  window.joviGetPushToken = getPushToken;
+// `!isNative` is load-bearing, not defensive (CAPACITOR-PLAN.md → P2.6).
+//
+// `'serviceWorker' in navigator` is TRUE inside a Capacitor WebView, so without
+// it this installs a web-push provider on a device: FCM registers a service
+// worker that no native push service will ever deliver to, and the settings
+// screen reports push as working when nothing can arrive. Phase 4 replaces the
+// provider with a native one at the same `window.wiMallGetPushToken` seam, which
+// is why the guard lives here and not in `usePushRegistration`.
+if (!isNative && configured && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.wiMallGetPushToken = getPushToken;
 }

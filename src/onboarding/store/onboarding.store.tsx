@@ -3,11 +3,13 @@ import {
     useContext,
     useState,
     useCallback,
+    useEffect,
     useRef,
     type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/auth.service';
+import { authStrategy } from '@/platform/auth/strategy';
 import { onboardingService } from '@/services/onboarding.service';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { ApiError } from '@/types/api';
@@ -75,6 +77,17 @@ export interface OnboardingState {
     saveDraft(step: 4, values: PoliciesFormValues): void;
 
     initialize: () => Promise<void>;
+    /**
+     * Install a session the app already has in hand, from a sign-in or a
+     * registration response.
+     *
+     * Without this the login screen has no way to hand its result over:
+     * `initialize()` latches after its first call, so navigating to a guarded
+     * route post-login would find `session` still null, bounce back to `/login`,
+     * and loop. Adopting the response also avoids spending an `auth-me` round
+     * trip to be told what the login response just said.
+     */
+    adoptSession: (session: AgencyAuthSession) => void;
     /** Re-fetch the session (used after a post-onboarding profile edit). */
     refreshSession: () => Promise<void>;
     /**
@@ -135,6 +148,24 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         initCalled.current = true;
         setIsInitializing(true);
         try {
+            // On the bearer transport an empty token store is already the answer:
+            // there is no credential to present, so `auth-me` can only come back
+            // 401. Skipping it turns a cold start of a signed-out app into an
+            // immediate `/login` rather than a round trip spent being told we are
+            // anonymous — on a phone, over mobile data, that request IS the
+            // splash-to-login delay.
+            //
+            // On cookies this is always true and nothing changes: httpOnly cookies
+            // are invisible to script, so asking the server is the only way to
+            // find out. See CAPACITOR-PLAN.md → P1.11.
+            //
+            // `return` still runs the `finally` below, so the guard stops
+            // rendering its skeleton and redirects.
+            if (!(await authStrategy.canAttemptSession())) {
+                setSession(null);
+                return;
+            }
+
             const res = await authService.getAuthMeAgency();
             setSession(res.data);
             setViewingStep(res.data.role_entity.onboarding_step);
@@ -247,6 +278,47 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         [wrapStep],
     );
 
+    /**
+     * A hard logout from the API layer has to clear the session here too.
+     *
+     * `auth:logout` used to be handled by navigation alone — App.tsx and
+     * OnboardingGuard both send the user to `/login` — which was enough while
+     * `/login` was a static screen. It is not enough now: the sign-in screen
+     * redirects anyone who already holds a session, so a stale one left in this
+     * store would bounce a signed-out user straight back into the dashboard, on
+     * to the next 401, and around again.
+     *
+     * This store owns the session, so ending it belongs here rather than in
+     * either listener. Neither navigates on our behalf being removed — both
+     * still do their own.
+     */
+    useEffect(() => {
+        const onHardLogout = () => {
+            setSession(null);
+            setViewingStep(null);
+            setDrafts({ logistics: null, payout: null, branding: null, policies: null });
+            // Same reset `logout()` performs: a later visit to a guarded route
+            // is free to ask the server again.
+            initCalled.current = false;
+            setIsInitializing(false);
+        };
+        window.addEventListener('auth:logout', onHardLogout);
+        return () => window.removeEventListener('auth:logout', onHardLogout);
+    }, []);
+
+    const adoptSession = useCallback((next: AgencyAuthSession) => {
+        setSession(next);
+        setViewingStep(next.role_entity.onboarding_step);
+        setError(null);
+        // The login response IS the session, and it is newer than anything
+        // `auth-me` could return, so the boot call is already satisfied.
+        initCalled.current = true;
+        // `/login` sits outside OnboardingGuard, so on a direct visit nothing
+        // ever called `initialize()` and this is still true from mount. Leaving
+        // it would park the guard on its skeleton forever after we navigate.
+        setIsInitializing(false);
+    }, []);
+
     const refreshSession = useCallback(async () => {
         try {
             const response = await authService.getAuthMeAgency();
@@ -312,6 +384,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
                 drafts,
                 saveDraft,
                 initialize,
+                adoptSession,
                 refreshSession,
                 updateAgencyProfile,
                 submitLogistics,

@@ -439,7 +439,7 @@ export function Sidebar() {
         </ScrollArea>
       </div>
 
-      {/* Footer — WiMall platform + health, then the collapse toggle */}
+      {/* Footer — Wi-Mall platform + health, then the collapse toggle */}
       <div className="border-t flex-shrink-0">
         {sidebarCollapsed ? (
           <div className="flex justify-center py-3">

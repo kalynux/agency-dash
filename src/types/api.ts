@@ -277,10 +277,32 @@ export interface AgencyRoleEntity {
 
 // ─── Auth Responses ───────────────────────────────────────────────────────────
 
+/**
+ * The token pair returned by the **mobile** auth namespace (`/auth/mobile/*`)
+ * and by nothing else — the cookie endpoints set `Set-Cookie` and return no
+ * `tokens` key at all. Present on login, register, add-role, auth-me and
+ * refresh.
+ *
+ * Both lifetimes are in **seconds**, and both tokens are re-issued on every
+ * refresh, which is what makes the 30-day refresh window sliding rather than
+ * absolute. Persisting only the access token quietly throws that away.
+ * See api-doc/auth/FRONTEND-CHANGELOG-mobile-auth.md §1.3–§1.4.
+ */
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  /** Seconds. 900 today; read it, never hardcode it. */
+  accessExpiresIn: number;
+  /** Seconds. 2592000 (30 days) today. */
+  refreshExpiresIn: number;
+}
+
 export interface AgencyAuthSession {
   user: ApiUser;
   role: 'agency';
   role_entity: AgencyRoleEntity;
+  /** Mobile namespace only — absent on every cookie response. */
+  tokens?: AuthTokens;
 }
 
 export interface AuthMeAgencyResponse {
@@ -289,6 +311,14 @@ export interface AuthMeAgencyResponse {
   meta?: Record<string, unknown>;
   message?: string;
 }
+
+/**
+ * Login, register, add-role and auth-me all answer with this one envelope —
+ * `{ user, role, role_entity }`, plus `tokens` on the mobile namespace. Register
+ * and add-role answer 201 rather than 200; the body is the same either way.
+ * Verified against `MobileAuthController` / `AuthController`.
+ */
+export type AgencyAuthResponse = AuthMeAgencyResponse;
 
 // ─── Onboarding Step & Status ─────────────────────────────────────────────────
 
@@ -417,6 +447,40 @@ export const ERROR_CATEGORIES = [
 
 export type ErrorCategory = (typeof ERROR_CATEGORIES)[number];
 
+/**
+ * The one auth failure a refresh can fix. On an ordinary authenticated route
+ * `401 AUTH_TOKEN_EXPIRED` means *refresh now*; everything else in the auth
+ * family means *sign out*.
+ * See api-doc/auth/FRONTEND-CHANGELOG-mobile-auth.md §3.
+ */
+export const REFRESHABLE_AUTH_CODE = 'AUTH_TOKEN_EXPIRED';
+
+/**
+ * Auth failures no refresh can fix — attempting one is a wasted round trip that
+ * ends in the same place.
+ *
+ * A password change stamps a per-account instant and BOTH credential paths
+ * refuse anything minted before it — the refresh cookie included — so the
+ * refresh would answer 401 with this very code. Suspension is the same shape:
+ * the account, not the token, is what is refused. `AUTH_MISSING_TOKEN` and
+ * `AUTH_SESSION_EXPIRED` mean the refresh credential was absent or already
+ * rejected, so there is nothing left to present.
+ *
+ * `AUTH_TOKEN_INVALID` (tampered / bad signature) is not in the backend's table
+ * but is documented at api-doc/README.md and is terminal for the same reason.
+ *
+ * See api-doc/auth/README.md ("Revocation — `iat` is load-bearing").
+ */
+export const TERMINAL_AUTH_CODES: ReadonlySet<string> = new Set([
+  'AUTH_MISSING_TOKEN',
+  'AUTH_REFRESH_TOKEN_INVALID',
+  'AUTH_SESSION_EXPIRED',
+  'AUTH_PASSWORD_CHANGED',
+  'AUTH_ACCOUNT_SUSPENDED',
+  'AUTH_USER_NOT_FOUND',
+  'AUTH_TOKEN_INVALID',
+]);
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -514,11 +578,13 @@ export class ApiError extends Error {
   }
 
   /**
-   * A 401 no refresh can fix — the credential predates a password change, or the
-   * account is suspended. Clear local state and sign in again; do not retry.
+   * An auth failure no refresh can fix — the credential predates a password
+   * change, the account is suspended, or there is no refresh credential left to
+   * present. Clear local state and sign in again; do not retry.
+   * See {@link TERMINAL_AUTH_CODES}.
    */
   get isTerminalAuth() {
-    return this.code === 'AUTH_PASSWORD_CHANGED' || this.code === 'AUTH_ACCOUNT_SUSPENDED';
+    return TERMINAL_AUTH_CODES.has(this.code);
   }
 
   /**

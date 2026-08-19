@@ -16,7 +16,7 @@ type PushTokenProvider = () => Promise<string | null>;
 
 declare global {
   interface Window {
-    joviGetPushToken?: PushTokenProvider;
+    wiMallGetPushToken?: PushTokenProvider;
   }
 }
 
@@ -44,7 +44,7 @@ function readStoredToken(): string | null {
 export function usePushRegistration() {
   const { t } = useTranslation('settings');
   const supported = typeof window !== 'undefined' && 'Notification' in window;
-  const hasProvider = typeof window !== 'undefined' && typeof window.joviGetPushToken === 'function';
+  const hasProvider = typeof window !== 'undefined' && typeof window.wiMallGetPushToken === 'function';
 
   const [status, setStatus] = useState<PushStatus>('default');
   const [isBusy, setIsBusy] = useState(false);
@@ -63,7 +63,7 @@ export function usePushRegistration() {
   }, [resolveStatus]);
 
   const enable = useCallback(async () => {
-    if (!supported || !window.joviGetPushToken) {
+    if (!supported || !window.wiMallGetPushToken) {
       setStatus(resolveStatus());
       return;
     }
@@ -75,7 +75,7 @@ export function usePushRegistration() {
         setStatus(permission === 'denied' ? 'denied' : 'default');
         return;
       }
-      const token = await window.joviGetPushToken();
+      const token = await window.wiMallGetPushToken();
       if (!token) {
         toast.error(t('notifications.push.toastTokenFailed'));
         setStatus('granted');

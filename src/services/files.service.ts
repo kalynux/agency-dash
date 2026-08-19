@@ -6,6 +6,7 @@
 // GET /files/:id — never from `usageCount`.
 
 import { api, BASE_URL } from './api';
+import { authStrategy } from '@/platform/auth/strategy';
 import { txStatic } from '@/i18n/tx';
 import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
 import type {
@@ -157,7 +158,8 @@ export async function deleteFile(id: string): Promise<void> {
 
 // ─── Upload with progress (XHR) ───────────────────────────────────────────────
 // The fetch-based client can't report upload progress, so uploads go through XHR.
-// Cookie auth is preserved with `withCredentials`.
+// Auth comes from the same `authStrategy` api.ts uses — `withCredentials` on the
+// cookie transport, an `Authorization` header on the bearer one.
 //
 // Two upload routes (api-doc/agency/file-management.md):
 //   • images/docs/audio/archives → POST /files/upload       (field `files`, ≤10)
@@ -297,19 +299,33 @@ function errorFromXhr(xhr: XMLHttpRequest, files: File[]): ApiError {
 }
 
 /** Low-level XHR upload to a single route. Reports bytes loaded for aggregation. */
-function xhrUpload(
+async function xhrUpload(
   url: string,
   fieldName: string,
   files: File[],
   onBytes?: (loaded: number) => void,
 ): Promise<ApiFile[]> {
+  // Authenticated the same way as every other request, just by hand — this is the
+  // one path that does not go through api.ts, and without this it would be the
+  // one feature that fails AFTER a successful sign-in.
+  //
+  // Known gap, deliberately not closed here: a 401 on this route cannot trigger
+  // the single-flight refresh that api.ts owns, so an access token that expires
+  // mid-upload fails the upload rather than recovering. On cookies the server
+  // refreshes silently and it cannot happen; on bearer the proactive scheduler
+  // (P2.5) is what keeps it from happening. Duplicating the refresh queue here
+  // would be the wrong fix — it has to exist exactly once.
+  const authHeaders = await authStrategy.authHeaders();
+
   return new Promise((resolve, reject) => {
     const fd = new FormData();
     files.forEach((f) => fd.append(fieldName, f));
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
-    xhr.withCredentials = true;
+    xhr.withCredentials = authStrategy.credentials === 'include';
+    // Must follow open() — setRequestHeader on an unopened XHR throws InvalidStateError.
+    Object.entries(authHeaders).forEach(([name, value]) => xhr.setRequestHeader(name, value));
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onBytes) onBytes(event.loaded);

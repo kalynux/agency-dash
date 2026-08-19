@@ -1,6 +1,6 @@
 {
   "layout": {
-    "platform": "WiMall",
+    "platform": "Wi-Mall",
     "fallbackAgencyName": "Votre agence",
     "signOut": "Se déconnecter",
     "progressLabel": "Progression de l'intégration",

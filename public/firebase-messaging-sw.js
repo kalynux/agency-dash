@@ -24,7 +24,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   if (payload.notification) return;
   const data = payload.data || {};
-  self.registration.showNotification(data.title || 'WiMall Agency', {
+  self.registration.showNotification(data.title || 'Wi-Agency', {
     body: data.body || '',
     icon: '/favicon-256.png', // without this the OS falls back to the browser's own mark
     tag: data.notificationId || undefined, // collapse duplicate deliveries

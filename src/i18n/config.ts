@@ -36,7 +36,7 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const DEFAULT_LANGUAGE: LanguageCode = 'en';
 
 /** Where the choice survives a reload before `/auth/me` has answered. */
-export const LANGUAGE_STORAGE_KEY = 'jovi-agency-language';
+export const LANGUAGE_STORAGE_KEY = 'wi-agency:language';
 
 export const SUPPORTED_LANGUAGE_CODES: readonly LanguageCode[] =
   SUPPORTED_LANGUAGES.map((l) => l.code);

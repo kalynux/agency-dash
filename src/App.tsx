@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext, useCallback, useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Toaster } from '@/components/ui/sonner';
 
 // Dashboard pages
@@ -18,11 +17,15 @@ import { MediaLibrary } from '@/pages/MediaLibrary';
 import { Account } from '@/pages/Account';
 import { Settings } from '@/pages/Settings';
 
+// Auth pages — the only screens that render outside the dashboard chrome.
+import { Login } from '@/pages/Login';
+import { Register } from '@/pages/Register';
+import { ForgotPassword } from '@/pages/ForgotPassword';
+
 // Layout
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
-import { AppLogo } from '@/components/common/AppLogo';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
@@ -54,9 +57,6 @@ import { StockRequestsProvider } from '@/store/stockRequests.store';
 // up on every viewport and content never stretches unusably wide on large
 // monitors. Keep these two class strings in sync.
 const CONTENT_FRAME = 'mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8';
-
-/** Where the login placeholder sends the user. Matches `/login`'s redirect. */
-const LOGIN_URL = 'http://localhost:3000/login';
 
 // ─── Sidebar collapse context (preserved for Sidebar/Header compatibility) ────
 
@@ -96,28 +96,6 @@ const LegacyAuthContext = createContext<LegacyAuthContextType>({
 });
 
 export const useAuth = () => useContext(LegacyAuthContext);
-
-// ─── Login placeholder ────────────────────────────────────────────────────────
-// Authentication lives on the main site; this screen only points there.
-
-function LoginRedirectScreen() {
-  const { t } = useTranslation('auth');
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-      <div className="text-center space-y-4 max-w-sm">
-        <AppLogo size="lg" className="mx-auto shadow-sm" />
-        <h1 className="text-2xl font-bold">{t('login.title')}</h1>
-        <p className="text-muted-foreground text-sm">{t('login.description')}</p>
-        <a
-          href={LOGIN_URL}
-          className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors w-full"
-        >
-          {t('login.cta')}
-        </a>
-      </div>
-    </div>
-  );
-}
 
 // ─── Stock-request deep link ──────────────────────────────────────────────────
 // The backend deep-links stock-request notifications to `stock-requests/{id}`
@@ -260,8 +238,11 @@ function AppContent() {
               {/* Applies the agency's saved language as soon as the session loads. */}
               <ProfileLanguageSync />
               <Routes>
-                {/* Login — placeholder, auth happens on the main site */}
-                <Route path="/login" element={<LoginRedirectScreen />} />
+                {/* Public auth routes — outside OnboardingGuard, because the
+                    guard's answer to "no session" is to send people here. */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 {/* Onboarding — gated: must be authenticated, step > 0 */}
                 <Route

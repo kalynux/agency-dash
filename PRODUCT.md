@@ -9,7 +9,7 @@ web
 ## Users
 
 Primary user: the **owner/operator of a delivery agency** — a small last-mile
-logistics business that fulfills orders for the WiMall marketplace. This person
+logistics business that fulfills orders for the Wi-Mall marketplace. This person
 is hands-on and wears every hat: they accept shipments from vendors, dispatch
 them to their own agents, watch deliveries on a live map, handle cash-on-delivery
 money and its reconciliation with the platform, manage billing, and chase the
@@ -24,7 +24,7 @@ process payouts and oversee cash).
 
 ## Product Purpose
 
-WiMall is a combined e-commerce + logistics marketplace in which last-mile
+Wi-Mall is a combined e-commerce + logistics marketplace in which last-mile
 delivery is a first-class role with its own economy. This dashboard is the
 operating console a delivery agency uses to run that side of the business end to
 end: receive dispatched shipments, offer them to agents and track acceptance,
@@ -58,7 +58,7 @@ delivery agencies in African markets, not a generic e-commerce admin panel.
 
 ## Operating Context
 
-- **Two backend services, one identity.** `wimall` (Express + TypeScript +
+- **Two backend services, one identity.** `wi-mall` (Express + TypeScript +
   MongoDB, HTTP only) owns users, orders, shipments, money, and the tracking
   authorization policy; `geo-tracker` (Go + Redis + Postgres, WebSocket) owns
   live positions, the tracking stream, and routing. The same JWT signs both; a
@@ -128,10 +128,18 @@ a 10,000 XAF minimum and an automatic sweep at 2,000,000 XAF.
 
 ## Brand Commitments
 
-- **Product name: WiMall** (canonical, per the project owner). Written as one
-  word, capital W and capital M — not "Wi Mall", not "wi-mall", and never the
-  legacy "Jovi Mall" / `jovi-mall`. Lowercase identifier slots (package name,
-  service ids) use `wimall`.
+- **Product name: Wi-Mall** (canonical, per the project owner). Always
+  hyphenated, capital W and capital M — not "WiMall", not "Wi Mall", and never
+  the legacy "Jovi Mall" / `jovi-mall`. Lowercase identifier slots (package
+  names, service ids, hosts) use `wi-mall`. The hyphen is not cosmetic:
+  `wimall.com` belongs to another company, so the product owns `wi-mall.com` and
+  the written name matches the domain.
+- **This app is Wi-Agency**, the agency-facing console — identifier `wi-agency`,
+  written "Wi-Agency". It is one of four apps under the platform brand, each on
+  its own subdomain: `agency.wi-mall.com` (this app), `agent.wi-mall.com`,
+  `vendor.wi-mall.com`, and `api.wi-mall.com`, with the main site at
+  `wi-mall.com`. Say "Wi-Mall" for the platform and "Wi-Agency" for this app;
+  never "Wi-Mall Agency".
 - **Visual identity is not yet established.** No confirmed logo, palette,
   typography, or brand voice has been provided. Do not fabricate brand guidelines;
   a visual world is decided later in design work, not here.

@@ -12,7 +12,7 @@ import type { GeoPosition, RouteResult, TrackingCheckpoint } from '@/types/track
 
 declare global {
   interface Window {
-    joviGetAccessToken?: () => string | null | Promise<string | null>;
+    wiMallGetAccessToken?: () => string | null | Promise<string | null>;
   }
 }
 
@@ -45,9 +45,9 @@ function resolveHttpBase(): string {
  * healthy answer in a same-site deploy — the cookie authenticates instead.
  */
 export async function resolveGeoTrackerToken(): Promise<string | null> {
-  if (typeof window !== 'undefined' && typeof window.joviGetAccessToken === 'function') {
+  if (typeof window !== 'undefined' && typeof window.wiMallGetAccessToken === 'function') {
     try {
-      return (await window.joviGetAccessToken()) ?? null;
+      return (await window.wiMallGetAccessToken()) ?? null;
     } catch {
       return null;
     }

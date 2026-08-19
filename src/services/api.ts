@@ -1,10 +1,28 @@
-import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
+import { ApiError, REFRESHABLE_AUTH_CODE, TERMINAL_AUTH_CODES } from '@/types/api';
+import { authStrategy } from '@/platform/auth/strategy';
+import { refreshSession } from '@/platform/auth/refreshScheduler';
+import { BASE_URL, buildApiError } from './http';
 
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8022/api';
+// Re-exported: this has been `api.ts`'s public surface since before the base URL
+// and the error builder moved to ./http (see that file for why).
+export { BASE_URL };
+
+// The transport — cookies or bearer tokens — is decided by `authStrategy`, and
+// this file must never ask which one is active. Everything that differs between
+// the two is a property on the strategy; anything else would put a
+// `if (isNative)` in the one code path both platforms have to share.
+// See CAPACITOR-PLAN.md → P1.3.
 
 // ─── Refresh queue ────────────────────────────────────────────────────────────
 // Ensures only one token refresh is in-flight at a time.
 // All concurrent 401s are held and resolved/rejected after the refresh settles.
+//
+// The refresh CALL itself is `refreshSession()`, which lives in the scheduler
+// (P2.5) because the proactive timer and this reactive path have to share one
+// lock. With two locks a resume and a 401 can each start a refresh, and the
+// second lands holding a refresh token the first has already rotated away — a
+// sign-out with nothing in the logs to explain it. The queue below stays here:
+// it is about retrying held *requests*, which is this file's job.
 
 type QueueItem = {
     resolve: () => void;
@@ -22,103 +40,101 @@ function flushQueue(err?: ApiError) {
     pendingQueue = [];
 }
 
+// A refresh refused with 429 must not be retried on the next request, or a
+// dashboard's concurrent polls turn one rate-limited refresh into a storm
+// against the very bucket that is already full. Hold the refusal and re-throw it
+// until `Retry-After` has elapsed.
+let refreshBlockedUntil = 0;
+let refreshBlockedBy: ApiError | null = null;
+/** Fallback when a 429 carries no `Retry-After` — the buckets are per-minute. */
+const DEFAULT_REFRESH_BACKOFF_SECONDS = 60;
+
+// ─── Auth error classification (P1.4) ─────────────────────────────────────────
+
+/** What the request path should do about a failed response. */
+export type AuthAction = 'refresh' | 'signOut' | 'propagate';
+
 /**
- * 401s that a refresh cannot fix, so attempting one is a wasted round trip that
- * ends in the same place. A password change stamps a per-account instant and
- * BOTH credential paths refuse anything minted before it — the refresh cookie
- * included — so the refresh would answer 401 with this very code. Suspension is
- * the same shape: the account, not the token, is what is refused.
- * See api-doc/auth/README.md ("Revocation — `iat` is load-bearing").
+ * The endpoints that are answered WITHOUT a session, so nothing they return can
+ * be a verdict on one. `add-role` is absent on purpose — it is authenticated.
+ *
+ * Read off the strategy so the mobile namespace is covered by the same set.
  */
-const TERMINAL_AUTH_CODES = new Set(['AUTH_PASSWORD_CHANGED', 'AUTH_ACCOUNT_SUSPENDED']);
+const SESSIONLESS_PATHS: ReadonlySet<string> = new Set([
+    authStrategy.paths.login,
+    authStrategy.paths.register,
+    '/auth/forgot-password',
+    '/auth/reset-password',
+]);
 
-function isTerminalAuthError(err: unknown): boolean {
-    return err instanceof ApiError && TERMINAL_AUTH_CODES.has(err.code);
+function carriesSession(path: string): boolean {
+    return !SESSIONLESS_PATHS.has(path.split('?')[0]);
 }
 
-async function refreshTokens(): Promise<void> {
-    // Browser clients refresh explicitly from the refresh_token cookie.
-    // NB: the endpoint is `/auth/browser/refresh` — there is no `/auth/refresh`.
-    // See api-doc/auth/README.md (POST /auth/browser/refresh).
-    //
-    // The whole `/auth/browser/*` namespace sits behind `requireJsonContent`, a
-    // CSRF mitigation: without this header the answer is `400 VALIDATION_ERROR
-    // — "Bad Request: Only JSON content is accepted"` and every silent refresh
-    // fails. The header is the requirement; there is no body to send.
-    const res = await fetch(`${BASE_URL}/auth/browser/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-    });
-    if (!res.ok) {
-        throw await buildApiError(res);
-    }
+/**
+ * Decide from `error.code`, never from the status — the backend is explicit that
+ * client logic keys on the code, and one status covers several outcomes here
+ * (401 is "refresh me", "you are done", and "wrong password" all at once).
+ *
+ * | code | status | action |
+ * |---|---|---|
+ * | `AUTH_TOKEN_EXPIRED` | 401 | refresh — the only recoverable one |
+ * | the codes in {@link TERMINAL_AUTH_CODES} | 401 / 403 | sign out |
+ * | `RATE_LIMIT_EXCEEDED` | 429 | propagate — **never** sign out |
+ * | any other 401 | 401 | sign out |
+ * | anything else (403 authorization, 404, 409, 5xx…) | — | propagate |
+ *
+ * The "any other 401" default is deliberate. Leaving an unrecognised 401 to
+ * propagate would leave the app running against a credential the server keeps
+ * refusing: every screen erroring, nothing routing to login, no way out but a
+ * manual reload. Signing out is recoverable; that state is not.
+ *
+ * A 403 that is not `AUTH_ACCOUNT_SUSPENDED` is an authorization answer about
+ * one resource, not a verdict on the session, so it must never sign anyone out.
+ *
+ * `opts.carriesSession: false` turns the whole table off, because a request that
+ * presented no session cannot have had one refused. Login answers
+ * `401 AUTH_INVALID_CREDENTIALS` — under the default table a mistyped password
+ * would destroy the session of whoever was already signed in and bounce them to
+ * a login screen instead of showing "wrong password" in the form.
+ *
+ * Exported for the P1.12 unit tests — it is pure.
+ */
+export function classifyAuthError(
+    err: ApiError,
+    opts: { carriesSession?: boolean } = {},
+): AuthAction {
+    if (opts.carriesSession === false) return 'propagate';
+    if (err.code === REFRESHABLE_AUTH_CODE) return 'refresh';
+    if (TERMINAL_AUTH_CODES.has(err.code)) return 'signOut';
+    // Checked before the 401 default: a rate-limited client still has a valid
+    // session and signing it out would punish the user for the ceiling.
+    if (err.isRateLimited) return 'propagate';
+    if (err.status === 401) return 'signOut';
+    return 'propagate';
 }
 
-// Hard logout: clear cookies server-side and reload to login
-async function hardLogout(): Promise<void> {
+/**
+ * End the session locally and tell the app. The strategy decides what "end"
+ * means — a `POST /auth/logout` on cookies, discarding the token pair on bearer.
+ *
+ * The `auth:logout` event stays the single exit for both transports. It now
+ * carries the cause so a login screen can say *why* (P1.8) — most of all for
+ * `AUTH_PASSWORD_CHANGED`, which to someone who did not change their password is
+ * the first sign that somebody else did.
+ */
+async function hardLogout(cause?: ApiError): Promise<void> {
     try {
-        await fetch(`${BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-        });
+        await authStrategy.endSession();
     } catch {
-        // best-effort
+        // Best-effort by contract. Never let this swallow the event below: an
+        // app that cannot sign out is worse than one that logs out untidily.
     }
-    // Signal to the app that auth is gone
-    window.dispatchEvent(new Event('auth:logout'));
-}
-
-// ─── Error builder ────────────────────────────────────────────────────────────
-
-async function buildApiError(res: Response): Promise<ApiError> {
-    let body: Record<string, unknown> = {};
-    try {
-        body = await res.json();
-    } catch {
-        // response body may not be JSON
-    }
-
-    const error = (body.error ?? body) as Record<string, unknown>;
-    const message =
-        (error.message as string) ??
-        (body.message as string) ??
-        `Request failed with status ${res.status}`;
-    const code = (error.code as string) ?? String(res.status);
-    const details = error.details ?? undefined;
-    // `requestId` is a body field, but it also rides `X-Request-Id` on EVERY
-    // response — including the masked 5xx where it is the only handle anyone has.
-    const requestId =
-        (body.requestId as string) ?? res.headers.get('X-Request-Id') ?? undefined;
-    const category = readCategory(error.category);
-
-    return new ApiError(res.status, code, message, details, requestId, category, {
-        // draft-7 `Retry-After` is in seconds. Prefer it over the body field: the
-        // header is what lets a client slow down before it is refused.
-        // See api-doc/rate-limits.md.
-        retryAfterSeconds:
-            parseRetryAfter(res.headers.get('Retry-After')) ??
-            readRetryAfterSeconds(details),
-    });
-}
-
-/** `error.category` is always present as of Phase 16, but tolerate its absence. */
-function readCategory(raw: unknown): ErrorCategory | undefined {
-    return typeof raw === 'string' && (ERROR_CATEGORIES as readonly string[]).includes(raw)
-        ? (raw as ErrorCategory)
-        : undefined;
-}
-
-function parseRetryAfter(header: string | null): number | undefined {
-    if (!header) return undefined;
-    const seconds = Number(header);
-    return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
-}
-
-function readRetryAfterSeconds(details: unknown): number | undefined {
-    if (!details || typeof details !== 'object') return undefined;
-    const value = (details as { retryAfterSeconds?: unknown }).retryAfterSeconds;
-    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    window.dispatchEvent(
+        new CustomEvent('auth:logout', {
+            detail: cause ? { code: cause.code, message: cause.message } : undefined,
+        }),
+    );
 }
 
 // ─── Core request function ────────────────────────────────────────────────────
@@ -133,58 +149,88 @@ async function request<T>(
     // For multipart uploads let the browser set the Content-Type (with boundary).
     const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
 
+    // Read per-request, never hoisted: after a refresh the retry below has to
+    // pick up the NEW access token, and the queued requests the fresh one too.
+    const authHeaders = await authStrategy.authHeaders();
+
     const res = await fetch(url, {
         ...init,
-        credentials: 'include',
+        credentials: authStrategy.credentials,
         headers: isFormData
-            ? { ...(init.headers ?? {}) }
+            ? { ...authHeaders, ...(init.headers ?? {}) }
             : {
                 'Content-Type': 'application/json',
+                ...authHeaders,
                 ...(init.headers ?? {}),
             },
     });
 
-    if (res.status === 401 && !isRetry) {
-        // Read the body BEFORE deciding: some 401s are terminal and a refresh
-        // against them is guaranteed to fail with the same code.
-        const authErr = await buildApiError(res);
-        if (isTerminalAuthError(authErr)) {
-            flushQueue(authErr);
-            await hardLogout();
-            throw authErr;
-        }
-
-        // If another refresh is already in flight, queue this request
-        if (isRefreshing) {
-            return new Promise<T>((resolve, reject) => {
-                pendingQueue.push({
-                    resolve: () => request<T>(path, init, true).then(resolve).catch(reject),
-                    reject,
-                });
-            });
-        }
-
-        // Begin refresh
-        isRefreshing = true;
-        try {
-            await refreshTokens();
-            isRefreshing = false;
-            flushQueue(); // resolve all queued requests
-            return request<T>(path, init, true); // retry original
-        } catch (refreshErr) {
-            isRefreshing = false;
-            const apiErr =
-                refreshErr instanceof ApiError
-                    ? refreshErr
-                    : new ApiError(401, 'REFRESH_FAILED', 'Session expired');
-            flushQueue(apiErr); // reject all queued requests
-            await hardLogout();
-            throw apiErr;
-        }
-    }
-
     if (!res.ok) {
-        throw await buildApiError(res);
+        // Read the body BEFORE deciding: the response code, not the status, says
+        // whether this is recoverable.
+        const err = await buildApiError(res);
+        let action = classifyAuthError(err, { carriesSession: carriesSession(path) });
+
+        // A 401 that survives a refresh cannot be an expiry problem — the token
+        // it was made with is seconds old. Refreshing again would loop.
+        if (action === 'refresh' && isRetry) action = 'signOut';
+
+        if (action === 'signOut') {
+            flushQueue(err);
+            await hardLogout(err);
+            throw err;
+        }
+
+        if (action === 'refresh') {
+            // If another refresh is already in flight, queue this request
+            if (isRefreshing) {
+                return new Promise<T>((resolve, reject) => {
+                    pendingQueue.push({
+                        resolve: () => request<T>(path, init, true).then(resolve).catch(reject),
+                        reject,
+                    });
+                });
+            }
+
+            // Still inside a refusal we were told to wait out. Fail with the
+            // original 429 rather than spending the request to be refused again.
+            if (refreshBlockedBy && Date.now() < refreshBlockedUntil) {
+                throw refreshBlockedBy;
+            }
+
+            // Begin refresh
+            isRefreshing = true;
+            try {
+                await refreshSession();
+                isRefreshing = false;
+                refreshBlockedBy = null;
+                flushQueue(); // resolve all queued requests
+                return request<T>(path, init, true); // retry original
+            } catch (refreshErr) {
+                isRefreshing = false;
+                const apiErr =
+                    refreshErr instanceof ApiError
+                        ? refreshErr
+                        : new ApiError(401, 'REFRESH_FAILED', 'Session expired');
+                flushQueue(apiErr); // reject all queued requests
+
+                // 429 is not an auth verdict: the session is fine, the ceiling
+                // is not. Back off and keep the user signed in — the next
+                // request after the window refreshes normally.
+                if (apiErr.isRateLimited) {
+                    refreshBlockedBy = apiErr;
+                    refreshBlockedUntil =
+                        Date.now() +
+                        (apiErr.retryAfterSeconds ?? DEFAULT_REFRESH_BACKOFF_SECONDS) * 1000;
+                    throw apiErr;
+                }
+
+                await hardLogout(apiErr);
+                throw apiErr;
+            }
+        }
+
+        throw err;
     }
 
     // 204 No Content

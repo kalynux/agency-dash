@@ -20,8 +20,17 @@ No test runner is configured.
 **Path alias:** `@` maps to `./src`.
 
 **Environment variables:**
-- `VITE_API_BASE_URL` — backend base URL (default: `http://localhost:8022/api`)
-- `VITE_APP_NAME` — app display name (default: `"WiMall"`)
+- `VITE_API_BASE_URL` — backend base URL (default: `http://localhost:8022/api`; production `https://api.wi-mall.com/api`)
+- `VITE_APP_NAME` — app display name (default: `"Wi-Agency"`)
+- `VITE_LOGIN_URL` — where `/login` redirects (default: `http://localhost:3000/login`; production `https://wi-mall.com/login`)
+
+Env files live in `env/`, not the project root (`vite.config.ts` → `envDir`).
+`.env.development` and `.env.production` are both committed; see [env/README.md](env/README.md).
+
+**Naming:** the platform is **Wi-Mall** (`wi-mall`), this app is **Wi-Agency**
+(`wi-agency`). Always hyphenated — `wimall.com` is another company's domain.
+Production hosts: `agency.wi-mall.com` (this app), `agent.wi-mall.com`,
+`vendor.wi-mall.com`, `api.wi-mall.com`, `wi-mall.com` (main site).
 
 ### App Structure
 
@@ -46,7 +55,7 @@ src/
 
 ### Routing
 
-- `/login` — redirects externally to `http://localhost:3000/login`
+- `/login` — redirects externally to `VITE_LOGIN_URL` (the main Wi-Mall site's login)
 - `/onboarding/*` — 4-step flow (logistics → payout → branding → policies), gated by `OnboardingGuard` + `StepGuard`. Each step is its own `PUT /api/agency/onboarding/{logistics,payout,branding,policies}`; there is no `PATCH .../onboarding/step`
 - `/dashboard/*` — main app, gated by authentication + completed onboarding
 

@@ -17,7 +17,13 @@
     "tooLong": "This number is too long for the selected country",
     "invalid": "Enter a valid phone number for the selected country"
   },
+  "name": {
+    "required": "Enter your name",
+    "tooShort": "Name must be at least 2 characters"
+  },
   "password": {
+    "required": "Enter your password",
+    "signUpMinLength": "Must be at least 6 characters",
     "currentRequired": "Enter your current password",
     "minLength": "Must be at least 8 characters",
     "uppercase": "Must contain at least one uppercase letter",

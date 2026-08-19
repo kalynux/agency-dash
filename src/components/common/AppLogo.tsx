@@ -1,8 +1,8 @@
-import logoSrc from '@/assets/brand/wimall-logo.png';
+import logoSrc from '@/assets/brand/wi-mall-logo.png';
 import { cn } from '@/lib/utils';
 
 /**
- * The WiMall product mark — the platform's own logo, not a tenant's.
+ * The Wi-Mall product mark — the platform's own logo, not a tenant's.
  *
  * Use it only where the chrome speaks for the platform (sidebar footer,
  * onboarding header, the login hand-off). The agency's own logo belongs in the
@@ -57,7 +57,7 @@ export function AppLogo({
     >
       <img
         src={logoSrc}
-        alt={decorative ? '' : 'WiMall'}
+        alt={decorative ? '' : 'Wi-Mall'}
         aria-hidden={decorative || undefined}
         draggable={false}
         className="h-full w-full object-contain"

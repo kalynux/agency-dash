@@ -18,7 +18,7 @@ export const trackingService = {
 
   /**
    * GET /api/tracking/visible-agents — the agents the caller may currently track
-   * (wimall owns this authorization policy). geo-tracker does the streaming.
+   * (wi-mall owns this authorization policy). geo-tracker does the streaming.
    *
    * The agency map reads {@link getBoard} instead: same agent set, plus the
    * shipments and pins it needs to draw. Kept for non-agency callers.
