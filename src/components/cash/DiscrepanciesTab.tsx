@@ -6,10 +6,15 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAgentsRoster } from '@/store/agents.store';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodDiscrepancyStatusBadge } from '@/components/cash/CodDiscrepancyStatusBadge';
+import { BlockHeading } from '@/components/common/InfoHint';
+import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import {
+  ResponsiveSelect,
+  type ResponsiveSelectOption,
+} from '@/components/common/ResponsiveSelect';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -73,6 +78,20 @@ export function DiscrepanciesTab() {
     [t],
   );
 
+  /** The same two values as the filter above, minus its "all" row. */
+  const discrepancyTypeOptions = useMemo(
+    (): ResponsiveSelectOption<CodDiscrepancyType>[] => [
+      { value: 'cash_shortfall', label: t('discrepancyType.cash_shortfall') },
+      { value: 'other', label: t('discrepancyType.other') },
+    ],
+    [t],
+  );
+
+  const agentOptions = useMemo(
+    (): ResponsiveSelectOption[] => agents.map((a) => ({ value: a.id, label: a.name })),
+    [agents],
+  );
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -128,21 +147,26 @@ export function DiscrepanciesTab() {
     <div className="space-y-6">
       <Card className={compactCardClass}>
         <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          <p className="text-sm font-medium">{t('discrepancies.raiseTitle')}</p>
+          <BlockHeading title={t('discrepancies.raiseTitle')} hint={t('discrepancies.raiseHint')} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-            <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger className="h-10 w-full min-w-0"><SelectValue placeholder={t('discrepancies.selectAgent')} /></SelectTrigger>
-              <SelectContent>
-                {agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={type} onValueChange={(v) => setType(v as CodDiscrepancyType)}>
-              <SelectTrigger className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash_shortfall">{t('discrepancyType.cash_shortfall')}</SelectItem>
-                <SelectItem value="other">{t('discrepancyType.other')}</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Searchable: an agency with fifty agents cannot scroll to one in
+                a dropdown, and the sheet has room for the filter box. */}
+            <ResponsiveSelect
+              value={agentId}
+              onValueChange={setAgentId}
+              options={agentOptions}
+              placeholder={t('discrepancies.selectAgent')}
+              title={t('discrepancies.selectAgent')}
+              className="h-10 w-full min-w-0"
+            />
+            <ResponsiveSelect
+              value={type}
+              onValueChange={(v) => setType(v)}
+              options={discrepancyTypeOptions}
+              title={t('discrepancies.table.type')}
+              aria-label={t('discrepancies.table.type')}
+              className="h-10 w-full min-w-0"
+            />
             <Input type="number" min={0} placeholder={t('discrepancies.amountPlaceholder')} value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder={t('discrepancies.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
             <Button variant="destructive" className="gap-2 sm:col-span-2 lg:col-span-1" disabled={!agentId || isSubmitting} onClick={handleSubmit}>
@@ -150,7 +174,6 @@ export function DiscrepanciesTab() {
               {t('discrepancies.raise')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('discrepancies.raiseHint')}</p>
         </CardContent>
       </Card>
 
@@ -178,7 +201,45 @@ export function DiscrepanciesTab() {
 
       <Card className={listSurfaceClass}>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile: one card per discrepancy. */}
+          <RecordCardList>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4">
+                  <div className="h-12 animate-pulse rounded bg-muted" />
+                </div>
+              ))
+            ) : loadError ? (
+              <div className="p-8 text-center">
+                <p className="mb-4 text-sm text-muted-foreground">{loadError}</p>
+                <Button variant="outline" onClick={load}>
+                  {t('common:actions.retry')}
+                </Button>
+              </div>
+            ) : visibleDiscrepancies.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                {discrepancies.length === 0
+                  ? t('discrepancies.empty')
+                  : t('discrepancies.emptyFiltered')}
+              </p>
+            ) : (
+              visibleDiscrepancies.map((d) => (
+                <RecordCard
+                  key={d.id}
+                  title={agentName(d.agentId)}
+                  badge={<CodDiscrepancyStatusBadge status={d.status} />}
+                  primary={d.amount != null ? formatCurrency(d.amount, d.currency) : undefined}
+                  meta={[
+                    t(`discrepancyType.${d.type}` as 'discrepancyType.other'),
+                    formatDateTime(d.openedAt),
+                  ]}
+                  note={d.resolutionNote ?? d.note}
+                />
+              ))
+            )}
+          </RecordCardList>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">

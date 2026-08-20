@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   formatNationalDisplay,
   formatNationalInput,
@@ -17,6 +18,7 @@ import {
 } from '@/lib/phone';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Command,
   CommandEmpty,
@@ -154,6 +156,9 @@ export function PhoneInput({
 }: PhoneInputProps) {
   const { t, i18n } = useTranslation('common');
   const fallbackCountry = useDefaultPhoneCountry(defaultCountry);
+  // Drives the country picker only: a 200-row list is a bottom sheet on a phone
+  // and a popover beside the field on desktop.
+  const isMobile = useIsMobile();
 
   const [open, setOpen] = useState(false);
   /** `null` = follow `fallbackCountry`; set once the value or the user names one. */
@@ -265,6 +270,93 @@ export function PhoneInput({
   const countryName = selected?.name ?? country;
   const hint = useMemo(() => placeholder ?? phoneExample(country), [placeholder, country]);
 
+  /**
+   * Radix hands focus back to the trigger on close, which is right for Escape
+   * but wrong right after a pick — the number is what they came here to type.
+   * Shared by both panels so the two behave identically.
+   */
+  const returnFocusToNumber = (event: Event) => {
+    if (!focusNumberOnClose.current) return;
+    focusNumberOnClose.current = false;
+    event.preventDefault();
+    inputRef.current?.focus();
+  };
+
+  /**
+   * The flag + dial-code button, identical either way. A function rather than a
+   * variable because the popover branch hands it to `PopoverTrigger asChild`
+   * (which attaches its own handler) while the sheet branch has to supply one.
+   */
+  const countryTrigger = (props: { onClick?: () => void } = {}) => (
+    <button
+      type="button"
+      role="combobox"
+      aria-expanded={open}
+      aria-label={t('phone.countryFor', { country: countryName, code: dialCode })}
+      disabled={disabled}
+      className={cn(
+        'flex h-full shrink-0 items-center gap-1.5 ps-3 pe-2 outline-none',
+        'hover:bg-muted/60 focus-visible:bg-muted/60 disabled:cursor-not-allowed',
+      )}
+      {...props}
+    >
+      <span aria-hidden className="text-base leading-none">
+        {selected?.flag}
+      </span>
+      <span dir="ltr" className="text-sm tabular-nums text-muted-foreground">
+        {dialCode}
+      </span>
+      <ChevronsUpDown aria-hidden className="h-3.5 w-3.5 shrink-0 opacity-50" />
+    </button>
+  );
+
+  /**
+   * The searchable list, shared by the popover and the sheet.
+   *
+   * `Command` comes along for the ride on mobile rather than being replaced by
+   * `ResponsiveSelect`: its filter matches `option.search`, which carries each
+   * country's aliases ("Côte d'Ivoire" under "Ivory Coast"), and that is worth
+   * more here than anywhere else in the app — the list is 200 rows long and
+   * scrolling it is not a real option on a phone.
+   *
+   * `dense === false` is the desktop row. On mobile the rows grow to a thumb
+   * target and the text goes up a step, since the same list is now the whole
+   * panel rather than a dropdown beside a form.
+   */
+  const countryList = (dense: boolean) => (
+    <Command className="h-full">
+      <CommandInput placeholder={t('phone.searchCountry')} />
+      <CommandList className={dense ? 'max-h-none' : undefined}>
+        <CommandEmpty>{t('phone.noCountry')}</CommandEmpty>
+        <CommandGroup>
+          {countries.map((option) => (
+            <CommandItem
+              key={option.code}
+              value={option.search}
+              onSelect={() => pickCountry(option.code)}
+              className={cn(dense && 'min-h-12 gap-3 text-base')}
+            >
+              <span aria-hidden className="text-base leading-none">
+                {option.flag}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{option.name}</span>
+              <span dir="ltr" className="text-xs tabular-nums text-muted-foreground">
+                +{option.callingCode}
+              </span>
+              <Check
+                aria-hidden
+                className={cn(
+                  'h-4 w-4 shrink-0',
+                  option.code === country ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
+
   return (
     <div
       className={cn(
@@ -275,73 +367,39 @@ export function PhoneInput({
         className,
       )}
     >
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            role="combobox"
-            aria-expanded={open}
-            aria-label={t('phone.countryFor', { country: countryName, code: dialCode })}
-            disabled={disabled}
-            className={cn(
-              'flex h-full shrink-0 items-center gap-1.5 ps-3 pe-2 outline-none',
-              'hover:bg-muted/60 focus-visible:bg-muted/60 disabled:cursor-not-allowed',
-            )}
+      {isMobile ? (
+        <>
+          {countryTrigger({ onClick: () => setOpen(true) })}
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetContent
+              side="bottom"
+              // Tall and fixed rather than content-sized: this list is ~200 rows
+              // long whatever the filter says, and a panel that resized as you
+              // typed would move the row you were reaching for.
+              className="flex h-[75dvh] flex-col gap-0 rounded-t-2xl p-0"
+              onCloseAutoFocus={returnFocusToNumber}
+            >
+              <SheetHeader className="shrink-0 border-b p-4 pe-10 text-start">
+                <SheetTitle className="text-base">{t('phone.searchCountry')}</SheetTitle>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+                {countryList(true)}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>{countryTrigger()}</PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-[min(20rem,calc(100vw-2rem))] p-0"
+            onCloseAutoFocus={returnFocusToNumber}
           >
-            <span aria-hidden className="text-base leading-none">
-              {selected?.flag}
-            </span>
-            <span dir="ltr" className="text-sm tabular-nums text-muted-foreground">
-              {dialCode}
-            </span>
-            <ChevronsUpDown aria-hidden className="h-3.5 w-3.5 shrink-0 opacity-50" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          className="w-[min(20rem,calc(100vw-2rem))] p-0"
-          // Radix hands focus back to the trigger on close, which is right for
-          // Escape but wrong right after a pick — the number is what they came
-          // here to type.
-          onCloseAutoFocus={(event) => {
-            if (!focusNumberOnClose.current) return;
-            focusNumberOnClose.current = false;
-            event.preventDefault();
-            inputRef.current?.focus();
-          }}
-        >
-          <Command>
-            <CommandInput placeholder={t('phone.searchCountry')} />
-            <CommandList>
-              <CommandEmpty>{t('phone.noCountry')}</CommandEmpty>
-              <CommandGroup>
-                {countries.map((option) => (
-                  <CommandItem
-                    key={option.code}
-                    value={option.search}
-                    onSelect={() => pickCountry(option.code)}
-                  >
-                    <span aria-hidden className="text-base leading-none">
-                      {option.flag}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{option.name}</span>
-                    <span dir="ltr" className="text-xs tabular-nums text-muted-foreground">
-                      +{option.callingCode}
-                    </span>
-                    <Check
-                      aria-hidden
-                      className={cn(
-                        'h-4 w-4 shrink-0',
-                        option.code === country ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+            {countryList(false)}
+          </PopoverContent>
+        </Popover>
+      )}
 
       <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
 

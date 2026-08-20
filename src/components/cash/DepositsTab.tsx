@@ -5,17 +5,16 @@ import { ChevronLeft, ChevronRight, HandCoins, Loader2, AlertTriangle, Check, X 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { CodDepositStatusBadge } from '@/components/cash/CodDepositStatusBadge';
+import { BlockHeading } from '@/components/common/InfoHint';
+import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import { ResponsiveActions } from '@/components/common/ResponsiveActions';
+import { ResponsiveModal } from '@/components/common/ResponsiveModal';
+import {
+  ResponsiveSelect,
+  type ResponsiveSelectOption,
+} from '@/components/common/ResponsiveSelect';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -68,6 +67,16 @@ export function DepositsTab() {
       { value: 'rejected' as const, label: t('depositStatus.rejected') },
     ],
     [t],
+  );
+
+  const agentOptions = useMemo(
+    (): ResponsiveSelectOption[] =>
+      agents.map((a) => ({
+        value: a.id,
+        label: a.name,
+        description: t('deposits.agentHeld', { amount: formatNumber(a.cashHeld) }),
+      })),
+    [agents, t],
   );
 
   const load = useCallback(async () => {
@@ -173,23 +182,20 @@ export function DepositsTab() {
       {/* Record form */}
       <Card className={compactCardClass}>
         <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          <p className="text-sm font-medium">{t('deposits.recordTitle')}</p>
+          <BlockHeading title={t('deposits.recordTitle')} hint={t('deposits.recordHint')} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
-            <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger className="h-10 w-full min-w-0">
-                {/* Only the name in the trigger — the held amount stays in the options, which have room for it. */}
-                <SelectValue placeholder={t('deposits.selectAgent')}>
-                  {agentId ? agentName(agentId) : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {agents.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {t('deposits.agentOption', { name: a.name, amount: formatNumber(a.cashHeld) })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* The held amount rides along as the option's `description`, so it
+                is a muted suffix in the dropdown and a second line in the sheet
+                — it is the number that tells you whether the hand-over adds up,
+                and it should not be something you have to remember. */}
+            <ResponsiveSelect
+              value={agentId}
+              onValueChange={setAgentId}
+              options={agentOptions}
+              placeholder={t('deposits.selectAgent')}
+              title={t('deposits.selectAgent')}
+              className="h-10 w-full min-w-0"
+            />
             <Input type="number" min={1} placeholder={t('deposits.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder={t('deposits.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
             <Button
@@ -205,13 +211,12 @@ export function DepositsTab() {
               {t('deposits.record')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('deposits.recordHint')}</p>
         </CardContent>
       </Card>
 
       {/* Search & filter */}
       <div className="space-y-3">
-        <p className="text-sm font-medium">{t('deposits.historyTitle')}</p>
+        <BlockHeading title={t('deposits.historyTitle')} />
         <SearchFilterBar
           value={search}
           onChange={setSearch}
@@ -239,10 +244,80 @@ export function DepositsTab() {
         </SearchFilterBar>
       </div>
 
-      {/* Table */}
+      {/* Mobile: cards. Desktop: the table below. */}
       <Card className={listSurfaceClass}>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <RecordCardList>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4">
+                  <div className="h-12 animate-pulse rounded bg-muted" />
+                </div>
+              ))
+            ) : loadError ? (
+              <div className="p-8 text-center">
+                <p className="mb-4 text-sm text-muted-foreground">{loadError}</p>
+                <Button variant="outline" onClick={load}>
+                  {t('common:actions.retry')}
+                </Button>
+              </div>
+            ) : visibleDeposits.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                {query ? t('deposits.emptyFiltered') : t('deposits.empty')}
+              </p>
+            ) : (
+              visibleDeposits.map((d) => {
+                const isDeclared = d.status === 'declared';
+                const isAgencyRecipient = (d.recipient ?? 'agency') === 'agency';
+                const actionable = isDeclared && isAgencyRecipient;
+                return (
+                  <RecordCard
+                    key={d.id}
+                    title={agentName(d.agentId)}
+                    badge={d.status ? <CodDepositStatusBadge status={d.status} /> : undefined}
+                    primary={formatCurrency(d.amount, d.currency)}
+                    meta={[
+                      formatDateTime(d.declaredAt ?? d.recordedAt),
+                      t(`recipient.${d.recipient ?? 'agency'}` as 'recipient.agency'),
+                      d.reference ? t('deposits.table.reference', { reference: d.reference }) : null,
+                    ].filter(Boolean)}
+                    note={d.rejectionReason ?? d.note}
+                    actions={
+                      // The two decisions are a sheet rather than two buttons in
+                      // the card: side-by-side "Confirm"/"Reject" at thumb width
+                      // are a mis-tap away from each other, and this one is not
+                      // an action to get wrong.
+                      actionable ? (
+                        <ResponsiveActions
+                          label={t('deposits.table.actions')}
+                          title={agentName(d.agentId)}
+                          busy={actions.pendingKey === `confirm:${d.id}`}
+                          items={[
+                            {
+                              key: 'confirm',
+                              label: t('deposits.confirm'),
+                              icon: <Check />,
+                              busy: actions.pendingKey === `confirm:${d.id}`,
+                              onSelect: () => handleConfirm(d.id),
+                            },
+                            {
+                              key: 'reject',
+                              label: t('deposits.reject'),
+                              icon: <X />,
+                              destructive: true,
+                              onSelect: () => setRejectTarget(d),
+                            },
+                          ]}
+                        />
+                      ) : undefined
+                    }
+                  />
+                );
+              })
+            )}
+          </RecordCardList>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
@@ -377,26 +452,28 @@ export function DepositsTab() {
         </CardContent>
       </Card>
 
-      {/* Reject reason dialog */}
-      <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('deposits.rejectTitle')}</DialogTitle>
-            <DialogDescription>{t('deposits.rejectDescription')}</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder={t('deposits.rejectPlaceholder')}
-            rows={3}
-            maxLength={500}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectTarget(null)}>
+      {/* Reject reason — a sheet on a phone, a dialog on desktop. */}
+      <ResponsiveModal
+        open={!!rejectTarget}
+        onOpenChange={(o) => !o && setRejectTarget(null)}
+        title={t('deposits.rejectTitle')}
+        description={t('deposits.rejectDescription')}
+        desktopClassName="sm:max-w-md"
+        // The panel holds one textarea; a full-height sheet for that is mostly
+        // empty space between the header and the keyboard.
+        mobileClassName="h-auto max-h-[92dvh]"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              className="max-md:w-full"
+              onClick={() => setRejectTarget(null)}
+            >
               {t('common:actions.cancel')}
             </Button>
             <Button
               variant="destructive"
+              className="max-md:w-full"
               disabled={!rejectReason.trim() || (rejectTarget ? actions.pendingKey === `reject:${rejectTarget.id}` : false)}
               onClick={handleReject}
             >
@@ -406,9 +483,17 @@ export function DepositsTab() {
                 t('deposits.rejectSubmit')
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <Textarea
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder={t('deposits.rejectPlaceholder')}
+          rows={3}
+          maxLength={500}
+        />
+      </ResponsiveModal>
     </div>
   );
 }

@@ -76,7 +76,6 @@
     "review": "Review",
     "recordTitle": "Record cash received from an agent",
     "selectAgent": "Select agent",
-    "agentOption": "{{name}} ({{amount}} held)",
     "amount": "Amount",
     "notePlaceholder": "Note (optional)",
     "record": "Record Deposit",
@@ -108,7 +107,8 @@
     "rejectDescription": "No money moves. The agent's late-deposit clock resumes and an admin can see both sides. Rejecting a claim you dispute is a normal, cost-free action.",
     "rejectPlaceholder": "e.g. Nothing was handed over at the desk; our till reconciles.",
     "rejectSubmit": "Reject declaration",
-    "rejected": "Declaration rejected — no money moved."
+    "rejected": "Declaration rejected — no money moved.",
+    "agentHeld": "{{amount}} held"
   },
   "remittances": {
     "declareTitle": "Declare a cash transfer to the platform",

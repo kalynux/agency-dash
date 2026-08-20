@@ -121,3 +121,48 @@ export function SectionHeading({
     </CardHeader>
   );
 }
+
+/**
+ * The heading of a *block* inside a page — the small bold line above an inline
+ * form or a listing, one step below `SectionHeading`.
+ *
+ * Same job as `SectionHeading`'s mobile/desktop split, applied where there is no
+ * Card to hang a header off. Those blocks currently carry their explanation as a
+ * `<p class="text-xs text-muted-foreground">` under the controls, which on a
+ * phone is two more lines of prose between the user and the next thing they
+ * came to do. Here the hint stays inline on desktop and moves behind the ⓘ on
+ * mobile — the same bargain, so the two read as one system.
+ *
+ * `action` is for a control that belongs to the block rather than to the page:
+ * a refresh, a "see all".
+ */
+export function BlockHeading({
+  title,
+  hint,
+  action,
+  className,
+}: {
+  title: string;
+  /** One sentence. Inline on desktop, behind the ⓘ on mobile. */
+  hint?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  const { t } = useTranslation('common');
+  return (
+    <div className={cn('space-y-1', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          {title}
+          {hint && (
+            <InfoHint className="md:hidden" label={t('form.aboutSection', { title })}>
+              {hint}
+            </InfoHint>
+          )}
+        </p>
+        {action}
+      </div>
+      {hint && <p className="max-md:hidden text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}

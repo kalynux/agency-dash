@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Loader2, Wallet, Users, PackageOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { InfoHint } from '@/components/common/InfoHint';
+import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -21,7 +23,14 @@ import type { CodSummary } from '@/types/cod-cash.types';
 
 type HoldingFilter = 'all' | 'holding' | 'settled';
 
-function StatCard({ icon: Icon, label, value, hint }: { icon: React.ElementType; label: string; value: string; hint?: string }) {
+interface Stat {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  hint: string;
+}
+
+function StatCard({ icon: Icon, label, value, hint }: Stat) {
   return (
     <Card className={compactCardClass}>
       <CardContent className={cn(compactCardContentClass, 'flex items-start justify-between gap-3')}>
@@ -35,6 +44,29 @@ function StatCard({ icon: Icon, label, value, hint }: { icon: React.ElementType;
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * One stat as a row rather than a tile — the phone form of {@link StatCard}.
+ *
+ * Three tiles stacked cost ~270px before the agent list starts, which on a
+ * 640px-tall viewport is the whole first screen spent on numbers nobody scrolled
+ * here for. As rows the same three read in ~130px, and the hint that justified
+ * each tile's third line moves behind the ⓘ.
+ */
+function StatRow({ icon: Icon, label, value, hint }: Stat) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <Icon className="h-4 w-4 text-primary" />
+      </div>
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-muted-foreground">
+        <span className="truncate">{label}</span>
+        <InfoHint label={label}>{hint}</InfoHint>
+      </span>
+      <span className="shrink-0 font-semibold tabular-nums">{value}</span>
+    </div>
   );
 }
 
@@ -98,28 +130,47 @@ export function SummaryTab() {
 
   const agentsHoldingCash = summary.agents.filter((a) => a.cashHeld > 0).length;
 
+  const stats: Stat[] = [
+    {
+      icon: Wallet,
+      label: t('summary.owedToPlatform'),
+      value: formatCurrency(summary.liability.balance, summary.liability.currency),
+      hint: t('summary.owedHint'),
+    },
+    {
+      icon: PackageOpen,
+      label: t('summary.unsettled'),
+      value: formatCurrency(summary.unsettledCollections.amount, summary.liability.currency),
+      hint: t('summary.unsettledHint', { count: summary.unsettledCollections.count }),
+    },
+    {
+      icon: Users,
+      label: t('summary.heldByAgents'),
+      value: formatCurrency(
+        summary.agents.reduce((sum, a) => sum + a.cashHeld, 0),
+        summary.liability.currency,
+      ),
+      hint: t('summary.heldByAgentsHint', { count: agentsHoldingCash }),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard
-          icon={Wallet}
-          label={t('summary.owedToPlatform')}
-          value={formatCurrency(summary.liability.balance, summary.liability.currency)}
-          hint={t('summary.owedHint')}
-        />
-        <StatCard
-          icon={PackageOpen}
-          label={t('summary.unsettled')}
-          value={formatCurrency(summary.unsettledCollections.amount, summary.liability.currency)}
-          hint={t('summary.unsettledHint', { count: summary.unsettledCollections.count })}
-        />
-        <StatCard
-          icon={Users}
-          label={t('summary.heldByAgents')}
-          value={formatCurrency(summary.agents.reduce((sum, a) => sum + a.cashHeld, 0), summary.liability.currency)}
-          hint={t('summary.heldByAgentsHint', { count: agentsHoldingCash })}
-        />
+      {/* Tiles where there is width for them, rows where there is not. The
+          breakpoint is `sm` because that is where the existing grid already
+          went three-across. */}
+      <div className="hidden gap-4 sm:grid sm:grid-cols-3">
+        {stats.map((s) => (
+          <StatCard key={s.label} {...s} />
+        ))}
       </div>
+      <Card className={cn(compactCardClass, 'sm:hidden')}>
+        <CardContent className="divide-y p-0">
+          {stats.map((s) => (
+            <StatRow key={s.label} {...s} />
+          ))}
+        </CardContent>
+      </Card>
 
       <SearchFilterBar
         value={search}
@@ -139,7 +190,36 @@ export function SummaryTab() {
 
       <Card className={listSurfaceClass}>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile: one card per agent. */}
+          <RecordCardList>
+            {visibleAgents.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                {summary.agents.length === 0
+                  ? t('summary.emptyRoster')
+                  : t('summary.emptyFiltered')}
+              </p>
+            ) : (
+              visibleAgents.map((a) => (
+                <RecordCard
+                  key={a.id}
+                  title={a.name}
+                  primary={
+                    a.cashHeld > 0 ? (
+                      <span className="text-amber-600">
+                        {formatCurrency(a.cashHeld, summary.liability.currency)}
+                      </span>
+                    ) : (
+                      <span className="font-normal text-muted-foreground">
+                        {t('summary.settledUp')}
+                      </span>
+                    )
+                  }
+                />
+              ))
+            )}
+          </RecordCardList>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">

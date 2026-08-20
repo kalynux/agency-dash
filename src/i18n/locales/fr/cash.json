@@ -79,7 +79,6 @@
     "review": "Examiner",
     "recordTitle": "Enregistrer des espèces reçues d'un livreur",
     "selectAgent": "Choisir un livreur",
-    "agentOption": "{{name}} ({{amount}} détenus)",
     "amount": "Montant",
     "notePlaceholder": "Note (facultatif)",
     "record": "Enregistrer le dépôt",
@@ -111,7 +110,8 @@
     "rejectDescription": "Aucun mouvement d'argent. Le compte à rebours de dépôt du livreur reprend et un administrateur peut consulter les deux versions. Refuser une déclaration que vous contestez est une action normale et sans frais.",
     "rejectPlaceholder": "ex. Rien n'a été remis au guichet ; notre caisse est équilibrée.",
     "rejectSubmit": "Refuser la déclaration",
-    "rejected": "Déclaration refusée — aucun mouvement d'argent."
+    "rejected": "Déclaration refusée — aucun mouvement d'argent.",
+    "agentHeld": "{{amount}} détenus"
   },
   "remittances": {
     "declareTitle": "Déclarer un transfert d'espèces à la plateforme",

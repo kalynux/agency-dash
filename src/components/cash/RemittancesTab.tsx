@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodRemittanceStatusBadge } from '@/components/cash/CodRemittanceStatusBadge';
+import { BlockHeading } from '@/components/common/InfoHint';
+import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -106,7 +108,9 @@ export function RemittancesTab() {
     <div className="space-y-6">
       <Card className={compactCardClass}>
         <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          <p className="text-sm font-medium">{t('remittances.declareTitle')}</p>
+          {/* The hint used to sit under the row as a third line of prose; on a
+              phone that pushed the submit button off the fold. */}
+          <BlockHeading title={t('remittances.declareTitle')} hint={t('remittances.declareHint')} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
             <Input type="number" min={1} placeholder={t('remittances.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder={t('remittances.referencePlaceholder')} value={reference} onChange={(e) => setReference(e.target.value)} />
@@ -116,7 +120,6 @@ export function RemittancesTab() {
               {t('remittances.declare')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('remittances.declareHint')}</p>
         </CardContent>
       </Card>
 
@@ -142,7 +145,47 @@ export function RemittancesTab() {
 
       <Card className={listSurfaceClass}>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile: one card per remittance. */}
+          <RecordCardList>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4">
+                  <div className="h-12 animate-pulse rounded bg-muted" />
+                </div>
+              ))
+            ) : loadError ? (
+              <div className="p-8 text-center">
+                <p className="mb-4 text-sm text-muted-foreground">{loadError}</p>
+                <Button variant="outline" onClick={load}>
+                  {t('common:actions.retry')}
+                </Button>
+              </div>
+            ) : visibleRemittances.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                {query ? t('remittances.emptyFiltered') : t('remittances.empty')}
+              </p>
+            ) : (
+              visibleRemittances.map((r) => (
+                <RecordCard
+                  key={r.id}
+                  title={r.reference}
+                  badge={<CodRemittanceStatusBadge status={r.status} />}
+                  primary={formatCurrency(r.amount, r.currency)}
+                  meta={[formatDateTime(r.declaredAt)]}
+                  fields={[
+                    {
+                      label: t('remittances.table.resolved'),
+                      value: r.resolvedAt ? formatDateTime(r.resolvedAt) : '—',
+                      hideWhenEmpty: false,
+                    },
+                  ]}
+                  note={r.note}
+                />
+              ))
+            )}
+          </RecordCardList>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
