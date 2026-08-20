@@ -27,6 +27,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
+import { StatusBarScrim } from '@/components/layout/StatusBarScrim';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
@@ -36,6 +37,7 @@ import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
 // "closed" in a browser.
 import { useHardwareBackButton } from '@/platform/shell/backButton';
 import { useDeepLinks } from '@/platform/shell/deepLinks';
+import { usePushDelivery } from '@/hooks/usePushDelivery';
 import { useKeyboardOpen } from '@/platform/shell/keyboard';
 
 // Onboarding system
@@ -43,6 +45,10 @@ import { OnboardingProvider } from '@/onboarding/store/onboarding.store';
 import { OnboardingGuard } from '@/onboarding/OnboardingGuard';
 import { OnboardingRouter } from '@/onboarding/OnboardingRouter';
 import { OnboardingErrorBoundary } from '@/onboarding/OnboardingErrorBoundary';
+
+// Biometric app lock (Phase 5). A no-op on the web and whenever the user has
+// not turned it on — see src/lib/biometricUnlock.ts.
+import { BiometricAppLock } from '@/components/auth/BiometricAppLock';
 
 // Vendor connections (real API — polls for the pending-action badge)
 import { VendorConnectionsProvider } from '@/store/vendorConnections.store';
@@ -116,6 +122,16 @@ function StockRequestDeepLink() {
   return <Navigate to={`/dashboard/inventory/requests?open=${requestId ?? ''}`} replace />;
 }
 
+// ─── Foreground push ──────────────────────────────────────────────────────────
+// A component only because the hook needs to sit INSIDE NotificationsProvider
+// (it refreshes the list) while DashboardShell itself renders that provider and
+// so is outside it. Renders nothing (CAPACITOR-PLAN.md → P4.7).
+
+function PushDeliveryBridge() {
+  usePushDelivery();
+  return null;
+}
+
 // ─── Dashboard shell ──────────────────────────────────────────────────────────
 
 function DashboardShell() {
@@ -127,10 +143,15 @@ function DashboardShell() {
     <ShipmentsProvider>
       <AgentsRosterProvider>
         <NotificationsProvider>
+        <PushDeliveryBridge />
         <VendorConnectionsProvider>
         <MagazinProvider>
         <StockRequestsProvider>
           <div className="min-h-screen bg-background">
+            {/* Keeps the scrolling column out from under the status bar's icons
+                — `main`'s top padding only holds at scroll position 0. Renders
+                as a zero-height nothing off a device. */}
+            <StatusBarScrim />
             {!isMobile && <Sidebar />}
             <div
               className={cn(
@@ -269,6 +290,11 @@ function AppContent() {
             <OnboardingProvider>
               {/* Applies the agency's saved language as soon as the session loads. */}
               <ProfileLanguageSync />
+              {/* Covers the app after a stretch in the background when the user
+                  has turned on biometric unlock. Inside the provider because it
+                  needs to know whether anyone is signed in; renders nothing on
+                  the web and nothing when the feature is off. */}
+              <BiometricAppLock />
               <Routes>
                 {/* Public auth routes — outside OnboardingGuard, because the
                     guard's answer to "no session" is to send people here. */}

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Loader2, Lock, Shield } from 'lucide-react';
+import { Fingerprint, Loader2, Lock, Shield } from 'lucide-react';
 import { SectionHeading } from '@/components/common/InfoHint';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,21 @@ import { ApiError } from '@/types/api';
 import { getApiErrorMessage, getFieldErrorMessage } from '@/lib/errors';
 import { buildPasswordSchema, type PasswordFormValues } from '@/lib/validation-schemas';
 import { cn } from '@/lib/utils';
+import {
+  disableBiometricUnlock,
+  enableBiometricUnlock,
+  isBiometricUnlockEnabled,
+} from '@/lib/biometricUnlock';
+import { getBiometryInfo, type BiometryInfo } from '@/platform/biometrics';
+import { isNative } from '@/platform/env';
+import { openBiometricEnrollmentSettings } from '@/platform/permissions';
 
 export function SecuritySettings() {
   const { t } = useTranslation('account');
   return (
     <div className={sectionGroupClass}>
       <ChangePasswordCard />
+      <BiometricUnlockCard />
 
       {/* Not-yet-implemented security features, greyed out (no agency API for these). */}
       <Card className={cn(sectionSurfaceClass, 'opacity-60')}>
@@ -49,6 +58,122 @@ export function SecuritySettings() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * Turn "unlock with your fingerprint" on and off.
+ *
+ * The switch is only live when the device can actually deliver on it, and
+ * turning it on runs a real prompt first (`enableBiometricUnlock`) — promising
+ * a fingerprint sign-in and discovering on the next cold start that the sensor
+ * refuses is the failure this rules out.
+ *
+ * Three unavailable states, told apart because only one of them is the user's
+ * to fix: no hardware (nothing to say but so), nothing enrolled (a route to the
+ * system screen that fixes it), and the web build (a statement about where the
+ * feature lives, not a fault).
+ */
+function BiometricUnlockCard() {
+  const { t } = useTranslation('account');
+  const [info, setInfo] = useState<BiometryInfo | null>(null);
+  const [enabled, setEnabled] = useState(isBiometricUnlockEnabled);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getBiometryInfo().then((next) => {
+      if (!cancelled) setInfo(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onToggle = async (next: boolean) => {
+    if (!next) {
+      disableBiometricUnlock();
+      setEnabled(false);
+      toast.success(t('security.biometric.disabledToast'));
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const outcome = await enableBiometricUnlock();
+      if (outcome === 'ok') {
+        setEnabled(true);
+        toast.success(t('security.biometric.enabledToast'));
+        return;
+      }
+      // The switch never moved — `enabled` is still false — so this only has to
+      // say why. A cancel gets the neutral line rather than an error: choosing
+      // not to finish is not a failure.
+      if (outcome === 'cancelled') toast.info(t('security.biometric.cancelledToast'));
+      else toast.error(t('security.biometric.unsupported'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Still asking the OS. Rendering the switch now would flash an interactive
+  // control that is about to turn out to be disabled.
+  if (info === null) return null;
+
+  const unavailableReason = !isNative
+    ? t('security.biometric.webOnly')
+    : info.notEnrolled
+      ? t('security.biometric.notEnrolled')
+      : !info.available
+        ? t('security.biometric.unsupported')
+        : null;
+
+  return (
+    <Card className={cn(sectionSurfaceClass, unavailableReason && 'opacity-60')}>
+      <SectionHeading
+        icon={Fingerprint}
+        title={t('security.biometric.title')}
+        description={t('security.biometric.description')}
+      />
+      <CardContent className="max-md:px-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="font-medium">{t('security.biometric.enable')}</p>
+            <p className="text-sm text-muted-foreground">
+              {unavailableReason ??
+                (enabled
+                  ? t('security.biometric.enabledHint')
+                  : t('security.biometric.disabledHint'))}
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            disabled={busy || unavailableReason !== null}
+            onCheckedChange={(next) => void onToggle(next)}
+            aria-label={t('security.biometric.toggleAria')}
+          />
+        </div>
+
+        {/* Only for the one unavailable state the user can do something about. */}
+        {isNative && info.notEnrolled && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => void openBiometricEnrollmentSettings()}
+          >
+            {t('security.biometric.openSettings')}
+          </Button>
+        )}
+
+        {enabled && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            {t('security.biometric.signOutNote')}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

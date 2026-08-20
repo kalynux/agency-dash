@@ -276,7 +276,9 @@
       "disable": "Disable",
       "toastEnabled": "Push notifications enabled on this device.",
       "toastDisabled": "Push notifications disabled on this device.",
-      "toastTokenFailed": "Could not obtain a push token on this device."
+      "toastTokenFailed": "Could not obtain a push token on this device.",
+      "channelName": "Agency alerts",
+      "channelDescription": "Shipments, agent contracts, payouts, cash deposits and plan alerts."
     },
     "language": {
       "title": "Language",

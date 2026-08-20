@@ -24,15 +24,17 @@ const listeners = vi.hoisted(() => new Map<string, (payload: unknown) => void>()
 const register = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const checkPermissions = vi.hoisted(() => vi.fn());
 const requestPermissions = vi.hoisted(() => vi.fn());
+const createChannel = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const removeHandle = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const addListener = vi.hoisted(() =>
   vi.fn((event: string, cb: (payload: unknown) => void) => {
     listeners.set(event, cb);
-    return Promise.resolve({ remove: () => Promise.resolve() });
+    return Promise.resolve({ remove: removeHandle });
   }),
 );
 
 vi.mock('@capacitor/push-notifications', () => ({
-  PushNotifications: { register, addListener, checkPermissions, requestPermissions },
+  PushNotifications: { register, addListener, checkPermissions, requestPermissions, createChannel },
 }));
 
 const getItem = vi.hoisted(() => vi.fn());
@@ -238,5 +240,73 @@ describe('rotation', () => {
     listeners.get('registration')?.({ value: '' });
 
     expect(seen).toEqual([]);
+  });
+});
+
+describe('notification channel', () => {
+  it('creates the channel the backend addresses by id', async () => {
+    const push = await loadPush();
+    await push.ensureNotificationChannel('Agency alerts', 'Shipments and payouts.');
+
+    // `jovi_default` is a three-way contract with res/values/strings.xml and
+    // the API's ANDROID_CHANNELS.DEFAULT. A mismatch is not an error at any
+    // layer — the notification just lands somewhere the user did not agree to.
+    expect(push.ANDROID_CHANNEL_ID).toBe('jovi_default');
+    expect(createChannel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'jovi_default',
+        name: 'Agency alerts',
+        description: 'Shipments and payouts.',
+        importance: 4,
+      }),
+    );
+  });
+
+  it('never fails the caller when the platform refuses the channel', async () => {
+    const push = await loadPush();
+    createChannel.mockRejectedValueOnce(new Error('nope'));
+    // Called during a render path; a rejection here must not surface.
+    await expect(push.ensureNotificationChannel('n', 'd')).resolves.toBeUndefined();
+  });
+});
+
+describe('foreground delivery', () => {
+  it('delivers the copy and the data of a push that lands with the app open', async () => {
+    const push = await loadPush();
+    const seen: unknown[] = [];
+    push.subscribeForegroundPush((p) => seen.push(p));
+
+    // The shape the plugin emits for a message carrying a `notification` block.
+    listeners.get('pushNotificationReceived')?.({
+      title: 'Shipment assigned',
+      body: 'WM-1042 is yours',
+      data: { path: 'shipments/1042' },
+    });
+
+    expect(seen).toEqual([
+      { title: 'Shipment assigned', body: 'WM-1042 is yours', data: { path: 'shipments/1042' } },
+    ]);
+  });
+
+  it('normalises a data-only push to null copy rather than undefined', async () => {
+    const push = await loadPush();
+    const seen: { title: string | null; body: string | null }[] = [];
+    push.subscribeForegroundPush((p) => seen.push({ title: p.title, body: p.body }));
+
+    listeners.get('pushNotificationReceived')?.({ data: { title: 'x', body: 'y' } });
+
+    // The copy lives in `data` for a data-only send; the caller falls back to
+    // it, so this layer must report the absence rather than paper over it.
+    expect(seen).toEqual([{ title: null, body: null }]);
+  });
+
+  it('detaches the plugin listener on unsubscribe', async () => {
+    const push = await loadPush();
+    const unsubscribe = push.subscribeForegroundPush(() => {});
+    unsubscribe();
+    // The handle is a promise; the removal is queued behind it.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(removeHandle).toHaveBeenCalled();
   });
 });

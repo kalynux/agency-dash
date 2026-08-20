@@ -80,3 +80,26 @@ export async function openAppSettings(): Promise<void> {
     console.warn('[permissions] could not open the system settings screen', err);
   }
 }
+
+/**
+ * Open the OS screen where a fingerprint or face is *enrolled*.
+ *
+ * Not the same destination as {@link openAppSettings}, and the difference
+ * matters: an unenrolled device is not withholding a permission from this app,
+ * so its app-details page has no control that would fix anything. Enrolment
+ * lives under the system's own security settings.
+ *
+ * iOS has no deep link to the Face ID / Touch ID pane, so it gets the app's
+ * page — the nearest reachable thing, and one tap from Settings' root.
+ */
+export async function openBiometricEnrollmentSettings(): Promise<void> {
+  if (!isNative) return;
+  try {
+    await NativeSettings.open({
+      optionAndroid: AndroidSettings.Security,
+      optionIOS: IOSSettings.App,
+    });
+  } catch (err) {
+    console.warn('[permissions] could not open the biometric enrolment screen', err);
+  }
+}

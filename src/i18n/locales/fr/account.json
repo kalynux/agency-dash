@@ -89,6 +89,22 @@
       "enable": "Activer la 2FA",
       "enableAria": "Activer l'authentification à deux facteurs",
       "notAvailable": "Pas encore disponible — cette option arrivera dans une prochaine mise à jour."
+    },
+    "biometric": {
+      "title": "Connexion biométrique",
+      "description": "Utilisez l'empreinte digitale ou la reconnaissance faciale de votre téléphone pour revenir dans Wi-Agency, au lieu de saisir votre mot de passe.",
+      "enable": "Déverrouiller avec la biométrie",
+      "toggleAria": "Activer la connexion biométrique",
+      "enabledHint": "Wi-Agency demande votre empreinte à l'ouverture et après un moment en arrière-plan.",
+      "disabledHint": "Activez cette option et Wi-Agency demandera votre empreinte plutôt que votre mot de passe.",
+      "signOutNote": "Se déconnecter efface toujours la session enregistrée — vous saisirez votre mot de passe une fois, puis cette option se réactive d'elle-même.",
+      "unsupported": "Cet appareil ne propose pas de déverrouillage biométrique.",
+      "notEnrolled": "Aucune empreinte ni visage n'est encore enregistré sur cet appareil. Ajoutez-en un dans les réglages, puis revenez ici.",
+      "openSettings": "Ouvrir les réglages de l'appareil",
+      "webOnly": "Disponible dans l'application mobile Wi-Agency.",
+      "enabledToast": "Connexion biométrique activée.",
+      "disabledToast": "Connexion biométrique désactivée.",
+      "cancelledToast": "La connexion biométrique n'a pas été activée."
     }
   },
   "payout": {

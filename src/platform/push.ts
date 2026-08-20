@@ -288,6 +288,106 @@ async function getNativeToken(): Promise<string | null> {
   });
 }
 
+// ─── Delivery: the channel, and pushes that land while the app is on screen ───
+
+/**
+ * The Android notification channel every agency push is delivered on.
+ *
+ * Not ours to pick: the backend stamps `ANDROID_CHANNELS.DEFAULT` onto every
+ * send (`fcm-push.service.ts` in the wi-mall API) and Android matches channels
+ * by string. Naming one the device does not have fails **quietly** — the
+ * Firebase SDK falls back to the manifest default, then to a channel of its own
+ * called "Miscellaneous" — so the importance, sound and lights asked for below
+ * are simply lost, and the user is left muting something they cannot identify.
+ *
+ * Three places hold this string and all three must agree: here,
+ * `res/values/strings.xml`, and the backend.
+ */
+export const ANDROID_CHANNEL_ID = 'jovi_default';
+
+/**
+ * Create the notification channel. Idempotent, and a no-op off Android.
+ *
+ * Android updates the name and description of a channel that already exists and
+ * ignores everything else — which is the behaviour we want when the agency
+ * switches language, and also why importance is not something this can change
+ * after the fact. Once the channel exists its importance belongs to the user,
+ * and the platform will not let an app raise it back. That is correct: someone
+ * who has quietened us should stay quietened.
+ *
+ * The labels are handed in already translated. `src/platform/` owns the OS, not
+ * the app's language — see `usePushDelivery`, which supplies them.
+ */
+export async function ensureNotificationChannel(name: string, description: string): Promise<void> {
+  if (!isNative || platform !== 'android') return;
+  try {
+    await PushNotifications.createChannel({
+      id: ANDROID_CHANNEL_ID,
+      name,
+      description,
+      // IMPORTANCE_HIGH — heads-up, with sound. Everything the backend pushes an
+      // agency is about their money or their work; none of it is a digest.
+      importance: 4,
+      // VISIBILITY_PUBLIC. A shipment reference on a lock screen is not a
+      // secret, and a notification the user has to unlock to read is one they
+      // will not act on.
+      visibility: 1,
+      lights: true,
+      lightColor: '#1350DD',
+      vibration: true,
+    });
+  } catch (err) {
+    // Non-fatal: without the channel the SDK still delivers, just on its own
+    // fallback. Worth logging, never worth blocking a render for.
+    console.error('[push] could not create the notification channel', err);
+  }
+}
+
+/** A push that arrived while the app was in the foreground. */
+export interface ForegroundPush {
+  /** From the payload's `notification` block, or its `data` for a data-only send. */
+  title: string | null;
+  body: string | null;
+  /** The FCM `data` map, flattened to strings. Feed to `routeFromPushData`. */
+  data: unknown;
+}
+
+/**
+ * Subscribe to pushes that arrive while the app is on screen. Returns the
+ * unsubscribe; a no-op off native.
+ *
+ * **This is the gap that makes push look broken to whoever is testing it.** A
+ * message carrying a `notification` block is drawn by the OS only while the app
+ * is backgrounded or killed. In the foreground FCM hands it to the app instead
+ * and draws nothing — and Capacitor draws nothing either unless
+ * `presentationOptions` is set. So the one case a tester always tries first,
+ * phone in hand with the app open, is the one case where absolutely nothing
+ * happens.
+ *
+ * `presentationOptions` is deliberately NOT the fix. It would post a tray
+ * notification over an app the user is already looking at, for a list they can
+ * see updating behind it. The app answers in its own language instead — a toast
+ * that deep-links, and the badge refreshing — which is what `usePushDelivery`
+ * does with this.
+ */
+export function subscribeForegroundPush(listener: (push: ForegroundPush) => void): () => void {
+  if (!isNative) return () => {};
+
+  const handle = PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    listener({
+      title: notification.title ?? null,
+      body: notification.body ?? null,
+      data: notification.data,
+    });
+  });
+
+  return () => {
+    void handle
+      .then((h) => h.remove())
+      .catch((err) => console.error('[push] could not detach the foreground listener', err));
+  };
+}
+
 // Native setup, at module load and before first render.
 //
 // The seam install is the timing contract `lib/push.ts` documents for the web

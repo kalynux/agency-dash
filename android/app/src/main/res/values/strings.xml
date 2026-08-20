@@ -4,4 +4,15 @@
     <string name="title_activity_main">Wi-Agency</string>
     <string name="package_name">com.wi_mall.agency</string>
     <string name="custom_url_scheme">com.wi_mall.agency</string>
+
+    <!--
+        The Android notification channel every agency push lands in.
+
+        A THREE-WAY contract, and the id is the whole of it: the backend names
+        this string on every send (`ANDROID_CHANNELS.DEFAULT` in the wi-mall
+        API), src/platform/push.ts creates the channel under it at runtime, and
+        the manifest names it as the fallback. Change it in one place only and
+        notifications quietly land in a channel the user never agreed to.
+    -->
+    <string name="default_notification_channel_id">jovi_default</string>
 </resources>

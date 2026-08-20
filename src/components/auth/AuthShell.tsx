@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AppLogo } from '@/components/common/AppLogo';
+import { LanguagePicker } from '@/components/common/LanguagePicker';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,6 +33,15 @@ export function AuthShell({ title, subtitle, children, footer, className }: Auth
       )}
     >
       <div className={cn('w-full max-w-md', className)}>
+        {/* Above the logo, not tucked in a corner: this is the first screen of a
+            freshly downloaded app, and for anyone who cannot read the form
+            below it is the only control on the page that matters. In flow
+            rather than absolutely positioned so it can never land under the
+            status bar on a device drawing edge to edge. */}
+        <div className="mb-3 flex justify-end">
+          <LanguagePicker />
+        </div>
+
         <div className="mb-6 flex justify-center">
           <AppLogo size="lg" className="shadow-sm" />
         </div>

@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { AuthError, AuthShell } from '@/components/auth/AuthShell';
+import { BiometricSignInButton } from '@/components/auth/BiometricSignInButton';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { authService } from '@/services/auth.service';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
 import { buildLoginSchema, type LoginFormValues } from '@/lib/validation-schemas';
+import type { AgencyAuthSession } from '@/types/api';
 
 /**
  * Sign in to the agency dashboard.
@@ -54,6 +56,24 @@ export function Login() {
   // and the React Compiler refuses to memoize a component that calls it.
   const identifierType = useWatch({ control, name: 'identifier_type' });
 
+  /**
+   * Install a session and go wherever it belongs. Shared by the password form
+   * and the biometric button — both arrive holding the same envelope, and the
+   * routing rule below is the part that must not diverge between them.
+   */
+  const enterWith = (session: AgencyAuthSession) => {
+    const step = session.role_entity.onboarding_step;
+    adoptSession(session);
+
+    // A guard that bounced someone here stashed where they were going. Honour
+    // it only once onboarding is finished — an unfinished agency has exactly
+    // one legal destination and it is not their bookmark.
+    const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+    const target =
+      step === 0 ? (from && !from.startsWith('/login') ? from : '/dashboard') : '/onboarding';
+    navigate(target, { replace: true });
+  };
+
   const onSubmit = async (values: LoginFormValues) => {
     setApiError(null);
     try {
@@ -63,16 +83,7 @@ export function Login() {
         password: values.password,
       });
 
-      const step = res.data.role_entity.onboarding_step;
-      adoptSession(res.data);
-
-      // A guard that bounced someone here stashed where they were going. Honour
-      // it only once onboarding is finished — an unfinished agency has exactly
-      // one legal destination and it is not their bookmark.
-      const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-      const target =
-        step === 0 ? (from && !from.startsWith('/login') ? from : '/dashboard') : '/onboarding';
-      navigate(target, { replace: true });
+      enterWith(res.data);
     } catch (err) {
       // Covers the 429 too: the credential bucket is 20/min/IP, and
       // `getApiErrorMessage` interpolates `Retry-After` into the copy. A 429 is
@@ -111,6 +122,12 @@ export function Login() {
       }
     >
       <AuthError message={apiError} />
+
+      {/* Above the form, not below it: when a saved session is sitting in the
+          Keystore waiting for a fingerprint, this is the primary way in and the
+          password fields are the fallback. Renders nothing when there is
+          nothing to unlock — which includes every web session. */}
+      <BiometricSignInButton onSession={enterWith} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         {/* Phone or email — the server takes either in one field, but the two

@@ -1131,6 +1131,78 @@ on a ten-minute clock it would not have been. The outgoing socket's handlers are
 now detached before it is closed, which makes the ordering irrelevant rather than
 lucky.
 
+
+### P4.7 — Push, finished off
+
+**Landed after the fact**, once `google-services.json` arrived. P4.1 was code
+complete but inert; four things stood between "the token registers" and "the
+agency sees the notification".
+
+**`android/app/google-services.json`.** It arrived at the repo root, alongside
+the two Kotlin-DSL snippets the Firebase console hands out — in a project whose
+Gradle files are Groovy, and containing literal `...` placeholders, so neither
+was a file that could ever have been evaluated. Both were deleted rather than
+translated: `classpath 'com.google.gms:google-services:4.4.4'` and the
+conditional `apply plugin` were already in `android/build.gradle` and
+`android/app/build.gradle` respectively, which is why the build had been green
+and silent about it all along. The console's Firebase BoM and
+`firebase-analytics` lines were dropped too — `@capacitor/push-notifications`
+brings `firebase-messaging` transitively, and the app consumes no analytics.
+
+*Verified rather than assumed:* `processDebugGoogleServices` now emits
+`google_app_id = 1:741831724264:android:33054a26bd81f96ed34d5d`, the
+`com.wi_mall.agency` client and not the `com.wimall.agent_app` one the same file
+also carries, on sender `741831724264` — which is the backend's `FCM_PROJECT_ID`
+(`bingoo-22222`). The messaging-vs-storage project trap this plan warned about
+is closed by evidence, not by hope.
+
+**The status-bar icon.** Android treats a notification icon as a MASK: only
+alpha survives, every opaque pixel is painted white. Left to fall back on
+`android:icon`, a filled launcher icon renders as a featureless white square —
+push that works and looks broken. `ic_stat_wi_agency` is the brand mark reduced
+to line art at five densities, derived from `assets/logo.png` by keeping the
+blue and dropping the white line-work, so the eyes and smile survive as real
+holes. `notification_accent` (`#1350DD`, the light `primary` token) tints it;
+without it the platform picks a flat grey that reads as a system message.
+
+**The channel is a three-way contract, and the id is the whole of it.** The
+backend stamps `ANDROID_CHANNELS.DEFAULT` — `jovi_default` — onto every send.
+Naming a channel the device does not have fails *quietly*: the SDK falls back to
+the manifest default, then to its own "Miscellaneous", and the importance and
+sound asked for are lost. `ensureNotificationChannel()` creates it at runtime,
+`res/values/strings.xml` names it as the manifest fallback, and both must keep
+matching the backend.
+
+**A foreground push was reaching nobody.** The OS draws a notification only for
+an app that is backgrounded or killed. With the app open FCM hands the message
+to the app instead and draws nothing — and Capacitor draws nothing either unless
+`presentationOptions` is set. So the first thing anyone tests, phone in hand
+with the app open, was the one case where *literally nothing happened*.
+`usePushDelivery` answers it in the app's own language instead: refresh the list
+and the badge, then a toast carrying the backend's already-localised title and
+body with a **View** action that deep-links through the same
+`routeFromPushData`. `presentationOptions` was deliberately not the fix — it
+posts a tray notification over an app the user is already looking at, for a list
+updating behind it.
+
+**Deep-link payload: confirmed, not assumed.** `fcm-push.service.ts` copies
+`data.path` and `data.url` onto every message, and the agency handler fills them
+from `action.path` — which `renderAgencyButton` derives from `urlSuffix`
+independently of `AGENCY_APP_URL`, so `path` is present even where `url` is not.
+`routeFromPushData` reads exactly that. The open question in the ticket table
+below is closed.
+
+**App Links: half-shipped, honestly.** `public/.well-known/assetlinks.json`
+exists and Vite copies the dot-directory into `dist/` (verified). It names the
+**debug** signing certificate, so App Links verify on a debug build the moment
+the file is deployed to `agency.wi-mall.com` — the host must serve it over https
+as `application/json` with no redirect. The release fingerprint cannot be minted
+before Phase 7; when it is, add it as a second entry to
+`sha256_cert_fingerprints`. Under Play App Signing the value to add is Play's
+own certificate (Play Console → Test and release → App integrity → App signing),
+not the upload key. Until then `wiagency://` remains the scheme that needs no
+server-side proof.
+
 ### Phase 4 exit criteria
 
 - [ ] A push arrives on a physical device and its tap opens the correct screen —
@@ -1321,6 +1393,105 @@ today from any second device.
 
 ---
 
+# Phase 5b — On-device polish
+
+Three unplanned items, all from using the packaged app on a real phone.
+
+## P5b.1 — The status bar was showing app content through it
+
+`src/components/layout/StatusBarScrim.tsx`, mounted in `DashboardShell`.
+
+P3.3 called the status bar handled once the icon colour tracked the theme, and
+gave `main` a `pt-[calc(1.5rem+env(safe-area-inset-top))]`. That is only true at
+scroll position 0. Padding does not travel with the document, so every row of a
+scrolled list passed under the clock and the battery — the shipment list against
+the system icons, which is what the bug report showed.
+
+**There is no native fix left.** `setStatusBarColor` and `setOverlaysWebView` are
+no-ops from Android 15, and `targetSdkVersion` here is 36. The strip is
+transparent by platform decree, so the only thing that can paint it is the
+WebView: a `fixed`, `h-[env(safe-area-inset-top)]`, `bg-background` band.
+
+- **z-40.** Above every page surface (`z-30` is the tallest — the desktop header)
+  and below every overlay (`z-50` — tab bar, offline banner, dialogs), so a modal
+  still dims the status-bar band and `OfflineBanner` can still claim it.
+- **Opaque, not blurred.** A translucent bar still shows content sliding
+  underneath, which is the complaint rather than the cure.
+- **Zero-height on the web**, where `env()` resolves to 0 — so no `isNative`
+  check and no change to the control group.
+- `LiveTrackingMap` gained `isolate`. Leaflet's panes (400–700) and our map
+  controls (1100–1200) were competing in the *root* stacking context, where they
+  beat every piece of app chrome including this scrim and any open dialog.
+
+Onboarding and the auth screens need no scrim: `OnboardingLayout`'s header
+already fills the band with its own colour, and `AuthShell` is a centred card
+with the inset as padding.
+
+## P5b.2 — Biometric sign-in
+
+`src/platform/biometrics.ts` (plugin seam) · `src/lib/biometricUnlock.ts`
+(policy) · `src/platform/shell/appState.ts` (resume clock) ·
+`BiometricSignInButton` · `BiometricAppLock` · the toggle in `SecuritySettings`.
+
+Plugin: `@aparajita/capacitor-biometric-auth@10` — same author as the secure
+storage already holding the tokens, and v10 is the Capacitor 8 line. It ships its
+own `AuthActivity` theme and strings; the only manifest edit is `USE_BIOMETRIC`,
+written out explicitly even though `androidx.biometric` would merge it in.
+
+**What it is.** P1.5 means a returning user is already signed in without a
+password, so "sign in with your fingerprint" cannot be a second credential and
+does not need to be a stored one. It is: *the session that is already on the
+device is not usable until the holder proves they own the phone.* One mechanism,
+three surfaces — the launch gate inside `initialize()`, the button on `/login`,
+and the resume cover.
+
+- **The gate lives in the session bootstrap**, immediately after
+  `canAttemptSession()` and before `auth-me`. A refusal destroys nothing: tokens
+  stay in the Keystore and the app reports itself signed out, which routes to
+  `/login`, where the button unlocks them. The lock screen and the sign-in screen
+  are the same screen, so there is no second lock UI for the cold-start path.
+- **Resume is an overlay, never a route.** Navigating to a lock screen would
+  unmount a half-filled stock request and hand it back as an empty dashboard —
+  a security feature that loses data. `LOCK_AFTER_MS` is 2 minutes.
+- **Excursions we start do not count.** `suspendAppStateWatch()` wraps the
+  biometric prompt itself (an Android activity — without this the prompt re-locks
+  the app it just unlocked) and `pickMedia`. `Browser.open` is deliberately not
+  wrapped: it resolves when the tab *opens*, so there is no honest release point.
+- **The gate fails open**, the resume cover does not. On launch, biometry that
+  has gone missing must not strand someone out of a valid session over a
+  fingerprint they deleted — the Keystore was always the thing protecting the
+  tokens. On resume the session is already restored and on screen, so failing
+  open would hand over exactly what the cover exists to withhold; the way out
+  there is a real sign-out.
+- **`allowDeviceCredential: true`.** Without it, five bad reads give
+  `biometryLockout` and the only way in is a full password sign-in — a dead end
+  reached by a wet thumb. The PIN is the same secret guarding the Keystore.
+- **Sign-out keeps its meaning.** No copy of the tokens is kept, so after
+  signing out the button is gone and the next sign-in is a password one. The
+  *preference* survives, and re-arms itself on that sign-in.
+- ⚠ **It is a gate, not a key.** A successful prompt re-derives nothing; the
+  tokens are protected by the Keystore either way. This raises the bar for
+  someone holding an unlocked phone. It is not a defence against a rooted device.
+
+## P5b.3 — Language before there is an account
+
+`src/components/common/LanguagePicker.tsx`, in `AuthShell` and
+`OnboardingLayout`'s header.
+
+`detectInitialLanguage()` already reads `navigator.language`, but a guess is not
+an answer — a phone set to English in a francophone market is ordinary, and
+someone who cannot read the sign-in form has no route to the Account → Profile
+picker that would fix it. Entries are written in their own language, and the
+Arabic row carries its own `dir` so it reads correctly while the UI around it is
+still English.
+
+Not wired to the profile: `setLanguage` marks the choice user-made, which
+persists it and stops a later `/auth/me` from yanking the UI back — so a
+pre-login pick survives the sign-in it was made for. The durable
+`preferred_language` stays where it was.
+
+---
+
 # Phase 6 — iOS
 
 **Blocked by:** access to a Mac or a CI runner with Xcode. The development machine is Windows, so this is a separately-scheduled track, not a same-sprint afterthought.
@@ -1350,9 +1521,9 @@ today from any second device.
 | Add `https://agency.wi-mall.internal` and `capacitor://agency.wi-mall.internal` to `ALLOWED_ORIGINS` on **wi-mall** | Backend | Phase 2 |
 | Same two origins on **geo-tracker** (same variable, no separate WebSocket knob) | Backend | Phase 4 |
 | ~~Confirm `POST /api/agency/devices` accepts `platform: 'android' \| 'ios'` (D5)~~ | Backend | **settled** |
-| `google-services.json` from the **messaging** Firebase project | Ops | Phase 4 push |
-| Confirm the FCM `data` payload carries `path` (or `url`) for deep links | Backend | Phase 4 push |
-| `assetlinks.json` on `agency.wi-mall.com`, once the release key exists | Ops | App Links (P4.2) |
+| ~~`google-services.json` from the **messaging** Firebase project~~ | Ops | **delivered** (P4.7) |
+| ~~Confirm the FCM `data` payload carries `path` (or `url`) for deep links~~ | Backend | **confirmed** (P4.7) |
+| Deploy `public/.well-known/assetlinks.json` to `agency.wi-mall.com`; add the release fingerprint once Phase 7 mints the key | Ops | App Links (P4.2) |
 | ~~Confirm the final hostname string before the CORS ticket is filed~~ | Us → Backend | **settled** |
 
 **D5 is settled in the code already**: `DevicePlatform` in
@@ -1360,7 +1531,8 @@ today from any second device.
 frontend's copy of the backend contract, so the value P4.1 now sends was already
 the documented one. Worth one confirming message, not a ticket.
 
-**The deep-link payload is the one genuinely open question.**
+**The deep-link payload was the one genuinely open question, and it is now
+answered** (see P4.7).
 `routeFromPushData` reads `path` (or `action_path`, or a fully-qualified `url`)
 because that mirrors `AgencyNotificationAction`, which is what the in-app
 notification carries. If the FCM `data` payload names those fields differently,
@@ -1384,7 +1556,8 @@ Name the environments explicitly in the ticket. The backend has asked which ones
 src/platform/env.ts · auth/{strategy,tokens,tokenStore,secureTokenStore,refreshScheduler}.ts
               push.ts · accessToken.ts · media.ts · geolocation.ts · clipboard.ts
               network.ts · browser.ts · permissions.ts · purchases.ts
-              shell/{splash,backButton,deepLinks,keyboard,statusBar}.ts
+              biometrics.ts
+              shell/{splash,backButton,deepLinks,keyboard,statusBar,appState}.ts
 ```
 
 `auth/tokens.ts` and `shell/splash.ts` are Phase 2 additions the plan did not
@@ -1393,7 +1566,10 @@ equivalent: camera, photo library and location all need the same
 denied-vs-permanently-denied distinction, and it is the only module that imports
 `capacitor-native-settings`. See P4.3. `purchases.ts` is Phase 5's — the only
 module here that imports no plugin at all, because what it answers is a policy
-question rather than a capability one. See P5.1.
+question rather than a capability one. See P5.1. `biometrics.ts` and
+`shell/appState.ts` are P5b.2's: the fingerprint prompt, and the "how long was
+the app away?" clock the resume lock is built on — the transition alone is what
+`@capacitor/app` reports, and the duration is the whole question.
 
 Everything above now exists.
 
@@ -1402,6 +1578,10 @@ Everything above now exists.
 ```
 src/pages/{Login,Register,ForgotPassword}.tsx
 src/components/layout/OfflineBanner.tsx      the mobile half of P3.4 — see there
+src/components/layout/StatusBarScrim.tsx     the status-bar band (P5b.1)
+src/components/auth/BiometricSignInButton.tsx  unlock from /login (P5b.2)
+src/components/auth/BiometricAppLock.tsx     the resume cover (P5b.2)
+src/components/common/LanguagePicker.tsx     language before sign-in (P5b.3)
 src/components/common/UploadSourceSheet.tsx  the camera-first sheet (P4.3)
 src/components/billing/ManageOnWebNotice.tsx what stands where a purchase
                                              button was (P5.3)

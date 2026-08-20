@@ -58,6 +58,37 @@
             </intent-filter>
         </activity>
 
+
+        <!--
+            FCM presentation defaults (P4.1). All three are read by the Firebase
+            messaging SDK when it draws a notification the app never sees —
+            which is every push that lands while the app is backgrounded or
+            killed, i.e. the ones that matter most.
+
+            ⚠ Without the icon line Android falls back to `android:icon`, and a
+            status-bar icon is a MASK: only its alpha survives and every opaque
+            pixel is painted white. The launcher icon is a filled square, so the
+            fallback is a featureless white box. `ic_stat_wi_agency` is the same
+            mark reduced to line art, with the eyes and smile as real holes.
+
+            The channel id must match the one the client creates at runtime
+            (src/platform/push.ts) AND the one the backend addresses
+            (`ANDROID_CHANNELS.DEFAULT` in fcm-push.service.ts). It is only a
+            fallback here — the backend names the channel on every send — but a
+            payload that ever arrived without one would otherwise land in the
+            SDK's own "Miscellaneous" channel, which the user cannot recognise
+            and will mute.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_wi_agency" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -83,6 +114,23 @@
 
     <!-- P4.1 — push. Runtime-granted from Android 13; implicit before that. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Biometric sign-in (src/lib/biometricUnlock.ts).
+
+        Install-time, not runtime: there is no prompt to grant, and asking for
+        a fingerprint is itself the consent. `androidx.biometric` declares this
+        in its own manifest, so the merger would add it either way — it is
+        written out here because a permission the app ships with should be
+        readable in the app's own manifest rather than inferred from a
+        transitive AAR.
+
+        Deliberately NOT paired with a `uses-feature`: an implied
+        `android.hardware.fingerprint` would let Play hide the app from every
+        device without a sensor, and biometric unlock is an opt-in convenience
+        that the settings screen already degrades gracefully without.
+    -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- P4.4 — "use my location" in the address picker. Coarse is enough to
          geocode to the right neighbourhood, so a user who grants only the

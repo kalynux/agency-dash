@@ -89,6 +89,22 @@
       "enable": "Enable 2FA",
       "enableAria": "Enable two-factor authentication",
       "notAvailable": "Not available yet — this will be enabled in a future update."
+    },
+    "biometric": {
+      "title": "Biometric sign-in",
+      "description": "Use your phone's fingerprint or face unlock to get back into Wi-Agency, instead of typing your password.",
+      "enable": "Unlock with biometrics",
+      "toggleAria": "Enable biometric sign-in",
+      "enabledHint": "Wi-Agency asks for your fingerprint when you open it and after it has been in the background for a while.",
+      "disabledHint": "Turn this on and Wi-Agency will ask for your fingerprint instead of your password.",
+      "signOutNote": "Signing out still clears the saved session — you will type your password once, then this re-arms by itself.",
+      "unsupported": "This device does not offer biometric unlock.",
+      "notEnrolled": "No fingerprint or face is registered on this device yet. Add one in your device settings, then come back.",
+      "openSettings": "Open device settings",
+      "webOnly": "Available in the Wi-Agency mobile app.",
+      "enabledToast": "Biometric sign-in is on.",
+      "disabledToast": "Biometric sign-in is off.",
+      "cancelledToast": "Biometric sign-in was not turned on."
     }
   },
   "payout": {

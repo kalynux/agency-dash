@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/auth.service';
 import { authStrategy } from '@/platform/auth/strategy';
+import { passesLaunchGate } from '@/lib/biometricUnlock';
 import { onboardingService } from '@/services/onboarding.service';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { ApiError } from '@/types/api';
@@ -162,6 +163,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
             // `return` still runs the `finally` below, so the guard stops
             // rendering its skeleton and redirects.
             if (!(await authStrategy.canAttemptSession())) {
+                setSession(null);
+                return;
+            }
+
+            // There IS a stored session — but if the user asked for biometric
+            // unlock, it is not usable until they prove who they are. A refusal
+            // is not an error and does not destroy anything: the tokens stay in
+            // the Keystore, the app simply reports itself signed out, and the
+            // sign-in screen offers the fingerprint button that gets them back
+            // in (`canOfferBiometricSignIn`). Returns true immediately when the
+            // feature is off, already satisfied this run, or unavailable.
+            if (!(await passesLaunchGate())) {
                 setSession(null);
                 return;
             }

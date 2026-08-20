@@ -619,8 +619,13 @@ export function LiveTrackingMap({
     [fixes, startPin, endPin],
   );
 
+  // `isolate` on the wrapper confines Leaflet's z-index scale (its panes sit at
+  // 400–700, our own overlay controls below at 1100–1200) to this box. Without
+  // it those numbers compete in the root stacking context and win against every
+  // piece of app chrome — the status-bar scrim, dialogs, the tab bar — all of
+  // which sit at 50 or below by design.
   return (
-    <div className={cn('agent-map relative h-full w-full overflow-hidden rounded-lg border', className)}>
+    <div className={cn('agent-map relative isolate h-full w-full overflow-hidden rounded-lg border', className)}>
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
 
       <div className="pointer-events-none absolute right-3 top-3 z-[1200] flex flex-col gap-2">

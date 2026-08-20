@@ -277,7 +277,9 @@
       "disable": "Désactiver",
       "toastEnabled": "Notifications push activées sur cet appareil.",
       "toastDisabled": "Notifications push désactivées sur cet appareil.",
-      "toastTokenFailed": "Impossible d'obtenir un jeton push sur cet appareil."
+      "toastTokenFailed": "Impossible d'obtenir un jeton push sur cet appareil.",
+      "channelName": "Alertes de l’agence",
+      "channelDescription": "Expéditions, contrats de livreurs, versements, dépôts d’espèces et alertes d’abonnement."
     },
     "language": {
       "title": "Langue",

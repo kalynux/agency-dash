@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { tx } from '@/i18n/tx';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
+import { LanguagePicker } from '@/components/common/LanguagePicker';
 import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
 import type { AgencyOnboardingStep } from '@/types/api';
 
@@ -162,10 +163,17 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                         <span className="text-[10px] text-slate-400 leading-none truncate max-w-[140px] mt-0.5">{agencyName}</span>
                     </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
-                    <LogOut className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm">{t('layout.signOut')}</span>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    {/* Onboarding is still "the very beginning" — someone who
+                        registered in the wrong language should not have to
+                        finish four steps of forms before they can reach the
+                        Account → Profile picker. */}
+                    <LanguagePicker />
+                    <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden sm:inline text-sm">{t('layout.signOut')}</span>
+                    </Button>
+                </div>
             </header>
 
             {/* ── Clickable Step progress ── */}

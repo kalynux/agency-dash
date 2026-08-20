@@ -19,6 +19,7 @@
 import { Camera, MediaTypeSelection, type MediaResult } from '@capacitor/camera';
 import { isNative } from './env';
 import { toOutcome, type AnyPermissionState } from './permissions';
+import { suspendAppStateWatch } from './shell/appState';
 
 /** Where the user wants the media to come from. */
 export type MediaSource = 'camera' | 'gallery';
@@ -202,6 +203,13 @@ export async function pickMedia(
   const permission = await ensurePermission(source);
   if (permission !== 'granted') return { status: permission };
 
+  // The camera and the gallery are separate activities, so this whole call is a
+  // stretch with our app in the background — and browsing a photo library is a
+  // slow, deliberate thing. Without this the biometric app lock would read the
+  // round trip as "the user walked away" and greet them with an unlock screen
+  // the moment they finished choosing a picture. See platform/shell/appState.ts.
+  const releaseAppStateWatch = suspendAppStateWatch();
+
   try {
     if (source === 'camera') {
       const shot = await Camera.takePhoto({
@@ -234,5 +242,7 @@ export async function pickMedia(
     if (PERMISSION_CODES.has(code)) return { status: 'blocked' };
     console.error('[media] could not pick media', err);
     return { status: 'error' };
+  } finally {
+    releaseAppStateWatch();
   }
 }
