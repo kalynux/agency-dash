@@ -182,7 +182,7 @@ export function InventoryDetailSheet({
             <img
               src={detail.image.url}
               alt=""
-              crossOrigin="use-credentials"
+              crossOrigin="anonymous"
               className="h-14 w-14 flex-shrink-0 rounded-md border object-cover"
             />
           ) : (
@@ -277,7 +277,7 @@ export function InventoryDetailSheet({
                     key={image.id}
                     src={image.url}
                     alt=""
-                    crossOrigin="use-credentials"
+                    crossOrigin="anonymous"
                     className="h-16 w-16 rounded-md border object-cover"
                   />
                 ))}

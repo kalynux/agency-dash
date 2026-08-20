@@ -261,7 +261,7 @@ export function MagazinSettings() {
                 <img
                   src={form.logo.url}
                   alt={t('store.logoAlt')}
-                  crossOrigin="use-credentials"
+                  crossOrigin="anonymous"
                   className="h-full w-full object-cover"
                 />
               ) : (

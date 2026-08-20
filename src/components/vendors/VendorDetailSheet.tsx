@@ -43,7 +43,7 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
           <div className="flex items-start gap-3">
             <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
               {vendor.logoUrl ? (
-                <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="use-credentials" className="w-full h-full object-cover" />
+                <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="anonymous" className="w-full h-full object-cover" />
               ) : (
                 <Store className="w-7 h-7 text-muted-foreground" />
               )}

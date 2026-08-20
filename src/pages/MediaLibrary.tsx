@@ -215,7 +215,7 @@ function FileArtwork({
       <img
         src={url}
         alt={file.originalName ?? txStatic('media:preview.fileAlt')}
-        crossOrigin="use-credentials"
+        crossOrigin="anonymous"
         loading="lazy"
         onError={() => setBroken(true)}
         className={cn('h-full w-full object-cover', className)}
@@ -231,7 +231,7 @@ function FileArtwork({
           src={url}
           controls
           preload="metadata"
-          crossOrigin="use-credentials"
+          crossOrigin="anonymous"
           playsInline
           onError={() => setBroken(true)}
           className={cn('h-full w-full bg-black object-contain', className)}
@@ -244,7 +244,7 @@ function FileArtwork({
           src={url}
           muted
           preload="metadata"
-          crossOrigin="use-credentials"
+          crossOrigin="anonymous"
           playsInline
           onError={() => setBroken(true)}
           className="h-full w-full object-cover"
@@ -281,7 +281,7 @@ function FilePreview({ file }: { file: ApiFile }) {
         <div className={cn('rounded-xl p-4', KIND_TINTS.audio)}>
           <Music className="h-8 w-8" />
         </div>
-        <audio src={url} controls crossOrigin="use-credentials" className="w-full max-w-sm" />
+        <audio src={url} controls crossOrigin="anonymous" className="w-full max-w-sm" />
       </div>
     );
   }

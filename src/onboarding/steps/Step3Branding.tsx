@@ -142,7 +142,7 @@ export function Step3Branding() {
                                     <img
                                         src={previewUrl}
                                         alt={t('branding.logoAlt')}
-                                        crossOrigin="use-credentials"
+                                        crossOrigin="anonymous"
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (

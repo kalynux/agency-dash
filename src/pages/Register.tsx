@@ -89,7 +89,6 @@ export function Register() {
   return (
     <AuthShell
       title={t('register.title')}
-      subtitle={t('register.subtitle')}
       footer={
         <span className="text-muted-foreground">
           {t('register.haveAccount')}{' '}

@@ -119,7 +119,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0 overflow-hidden">
               {detail.agent.avatarUrl ? (
-                <img src={detail.agent.avatarUrl} crossOrigin="use-credentials" alt={detail.agent.name} className="w-full h-full object-cover" />
+                <img src={detail.agent.avatarUrl} crossOrigin="anonymous" alt={detail.agent.name} className="w-full h-full object-cover" />
               ) : (
                 initials(detail.agent.name)
               )}

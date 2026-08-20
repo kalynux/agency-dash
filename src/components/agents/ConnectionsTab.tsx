@@ -259,7 +259,7 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                   >
                     <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center md:h-9 md:w-9">
                       {avatar ? (
-                        <img src={avatar} alt={agent.name} crossOrigin="use-credentials" className="w-full h-full object-cover" />
+                        <img src={avatar} alt={agent.name} crossOrigin="anonymous" className="w-full h-full object-cover" />
                       ) : (
                         <User className="w-4 h-4 text-muted-foreground" />
                       )}

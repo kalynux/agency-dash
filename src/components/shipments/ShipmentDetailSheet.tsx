@@ -152,7 +152,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                       <img
                         src={item.images[0].url}
                         alt=""
-                        crossOrigin="use-credentials"
+                        crossOrigin="anonymous"
                         className="w-12 h-12 rounded-md object-cover border flex-shrink-0"
                       />
                     )}

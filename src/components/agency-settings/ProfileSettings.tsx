@@ -232,7 +232,7 @@ export function ProfileSettings() {
                     <AvatarImage
                       src={avatarUrl}
                       alt={displayName}
-                      crossOrigin="use-credentials"
+                      crossOrigin="anonymous"
                       className="object-cover"
                     />
                   )}

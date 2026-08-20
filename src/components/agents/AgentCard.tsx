@@ -48,7 +48,7 @@ export function AgentCard({ agent, onInfo, rightSlot }: AgentCardProps) {
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
               {agent.avatar?.url ? (
-                <img src={agent.avatar.url} crossOrigin="use-credentials" alt={agent.name} className="w-full h-full object-cover" />
+                <img src={agent.avatar.url} crossOrigin="anonymous" alt={agent.name} className="w-full h-full object-cover" />
               ) : (
                 <User className="w-5 h-5 text-muted-foreground" />
               )}

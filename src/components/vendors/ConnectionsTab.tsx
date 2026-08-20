@@ -291,7 +291,7 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {vendor?.logoUrl ? (
-                      <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="use-credentials" className="w-full h-full object-cover" />
+                      <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="anonymous" className="w-full h-full object-cover" />
                     ) : (
                       <Store className="w-4 h-4 text-muted-foreground" />
                     )}

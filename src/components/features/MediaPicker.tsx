@@ -164,7 +164,7 @@ function FileThumb({ file }: { file: ApiFile }) {
       <img
         src={url}
         alt={file.originalName ?? txStatic('media:preview.fileAlt')}
-        crossOrigin="use-credentials"
+        crossOrigin="anonymous"
         loading="lazy"
         className="h-full w-full object-cover"
         draggable={false}
@@ -178,7 +178,7 @@ function FileThumb({ file }: { file: ApiFile }) {
           src={url}
           muted
           preload="metadata"
-          crossOrigin="use-credentials"
+          crossOrigin="anonymous"
           playsInline
           className="h-full w-full object-cover"
         />
