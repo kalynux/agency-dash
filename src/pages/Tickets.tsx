@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/state-views';
+import { PageHeader } from '@/components/layout/PageContainer';
 import {
   FilterField, FilterOptionGroup, FilterSection, SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
@@ -165,26 +166,27 @@ export function Tickets() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('page.title')}</h1>
-          <p className="text-muted-foreground">{t('page.description')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={load} title={t('page.refresh')} disabled={isLoading}>
-            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setFaqOpen(true)}>
-            <HelpCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('page.faq')}</span>
-          </Button>
-          <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            {t('page.newTicket')}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('page.title')}
+        description={t('page.description')}
+        actionItems={[
+          {
+            id: 'new-ticket',
+            label: t('page.newTicket'),
+            icon: Plus,
+            onSelect: () => setCreateOpen(true),
+            primary: true,
+          },
+          { id: 'faq', label: t('page.faq'), icon: HelpCircle, onSelect: () => setFaqOpen(true) },
+          {
+            id: 'refresh',
+            label: t('page.refresh'),
+            icon: RefreshCw,
+            onSelect: load,
+            busy: isLoading,
+          },
+        ]}
+      />
 
       {/* Search & filters */}
       <SearchFilterBar

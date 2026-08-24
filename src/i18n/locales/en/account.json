@@ -97,7 +97,7 @@
       "toggleAria": "Enable biometric sign-in",
       "enabledHint": "Wi-Agency asks for your fingerprint when you open it and after it has been in the background for a while.",
       "disabledHint": "Turn this on and Wi-Agency will ask for your fingerprint instead of your password.",
-      "signOutNote": "Signing out still clears the saved session — you will type your password once, then this re-arms by itself.",
+      "signOutNote": "Signing out clears the saved session. Any sign-in details you saved for the fingerprint button stay on this phone until you turn this off.",
       "unsupported": "This device does not offer biometric unlock.",
       "notEnrolled": "No fingerprint or face is registered on this device yet. Add one in your device settings, then come back.",
       "openSettings": "Open device settings",

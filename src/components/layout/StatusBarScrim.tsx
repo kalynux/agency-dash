@@ -17,10 +17,10 @@
  * sliding underneath, which is the complaint rather than the cure.
  *
  * **z-40 is deliberate.** Above every page surface (the tallest is `z-30` — the
- * desktop header and `MobilePageHeader`) and below every overlay (`z-50` — the
- * tab bar, the offline banner, dialogs and sheets), so a modal still dims the
- * status-bar band along with the rest of the screen and the offline banner can
- * still claim it.
+ * desktop header, and the mobile search row pinned under the app bar; see
+ * `./mobileChrome`) and below every overlay (`z-50` — the tab bar, the offline
+ * banner, dialogs and sheets), so a modal still dims the status-bar band along
+ * with the rest of the screen and the offline banner can still claim it.
  *
  * Zero-height everywhere `env(safe-area-inset-top)` resolves to 0, which is
  * every desktop browser — so the web build is untouched and this needs no

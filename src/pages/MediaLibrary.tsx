@@ -63,7 +63,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/common/state-views';
-import { InfoHint } from '@/components/common/InfoHint';
+import { PageHeader } from '@/components/layout/PageContainer';
 import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
 import { nativeMediaAvailable } from '@/platform/media';
 import {
@@ -215,7 +215,6 @@ function FileArtwork({
       <img
         src={url}
         alt={file.originalName ?? txStatic('media:preview.fileAlt')}
-        crossOrigin="anonymous"
         loading="lazy"
         onError={() => setBroken(true)}
         className={cn('h-full w-full object-cover', className)}
@@ -231,7 +230,6 @@ function FileArtwork({
           src={url}
           controls
           preload="metadata"
-          crossOrigin="anonymous"
           playsInline
           onError={() => setBroken(true)}
           className={cn('h-full w-full bg-black object-contain', className)}
@@ -244,7 +242,6 @@ function FileArtwork({
           src={url}
           muted
           preload="metadata"
-          crossOrigin="anonymous"
           playsInline
           onError={() => setBroken(true)}
           className="h-full w-full object-cover"
@@ -281,7 +278,7 @@ function FilePreview({ file }: { file: ApiFile }) {
         <div className={cn('rounded-xl p-4', KIND_TINTS.audio)}>
           <Music className="h-8 w-8" />
         </div>
-        <audio src={url} controls crossOrigin="anonymous" className="w-full max-w-sm" />
+        <audio src={url} controls className="w-full max-w-sm" />
       </div>
     );
   }
@@ -627,27 +624,21 @@ export function MediaLibrary() {
           allowVideo
         />
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-              {t('page.title')}
-              <InfoHint className="md:hidden" label={t('page.aboutLabel')}>
-                {t('page.about')}
-              </InfoHint>
-            </h1>
-            <p className="text-muted-foreground max-md:hidden">{t('page.description')}</p>
-            <p className="text-muted-foreground md:hidden">{t('page.descriptionShort')}</p>
-          </div>
-          <Button
-            onClick={requestUpload}
-            disabled={uploading}
-            className="gap-2"
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {t('upload.button')}
-          </Button>
-        </div>
+        <PageHeader
+          title={t('page.title')}
+          description={t('page.description')}
+          shortDescription={t('page.descriptionShort')}
+          actionItems={[
+            {
+              id: 'upload',
+              label: t('upload.button'),
+              icon: Upload,
+              onSelect: requestUpload,
+              busy: uploading,
+              primary: true,
+            },
+          ]}
+        />
 
         {/* Upload progress */}
         {uploading && (

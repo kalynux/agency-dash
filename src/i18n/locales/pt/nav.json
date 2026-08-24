@@ -55,6 +55,8 @@
     "closeSearch": "Fechar a pesquisa",
     "quickActions": "Ações rápidas",
     "notifications": "Notificações",
+    "notificationsWithCount_one": "Notificações, 1 por ler",
+    "notificationsWithCount_other": "Notificações, {{count}} por ler",
     "markAllRead": "Marcar tudo como lido",
     "noNewNotifications": "Sem notificações novas",
     "viewAllNotifications": "Ver todas as notificações",

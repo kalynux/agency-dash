@@ -72,7 +72,31 @@ const FILE_PUBLIC_BASE: string =
   (import.meta.env.VITE_FILE_BASE_URL as string | undefined) ??
   `${BASE_URL.replace(/\/$/, '')}/files`;
 
-/** Resolve a displayable URL for a file, preferring the backend-populated `url`. */
+/**
+ * Resolve a displayable URL for a file, preferring the backend-populated `url`.
+ *
+ * **Never put `crossOrigin` on the tag that renders one of these.** These URLs
+ * point at the API host, so every media load is cross-origin, and which of two
+ * unrelated mechanisms decides whether the browser paints the bytes depends
+ * entirely on whether that attribute is present:
+ *
+ * - **Without it** the load is a no-CORS request. CORS never enters into it; the
+ *   gate is the response's `Cross-Origin-Resource-Policy`, which the backend
+ *   sets to `cross-origin` on the public storage trees (jovi-mall
+ *   `src/api/index.ts`). That works from every origin — the web dashboard, the
+ *   dev server, the Capacitor WebView — with nothing allowlisted anywhere.
+ * - **With it** — either value — the load becomes a CORS request, which
+ *   additionally requires the API to name this exact origin in
+ *   `ALLOWED_ORIGINS`. That makes an avatar depend on a backend env var, and
+ *   breaks on any client whose origin is not in that list.
+ *
+ * Files are served publicly, so no credential is needed either way. The one
+ * thing the attribute would buy is un-tainted canvas readback of these pixels;
+ * nothing here does that, and anything that starts to should fetch the bytes
+ * through the API instead of reaching for `crossOrigin`.
+ *
+ * See CAPACITOR-PLAN.md → P5b.4 for the incident this came out of.
+ */
 export function resolveFileUrl(file: Pick<ApiFile, 'url' | 'key'>): string {
   if (file.url) return file.url;
   const base = FILE_PUBLIC_BASE.replace(/\/$/, '');

@@ -12,7 +12,7 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { listSurfaceClass, PageHeader } from '@/components/layout/PageContainer';
 import { useNotifications } from '@/store/notifications.store';
 import { notificationsService } from '@/services/notifications.service';
 import { notificationVisual, notificationHref } from '@/lib/notification-display';
@@ -210,41 +210,57 @@ export function Notifications() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="text-2xl font-bold">{t('page.title')}</h1>
-            {/* Counts read as badges next to the title — desktop only, as the
-                cards they replaced were. */}
-            <div className="flex items-center gap-2 max-sm:hidden">
-              <Badge variant={unreadCount > 0 ? 'default' : 'secondary'}>
-                <Bell />
-                <span className="tabular-nums">{unreadCount}</span>
-                {t('stats.unread')}
-              </Badge>
-              <Badge variant="outline">
-                <span className="tabular-nums">{meta.total}</span>
-                {t('stats.total')}
-              </Badge>
-            </div>
+      <PageHeader
+        title={t('page.title')}
+        description={t('page.description')}
+        // Counts read as badges next to the title — desktop only, as the cards
+        // they replaced were. On a phone the same numbers are already on the
+        // tab bar's badge and in the list itself.
+        actions={
+          <div className="flex items-center gap-2 max-md:hidden">
+            <Badge variant={unreadCount > 0 ? 'default' : 'secondary'}>
+              <Bell />
+              <span className="tabular-nums">{unreadCount}</span>
+              {t('stats.unread')}
+            </Badge>
+            <Badge variant="outline">
+              <span className="tabular-nums">{meta.total}</span>
+              {t('stats.total')}
+            </Badge>
           </div>
-          <p className="text-muted-foreground">{t('page.description')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Button variant="outline" onClick={handleMarkAll}>
-              <Check className="w-4 h-4 me-2" />
-              {t('page.markAllRead')}
-            </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={() => { load(); refetchBadge(); }} title={t('page.refresh')} aria-label={t('page.refresh')}>
-            <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => navigate('/dashboard/settings/notifications')} title={t('page.settings')} aria-label={t('page.settings')}>
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+        }
+        actionItems={[
+          // Conditional, because "mark all read" with nothing unread is a
+          // button that cannot do anything.
+          ...(unreadCount > 0
+            ? [
+                {
+                  id: 'mark-all',
+                  label: t('page.markAllRead'),
+                  icon: Check,
+                  onSelect: handleMarkAll,
+                  primary: true,
+                },
+              ]
+            : []),
+          {
+            id: 'refresh',
+            label: t('page.refresh'),
+            icon: RefreshCw,
+            onSelect: () => {
+              load();
+              refetchBadge();
+            },
+            busy: isLoading,
+          },
+          {
+            id: 'settings',
+            label: t('page.settings'),
+            icon: Settings,
+            onSelect: () => navigate('/dashboard/settings/notifications'),
+          },
+        ]}
+      />
 
       <SearchFilterBar
         value={searchQuery}

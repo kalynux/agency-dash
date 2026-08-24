@@ -721,7 +721,7 @@ function MembershipBody({
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted">
             {avatar ? (
-              <img src={avatar} crossOrigin="anonymous" alt={agent.name} className="h-full w-full object-cover" />
+              <img src={avatar} alt={agent.name} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <User className="h-6 w-6 text-muted-foreground" />
@@ -891,7 +891,6 @@ function MembershipBody({
                 <img
                   src={agent.vehicleInfo.photo.url}
                   alt={t('membership.tiles.vehiclePhotoAlt')}
-                  crossOrigin="anonymous"
                   className="h-24 w-full rounded-lg border object-cover"
                 />
               </div>

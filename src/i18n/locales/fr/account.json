@@ -97,7 +97,7 @@
       "toggleAria": "Activer la connexion biométrique",
       "enabledHint": "Wi-Agency demande votre empreinte à l'ouverture et après un moment en arrière-plan.",
       "disabledHint": "Activez cette option et Wi-Agency demandera votre empreinte plutôt que votre mot de passe.",
-      "signOutNote": "Se déconnecter efface toujours la session enregistrée — vous saisirez votre mot de passe une fois, puis cette option se réactive d'elle-même.",
+      "signOutNote": "La déconnexion efface la session enregistrée. Les identifiants enregistrés pour le bouton d'empreinte digitale restent sur ce téléphone jusqu'à ce que vous désactiviez cette option.",
       "unsupported": "Cet appareil ne propose pas de déverrouillage biométrique.",
       "notEnrolled": "Aucune empreinte ni visage n'est encore enregistré sur cet appareil. Ajoutez-en un dans les réglages, puis revenez ici.",
       "openSettings": "Ouvrir les réglages de l'appareil",

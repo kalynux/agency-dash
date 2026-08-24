@@ -31,7 +31,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
               {vendor.logoUrl ? (
-                <img src={vendor.logoUrl} alt={vendor.businessName} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
               ) : (
                 <Store className="w-5 h-5 text-muted-foreground" />
               )}

@@ -232,7 +232,6 @@ export function ProfileSettings() {
                     <AvatarImage
                       src={avatarUrl}
                       alt={displayName}
-                      crossOrigin="anonymous"
                       className="object-cover"
                     />
                   )}

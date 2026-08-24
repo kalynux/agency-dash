@@ -57,6 +57,8 @@
     "closeSearch": "Close search",
     "quickActions": "Quick Actions",
     "notifications": "Notifications",
+    "notificationsWithCount_one": "Notifications, 1 unread",
+    "notificationsWithCount_other": "Notifications, {{count}} unread",
     "markAllRead": "Mark all read",
     "noNewNotifications": "No new notifications",
     "viewAllNotifications": "View all notifications",

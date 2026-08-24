@@ -26,7 +26,6 @@ import { inventoryService } from '@/services/inventory.service';
 import { useMagazin } from '@/store/magazin.store';
 import { useStockRequests } from '@/store/stockRequests.store';
 import { getApiErrorMessage } from '@/lib/errors';
-import { cn } from '@/lib/utils';
 import { toSummaryParams, UNASSIGNED_LOCATION } from '@/types/inventory.types';
 import type {
   InventoryListItem,
@@ -168,18 +167,9 @@ export function StockTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
 
   return (
     <div className="space-y-6">
-      {renderHeader(
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={load}
-          disabled={isLoading}
-          aria-label={t('page.refresh')}
-        >
-          <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          <span className="hidden sm:inline">{t('page.refresh')}</span>
-        </Button>,
-      )}
+      {renderHeader([
+        { id: 'refresh', label: t('page.refresh'), icon: RefreshCw, onSelect: load, busy: isLoading },
+      ])}
 
       {/* Phase 1: the COUNTED numbers are derived, not counted. Say so once, at
           the top, rather than letting every zero on the screen be read as a stock

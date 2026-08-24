@@ -9,7 +9,7 @@ import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/Page
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { authService } from '@/services/auth.service';
@@ -22,6 +22,7 @@ import {
   enableBiometricUnlock,
   isBiometricUnlockEnabled,
 } from '@/lib/biometricUnlock';
+import { updateBiometricPassword } from '@/platform/auth/biometricLogin';
 import { getBiometryInfo, type BiometryInfo } from '@/platform/biometrics';
 import { isNative } from '@/platform/env';
 import { openBiometricEnrollmentSettings } from '@/platform/permissions';
@@ -92,7 +93,9 @@ function BiometricUnlockCard() {
 
   const onToggle = async (next: boolean) => {
     if (!next) {
-      disableBiometricUnlock();
+      // Awaited, not fired and forgotten: this also forgets the sign-in details
+      // saved for the fingerprint button, and the toast below says it happened.
+      await disableBiometricUnlock();
       setEnabled(false);
       toast.success(t('security.biometric.disabledToast'));
       return;
@@ -198,6 +201,12 @@ function ChangePasswordCard() {
     setApiError(null);
     try {
       await authService.changePassword(values.oldPassword, values.newPassword);
+      // Keep the biometric credential in step. Without this, changing a password
+      // here silently breaks the fingerprint button: the next unlock 401s, the
+      // credential is thrown away, and the user is back to typing with no idea
+      // which of the two things they did caused it. A no-op when nothing is
+      // stored, and best-effort — the password change already succeeded.
+      await updateBiometricPassword(values.newPassword);
       toast.success(t('security.password.success'));
       reset();
     } catch (err) {
@@ -230,17 +239,17 @@ function ChangePasswordCard() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="old-password">{t('security.password.current')}</Label>
-            <Input id="old-password" type="password" autoComplete="current-password" {...register('oldPassword')} />
+            <PasswordInput id="old-password" autoComplete="current-password" {...register('oldPassword')} />
             {errors.oldPassword && <p className="text-xs text-red-500" role="alert">{errors.oldPassword.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-password">{t('security.password.new')}</Label>
-            <Input id="new-password" type="password" autoComplete="new-password" {...register('newPassword')} />
+            <PasswordInput id="new-password" autoComplete="new-password" {...register('newPassword')} />
             {errors.newPassword && <p className="text-xs text-red-500" role="alert">{errors.newPassword.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-password">{t('security.password.confirm')}</Label>
-            <Input id="confirm-password" type="password" autoComplete="new-password" {...register('confirmPassword')} />
+            <PasswordInput id="confirm-password" autoComplete="new-password" {...register('confirmPassword')} />
             {errors.confirmPassword && <p className="text-xs text-red-500" role="alert">{errors.confirmPassword.message}</p>}
           </div>
           <p className="text-xs text-muted-foreground">{t('security.password.rules')}</p>

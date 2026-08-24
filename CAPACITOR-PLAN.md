@@ -1395,7 +1395,7 @@ today from any second device.
 
 # Phase 5b — On-device polish
 
-Three unplanned items, all from using the packaged app on a real phone.
+Four unplanned items, all from using the packaged app on a real phone.
 
 ## P5b.1 — The status bar was showing app content through it
 
@@ -1490,6 +1490,149 @@ persists it and stops a later `/auth/me` from yanking the UI back — so a
 pre-login pick survives the sign-in it was made for. The durable
 `preferred_language` stays where it was.
 
+## P5b.4 — Every uploaded image was blank in the app
+
+Avatars, agency logos, vendor logos, ticket attachments, inventory and media
+thumbnails — all of them, on device only. The web dashboard rendered the same
+URLs fine, which is what made it look like a native-storage problem rather than
+a one-attribute one.
+
+The tags carried `crossOrigin` — `use-credentials` at first, then `anonymous`,
+neither of which belongs on a public image. Dropping it from all 27
+`<img>`/`<video>`/`<audio>` tags that render a `resolveFileUrl` URL blanked the
+images **on the web too**, and that second failure is what exposed the actual
+cause. It is not CORS.
+
+`jovi-mall` mounts `app.use(helmet())`, whose defaults stamp
+`Cross-Origin-Resource-Policy: same-origin` on every response — including the
+`express.static` mount that serves the public storage trees. CORP is enforced on
+**no-cors** requests, which is precisely what a plain `<img src>` issues. So the
+browser fetched each file, read the header, and discarded the bytes. Every
+origin is affected equally: `localhost:5174`, `agency.wi-mall.com`, the WebView.
+Verified on the wire, not inferred —
+`HEAD /api/files/images/…` answered `200` with `Cross-Origin-Resource-Policy:
+same-origin`.
+
+That also explains why the attribute looked like a fix for two years' worth of
+frontends: a CORS-mode request is **exempt** from the CORP check. `crossOrigin`
+was never doing what its name suggests here — it was buying an exemption from an
+unrelated header, at the price of a permanent dependency on `ALLOWED_ORIGINS`
+naming every origin that will ever render an avatar.
+
+**Fixed in the backend**, which is the only place it can be fixed properly:
+`src/api/index.ts` now puts `Cross-Origin-Resource-Policy: cross-origin` on the
+public-tree mounts. Scoped to those mounts, not widened globally — the trees are
+public, unauthenticated, no-cookie content by classification
+(`core/storage/storage-trees.ts`), so declaring them embeddable gives nothing
+away, while the API's own responses and the private trees keep `same-origin`.
+`test:uploads` still passes (73/73), including the assertion that pins the
+`express.static` call text; the header goes in a middleware beside that call
+rather than in its options object so the guardrail keeps working.
+
+Client side the fix is the *absence* of the attribute, with the reasoning
+written once at `resolveFileUrl` (`src/services/files.service.ts`) rather than
+at 27 call sites — it is exactly the kind of thing that gets re-added by someone
+reading a CORS error and reaching for the CORS-shaped attribute.
+
+Not the `ALLOWED_ORIGINS` ticket below, and not fixed by it: that one is about
+`fetch`, and both WebView origins are in fact already in the dev server's list.
+Images never needed it and now demonstrably do not use it.
+
+### The measurements
+
+Chromium was asked directly rather than reasoned about, in headless Chrome — the
+same engine the WebView runs — with the page origin spoofed to the app's real
+one via `--host-resolver-rules="MAP agency.wi-mall.internal:443 …"`, so CORS
+allowlisting behaves exactly as it does on device.
+
+First, CORP against request mode, everything else held constant (same bytes,
+same origin, `Access-Control-Allow-Origin` echoed so the CORS half is never in
+question):
+
+| image response | plain `<img>` (no-cors) | `crossOrigin="anonymous"` (cors) |
+|---|---|---|
+| `Cross-Origin-Resource-Policy: same-origin` | **BLOCKED** | LOADED |
+| `Cross-Origin-Resource-Policy: cross-origin` | LOADED | LOADED |
+
+That is the whole bug in four cells. The top-left is what every avatar in the
+app was, and what every avatar on the web became the moment the attribute came
+off. The top-right is the exemption `crossOrigin` was silently buying.
+
+Second, the app's exact conditions — origin `https://agency.wi-mall.internal`,
+image at `http://100.124.149.1:8022/api/files/…`, so an https page pulling an
+http subresource, against the real dev backend:
+
+```
+plain-img-no-attribute      => LOADED 1600x1600
+crossOrigin-anonymous       => LOADED 1600x1600
+crossOrigin-use-credentials => LOADED 1600x1600
+fetch-no-cors               => OK type=opaque
+fetch-cors                  => OK status=200
+```
+
+Every variant loads, which reads as "the scheme split is not a factor". **That
+conclusion was wrong**, and it is recorded here because the way it was wrong is
+the lesson: desktop Chrome, run with `--ignore-certificate-errors` so it would
+accept a self-signed origin, does not apply the same mixed-content rule the
+WebView does. A desktop reproduction of a WebView problem is a hypothesis, not
+a measurement. The real device says otherwise, and only the device counts.
+
+### The app half — read off the phone
+
+`adb forward` onto the WebView's DevTools socket, CDP into the live page. The
+console, from the running app:
+
+```
+[security/error] Mixed Content: The page at
+'https://agency.wi-mall.internal/dashboard/shipments' was loaded over HTTPS,
+but requested an insecure image 'http://100.124.149.1:8022/api/files/…jpg'.
+This request has been BLOCKED; the content must be served over HTTPS.
+
+[security/warning] Mixed Content: … requested an insecure resource
+'http://100.124.149.1:8022/api/agency/shipments?page=1&limit=20'.
+This content should also be served over HTTPS.
+```
+
+Blocked for the image, a warning for the API call beside it — same host, same
+scheme, one killed and one waved through. `allowMixedContent` buys the
+*blockable* class (fetch, XHR), which is why the app worked while every picture
+in it was empty. Images are not covered: Chromium auto-upgrades a mixed `<img>`
+to https and blocks it when that fails, which a dev backend with no TLS
+guarantees. No response header can reach this — the request dies in the
+renderer before it is sent, so CORP and CORS never enter into it.
+
+**Fixed at the root** in `capacitor.config.ts`: a LAN-dev build now serves its
+own page over `http` (`androidScheme: lanDev ? 'http' : 'https'`), matching the
+scheme of the dev API, so there is no mixed content to adjudicate. The page
+stops being a secure context, which costs nothing here — every web API that
+would care already routes through `src/platform/` to a native plugin, and web
+push is off on native (P2.6). Release builds are untouched: production is https
+on both sides. The new origin `http://agency.wi-mall.internal` goes in
+`ALLOWED_ORIGINS` beside the other two (vendor-dash will need its own when it
+hits this).
+
+Verified on the device, not inferred: same CDP probe, after the change —
+`plain: LOADED 1600x1600`, and the live `<img>` in the shipments sheet reporting
+`complete: true, naturalWidth: 1920`.
+
+### Two build-script bugs found on the way
+
+Both meant the device was never running the code under test, which is what made
+the diagnosis take three rounds:
+
+1. `cd android && ./gradlew` dies under cmd.exe — npm's shell on Windows — so
+   `build:apk` always exited right after `cap sync`. Web assets refreshed, no
+   APK produced, ever. The phone was running whatever was last assembled by
+   hand in Android Studio.
+2. `cross-env CAP_LAN_DEV=1 vite build … && cap sync android` sets the flag for
+   the **vite build only**: cmd splits the line at `&&`, so `cap sync` ran
+   without it and wrote `androidScheme: https, allowMixedContent: false` into
+   the packaged config no matter what the script claimed to be doing.
+
+`build:apk` is now `npm run sync:android:lan && cd android && .\\gradlew.bat
+assembleDebug`, which reuses the one script that already passes the flag across
+the whole sync — the duplication is what let the two drift apart.
+
 ---
 
 # Phase 6 — iOS
@@ -1519,6 +1662,8 @@ pre-login pick survives the sign-in it was made for. The durable
 | Ticket | Owner | Blocks |
 |---|---|---|
 | Add `https://agency.wi-mall.internal` and `capacitor://agency.wi-mall.internal` to `ALLOWED_ORIGINS` on **wi-mall** | Backend | Phase 2 |
+| Public file responses must carry `Cross-Origin-Resource-Policy: cross-origin` — helmet's default `same-origin` blanks every image on every frontend (P5b.4) | Backend | **done** in dev |
+| `http://agency.wi-mall.internal` on the **dev** server only — the LAN-dev WebView origin (P5b.4). Not needed in production, where both sides are https | Backend | on-device dev |
 | Same two origins on **geo-tracker** (same variable, no separate WebSocket knob) | Backend | Phase 4 |
 | ~~Confirm `POST /api/agency/devices` accepts `platform: 'android' \| 'ios'` (D5)~~ | Backend | **settled** |
 | ~~`google-services.json` from the **messaging** Firebase project~~ | Ops | **delivered** (P4.7) |

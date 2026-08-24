@@ -81,7 +81,7 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
           <div className="flex items-start gap-3">
             <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
               {agent.avatar?.url ? (
-                <img src={agent.avatar.url} crossOrigin="anonymous" alt={agent.name} className="w-full h-full object-cover" />
+                <img src={agent.avatar.url} alt={agent.name} className="w-full h-full object-cover" />
               ) : (
                 <User className="w-7 h-7 text-muted-foreground" />
               )}

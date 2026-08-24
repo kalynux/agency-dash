@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { mobileSearchBarClass } from '@/components/layout/mobileChrome';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
@@ -96,6 +97,17 @@ export interface SearchFilterBarProps {
   className?: string;
   /** Search box `aria-label`, when the placeholder alone reads oddly to a screen reader. */
   searchLabel?: string;
+  /**
+   * Pin the row under the page header on mobile, so search and filters stay one
+   * tap away however far down a list the user has scrolled. On by default —
+   * every listing in the dashboard wants it.
+   *
+   * Pass `false` when the bar is NOT a direct child of a page's scrolling
+   * column: inside a sheet, or above a panel that scrolls on its own. Sticky
+   * resolves against the nearest scroll container, so in those places it would
+   * pin to the wrong thing, or to a box that never scrolls at all.
+   */
+  sticky?: boolean;
 }
 
 export function SearchFilterBar({
@@ -114,6 +126,7 @@ export function SearchFilterBar({
   hint,
   className,
   searchLabel,
+  sticky = true,
 }: SearchFilterBarProps) {
   const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
@@ -195,7 +208,7 @@ export function SearchFilterBar({
   );
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('space-y-2', sticky && mobileSearchBarClass, className)}>
       <div className="flex items-center gap-2">
         {hasSearch ? (
           <div className="relative min-w-0 flex-1">

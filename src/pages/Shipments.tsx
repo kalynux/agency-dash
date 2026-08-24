@@ -10,7 +10,7 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { listSurfaceClass, PageHeader } from '@/components/layout/PageContainer';
 import { shipmentsService } from '@/services/shipments.service';
 import { useShipments } from '@/store/shipments.store';
 import { useAgentsRoster } from '@/store/agents.store';
@@ -20,7 +20,6 @@ import { ShipmentDetailSheet } from '@/components/shipments/ShipmentDetailSheet'
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
 import { getApiErrorMessage } from '@/lib/errors';
-import { cn } from '@/lib/utils';
 import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
 
@@ -191,26 +190,23 @@ export function Shipments() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{t('page.title')}</h1>
-          <p className="text-muted-foreground">{t('page.description')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <AutoAssignToggle />
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={load}
-            disabled={isLoading}
-            aria-label={t('page.refresh')}
-          >
-            <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-            <span className="hidden sm:inline">{t('page.refresh')}</span>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('page.title')}
+        description={t('page.description')}
+        // Not an action but a standing setting, and a switch rather than a
+        // button — so it rides the bar directly instead of going through
+        // `actionItems`, which can only describe things you press.
+        actions={<AutoAssignToggle />}
+        actionItems={[
+          {
+            id: 'refresh',
+            label: t('page.refresh'),
+            icon: RefreshCw,
+            onSelect: load,
+            busy: isLoading,
+          },
+        ]}
+      />
 
       {/* Filters & Search */}
       <SearchFilterBar

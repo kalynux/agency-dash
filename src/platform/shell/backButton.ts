@@ -22,13 +22,31 @@
 import { App } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType, type NavigationType } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { isNative, platform } from '../env';
 
 /** How long the "press again" offer stands. Matches the toast's duration. */
 const EXIT_CONFIRM_WINDOW_MS = 2000;
+
+/**
+ * How long after a handled press another one is ignored.
+ *
+ * Android's back is dispatched to JS TWICE for every press: `AppPlugin.java`
+ * calls `notifyListeners('backButton', …)` and then
+ * `bridge.triggerJSEvent('backbutton', 'document')` — the plugin event and the
+ * Cordova-compatibility DOM event, from the same `handleOnBackPressed`. Only the
+ * first is handled here today, but a single stray listener on the other (a
+ * dependency, a future `document.addEventListener('backbutton')`) would silently
+ * turn every press into two — which reads as back "skipping" a screen, and is
+ * exactly the shape of bug that is impossible to spot from the code.
+ *
+ * Short enough that deliberate repeated presses still step back once each: a
+ * fast human repeat is ~150ms apart at the very quickest, and the two machine
+ * dispatches are in the same frame.
+ */
+const DUPLICATE_PRESS_MS = 120;
 
 /** One id, so holding back down replaces the prompt instead of stacking it. */
 const EXIT_TOAST_ID = 'shell:confirm-exit';
@@ -85,6 +103,71 @@ export function dismissTopLayer(): boolean {
 }
 
 /**
+ * How many screens deep into the app the user is, counted by the router rather
+ * than by the WebView.
+ *
+ * The plugin hands us `canGoBack`, which is `WebView.canGoBack()` — a count of
+ * *document* history entries, including any the app did not put there and any a
+ * redirect swapped out. It answers "is there anything behind this page", which
+ * is not the same question as "is there a screen of ours to go back to", and the
+ * two disagree exactly where it matters: at the root, where the difference is
+ * between offering to exit and quietly navigating somewhere the user never was.
+ *
+ * Counting our own pushes removes the guess. `PUSH` added a screen, `POP`
+ * removed one, and `REPLACE` did neither — a redirect like
+ * `/dashboard/agents → /dashboard/agents/connections` swapped the entry rather
+ * than stacking a second one, and must not be counted as somewhere to return to.
+ *
+ * Keyed on `location.key`, which React Router mints per history entry, so a
+ * re-render that does not move cannot be mistaken for a navigation.
+ */
+function useNavigationDepth(): { current: number } {
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const depth = useRef(0);
+  const lastKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (lastKey.current === location.key) return;
+    // The first commit is the entry the app launched on, not a navigation into
+    // it — seed the key and leave the depth at zero.
+    const isFirst = lastKey.current === null;
+    lastKey.current = location.key;
+    if (isFirst) return;
+
+    depth.current = nextDepth(depth.current, navigationType);
+  }, [location.key, navigationType]);
+
+  return depth;
+}
+
+/**
+ * The three shapes a navigation can take.
+ *
+ * Spelled out rather than reusing react-router's `NavigationType` alone: that is
+ * a string *enum*, and TypeScript will not let a plain `'PUSH'` stand in for one
+ * — which would make every case in the tests a cast. The union accepts both, and
+ * the enum's values are exactly these three strings.
+ */
+export type NavigationKind = 'PUSH' | 'POP' | 'REPLACE';
+
+/**
+ * The depth after one navigation of the given kind. Pure, and exported for the
+ * unit tests — the hook around it is three lines of React over this rule.
+ *
+ * `REPLACE` is the one worth stating: it swapped the current entry rather than
+ * stacking a new one, so it adds nothing to go back to.
+ */
+export function nextDepth(
+  depth: number,
+  navigationType: NavigationKind | NavigationType,
+): number {
+  if (navigationType === 'PUSH') return depth + 1;
+  if (navigationType === 'POP') return Math.max(0, depth - 1);
+  return depth;
+}
+
+/**
  * Wire the hardware back button to the router. Call once, inside the Router.
  *
  * The listener is registered once for the life of the app and reads `navigate`
@@ -95,6 +178,7 @@ export function dismissTopLayer(): boolean {
 export function useHardwareBackButton(): void {
   const navigate = useNavigate();
   const { t } = useTranslation('nav');
+  const depth = useNavigationDepth();
 
   const navigateRef = useRef(navigate);
   const tRef = useRef(t);
@@ -110,6 +194,8 @@ export function useHardwareBackButton(): void {
 
   /** When the exit offer was made. 0 means "not armed". */
   const exitArmedAt = useRef(0);
+  /** When a press was last acted on — see {@link DUPLICATE_PRESS_MS}. */
+  const lastPressAt = useRef(0);
 
   useEffect(() => {
     // `platform`, not just `isNative`: iOS never fires this, and registering
@@ -120,19 +206,24 @@ export function useHardwareBackButton(): void {
     let handle: PluginListenerHandle | null = null;
     let cancelled = false;
 
-    void App.addListener('backButton', ({ canGoBack }) => {
+    void App.addListener('backButton', () => {
+      const pressedAt = Date.now();
+      // One press, one action. See DUPLICATE_PRESS_MS for why a press can
+      // arrive here twice.
+      if (pressedAt - lastPressAt.current < DUPLICATE_PRESS_MS) return;
+      lastPressAt.current = pressedAt;
+
       if (dismissTopLayer()) return;
 
-      if (canGoBack) {
-        // `canGoBack` is the WebView's own answer, and every route change in
-        // this app is a pushState on one document — so it is false exactly when
-        // the user is on the entry they launched into.
+      // `canGoBack` from the event is deliberately ignored — see
+      // `useNavigationDepth` for what it counts and why that is the wrong count.
+      if (depth.current > 0) {
         exitArmedAt.current = 0;
         navigateRef.current(-1);
         return;
       }
 
-      const now = Date.now();
+      const now = pressedAt;
       if (now - exitArmedAt.current < EXIT_CONFIRM_WINDOW_MS) {
         void App.exitApp();
         return;

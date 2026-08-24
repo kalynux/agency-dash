@@ -4,6 +4,7 @@ import { PoliciesSettings } from '@/components/agency-settings/PoliciesSettings'
 import { NotificationSettings } from '@/components/agency-settings/NotificationSettings';
 import { PreferencesSettings } from '@/components/agency-settings/PreferencesSettings';
 import { SubPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['policies', 'notifications', 'preferences'] as const;
 type SettingsTab = typeof VALID_TABS[number];
@@ -16,7 +17,12 @@ export function Settings() {
     : 'policies';
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/settings/${next}`}
+      className="space-y-6 animate-fade-in"
+    >
       <SubPageHeader
         path={`/dashboard/settings/${activeTab}`}
         description={t(`tabs.${activeTab}.description`)}
@@ -26,6 +32,6 @@ export function Settings() {
       {activeTab === 'policies' && <PoliciesSettings />}
       {activeTab === 'notifications' && <NotificationSettings />}
       {activeTab === 'preferences' && <PreferencesSettings />}
-    </div>
+    </TabSwipeArea>
   );
 }

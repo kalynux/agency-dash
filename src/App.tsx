@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -29,6 +29,8 @@ import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { StatusBarScrim } from '@/components/layout/StatusBarScrim';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
+import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
+import { MOBILE_TAB_PATHS } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
 
@@ -138,6 +140,34 @@ function DashboardShell() {
   const { sidebarCollapsed } = useUI();
   const isMobile = useIsMobile();
   const keyboardOpen = useKeyboardOpen();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  /**
+   * Swipe left/right between the bottom bar's sections.
+   *
+   * Only from a section itself: swiping on a screen opened from "More" has no
+   * obvious neighbour, and guessing one would move the user somewhere they
+   * cannot see the way back from. Returning `false` there also lets the gesture
+   * stay unconsumed, which is what a page's own tab swipe relies on.
+   *
+   * `navigate` (a push, not a replace) so the gesture and a tap on the same tab
+   * leave identical history behind them.
+   */
+  const goSection = (delta: number): boolean => {
+    const index = MOBILE_TAB_PATHS.indexOf(pathname as (typeof MOBILE_TAB_PATHS)[number]);
+    if (index < 0) return false;
+    const next = MOBILE_TAB_PATHS[index + delta];
+    if (!next) return false;
+    navigate(next);
+    return true;
+  };
+
+  const sectionSwipe = useSwipeNavigation({
+    enabled: isMobile,
+    onNext: () => goSection(1),
+    onPrevious: () => goSection(-1),
+  });
 
   return (
     <ShipmentsProvider>
@@ -161,6 +191,7 @@ function DashboardShell() {
             >
               {!isMobile && <Header />}
               <main
+                {...sectionSwipe}
                 className={cn(
                   CONTENT_FRAME,
                   'py-6 lg:py-8',

@@ -5,6 +5,11 @@ import { InfoHint } from '@/components/common/InfoHint';
 import { findNavTrail } from '@/config/navigation';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from './NotificationBell';
+import { PageActions, type PageAction } from './PageActions';
+import { mobileAppBarClass, mobileAppBarTitleRowClass } from './mobileChrome';
+
+export type { PageAction } from './PageActions';
 
 /**
  * Page-level layout primitives shared by every dashboard route.
@@ -32,6 +37,10 @@ interface PageHeaderProps {
    * the title ("Account › Profile"). Deliberately not a link: it names where
    * you are, and the parent has no page of its own to go back to — every one of
    * them redirects straight to its first submenu.
+   *
+   * Desktop only. On a phone the crumb spends a third of the title row naming
+   * the menu the user tapped one screen ago, and the title it pushes aside is
+   * the half that says where they actually are.
    */
   parent?: string;
   description?: string;
@@ -41,63 +50,111 @@ interface PageHeaderProps {
    * two-line paragraph costs more than it explains. See `SectionHeading`.
    */
   shortDescription?: string;
-  /** Right-aligned actions (buttons, filters). Stack below the title on mobile. */
+  /**
+   * Free-form inline controls — a live status pill, a toggle, anything that is
+   * not a button with a label. Always rendered on the bar, at every width.
+   *
+   * For ordinary buttons prefer {@link PageHeaderProps.actionItems}: only the
+   * described form can be folded into the mobile overflow sheet with its label
+   * intact.
+   */
   actions?: ReactNode;
+  /**
+   * The page's actions, described rather than rendered, so the header can lay
+   * them out for the viewport it is on — labelled buttons on desktop, icons and
+   * an overflow sheet on a phone. See {@link PageAction}.
+   */
+  actionItems?: PageAction[];
+  /** Applied to the title row (the pinned band on mobile). */
   className?: string;
 }
 
+/**
+ * The page's title bar.
+ *
+ * On desktop this is an ordinary heading block. On a phone it is the app bar:
+ * pinned under the status bar, one row of title-and-actions at a fixed height,
+ * the notification bell always in the top-right corner, and a description
+ * clamped to a single line beneath. See `./mobileChrome` for the pinning
+ * contract it shares with `SearchFilterBar` — in particular why the height of
+ * the title row is fixed and why the description sits outside it.
+ */
 export function PageHeader({
   title,
   parent,
   description,
   shortDescription,
   actions,
+  actionItems,
   className,
 }: PageHeaderProps) {
   const { t } = useTranslation('common');
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between',
-        className,
-      )}
-    >
-      <div className="space-y-1">
+    <div className={cn(mobileAppBarClass, className)}>
+      <div
+        className={cn(
+          'flex items-center justify-between gap-2 md:gap-4',
+          mobileAppBarTitleRowClass,
+        )}
+      >
         <h1
           className={cn(
-            'flex flex-wrap items-center gap-x-1.5 text-2xl font-bold tracking-tight',
+            'flex min-w-0 flex-1 items-center gap-x-1.5 text-lg font-bold tracking-tight md:text-2xl',
             // A crumb is two names on one line, so it skips the desktop size
             // step: "Cash Management › Discrepancies" at 3xl wraps on anything
             // narrower than a wide laptop.
-            !parent && 'sm:text-3xl',
+            !parent && 'lg:text-3xl',
           )}
         >
           {parent && (
-            <>
-              <span className="text-muted-foreground">{parent}</span>
+            <span className="flex min-w-0 items-center gap-x-1.5 max-md:hidden">
+              <span className="truncate text-muted-foreground">{parent}</span>
               <ChevronRight
                 aria-hidden="true"
                 className="h-5 w-5 shrink-0 text-muted-foreground/60 rtl:-scale-x-100"
               />
-            </>
+            </span>
           )}
-          {title}
+          {/* `truncate`, not wrap: the row's height is the offset the search bar
+              pins to, so a title long enough to wrap would open a seam between
+              the two pinned bands. */}
+          <span className="truncate">{title}</span>
           {description && shortDescription && (
-            <InfoHint className="md:hidden" label={t('form.aboutSection', { title })}>
+            <InfoHint className="shrink-0 md:hidden" label={t('form.aboutSection', { title })}>
               {description}
             </InfoHint>
           )}
         </h1>
-        {description && (
-          <p className={cn('max-w-2xl text-muted-foreground', shortDescription && 'max-md:hidden')}>
-            {description}
-          </p>
-        )}
-        {shortDescription && (
-          <p className="text-muted-foreground md:hidden">{shortDescription}</p>
-        )}
+
+        <div className="flex flex-shrink-0 items-center gap-1 md:gap-2">
+          {actions}
+          {actionItems && actionItems.length > 0 && <PageActions actions={actionItems} />}
+          {/* Last, so it is the constant in the corner across every screen —
+              the one control whose position the user can learn. Desktop has its
+              own in `Header`. */}
+          <NotificationBell className="md:hidden" />
+        </div>
       </div>
-      {actions && <div className="flex flex-shrink-0 items-center gap-2">{actions}</div>}
+
+      {/* One line, everywhere. On a phone the ⓘ above carries the full text
+          when a `shortDescription` was supplied; on desktop the title attribute
+          does, for the rare description wider than the column. */}
+      {description && (
+        <p
+          title={description}
+          className={cn(
+            'mt-1.5 line-clamp-1 max-w-2xl text-sm text-muted-foreground md:text-base',
+            shortDescription && 'max-md:hidden',
+          )}
+        >
+          {description}
+        </p>
+      )}
+      {shortDescription && (
+        <p className="mt-1.5 line-clamp-1 text-sm text-muted-foreground md:hidden">
+          {shortDescription}
+        </p>
+      )}
     </div>
   );
 }
@@ -109,8 +166,12 @@ export function PageHeader({
  * but the button that reloads a tab belongs to the tab — it closes over that
  * tab's own `load` and its in-flight state. Rather than lift that state up, the
  * page passes down a renderer and the tab decides what goes in the action slot.
+ *
+ * Takes {@link PageAction}s rather than JSX so a tab's actions get the same
+ * mobile treatment as a page's — an icon on the bar, or a labelled row in the
+ * overflow sheet — instead of each tab having to decide for itself.
  */
-export type RenderPageHeader = (actions?: ReactNode) => ReactNode;
+export type RenderPageHeader = (actions?: PageAction[]) => ReactNode;
 
 interface SubPageHeaderProps extends Omit<PageHeaderProps, 'title' | 'parent'> {
   /**

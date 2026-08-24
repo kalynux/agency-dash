@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-import { AuthError, AuthShell } from '@/components/auth/AuthShell';
+import { AuthError, AuthLink, AuthShell } from '@/components/auth/AuthShell';
+import { FieldLabel, FieldMessage, PasswordField } from '@/components/auth/AuthFields';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { authService } from '@/services/auth.service';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -27,6 +27,10 @@ import {
  * subsystem — logistics, payout, branding, policies — and none of that is
  * duplicated here.
  *
+ * Field order is the person, then the business, then how to reach them, and it
+ * matches Wi-Vendor's sign-up field for field. Someone who runs both apps sets
+ * up the second one from muscle memory.
+ *
  * Phone and WhatsApp **verification is deliberately absent**. It already exists
  * in-app under agency settings (`WhatsappLinkCard`, `ChannelSetupDialog`), and
  * putting a verification wall between "create account" and "start onboarding"
@@ -37,7 +41,6 @@ export function Register() {
   const navigate = useNavigate();
   const { session, adoptSession } = useOnboarding();
   const [apiError, setApiError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
 
   // Rebuilt on a language switch so field errors follow the UI.
   const schema = useMemo(() => buildRegisterSchema(t), [t]);
@@ -48,12 +51,21 @@ export function Register() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { phone: '', name: '', agency_name: '', email: '', password: '' },
+    defaultValues: {
+      name: '',
+      agency_name: '',
+      phone: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
   const onSubmit = async (values: RegisterFormValues) => {
     setApiError(null);
     try {
+      // Built field by field rather than spread: `confirmPassword` is a form
+      // concern and has no business on the wire.
       const res = await authService.register({
         phone: values.phone,
         name: values.name,
@@ -89,57 +101,61 @@ export function Register() {
   return (
     <AuthShell
       title={t('register.title')}
+      subtitle={t('register.subtitle')}
       footer={
-        <span className="text-muted-foreground">
-          {t('register.haveAccount')}{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            {t('register.signIn')}
-          </Link>
-        </span>
+        <>
+          {t('register.haveAccount')} <AuthLink to="/login">{t('register.signIn')}</AuthLink>
+        </>
       }
     >
       <AuthError message={apiError} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {/* The person. Lands on the role profile as display_name. */}
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="name" required>
+            {t('register.name')}
+          </FieldLabel>
+          <Input
+            id="name"
+            autoComplete="name"
+            placeholder={t('register.namePlaceholder')}
+            className="h-11"
+            autoFocus
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'name-message' : undefined}
+            {...register('name')}
+          />
+          <FieldMessage id="name-message" error={errors.name?.message} />
+        </div>
+
         {/* The business. Seeds Magazin.name on a separate document — which is
             why it is not simply the account's display name. */}
-        <div className="space-y-2">
-          <Label htmlFor="agency_name">{t('register.agencyName')}</Label>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="agency_name" required>
+            {t('register.agencyName')}
+          </FieldLabel>
           <Input
             id="agency_name"
             autoComplete="organization"
             maxLength={AGENCY_NAME_MAX}
-            autoFocus
+            placeholder={t('register.agencyNamePlaceholder')}
+            className="h-11"
             aria-invalid={Boolean(errors.agency_name)}
-            aria-describedby={errors.agency_name ? 'agency_name-error' : undefined}
+            aria-describedby="agency_name-message"
             {...register('agency_name')}
           />
-          {errors.agency_name && (
-            <p id="agency_name-error" role="alert" className="text-xs text-destructive">
-              {errors.agency_name.message}
-            </p>
-          )}
-        </div>
-
-        {/* The person. Lands on the role profile as display_name. */}
-        <div className="space-y-2">
-          <Label htmlFor="name">{t('register.name')}</Label>
-          <Input
-            id="name"
-            autoComplete="name"
-            aria-invalid={Boolean(errors.name)}
-            aria-describedby={errors.name ? 'name-error' : undefined}
-            {...register('name')}
+          <FieldMessage
+            id="agency_name-message"
+            error={errors.agency_name?.message}
+            hint={t('register.agencyNameHint')}
           />
-          {errors.name && (
-            <p id="name-error" role="alert" className="text-xs text-destructive">
-              {errors.name.message}
-            </p>
-          )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="phone">{t('register.phone')}</Label>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="phone" required>
+            {t('register.phone')}
+          </FieldLabel>
           <Controller
             control={control}
             name="phone"
@@ -149,87 +165,78 @@ export function Register() {
               // before it is ever sent.
               <PhoneInput
                 id="phone"
+                className="h-11"
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 hasError={Boolean(errors.phone)}
-                describedBy={errors.phone ? 'phone-error' : 'phone-hint'}
+                describedBy="phone-message"
               />
             )}
           />
-          {errors.phone ? (
-            <p id="phone-error" role="alert" className="text-xs text-destructive">
-              {errors.phone.message}
-            </p>
-          ) : (
-            <p id="phone-hint" className="text-xs text-muted-foreground">
-              {t('register.phoneHint')}
-            </p>
-          )}
+          <FieldMessage
+            id="phone-message"
+            error={errors.phone?.message}
+            hint={t('register.phoneHint')}
+          />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">
-            {t('register.email')}{' '}
-            <span className="font-normal text-muted-foreground">{t('register.optional')}</span>
-          </Label>
+        {/* Optional, and said so by the hint rather than by a marker on the
+            label: every other field here carries a required asterisk, so the
+            one without it is already the odd one out. The hint spends its line
+            on *why* you would fill it in instead. */}
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="email">{t('register.email')}</FieldLabel>
           <Input
             id="email"
             type="email"
             inputMode="email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder={t('register.emailPlaceholder')}
+            className="h-11"
             aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? 'email-error' : undefined}
+            aria-describedby="email-message"
             {...register('email')}
           />
-          {errors.email && (
-            <p id="email-error" role="alert" className="text-xs text-destructive">
-              {errors.email.message}
-            </p>
-          )}
+          <FieldMessage
+            id="email-message"
+            error={errors.email?.message}
+            hint={t('register.emailHint')}
+          />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">{t('register.password')}</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              className="pe-10"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : 'password-hint'}
-              {...register('password')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 end-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
-              aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-              aria-pressed={showPassword}
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </button>
-          </div>
-          {errors.password ? (
-            <p id="password-error" role="alert" className="text-xs text-destructive">
-              {errors.password.message}
-            </p>
-          ) : (
-            <p id="password-hint" className="text-xs text-muted-foreground">
-              {t('register.passwordHint')}
-            </p>
-          )}
-        </div>
+        <PasswordField
+          id="password"
+          label={t('register.password')}
+          hint={t('register.passwordHint')}
+          autoComplete="new-password"
+          error={errors.password?.message}
+          registration={register('password')}
+        />
+
+        {/* A typo in a password nobody can see is only discovered at the next
+            sign-in, by which point the account exists and the only way back in
+            is a reset. Cheaper to ask twice. */}
+        <PasswordField
+          id="confirmPassword"
+          label={t('register.confirmPassword')}
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          registration={register('confirmPassword')}
+        />
 
         {/* Disabled in flight: registration shares the 20/min/IP credential
             bucket, and a double-submit spends two of them — or races two
             accounts onto one phone number. */}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {t('register.submit')}
         </Button>
+
+        <p className="text-center text-xs text-muted-foreground">{t('register.terms')}</p>
       </form>
     </AuthShell>
   );

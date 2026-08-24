@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, MailCheck } from 'lucide-react';
 
-import { AuthError, AuthShell } from '@/components/auth/AuthShell';
+import { AuthError, AuthLink, AuthShell } from '@/components/auth/AuthShell';
+import { FieldLabel, FieldMessage } from '@/components/auth/AuthFields';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { authService } from '@/services/auth.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import {
@@ -62,11 +61,7 @@ export function ForgotPassword() {
     }
   };
 
-  const backToSignIn = (
-    <Link to="/login" className="font-medium text-primary hover:underline">
-      {t('forgot.backToSignIn')}
-    </Link>
-  );
+  const backToSignIn = <AuthLink to="/login">{t('forgot.backToSignIn')}</AuthLink>;
 
   if (sent) {
     return (
@@ -87,31 +82,30 @@ export function ForgotPassword() {
       <AuthError message={apiError} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <div className="space-y-2">
-          <Label htmlFor="identifier">{t('forgot.identifier')}</Label>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="identifier" required>
+            {t('forgot.identifier')}
+          </FieldLabel>
           {/* Plain text, not `type="email"`: a phone number is equally valid
               here and the browser would mark one of them invalid. */}
           <Input
             id="identifier"
             type="text"
             autoComplete="username"
+            className="h-11"
             autoFocus
             aria-invalid={Boolean(errors.identifier)}
-            aria-describedby={errors.identifier ? 'identifier-error' : 'identifier-hint'}
+            aria-describedby="identifier-message"
             {...register('identifier')}
           />
-          {errors.identifier ? (
-            <p id="identifier-error" role="alert" className="text-xs text-destructive">
-              {errors.identifier.message}
-            </p>
-          ) : (
-            <p id="identifier-hint" className="text-xs text-muted-foreground">
-              {t('forgot.identifierHint')}
-            </p>
-          )}
+          <FieldMessage
+            id="identifier-message"
+            error={errors.identifier?.message}
+            hint={t('forgot.identifierHint')}
+          />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {t('forgot.submit')}
         </Button>

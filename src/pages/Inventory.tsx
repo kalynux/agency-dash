@@ -1,9 +1,8 @@
-import type { ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StockTab } from '@/components/inventory/StockTab';
 import { StockRequestsTab } from '@/components/inventory/requests/StockRequestsTab';
-import { SubPageHeader } from '@/components/layout/PageContainer';
+import { SubPageHeader, type RenderPageHeader } from '@/components/layout/PageContainer';
 
 const VALID_TABS = ['stock', 'requests'] as const;
 type InventoryTab = (typeof VALID_TABS)[number];
@@ -33,16 +32,14 @@ export function Inventory() {
   /**
    * Rendered BY the tab, not beside it: both tabs put their reload button in the
    * header's action slot, and that button belongs to the tab that owns the
-   * request it re-runs. `sm:items-start` keeps it level with the title rather
-   * than with the bottom of the description.
+   * request it re-runs.
    */
-  const renderHeader = (actions?: ReactNode) => (
+  const renderHeader: RenderPageHeader = (actions) => (
     <SubPageHeader
       path={`/dashboard/inventory/${activeTab}`}
       description={t(`tabs.${activeTab}.description`)}
       shortDescription={t(`tabs.${activeTab}.short`)}
-      actions={actions}
-      className="sm:items-start"
+      actionItems={actions}
     />
   );
 

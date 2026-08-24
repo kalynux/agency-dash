@@ -60,6 +60,10 @@ export function TrackingPanel({
     <div className={cn('flex min-h-0 flex-col', className)}>
       <div className="sticky top-0 z-10 bg-background pb-2">
         <SearchFilterBar
+          // The panel pins its own header (the wrapper above) and scrolls
+          // independently of the page, so the page-level pinning would resolve
+          // against the wrong container.
+          sticky={false}
           value={search}
           onChange={onSearchChange}
           placeholder={t('filters.searchPlaceholder')}

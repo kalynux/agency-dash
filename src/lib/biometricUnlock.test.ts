@@ -20,34 +20,55 @@ import type { BiometryInfo, UnlockOutcome } from '@/platform/biometrics';
 // `vi.hoisted` because `vi.mock` factories are lifted above every other
 // statement in the file — a plain `const` above them is still in its temporal
 // dead zone by the time a factory runs.
-const { getBiometryInfo, promptBiometric, canAttemptSession, release, suspendAppStateWatch } =
-  vi.hoisted(() => {
-    const releaseFn = vi.fn();
-    return {
-      getBiometryInfo: vi.fn<() => Promise<BiometryInfo>>(),
-      promptBiometric: vi.fn<() => Promise<UnlockOutcome>>(),
-      canAttemptSession: vi.fn<() => Promise<boolean>>(),
-      release: releaseFn,
-      suspendAppStateWatch: vi.fn(() => releaseFn),
-    };
-  });
+const {
+  getBiometryInfo,
+  promptBiometric,
+  canAttemptSession,
+  release,
+  suspendAppStateWatch,
+  readBiometricCredential,
+  writeBiometricCredential,
+  clearBiometricCredential,
+} = vi.hoisted(() => {
+  const releaseFn = vi.fn();
+  return {
+    getBiometryInfo: vi.fn<() => Promise<BiometryInfo>>(),
+    promptBiometric: vi.fn<() => Promise<UnlockOutcome>>(),
+    canAttemptSession: vi.fn<() => Promise<boolean>>(),
+    release: releaseFn,
+    suspendAppStateWatch: vi.fn(() => releaseFn),
+    readBiometricCredential: vi.fn<() => Promise<{ identifier: string; password: string } | null>>(),
+    writeBiometricCredential: vi.fn<() => Promise<boolean>>(),
+    clearBiometricCredential: vi.fn<() => Promise<void>>(),
+  };
+});
 
 vi.mock('@/platform/env', () => ({ isNative: true, platform: 'android', useBearerAuth: true }));
 vi.mock('@/platform/biometrics', () => ({ getBiometryInfo, promptBiometric }));
 vi.mock('@/platform/shell/appState', () => ({ suspendAppStateWatch }));
 vi.mock('@/platform/auth/strategy', () => ({ authStrategy: { canAttemptSession } }));
+vi.mock('@/platform/auth/biometricLogin', () => ({
+  readBiometricCredential,
+  writeBiometricCredential,
+  clearBiometricCredential,
+}));
 vi.mock('@/i18n', () => ({ default: { t: (key: string) => key } }));
 
 import {
+  biometricSignInStatus,
   canOfferBiometricSignIn,
   disableBiometricUnlock,
+  enableBiometricSignIn,
   enableBiometricUnlock,
   isBiometricUnlockEnabled,
   passesLaunchGate,
   relock,
   resetBiometricUnlockForTests,
+  unlockForSignIn,
   unlockWithBiometrics,
 } from './biometricUnlock';
+
+const CREDENTIAL = { identifier: '+237671234567', password: 'hunter2' };
 
 const AVAILABLE: BiometryInfo = {
   available: true,
@@ -81,6 +102,10 @@ beforeEach(() => {
   canAttemptSession.mockReset();
   suspendAppStateWatch.mockClear();
   release.mockClear();
+  // The default world: nothing saved for the fingerprint button.
+  readBiometricCredential.mockReset().mockResolvedValue(null);
+  writeBiometricCredential.mockReset().mockResolvedValue(true);
+  clearBiometricCredential.mockReset().mockResolvedValue(undefined);
 });
 
 describe('enableBiometricUnlock', () => {
@@ -130,13 +155,16 @@ describe('enableBiometricUnlock', () => {
 });
 
 describe('disableBiometricUnlock', () => {
-  it('clears the preference', async () => {
+  it('clears the preference AND the stored credential', async () => {
     await turnOn();
     expect(isBiometricUnlockEnabled()).toBe(true);
 
-    disableBiometricUnlock();
+    await disableBiometricUnlock();
 
+    // A switch labelled "biometric unlock" that left a password behind in the
+    // Keystore would be lying about what it did.
     expect(isBiometricUnlockEnabled()).toBe(false);
+    expect(clearBiometricCredential).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -221,37 +249,153 @@ describe('unlockWithBiometrics', () => {
   });
 });
 
-describe('canOfferBiometricSignIn', () => {
-  it('is false when the user never turned the feature on', async () => {
+describe('biometricSignInStatus', () => {
+  it('offers nothing at all when the device cannot ask', async () => {
+    getBiometryInfo.mockResolvedValue(UNAVAILABLE);
     canAttemptSession.mockResolvedValue(true);
-    getBiometryInfo.mockResolvedValue(AVAILABLE);
 
-    await expect(canOfferBiometricSignIn()).resolves.toBe(false);
+    // A button leading to "biometrics unavailable" is worse than no button, and
+    // a checkbox promising a way in that will not work is worse still.
+    await expect(biometricSignInStatus()).resolves.toMatchObject({
+      offer: false,
+      canOptIn: false,
+    });
   });
 
-  it('is false after a sign-out, when there is no stored session left to unlock', async () => {
-    await turnOn();
+  it('offers the OPT-IN on a fresh install: biometry works, nothing saved yet', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
     canAttemptSession.mockResolvedValue(false);
-    getBiometryInfo.mockResolvedValue(AVAILABLE);
 
-    // The whole contract of "signing out means the credential leaves the
-    // device": the preference survives, the button does not.
-    await expect(canOfferBiometricSignIn()).resolves.toBe(false);
+    await expect(biometricSignInStatus()).resolves.toMatchObject({
+      offer: false,
+      canOptIn: true,
+      identifier: null,
+    });
   });
 
-  it('is false when the device can no longer ask', async () => {
+  it('offers the BUTTON once a credential is stored, and names the account', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    canAttemptSession.mockResolvedValue(false);
+    readBiometricCredential.mockResolvedValue(CREDENTIAL);
+
+    // No stored session — this is the state after an explicit sign-out, and it
+    // is exactly the case the credential exists to cover.
+    await expect(biometricSignInStatus()).resolves.toMatchObject({
+      offer: true,
+      canOptIn: false,
+      identifier: CREDENTIAL.identifier,
+    });
+  });
+
+  it('still offers the button for a gated session with no credential saved', async () => {
     await turnOn();
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
     canAttemptSession.mockResolvedValue(true);
+
+    // The launch gate bounced someone off tokens that are sitting right there.
+    // The identifier is unknown on this path — a token pair does not say whose
+    // it is, and guessing on a shared phone is where that would be worst.
+    await expect(biometricSignInStatus()).resolves.toMatchObject({
+      offer: true,
+      canOptIn: false,
+      identifier: null,
+    });
+  });
+
+  it('falls back to the opt-in once the gated session is gone', async () => {
+    await turnOn();
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    canAttemptSession.mockResolvedValue(false);
+
+    await expect(biometricSignInStatus()).resolves.toMatchObject({
+      offer: false,
+      canOptIn: true,
+    });
+    await expect(canOfferBiometricSignIn()).resolves.toBe(false);
+  });
+});
+
+describe('enableBiometricSignIn', () => {
+  it('stores the credential once the prompt has succeeded', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    promptBiometric.mockResolvedValue('ok');
+
+    await expect(enableBiometricSignIn(CREDENTIAL)).resolves.toBe('ok');
+    expect(writeBiometricCredential).toHaveBeenCalledWith(CREDENTIAL);
+  });
+
+  it('does NOT arm the launch gate — that is a different promise', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    promptBiometric.mockResolvedValue('ok');
+
+    await enableBiometricSignIn(CREDENTIAL);
+
+    // Ticking "next time, sign in with your fingerprint" must not turn the app
+    // into one that raises an OS dialog on every cold start. That is the lock,
+    // it is asked for in Settings, and someone who got it here would never even
+    // reach the sign-in screen the checkbox was talking about.
+    expect(isBiometricUnlockEnabled()).toBe(false);
+  });
+
+  it('stores nothing when the user backs out of the prompt', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    promptBiometric.mockResolvedValue('cancelled');
+
+    await expect(enableBiometricSignIn(CREDENTIAL)).resolves.toBe('cancelled');
+    expect(writeBiometricCredential).not.toHaveBeenCalled();
+    expect(isBiometricUnlockEnabled()).toBe(false);
+  });
+
+  it('does not claim success when the write itself fails', async () => {
+    getBiometryInfo.mockResolvedValue(AVAILABLE);
+    promptBiometric.mockResolvedValue('ok');
+    writeBiometricCredential.mockResolvedValue(false);
+
+    // Reported rather than swallowed: someone asked for a switch to be flipped
+    // and it was not, so they need to know it is still off.
+    await expect(enableBiometricSignIn(CREDENTIAL)).resolves.toBe('failed');
+    expect(isBiometricUnlockEnabled()).toBe(false);
+  });
+
+  it('does not prompt at all when the device has no biometry', async () => {
     getBiometryInfo.mockResolvedValue(UNAVAILABLE);
 
-    await expect(canOfferBiometricSignIn()).resolves.toBe(false);
+    await expect(enableBiometricSignIn(CREDENTIAL)).resolves.toBe('unavailable');
+    expect(promptBiometric).not.toHaveBeenCalled();
+  });
+});
+
+describe('unlockForSignIn', () => {
+  it('hands back the stored credential after a successful prompt', async () => {
+    promptBiometric.mockResolvedValue('ok');
+    readBiometricCredential.mockResolvedValue(CREDENTIAL);
+
+    await expect(unlockForSignIn()).resolves.toEqual({ ok: true, credential: CREDENTIAL });
   });
 
-  it('is true with a stored session, an enrolled finger and the preference on', async () => {
-    await turnOn();
-    canAttemptSession.mockResolvedValue(true);
-    getBiometryInfo.mockResolvedValue(AVAILABLE);
+  it('hands back a null credential when only a stored session is behind the gate', async () => {
+    promptBiometric.mockResolvedValue('ok');
 
-    await expect(canOfferBiometricSignIn()).resolves.toBe(true);
+    // The caller reads this as "restore the session you already have" rather
+    // than "sign in from scratch".
+    await expect(unlockForSignIn()).resolves.toEqual({ ok: true, credential: null });
+  });
+
+  it('reports a refusal without touching the credential', async () => {
+    promptBiometric.mockResolvedValue('failed');
+    readBiometricCredential.mockResolvedValue(CREDENTIAL);
+
+    await expect(unlockForSignIn()).resolves.toEqual({ ok: false, outcome: 'failed' });
+    expect(clearBiometricCredential).not.toHaveBeenCalled();
+  });
+
+  it('throws the credential away when biometry has gone from the device', async () => {
+    promptBiometric.mockResolvedValue('unavailable');
+    readBiometricCredential.mockResolvedValue(CREDENTIAL);
+
+    // It can never be released again, so it is dead weight rather than a secret
+    // worth keeping around.
+    await expect(unlockForSignIn()).resolves.toEqual({ ok: false, outcome: 'unavailable' });
+    expect(clearBiometricCredential).toHaveBeenCalledTimes(1);
   });
 });

@@ -31,7 +31,6 @@ import { StockRequestSheet } from '@/components/inventory/requests/StockRequestS
 import { stockRequestsService } from '@/services/stock-requests.service';
 import { useStockRequests } from '@/store/stockRequests.store';
 import { getApiErrorMessage } from '@/lib/errors';
-import { cn } from '@/lib/utils';
 import type {
   ListStockRequestsParams,
   StockRequest,
@@ -138,18 +137,9 @@ export function StockRequestsTab({ renderHeader }: { renderHeader: RenderPageHea
 
   return (
     <div className="space-y-6">
-      {renderHeader(
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={load}
-          disabled={isLoading}
-          aria-label={t('page.refresh')}
-        >
-          <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          <span className="hidden sm:inline">{t('page.refresh')}</span>
-        </Button>,
-      )}
+      {renderHeader([
+        { id: 'refresh', label: t('page.refresh'), icon: RefreshCw, onSelect: load, busy: isLoading },
+      ])}
 
       <SearchFilterBar
         activeCount={activeFilterCount}

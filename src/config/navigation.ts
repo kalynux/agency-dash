@@ -160,6 +160,24 @@ export const FOOTER_NAV: NavItem[] = [
 
 export const ALL_NAV: NavItem[] = [...PRIMARY_NAV, ...FOOTER_NAV];
 
+/**
+ * The bottom tab bar's destinations, left to right.
+ *
+ * The bar itself is hand-built in `MobileTabBar` because each button carries its
+ * own icon, badge and label; this is the one thing about it that a second piece
+ * of code needs — the ORDER — and it is what swiping between sections steps
+ * through. Keep it in step with the buttons: a swipe that lands somewhere the
+ * bar does not highlight is worse than no swipe at all.
+ *
+ * The FAB is absent on purpose. It opens a sheet of quick actions rather than
+ * going anywhere, so there is nothing to swipe to.
+ */
+export const MOBILE_TAB_PATHS = [
+  '/dashboard',
+  '/dashboard/shipments',
+  '/dashboard/account/payout',
+] as const;
+
 // ─── Route → menu lookup ──────────────────────────────────────────────────────
 
 export interface NavTrail {

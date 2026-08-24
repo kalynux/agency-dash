@@ -22,14 +22,32 @@
  *    background, so an unlocked phone left on a table does not stay an open
  *    dashboard.
  *
+ * ## Two things can sit behind the prompt
+ *
+ * 1. **The stored session**, when the launch gate bounced someone off a token
+ *    pair that is still sitting in the Keystore. Unlocking restores it.
+ * 2. **A stored credential** — the identifier and password, kept in secure
+ *    storage by `platform/auth/biometricLogin.ts` once the user ticks the opt-in
+ *    on the sign-in screen. This is the one that survives `logout()` and a
+ *    session expiring, and it is why "sign in with your fingerprint" is a *sign
+ *    in* rather than a lock screen. Read that file's header for what is stored
+ *    and the trade-off it carries.
+ *
+ * The two are opted into separately and neither implies the other. The launch
+ * gate is a *lock* — an OS dialog on every cold start — and it is asked for in
+ * Settings. The credential is a *sign-in*, asked for on the sign-in screen. A
+ * user can have either, both, or neither.
+ *
+ * The credential wins when both are present: it works in strictly more
+ * situations, and it is the one that knows *whose* account the thumb opens.
+ *
  * ## Sign-out
  *
- * `authService.logout()` destroys the tokens, and this feature deliberately does
- * not keep a copy: after an explicit sign-out there is nothing for a fingerprint
- * to unlock and the next sign-in is a password one. That is the point of the
- * button — "sign out" has to mean the credential is off the device, or it is a
- * promise the app is not keeping. The *preference* survives, so biometric
- * unlock re-arms by itself on the next successful sign-in.
+ * `authService.logout()` destroys the tokens. It does **not** destroy the
+ * credential — signing out and back in with a thumb is the entire point of the
+ * feature. The explicit off switch is Settings → Security, which forgets the
+ * credential and the preference together; that is the one place "make this
+ * device forget me" lives, and it is where someone would look for it.
  *
  * ## Failing open
  *
@@ -48,8 +66,14 @@ import {
   type BiometryKind,
   type UnlockOutcome,
 } from '@/platform/biometrics';
+import {
+  clearBiometricCredential,
+  readBiometricCredential,
+  writeBiometricCredential,
+} from '@/platform/auth/biometricLogin';
 import { isNative } from '@/platform/env';
 import { suspendAppStateWatch } from '@/platform/shell/appState';
+import type { AgencyLoginInput } from '@/services/auth.service';
 
 /**
  * Where the preference lives.
@@ -154,10 +178,30 @@ export async function enableBiometricUnlock(): Promise<UnlockOutcome> {
   return outcome;
 }
 
-/** Turn the feature off. No prompt — locking someone out is not a risk here. */
-export function disableBiometricUnlock(): void {
+/**
+ * Turn the feature off, everywhere.
+ *
+ * No prompt — locking someone out is not a risk here. The stored credential goes
+ * with the preference on purpose: a switch labelled "biometric unlock" that left
+ * a password behind in the Keystore would be lying about what it did.
+ */
+export async function disableBiometricUnlock(): Promise<void> {
   writePreference(false);
   unlockedThisRun = false;
+  await clearBiometricCredential();
+}
+
+/**
+ * Forget only the stored credential, leaving the preference alone.
+ *
+ * For the case the sign-in screen owns: a *different* account just signed in on
+ * this phone. The biometric gate proves "someone enrolled on this device", not
+ * "the person who saved this credential" — so on a handset with more than one
+ * finger enrolled, leaving the previous user's credential behind would let
+ * whoever holds the phone next open an account that is not theirs.
+ */
+export async function forgetBiometricSignIn(): Promise<void> {
+  await clearBiometricCredential();
 }
 
 /**
@@ -185,18 +229,127 @@ export async function passesLaunchGate(): Promise<boolean> {
   return (await unlockWithBiometrics()) === 'ok';
 }
 
+/** Everything the sign-in screen needs in order to decide what to render. */
+export interface BiometricSignInStatus {
+  /** Offer the unlock button: the device can ask, and there is something to open. */
+  offer: boolean;
+  /** Offer the opt-in: the device can ask, but nothing is stored to open yet. */
+  canOptIn: boolean;
+  /** Drives whether the copy says "fingerprint" or "face unlock". */
+  kind: BiometryKind;
+  /**
+   * Whose account the thumb opens — shown under the button, because it matters
+   * on a phone more than one person uses. `null` on the stored-session path,
+   * which knows a token pair exists but not who it belongs to.
+   */
+  identifier: string | null;
+}
+
 /**
- * Whether the sign-in screen should offer a biometric button.
+ * Resolve that state in one pass.
  *
- * All three conditions matter: the user asked for it, there is actually a
- * stored session for it to unlock (after a sign-out there is not), and the
- * device can still ask. A button that leads to "biometrics unavailable" is
- * worse than no button.
+ * Order matters. Biometry first, because a device that cannot ask should offer
+ * neither control — a button leading to "biometrics unavailable" is worse than
+ * no button, and a checkbox promising a way in that will not work is worse
+ * still. Then the credential, which works in strictly more situations than the
+ * stored session and is the only one that can name the account.
  */
+export async function biometricSignInStatus(): Promise<BiometricSignInStatus> {
+  const info = await getBiometryInfo();
+  if (!info.available) return { offer: false, canOptIn: false, kind: info.kind, identifier: null };
+
+  const stored = await readBiometricCredential();
+  if (stored) {
+    return { offer: true, canOptIn: false, kind: info.kind, identifier: stored.identifier };
+  }
+
+  // Nothing stored — but the launch gate may still have bounced someone off a
+  // session sitting right there in the Keystore, and unlocking restores it.
+  // While that is true the feature is already on, so the opt-in stays away
+  // rather than asking someone to enable what they are looking at.
+  const gated = isBiometricUnlockEnabled() && (await authStrategy.canAttemptSession());
+  return { offer: gated, canOptIn: !gated, kind: info.kind, identifier: null };
+}
+
+/** Whether the sign-in screen should offer a biometric button. */
 export async function canOfferBiometricSignIn(): Promise<boolean> {
-  if (!isBiometricUnlockEnabled()) return false;
-  if (!(await authStrategy.canAttemptSession())) return false;
-  return (await getBiometryInfo()).available;
+  return (await biometricSignInStatus()).offer;
+}
+
+/**
+ * Turn on fingerprint sign-in for a credential that has **just been used to
+ * sign in successfully**.
+ *
+ * That precondition is why this is never called speculatively: an unverified
+ * password stored here would fail on every future unlock, and the user would
+ * have no way to tell a broken feature from a broken finger.
+ *
+ * The prompt runs *before* the write, so enabling and using the feature go
+ * through the same gate — a phone left unlocked on a table cannot silently
+ * acquire a stored password.
+ *
+ * ⚠ **It deliberately does NOT arm the launch gate.** Those are two different
+ * promises and only one of them was made here. This checkbox promises a button
+ * on the sign-in screen; the launch gate raises an OS dialog on every cold
+ * start, which is a *lock*, and the only place anyone asks for that is the
+ * Settings toggle (`enableBiometricUnlock`). Setting the preference here meant
+ * someone who ticked "next time, sign in with your fingerprint" got an
+ * unasked-for system prompt on the next launch and never reached the sign-in
+ * screen the checkbox was talking about.
+ *
+ * The credential alone is enough for what was promised: while the session is
+ * still good the app opens straight to the dashboard and no sign-in is needed,
+ * and the moment one *is* needed — after a sign-out, or once the session
+ * expires — the button is there.
+ */
+export async function enableBiometricSignIn(
+  credential: AgencyLoginInput,
+): Promise<UnlockOutcome> {
+  const info = await getBiometryInfo();
+  if (!info.available) return 'unavailable';
+
+  const outcome = await prompt('enable');
+  if (outcome !== 'ok') return outcome;
+
+  if (!(await writeBiometricCredential(credential))) return 'failed';
+  return 'ok';
+}
+
+/** What {@link unlockForSignIn} hands back. */
+export type SignInUnlock =
+  | {
+      ok: true;
+      /**
+       * The credential to sign in with, or `null` when there was none stored and
+       * the caller should restore the existing session instead.
+       */
+      credential: AgencyLoginInput | null;
+    }
+  | { ok: false; outcome: Exclude<UnlockOutcome, 'ok'> };
+
+/**
+ * Prompt, then hand back whatever is behind the gate.
+ *
+ * The caller performs the sign-in rather than this module, because only it knows
+ * what to do with the session afterwards — and only it can tell a rejected
+ * credential (a password changed on another device) from a network failure. On
+ * a rejection the caller must call {@link forgetBiometricSignIn}: re-prompting a
+ * thumb against a dead password is a loop.
+ */
+export async function unlockForSignIn(): Promise<SignInUnlock> {
+  const outcome = await unlockWithBiometrics();
+  if (outcome !== 'ok') {
+    // Biometry has been removed from the device. The credential can never be
+    // released again, so it is dead weight rather than a secret worth keeping.
+    if (outcome === 'unavailable') await clearBiometricCredential();
+    return { ok: false, outcome };
+  }
+
+  const stored = await readBiometricCredential();
+  return {
+    ok: true,
+    credential: stored ? { identifier: stored.identifier, password: stored.password } : null,
+  };
 }
 
 /**
@@ -229,6 +382,14 @@ export const SIGN_IN_LABEL_KEY = {
   face: 'biometric.signIn.face',
   iris: 'biometric.signIn.iris',
   none: 'biometric.signIn.none',
+} as const satisfies Record<BiometryKind, string>;
+
+/** The opt-in offered on the sign-in screen, where the password is in hand. */
+export const OPT_IN_LABEL_KEY = {
+  fingerprint: 'biometric.optIn.fingerprint',
+  face: 'biometric.optIn.face',
+  iris: 'biometric.optIn.iris',
+  none: 'biometric.optIn.none',
 } as const satisfies Record<BiometryKind, string>;
 
 export const UNLOCK_LABEL_KEY = {

@@ -196,20 +196,31 @@ export const AGENCY_NAME_MAX = 100;
  * `email` is optional for agencies (vendors are the ones who must supply one).
  */
 export function buildRegisterSchema(t: T, options: { country?: CountryCode | null } = {}) {
-  return z.object({
-    phone: buildPhoneSchema(t, { required: true, country: options.country }),
-    name: z.string().trim().min(1, v(t, 'name.required')).min(2, v(t, 'name.tooShort')),
-    agency_name: z
-      .string()
-      .trim()
-      .min(1, v(t, 'magazin.nameRequired'))
-      .min(AGENCY_NAME_MIN, v(t, 'magazin.nameTooShort'))
-      .max(AGENCY_NAME_MAX, v(t, 'magazin.nameTooLong')),
-    // `.or(z.literal(''))` rather than a plain `.optional()`: an untouched field
-    // holds `''`, and `z.string().email()` would reject that as malformed.
-    email: z.string().trim().email(v(t, 'email')).optional().or(z.literal('')),
-    password: z.string().min(6, v(t, 'password.signUpMinLength')),
-  });
+  return z
+    .object({
+      phone: buildPhoneSchema(t, { required: true, country: options.country }),
+      name: z.string().trim().min(1, v(t, 'name.required')).min(2, v(t, 'name.tooShort')),
+      agency_name: z
+        .string()
+        .trim()
+        .min(1, v(t, 'magazin.nameRequired'))
+        .min(AGENCY_NAME_MIN, v(t, 'magazin.nameTooShort'))
+        .max(AGENCY_NAME_MAX, v(t, 'magazin.nameTooLong')),
+      // `.or(z.literal(''))` rather than a plain `.optional()`: an untouched
+      // field holds `''`, and `z.string().email()` would reject that as
+      // malformed.
+      email: z.string().trim().email(v(t, 'email')).optional().or(z.literal('')),
+      password: z.string().min(6, v(t, 'password.signUpMinLength')),
+      // Form-only — `Register.onSubmit` builds the request field by field, so
+      // this never reaches the wire. Unconstrained on its own: the only thing
+      // wrong with it is disagreeing with `password`, and repeating the
+      // min-length rule here would report the same fault twice.
+      confirmPassword: z.string(),
+    })
+    .refine((value) => value.password === value.confirmPassword, {
+      message: v(t, 'password.mismatch'),
+      path: ['confirmPassword'],
+    });
 }
 
 export type RegisterFormValues = z.infer<ReturnType<typeof buildRegisterSchema>>;

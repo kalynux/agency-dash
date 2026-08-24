@@ -315,53 +315,44 @@ export function LiveTracking() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* `PageHeader` stacks its actions under the title below `sm`. Here they
-          are two icons, not a row of labelled buttons, so they ride beside the
-          title at every width instead of costing the map a whole line — the
-          unprefixed `flex-row` out-merges the primitive's `flex-col` and leaves
-          its `sm:` rules alone. */}
       <PageHeader
-        className="flex-row items-start justify-between gap-2"
         title={t('page.title')}
         description={t('page.description')}
         shortDescription={t('page.shortDescription')}
+        // The live-connection state is a readout, not something you press, so
+        // it stays on the bar rather than folding into the overflow — the one
+        // thing on this page you want visible without opening anything.
         actions={
-          <>
-            <span
-              className={cn('flex items-center gap-1.5 text-sm font-medium', statusMeta.className)}
-            >
-              <StatusIcon className="h-4 w-4" />
-              <span className="max-sm:sr-only">{t(statusMeta.labelKey)}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                board.refetch();
-                socket.reconnect();
-              }}
-              title={t('common:actions.refresh')}
-              aria-label={t('common:actions.refresh')}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="hidden lg:inline-flex"
-              onClick={() => setPanelOpen((v) => !v)}
-              title={panelOpen ? t('panel.hide') : t('panel.show')}
-              aria-label={panelOpen ? t('panel.hide') : t('panel.show')}
-              aria-pressed={panelOpen}
-            >
-              {panelOpen ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRightOpen className="h-4 w-4" />
-              )}
-            </Button>
-          </>
+          <span
+            className={cn('flex items-center gap-1.5 text-sm font-medium', statusMeta.className)}
+          >
+            <StatusIcon className="h-4 w-4" />
+            <span className="max-lg:sr-only">{t(statusMeta.labelKey)}</span>
+          </span>
         }
+        actionItems={[
+          {
+            id: 'refresh',
+            label: t('common:actions.refresh'),
+            icon: RefreshCw,
+            onSelect: () => {
+              board.refetch();
+              socket.reconnect();
+            },
+          },
+          // The side panel only exists from `lg` up, so on anything narrower
+          // there is nothing for this to toggle.
+          ...(isBelowDesktop
+            ? []
+            : [
+                {
+                  id: 'panel',
+                  label: panelOpen ? t('panel.hide') : t('panel.show'),
+                  icon: panelOpen ? PanelRightClose : PanelRightOpen,
+                  onSelect: () => setPanelOpen((v) => !v),
+                },
+              ]),
+        ]}
       />
 
       {socket.status === 'error' && (

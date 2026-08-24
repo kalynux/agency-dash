@@ -30,7 +30,6 @@ export function ProductCell({ item }: { item: InventoryListItem }) {
         <img
           src={item.image.url}
           alt=""
-          crossOrigin="anonymous"
           className="h-10 w-10 flex-shrink-0 rounded-md border object-cover"
         />
       ) : (

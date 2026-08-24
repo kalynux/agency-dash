@@ -27,16 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog';
 import { QUICK_ACTIONS, type QuickAction } from '@/config/quickActions';
 import { notificationVisual, notificationHref } from '@/lib/notification-display';
 import { tx } from '@/i18n/tx';
@@ -58,7 +49,9 @@ export function Header() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const { session, logout } = useOnboarding();
+  // The sign-out call itself lives in `LogoutConfirmDialog` now; this only
+  // needs the session for the avatar and the name beside it.
+  const { session } = useOnboarding();
   const roleEntity = session?.role_entity;
 
   const agencyName = roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
@@ -253,26 +246,8 @@ export function Header() {
         </div>
       </header>
 
-      {/* Logout confirmation */}
-      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('header.logoutConfirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('header.logoutConfirmDescription')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => logout()}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              {t('header.logoutConfirmAction')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Logout confirmation — shared with Account → Profile on mobile. */}
+      <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} />
 
       {/* Global Search Overlay */}
       {isSearchOpen && (

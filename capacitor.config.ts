@@ -32,7 +32,35 @@ const config: CapacitorConfig = {
   webDir: 'dist',
 
   server: {
-    androidScheme: 'https',
+    // `https` for every real build; `http` ONLY for a LAN-dev sync, and only
+    // because of mixed content.
+    //
+    // `allowMixedContent` below buys the *blockable* class — `fetch`, XHR — so
+    // the whole API works from an https page against the plain-http dev
+    // backend. It does not buy images. Chromium auto-upgrades a mixed <img> to
+    // https and blocks it when that fails, which the dev backend guarantees
+    // since it has no TLS. Read off the device (P5b.4):
+    //
+    //   Mixed Content: … requested an insecure image
+    //   'http://100.124.149.1:8022/api/files/…jpg'. This request has been
+    //   BLOCKED; the content must be served over HTTPS.
+    //
+    // …while every `/api/…` call beside it logs the milder "should also be
+    // served over HTTPS" and succeeds. That asymmetry is the whole reason every
+    // avatar, logo and thumbnail was blank on device while the app otherwise
+    // worked, and no header on the backend can reach it: the request is killed
+    // in the renderer before it is sent.
+    //
+    // Matching the page's scheme to the API's removes the mismatch at the root
+    // rather than trying to get an exception for it. The cost is that the page
+    // is no longer a secure context — which costs nothing here, because every
+    // web API that would care (clipboard, geolocation, push) already goes
+    // through `src/platform/` to a native plugin on device, and web push is
+    // switched off on native by P2.6.
+    //
+    // ⚠ Release builds are untouched: `lanDev` is false unless CAP_LAN_DEV=1,
+    // production's API is https, and there is no mixed content to answer for.
+    androidScheme: lanDev ? 'http' : 'https',
 
     // D1 — a custom hostname rather than `localhost`.
     //
@@ -42,10 +70,11 @@ const config: CapacitorConfig = {
     // never route publicly — that is precisely why it was chosen. Pointing this
     // at a live domain would make that domain unreachable from inside the app.
     //
-    // Resulting origins, both of which must be in the backend's ALLOWED_ORIGINS
+    // Resulting origins, all of which must be in the backend's ALLOWED_ORIGINS
     // before anything native can talk to the API (the D2 ticket):
-    //   Android → https://agency.wi-mall.internal
-    //   iOS     → capacitor://agency.wi-mall.internal
+    //   Android         → https://agency.wi-mall.internal
+    //   Android LAN dev → http://agency.wi-mall.internal   (the scheme above)
+    //   iOS             → capacitor://agency.wi-mall.internal
     hostname: 'agency.wi-mall.internal',
   },
 

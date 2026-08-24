@@ -5,6 +5,7 @@ import { DepositsTab } from '@/components/cash/DepositsTab';
 import { RemittancesTab } from '@/components/cash/RemittancesTab';
 import { DiscrepanciesTab } from '@/components/cash/DiscrepanciesTab';
 import { SubPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['summary', 'deposits', 'remittances', 'discrepancies'] as const;
 type CashTab = typeof VALID_TABS[number];
@@ -17,7 +18,12 @@ export function CashManagement() {
     : 'summary';
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/cash/${next}`}
+      className="space-y-6 animate-fade-in"
+    >
       <SubPageHeader
         path={`/dashboard/cash/${activeTab}`}
         description={t(`tabs.${activeTab}.description`)}
@@ -28,6 +34,6 @@ export function CashManagement() {
       {activeTab === 'deposits' && <DepositsTab />}
       {activeTab === 'remittances' && <RemittancesTab />}
       {activeTab === 'discrepancies' && <DiscrepanciesTab />}
-    </div>
+    </TabSwipeArea>
   );
 }

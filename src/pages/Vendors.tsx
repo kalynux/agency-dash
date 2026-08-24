@@ -4,6 +4,7 @@ import { useVendorConnections } from '@/store/vendorConnections.store';
 import { ConnectionsTab } from '@/components/vendors/ConnectionsTab';
 import { BrowseTab } from '@/components/vendors/BrowseTab';
 import { SubPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['connections', 'browse'] as const;
 type VendorsTab = typeof VALID_TABS[number];
@@ -17,7 +18,12 @@ export function Vendors() {
     : 'connections';
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/vendors/${next}`}
+      className="space-y-6 animate-fade-in"
+    >
       <SubPageHeader
         path={`/dashboard/vendors/${activeTab}`}
         description={t(`tabs.${activeTab}.description`)}
@@ -26,6 +32,6 @@ export function Vendors() {
 
       {activeTab === 'connections' && <ConnectionsTab onConnectionChange={refetch} />}
       {activeTab === 'browse' && <BrowseTab onConnectionChange={refetch} />}
-    </div>
+    </TabSwipeArea>
   );
 }

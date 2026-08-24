@@ -137,6 +137,142 @@ async function hardLogout(cause?: ApiError): Promise<void> {
     );
 }
 
+// ─── Transport resilience ─────────────────────────────────────────────────────
+//
+// `fetch` has no timeout of its own — a connection that stalls hangs until the
+// browser's own ceiling (minutes), during which the screen shows a spinner and
+// the user shows the app to someone else. And on a link that drops the odd
+// packet, a single failed attempt becomes "We couldn't reach the server" even
+// though the next one would have worked. Both are the same class of problem:
+// the request path treats a flaky transport as a verdict.
+//
+// This is aimed squarely at on-device development, where the app talks to a dev
+// machine over Wi-Fi or a tailnet rather than to a datacentre — but it is not
+// gated on that, because a phone on mobile data in production has exactly the
+// same weather.
+
+/**
+ * How long one attempt may run before it is abandoned and (if eligible) retried.
+ *
+ * Generous on purpose. The point is to put a *bound* on a stalled connection,
+ * not to police slow ones: a relayed tailnet hop can add a quarter-second to
+ * every round trip, and a listing endpoint on a cold dev database is entitled
+ * to take its time. Anything that legitimately runs longer than this — file
+ * uploads — does not come through here at all (`files.service.ts` drives those
+ * over XHR to get progress events).
+ */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Backoff before each retry. Two entries = three attempts in the worst case.
+ *
+ * Short, because the failure being retried is a dropped packet rather than a
+ * busy server — a 429 is an `ApiError` and never reaches this path, so there is
+ * no ceiling here to be polite about.
+ */
+const NETWORK_RETRY_DELAYS_MS = [400, 1_200] as const;
+
+/**
+ * The methods a retry is allowed to repeat.
+ *
+ * **Deliberately read-only.** A `TypeError` from `fetch` means the *response*
+ * never arrived; it says nothing about whether the request did. Retrying a POST
+ * that the server had already processed books the shipment twice, sends the
+ * payout twice, files the ticket twice — and the user, who saw an error, has no
+ * reason to suspect it. PUT and DELETE are idempotent in HTTP theory, but only
+ * where the handler is written that way, which is not a promise this layer can
+ * make on the backend's behalf. So the automatic retry covers reads, and a
+ * failed write is reported to the caller to retry deliberately.
+ */
+const RETRYABLE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * True for a failure of the transport rather than an answer from the server.
+ *
+ * `fetch` rejects with a `TypeError` for every one of them — DNS failure,
+ * connection refused, TLS failure, connection reset mid-body, and a CORS
+ * preflight the browser refused. It never rejects for an HTTP status, so an
+ * error *response* cannot reach here.
+ */
+function isTransportFailure(err: unknown): boolean {
+    return err instanceof TypeError;
+}
+
+/** True for the abort raised by our own {@link REQUEST_TIMEOUT_MS} timer. */
+function isTimeoutAbort(err: unknown): boolean {
+    return err instanceof DOMException && err.name === 'AbortError';
+}
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * A network error the UI already knows how to phrase.
+ *
+ * `errors:codes.NETWORK_ERROR` is the same sentence `getApiErrorMessage` gives a
+ * raw `TypeError`, so a timeout reads identically to a refused connection —
+ * which is what it is, from where the user is sitting.
+ */
+function networkError(message: string): ApiError {
+    return new ApiError(0, 'NETWORK_ERROR', message);
+}
+
+/** One attempt, bounded by {@link REQUEST_TIMEOUT_MS}. */
+async function fetchOnce(url: string, init: RequestInit): Promise<Response> {
+    // `AbortController` rather than `AbortSignal.timeout()`: the latter needs
+    // Chromium 103, and the Android System WebView on an older device is exactly
+    // the runtime this code exists to be kind to.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+        return await fetch(url, { ...init, signal: controller.signal });
+    } finally {
+        // Always — including on the success path, or every completed request
+        // leaves a live 30s timer holding its controller.
+        clearTimeout(timer);
+    }
+}
+
+/**
+ * `fetchOnce` plus bounded retries for read-only requests on a transport failure.
+ *
+ * Retries stop early when the device says it is offline: there is no packet to
+ * lose when there is no network, and spending 1.6s of backoff to discover that
+ * only delays the message telling the user to reconnect.
+ */
+async function fetchResilient(url: string, init: RequestInit): Promise<Response> {
+    const method = (init.method ?? 'GET').toUpperCase();
+    const retryable = RETRYABLE_METHODS.has(method);
+
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await fetchOnce(url, init);
+        } catch (err) {
+            const timedOut = isTimeoutAbort(err);
+            if (!timedOut && !isTransportFailure(err)) throw err;
+
+            const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+            const canRetry = retryable && !offline && attempt < NETWORK_RETRY_DELAYS_MS.length;
+
+            if (!canRetry) {
+                // A timeout is ours, so it has to be given a shape the error
+                // layer recognises. A `TypeError` is the browser's and already
+                // resolves to the network message — rethrow it untouched so
+                // nothing downstream sees a different error than it used to.
+                if (timedOut) {
+                    throw networkError(
+                        `Request to ${url} timed out after ${REQUEST_TIMEOUT_MS}ms`,
+                    );
+                }
+                throw err;
+            }
+
+            await delay(NETWORK_RETRY_DELAYS_MS[attempt]);
+        }
+    }
+}
+
 // ─── Core request function ────────────────────────────────────────────────────
 
 async function request<T>(
@@ -153,7 +289,7 @@ async function request<T>(
     // pick up the NEW access token, and the queued requests the fresh one too.
     const authHeaders = await authStrategy.authHeaders();
 
-    const res = await fetch(url, {
+    const res = await fetchResilient(url, {
         ...init,
         credentials: authStrategy.credentials,
         headers: isFormData

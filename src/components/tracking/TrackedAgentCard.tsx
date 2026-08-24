@@ -179,7 +179,6 @@ export function TrackedAgentCard({
             {agent.avatar?.url ? (
               <img
                 src={agent.avatar.url}
-                crossOrigin="anonymous"
                 alt=""
                 className="h-full w-full object-cover"
               />

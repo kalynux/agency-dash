@@ -4,6 +4,7 @@ import { useAgentsRoster } from '@/store/agents.store';
 import { ConnectionsTab } from '@/components/agents/ConnectionsTab';
 import { BrowseTab } from '@/components/agents/BrowseTab';
 import { SubPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['connections', 'browse'] as const;
 type AgentsTab = typeof VALID_TABS[number];
@@ -24,7 +25,12 @@ export function Agents() {
   const openContractId = !isTab && tab && CONTRACT_ID.test(tab) ? tab : null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/agents/${next}`}
+      className="space-y-6 animate-fade-in"
+    >
       <SubPageHeader
         path={`/dashboard/agents/${activeTab}`}
         description={t(`tabs.${activeTab}.description`)}
@@ -35,6 +41,6 @@ export function Agents() {
         <ConnectionsTab onContractChange={refetch} openContractId={openContractId} />
       )}
       {activeTab === 'browse' && <BrowseTab onContractChange={refetch} />}
-    </div>
+    </TabSwipeArea>
   );
 }

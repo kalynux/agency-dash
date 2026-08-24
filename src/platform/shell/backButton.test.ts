@@ -15,7 +15,7 @@ vi.mock('../env', () => ({ isNative: true, platform: 'android', useBearerAuth: t
 vi.mock('@capacitor/app', () => ({ App: { addListener: vi.fn(), exitApp: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
-import { dismissTopLayer, hasOpenOverlay } from './backButton';
+import { dismissTopLayer, hasOpenOverlay, nextDepth } from './backButton';
 
 function mount(html: string): void {
   document.body.innerHTML = html;
@@ -98,5 +98,55 @@ describe('dismissTopLayer', () => {
     expect(dismissTopLayer()).toBe(true);
     expect(targets).toHaveLength(1);
     expect(targets[0]).toBe(field);
+  });
+});
+
+// ─── Navigation depth ─────────────────────────────────────────────────────────
+
+describe('nextDepth', () => {
+  it('counts a push as one screen deeper', () => {
+    expect(nextDepth(0, 'PUSH')).toBe(1);
+    expect(nextDepth(3, 'PUSH')).toBe(4);
+  });
+
+  it('counts a pop as one screen shallower', () => {
+    expect(nextDepth(3, 'POP')).toBe(2);
+  });
+
+  it('leaves a replace alone', () => {
+    // The redirect case: /dashboard/agents → /dashboard/agents/connections
+    // swapped the entry rather than stacking a second one, so there is nothing
+    // new behind it. Counting it would make back land on a URL that only ever
+    // existed for one tick.
+    expect(nextDepth(2, 'REPLACE')).toBe(2);
+    expect(nextDepth(0, 'REPLACE')).toBe(0);
+  });
+
+  it('never goes below zero', () => {
+    // Depth is the offer of somewhere to go back to; a negative one would
+    // silently disarm the confirm-to-exit branch.
+    expect(nextDepth(0, 'POP')).toBe(0);
+  });
+
+  it('returns to zero after a run of pushes is fully unwound', () => {
+    // Three screens opened from the "More" sheet, then three presses of back.
+    let depth = 0;
+    for (let i = 0; i < 3; i++) depth = nextDepth(depth, 'PUSH');
+    expect(depth).toBe(3);
+    for (let i = 0; i < 3; i++) depth = nextDepth(depth, 'POP');
+    expect(depth).toBe(0);
+  });
+
+  it('is unmoved by redirects interleaved with real navigations', () => {
+    // What each "More" menu tap actually looks like: a push onto the parent
+    // path, then the route's own `<Navigate replace>` onto its first tab. One
+    // screen, not two — so three taps must leave exactly three to come back
+    // through.
+    let depth = 0;
+    for (let i = 0; i < 3; i++) {
+      depth = nextDepth(depth, 'PUSH');
+      depth = nextDepth(depth, 'REPLACE');
+    }
+    expect(depth).toBe(3);
   });
 });

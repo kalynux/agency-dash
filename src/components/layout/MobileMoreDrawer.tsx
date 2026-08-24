@@ -157,7 +157,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
             <div className="mx-4 mt-4 mb-4 p-4 bg-card rounded-xl border flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden bg-primary flex items-center justify-center">
                 {agencyLogo ? (
-                  <img src={agencyLogo} alt={agencyName} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                  <img src={agencyLogo} alt={agencyName} className="w-full h-full object-cover" />
                 ) : (
                   <Truck className="w-6 h-6 text-primary-foreground" />
                 )}

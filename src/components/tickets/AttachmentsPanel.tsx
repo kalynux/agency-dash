@@ -93,7 +93,7 @@ export function AttachmentsPanel({
               <li key={att.id} className="flex items-center gap-3 rounded-lg border bg-card p-2.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
                   {isImage ? (
-                    <img src={att.url} alt={att.fileName} crossOrigin="anonymous" className="h-full w-full object-cover" />
+                    <img src={att.url} alt={att.fileName} className="h-full w-full object-cover" />
                   ) : (
                     <FileText className="h-5 w-5 text-muted-foreground" />
                   )}
