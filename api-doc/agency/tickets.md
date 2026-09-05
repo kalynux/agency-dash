@@ -20,12 +20,12 @@ Authorization: Bearer <access_token>
 
 > [!NOTE]
 > This is the same ticketing engine documented for other roles (see
-> [vendor/tickets.md](../vendor/tickets.md)) — the same controllers/services are mounted under
+> vendor/tickets.md (`backend/jovi-mall/api-doc/vendor/tickets.md` — not mirrored in this repository)) — the same controllers/services are mounted under
 > `/api/vendor/tickets`, `/api/agency/tickets`, `/api/agent/tickets`, `/api/customer/tickets` and
-> `/api/admin/tickets`, scoped to the caller's role. Mechanics (follower system, priority locking,
+> `/api/internal/admin/tickets`, scoped to the caller's role. Mechanics (follower system, priority locking,
 > visibility rules) are identical across roles; this document lists the **current, authoritative**
-> enum values from `src/modules/tickets/types/ticket.types.ts` — some values shown in the vendor
-> doc are stale placeholders and should not be used as a reference.
+> enum values from `src/modules/tickets/types/ticket.types.ts`. The full `TicketType` list is also
+> kept as a flat file at [../ticket_types.txt](../ticket_types.txt).
 
 ## Endpoints
 
@@ -108,7 +108,7 @@ Body:
       "user_id": "string",
       "role": "agency",
       "name": "FastTrack Logistics",
-      "avatar_url": "https://cdn.example.com/fasttrack-logo.png"
+      "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
     },
     "assigned_to_role": null,
     "assigned_to": null,
@@ -120,7 +120,7 @@ Body:
         "user_id": "string",
         "role": "agency",
         "name": "FastTrack Logistics",
-        "avatar_url": "https://cdn.example.com/fasttrack-logo.png"
+        "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
       }
     ],
     "createdAt": "2026-07-05T19:00:00.000Z",
@@ -129,9 +129,9 @@ Body:
 }
 ```
 
-> **Actor summary for `agency`.** `name` resolves to `agency_name` and `avatar_url` to `logo_url`
-> (from the agency's own profile) — used for `created_by`, `assigned_to`, and every entry in
-> `followers` when the actor is an agency.
+> **Actor summary for `agency`.** `name` resolves to `agency_name` and `avatar` to the resolved logo
+> **file object** (from the agency's `logo_file_id`) — used for `created_by`, `assigned_to`, and every
+> entry in `followers` when the actor is an agency.
 >
 > **Entity summary for non-`ORDER`/`PRODUCT`/`BOOKING` types** (e.g. `SHIPMENT`, `DELIVERY`,
 > `AGENCY`) degrades to a generic placeholder: `label` is `"<Type> <last 6 chars of id>"` and
@@ -275,15 +275,15 @@ Body:
         "user_id": "string",
         "role": "agency",
         "name": "FastTrack Logistics",
-        "avatar_url": null
+        "avatar": null
       },
       "assigned_to_role": "admin",
       "assigned_to": null,
       "assigned_admin_id": "string",
       "assigned_admin": {
-        "user_id": "string",
-        "role": "admin",
         "name": "Kofi Mensah",
+        "job_title": "Support lead",
+        "department": "Customer Care",
         "avatar_url": null
       },
       "priority_locked": true,
@@ -443,7 +443,7 @@ reflect the new assignment). A system note is appended.
 - `403` – `TICKET_ACCESS_DENIED` – Only ticket creator or admin can close tickets
 
 > There is no `POST /:id/reopen` under this namespace — reopening a closed ticket is admin-only
-> (`/api/admin/tickets/:id/reopen`).
+> (`/api/internal/admin/tickets/:id/reopen`).
 
 ---
 
@@ -487,7 +487,7 @@ Body:
       "user_id": "string",
       "role": "agency",
       "name": "FastTrack Logistics",
-      "avatar_url": null
+      "avatar": null
     },
     "visible_to_user_ids": [],
     "created_at": "2026-07-05T19:30:00.000Z"
@@ -547,14 +547,14 @@ Body:
     "fileName": "proof-of-attempt.jpg",
     "fileSize": 184320,
     "mimeType": "image/jpeg",
-    "url": "http://localhost:3000/storage/ticket-attachments/...",
+    "url": "http://localhost:8022/api/files/images/2026/02/a1b2c3…_checkout-error.png",
     "uploadedBy": "string",
     "uploadedByRole": "agency",
     "uploadedByActor": {
       "user_id": "string",
       "role": "agency",
       "name": "FastTrack Logistics",
-      "avatar_url": null
+      "avatar": null
     },
     "createdAt": "2026-07-05T19:30:00.000Z"
   }
@@ -612,15 +612,44 @@ most relevant groups, but any value is accepted.
 Every endpoint that returns a ticket, note, or attachment resolves the raw ObjectId references
 into ready-to-render summary objects. The original `*_id` fields are kept alongside them.
 
-**Actor summary** (`created_by`, `assigned_to`, `assigned_admin`, each `followers` entry, note
-`author`, attachment `uploadedByActor`):
+**Actor summary** (`created_by`, `assigned_to`, each `followers` entry, note `author`,
+attachment `uploadedByActor`). **`assigned_admin` is NOT one of these** — it has its own shape,
+below:
 ```json
-{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar_url": "https://.../logo.png" }
+{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar": { "id": "…", "key": "…", "url": "https://.../logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" } }
 ```
 - `name`: admin/customer/agent → `name`; vendor → `display_name` (falls back to `business_name`);
   **agency → `agency_name`**.
-- `avatar_url`: profile photo/logo where one exists — **agency → `logo_url`** — otherwise `null`.
-- Unresolvable references fall back to the capitalised role name (e.g. `"Agency"`) with `avatar_url: null`.
+- `avatar`: profile photo/logo where one exists, as a resolved **file object** (`{ id, key, url, mimeType, size, originalName }`) — **agency → resolved from `logo_file_id`** — otherwise `null`.
+- Unresolvable references fall back to the capitalised role name (e.g. `"Agency"`) with `avatar: null`.
+
+**Administrator snapshot** — used for `assigned_admin` and `created_by_admin`:
+
+```json
+{ "name": "Kofi Mensah", "job_title": "Support lead", "department": "Customer Care", "avatar_url": null }
+```
+
+**This is NOT the actor summary above, and it changed.** It used to be
+`{ user_id, role, name, avatar }`; it is now the four fields shown. Nothing broke when it
+changed, because it is `null` on almost every ticket — see below — which is exactly how a
+documented shape goes stale unnoticed.
+
+- `assigned_admin` is **`null` until a wi-admin administrator takes the ticket.** Support
+  administrators live in a separate service with its own database, so nobody is assigned by
+  default and most tickets never are. `null` is the normal state, not missing data.
+- `created_by_admin` is non-null only when an administrator opened the ticket **for** you.
+  When they did, `created_by` is also present with `role: "admin"` — but its `user_id` is an
+  administrator id from the other service, which resolves nowhere here, and its `avatar` is
+  always `null`. Render the person from this block, not from that one.
+- **`avatar_url` is reserved and always `null`.** Administrators have no picture: there is no
+  upload surface for one and no storage decision has been made. Draw the initials from `name`
+  and do not branch on this field. It is carried so that the day an avatar exists, nothing
+  about this shape changes.
+- `job_title` and `department` are free text and may each be `null`.
+- **No `tier`, no `id`.** The administrator hierarchy is internal and is deliberately not
+  disclosed to a ticket follower.
+- `assigned_admin_id` beside it is an id in the administration service. **It resolves to
+  nothing here** — treat it as opaque, or ignore it and read this block.
 
 **Entity summary** (ticket `entity` field):
 ```json

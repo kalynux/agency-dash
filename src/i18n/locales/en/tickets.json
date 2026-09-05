@@ -1,0 +1,322 @@
+{
+  "page": {
+    "title": "Tickets",
+    "description": "Get help from the Wi-Mall support team",
+    "refresh": "Refresh",
+    "faq": "FAQ",
+    "newTicket": "New ticket",
+    "searchPlaceholder": "Search tickets…",
+    "searchLabel": "Search this page by subject or description",
+    "filterDescription": "Status, type and priority filter every ticket; search looks at the page you're on.",
+    "filters": {
+      "status": "Status",
+      "priority": "Priority",
+      "type": "Type",
+      "ticketType": "Ticket type",
+      "allTypes": "All types",
+      "allPriorities": "All priorities",
+      "sortBy": "Sort by"
+    },
+    "sort": {
+      "updated": "Recently updated",
+      "created": "Recently created",
+      "priority": "Priority"
+    },
+    "table": {
+      "ticket": "Ticket",
+      "status": "Status",
+      "priority": "Priority",
+      "updated": "Updated"
+    },
+    "empty": {
+      "titleFiltered": "No matching tickets",
+      "title": "No tickets yet",
+      "descriptionFiltered": "Try adjusting your search or filters.",
+      "description": "Create your first ticket to get help from support.",
+      "clearFilters": "Clear filters"
+    },
+    "matchesOnPage_one": "{{count}} match on this page",
+    "matchesOnPage_other": "{{count}} matches on this page"
+  },
+  "_statusComment": "One table for both the detail control and the list filter tabs — the two used to carry the same words in different casing.",
+  "status": {
+    "all": "All",
+    "open": "Open",
+    "in_progress": "In progress",
+    "waiting_on_admin": "Waiting on support",
+    "waiting_on_vendor": "Waiting on vendor",
+    "waiting_on_customer": "Waiting on customer",
+    "waiting_on_agency": "Waiting on you",
+    "waiting_on_agent": "Waiting on agent",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  },
+  "priority": {
+    "low": "Low",
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "importance": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "roles": {
+    "admin": "Support",
+    "agent": "Delivery agent",
+    "vendor": "Vendor",
+    "customer": "Customer",
+    "agency": "Agency"
+  },
+  "entityTypes": {
+    "OTHER": "General (no specific item)",
+    "SHIPMENT": "A shipment",
+    "DELIVERY": "A delivery",
+    "ORDER": "An order",
+    "PRODUCT": "A product",
+    "AGENCY": "My agency",
+    "BOOKING": "A booking",
+    "USER": "A user",
+    "VENDOR": "A vendor",
+    "CUSTOMER": "A customer",
+    "AGENT": "An agent"
+  },
+  "typeGroups": {
+    "shipping": "Shipping & Delivery",
+    "payouts": "Payouts",
+    "general": "General & Account",
+    "orders": "Orders",
+    "payments": "Payments",
+    "products": "Products",
+    "bookings": "Bookings",
+    "technical": "Technical",
+    "policy": "Policy & Legal",
+    "other": "Other"
+  },
+  "types": {
+    "SHIPPING_ISSUE": "Shipping issue",
+    "DELIVERY_DELAY": "Delivery delay",
+    "DELIVERY_CONFIRMATION": "Delivery confirmation",
+    "ADDRESS_CHANGE": "Address change",
+    "PAYOUT_REQUEST": "Payout request",
+    "PAYOUT_DELAY": "Payout delay",
+    "PAYOUT_DISPUTE": "Payout dispute",
+    "COMMISSION_QUESTION": "Commission question",
+    "GENERAL_SUPPORT": "General support",
+    "ACCOUNT_ACCESS": "Account access",
+    "ACCOUNT_VERIFICATION": "Account verification",
+    "PROFILE_UPDATE": "Profile update",
+    "SECURITY_ISSUE": "Security issue",
+    "ORDER_ISSUE": "Order issue",
+    "ORDER_CANCELLATION": "Order cancellation",
+    "ORDER_REFUND": "Order refund",
+    "ORDER_DISPUTE": "Order dispute",
+    "ORDER_FULFILLMENT": "Order fulfillment",
+    "PAYMENT_ISSUE": "Payment issue",
+    "PAYMENT_FAILED": "Payment failed",
+    "PAYMENT_CONFIRMATION": "Payment confirmation",
+    "CHARGEBACK": "Chargeback",
+    "INVOICE_REQUEST": "Invoice request",
+    "PRODUCT_ISSUE": "Product issue",
+    "INVENTORY_PROBLEM": "Inventory problem",
+    "PRICING_ISSUE": "Pricing issue",
+    "VARIANT_ISSUE": "Variant issue",
+    "BOOKING_ISSUE": "Booking issue",
+    "BOOKING_CANCELLATION": "Booking cancellation",
+    "BOOKING_RESCHEDULE": "Booking reschedule",
+    "AVAILABILITY_PROBLEM": "Availability problem",
+    "TECHNICAL_ISSUE": "Technical issue",
+    "BUG_REPORT": "Bug report",
+    "INTEGRATION_ISSUE": "Integration issue",
+    "API_ACCESS": "API access",
+    "POLICY_QUESTION": "Policy question",
+    "COMPLIANCE": "Compliance",
+    "LEGAL_REQUEST": "Legal request",
+    "OTHER": "Other"
+  },
+  "_fulfillmentComment": "The parent order's fulfillment status, shown on the entity picker's order rows. Values from the backend's FulfillmentStatus union.",
+  "fulfillmentStatus": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "partially_shipped": "Partially shipped",
+    "shipped": "Shipped",
+    "partially_delivered": "Partially delivered",
+    "delivered": "Delivered",
+    "fulfilled": "Fulfilled",
+    "cancelled": "Cancelled",
+    "returned": "Returned"
+  },
+  "_timeComment": "Compact relative time for table cells. Interpolated with {{value}} rather than i18next's count: these are abbreviations, which do not inflect.",
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{value}}m ago",
+    "hoursAgo": "{{value}}h ago",
+    "daysAgo": "{{value}}d ago"
+  },
+  "detail": {
+    "loading": "Loading ticket…",
+    "fallbackTitle": "Ticket",
+    "edit": "Edit ticket",
+    "description": "Description",
+    "subject": "Subject",
+    "status": "Status",
+    "priority": "Priority",
+    "charCount": "{{current}}/{{max}}",
+    "noParticipant": "no participant",
+    "priorityLocked": "Locked",
+    "priorityLockedHint": "Support set this priority; it can no longer be changed.",
+    "type": "Type",
+    "importance": "Importance",
+    "relatedTo": "Related to",
+    "tracking": "Tracking",
+    "assignedTo": "Assigned to",
+    "unassigned": "Unassigned",
+    "escalate": "Escalate to support",
+    "followers": "Followers",
+    "noFollowers": "No followers yet.",
+    "created": "Created",
+    "lastUpdated": "Last updated",
+    "ticketId": "Ticket ID",
+    "closeTicket": "Close ticket",
+    "confirmCloseTitle": "Close this ticket?",
+    "confirmCloseDescription": "Closing the ticket marks it as resolved. You won't be able to change its priority or add new messages or attachments afterwards. Reopening is handled by support.",
+    "keepOpen": "Keep open",
+    "toasts": {
+      "updated": "Ticket updated.",
+      "statusUpdated": "Status updated.",
+      "priorityUpdated": "Priority updated.",
+      "escalated": "Escalated to support.",
+      "closed": "Ticket closed."
+    }
+  },
+  "create": {
+    "title": "New support ticket",
+    "description": "Describe your issue and link it to the related shipment, order, or product.",
+    "subject": "Subject",
+    "subjectPlaceholder": "Brief summary of the issue",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Provide as much detail as possible…",
+    "charCount": "{{current}}/{{max}}",
+    "type": "Type",
+    "importance": "Importance",
+    "importanceHint": "Can't be changed after creation.",
+    "relatedTo": "Related to",
+    "item": "Item",
+    "optional": "(optional)",
+    "trackingNumber": "Tracking number",
+    "trackingPlaceholder": "e.g. FS-1234567890",
+    "trackingSelectPlaceholder": "Select a tracking number",
+    "trackingManual": "Enter manually…",
+    "trackingBackToList": "Choose from this item's tracking numbers instead",
+    "trackingAgencyFallback": "Delivery agency",
+    "trackingOptionMeta": "{{agency}} · {{status}}",
+    "attachments": "Attachments",
+    "addAttachment": "Add attachment",
+    "attachmentsHint": "Once the ticket is created, these files stay attached to it — they can't be detached until the ticket is closed.",
+    "submit": "Create ticket",
+    "errors": {
+      "subjectTooShort": "Subject must be at least 3 characters.",
+      "descriptionTooShort": "Please add a bit more detail to the description.",
+      "entityRequired": "Select the item this ticket is about.",
+      "trackingRequired": "A tracking number is required for order tickets.",
+      "attachmentRequired": "Attach at least one photo/video for this ticket type.",
+      "entityNotFound": "The selected order or product no longer exists."
+    },
+    "toasts": {
+      "created": "Ticket created."
+    }
+  },
+  "notes": {
+    "title": "Conversation",
+    "count_one": "{{count}} note",
+    "count_other": "{{count}} notes",
+    "empty": "No messages yet. Start the conversation below.",
+    "placeholder": "Write a note…",
+    "charCount": "{{current}}/{{max}}",
+    "send": "Send",
+    "public": "public",
+    "private": "private",
+    "visibleTo": "Visible to:",
+    "closed": "This ticket is closed. No new messages can be added.",
+    "tooLong": "Note must be {{max}} characters or less"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "counter": "{{current}}/{{max}}",
+    "uploadedBy": "{{size}} · uploaded by {{name}}",
+    "download": "Download {{name}}",
+    "public": "Public",
+    "private": "Private",
+    "add": "Add attachment",
+    "permanentWarning": "Once attached, a file can't be detached from this ticket until the ticket is closed.",
+    "attaching": "Attaching…",
+    "closed": "This ticket is closed.",
+    "atLimit": "Maximum of {{max}} attachments reached",
+    "attached_one": "Attached {{count}} file",
+    "attached_other": "Attached {{count}} files"
+  },
+  "followerSelect": {
+    "everyone": "Everyone (admins only)",
+    "selected_one": "{{count}} follower",
+    "selected_other": "{{count}} followers",
+    "none": "No followers to add",
+    "hint": "Who can see this private item? Support can always see it."
+  },
+  "entityPicker": {
+    "placeholderAgency": "Optional — leave blank to use your agency",
+    "placeholderId": "Enter the related item ID",
+    "_nounsComment": "What is being picked, named in the picker's own copy. Two forms because the trigger says \"Select order…\" while the list says \"No orders found.\"",
+    "nouns": {
+      "ORDER": "order",
+      "PRODUCT": "product",
+      "SHIPMENT": "shipment",
+      "DELIVERY": "delivery",
+      "item": "item"
+    },
+    "nounsPlural": {
+      "ORDER": "orders",
+      "PRODUCT": "products",
+      "SHIPMENT": "shipments",
+      "DELIVERY": "deliveries",
+      "item": "items"
+    },
+    "trigger": "Select {{noun}}…",
+    "dialogTitle": "Select {{noun}}",
+    "selectedCaption": "· {{caption}}",
+    "descriptionProduct": "Search products on orders you handle by name, category, or tag.",
+    "descriptionOrder": "Search orders you handle by order number or customer.",
+    "searchProduct": "Search by name, category, or tag…",
+    "searchOrder": "Search by order number or customer…",
+    "loading": "Loading {{nouns}}…",
+    "empty": "No {{nouns}} found.",
+    "unknownCustomer": "Unknown customer",
+    "orderTitle": "{{orderNumber}} · {{customer}}",
+    "shipmentStatus": "Status: {{status}}",
+    "trackingCaption": "Tracking {{number}}",
+    "fulfillment": "Delivery: {{status}}"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "description": "Quick answers to common questions. Still stuck? Create a ticket.",
+    "items": {
+      "payouts": {
+        "question": "When are payouts processed?",
+        "answer": "Payouts are processed on the 1st and 15th of every month for all completed deliveries, provided your payout method is verified."
+      },
+      "coverage": {
+        "question": "How do I add or remove a coverage region?",
+        "answer": "Go to Account → Business and update your coverage regions. Changes apply immediately to new delivery assignments."
+      },
+      "policies": {
+        "question": "Where can I update my pricing or return policies?",
+        "answer": "Visit Settings → Policies to edit your pricing model, return handling, and damage policies at any time."
+      },
+      "delay": {
+        "question": "What do I do if a delivery is delayed?",
+        "answer": "Update the delivery status from the Shipments page as soon as possible, and open a ticket if you need support coordinating with the vendor or customer."
+      }
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "transactionsPage": {
+    "title": "Transactions",
+    "aboutLabel": "About transactions",
+    "about": "Every money and credit movement on your account — plan purchases, credit top-ups and usage, and delivery-fee earnings.",
+    "description": "Every money and credit movement on your account — plan purchases, credit top-ups and delivery-fee earnings",
+    "descriptionShort": "Money and credit movements"
+  },
+  "transactions": {
+    "searchPlaceholder": "Search transactions…",
+    "searchLabel": "Search this page by description or category",
+    "filterDescription": "Category filters the whole ledger; search looks at the page you're on.",
+    "category": "Category",
+    "loadFailed": "Failed to load transactions.",
+    "emptyFiltered": "No transactions match your search.",
+    "empty": "No transactions yet.",
+    "via": "via {{gateway}}",
+    "reversalNote": "Chargeback/refund — this charge was unwound.",
+    "creditsSuffix": "cr",
+    "table": {
+      "activity": "Activity",
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "categoryTabs": {
+      "all": "All",
+      "plan": "Plans",
+      "credit": "Credits",
+      "earning": "Earnings"
+    },
+    "categoryChip": {
+      "plan": "Plan",
+      "credit": "Credit",
+      "earning": "Earning",
+      "payout": "Payout"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "failed": "Failed",
+      "reversed": "Reversed",
+      "completed": "Completed",
+      "hold": "On hold",
+      "release": "Released",
+      "reversal": "Reversed"
+    }
+  },
+  "plan": {
+    "loadFailed": "Failed to load billing information.",
+    "freePlan": "Free plan",
+    "priceAndTerm": "{{price}} · {{term}}",
+    "renewsOrExpires": "Renews / expires",
+    "neverExpires": "Never expires",
+    "creditAllowance": "Credit allowance",
+    "liveTracking": "Live tracking",
+    "included": "Included",
+    "notIncluded": "Not included",
+    "activeShipments": "Active shipments",
+    "usage": "{{used}} / {{cap}}",
+    "capHint": "Shipments not yet in a terminal state, counted against your plan's soft cap.",
+    "atCapacity": "You're at capacity — deliveries keep flowing as normal. Upgrade for more headroom on concurrent shipments.",
+    "pendingQueued": "{{name}} queued",
+    "pendingStarts": "Starts when your current plan ends.",
+    "pendingStartsOn": "Starts when your current plan ends on {{date}}.",
+    "unlimited": "Unlimited",
+    "status": {
+      "active": "Active",
+      "pending_activation": "Queued",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "term": {
+      "never": "Never expires",
+      "monthly": "Monthly",
+      "everyMonths": "Every {{count}} months",
+      "everyDays": "Every {{count}} days"
+    }
+  },
+  "plans": {
+    "title": "Plans",
+    "aboutLabel": "About plans",
+    "description": "Upgrade any time — a paid plan you buy now starts when your current one ends.",
+    "current": "Current",
+    "free": "Free",
+    "creditsOnActivation": "{{credits}} credits on activation",
+    "concurrentShipments": "{{cap}} concurrent shipments",
+    "liveTrackingIncluded": "Live agent tracking included",
+    "mediaStorage": "{{size}} media storage",
+    "yourPlan": "Your plan",
+    "defaultTier": "Default tier",
+    "queuedTitle": "A plan is already queued to start when your current one ends.",
+    "queued": "Plan queued",
+    "choose": "Choose plan"
+  },
+  "wallet": {
+    "title": "Credit wallet",
+    "aboutLabel": "About the credit wallet",
+    "description": "Top up your agency credit balance. Credits never expire and power upcoming credit-metered features.",
+    "descriptionShort": "Credits never expire",
+    "currentBalance": "Current balance",
+    "creditsUnit": "credits",
+    "negative": "Your balance is negative after a refunded or disputed top-up. Top up to bring it back to positive.",
+    "topUp": "Top up",
+    "packCredits": "{{credits}} credits",
+    "buy": "Buy",
+    "noPacks": "No credit packs available right now."
+  },
+  "web": {
+    "plan": "Manage your plan on the web dashboard at {{host}}.",
+    "topup": "Top up your balance on the web dashboard at {{host}}.",
+    "method": "Add a payment method on the web dashboard at {{host}}.",
+    "open": "Open web dashboard"
+  },
+  "storage": {
+    "title": "Media storage",
+    "usedOf": "{{used}} of {{limit}} used",
+    "usedNoLimit": "{{used}} used · no limit",
+    "used": "Used",
+    "remaining": "{{size}} remaining",
+    "full": "Your media storage is full. New uploads will be rejected until you free up space.",
+    "nearFull": "You've used {{percent}}% of your media storage.",
+    "freeUpSpace": "Free up space",
+    "upgradePlan": "Upgrade plan",
+    "footnote": "Every file your agency owns counts here — your avatar, your business logo, anything you upload, and the delivery proofs your agents attach to their shipments.",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "categories": {
+      "image": "Images",
+      "video": "Videos",
+      "document": "Documents",
+      "audio": "Audio",
+      "archive": "Archives",
+      "other": "Other"
+    }
+  },
+  "methods": {
+    "title": "Payment methods",
+    "aboutLabel": "About saved payment methods",
+    "description": "Saved methods pre-fill checkout. We never store full card numbers or CVV.",
+    "descriptionShort": "Pre-fill checkout",
+    "atLimit": "You can save up to {{count}} methods.",
+    "loadFailed": "Failed to load payment methods.",
+    "empty": "No saved payment methods yet. Add one to speed up checkout.",
+    "default": "Default",
+    "setDefault": "Set default",
+    "setDefaultFailed": "Could not update the default.",
+    "expires": "Expires {{month}}/{{year}}",
+    "remove": "Remove payment method",
+    "removed": "Payment method removed",
+    "removeFailed": "Could not remove the method.",
+    "pickNewDefault": "Pick a new default payment method.",
+    "removeTitle": "Remove payment method?",
+    "removeDescription": "{{label}} will be removed. This can't be undone.",
+    "types": {
+      "card": "Card",
+      "mobile_money": "Mobile money",
+      "bank_transfer": "Bank transfer"
+    },
+    "add": {
+      "title": "Add payment method",
+      "description": "Save a method to speed up checkout. We never store full card numbers or CVV.",
+      "phone": "Mobile money number",
+      "operator": "Provider",
+      "holderNameMobile": "Account holder name (optional)",
+      "holderNameMobilePlaceholder": "Account holder",
+      "holderNameCard": "Card holder name",
+      "holderNameCardPlaceholder": "Name on card",
+      "cardDetails": "Card details",
+      "setAsDefault": "Set as default",
+      "setAsDefaultHint": "Pre-selected at checkout.",
+      "submit": "Save method",
+      "added": "Payment method added",
+      "channel": "Payment method",
+      "secureNote": "Card details go straight to Stripe — they never touch our servers."
+    }
+  },
+  "settings": {
+    "title": "Expiry reminders",
+    "description": "How many days before your plan expires should we warn you?",
+    "daysLabel": "Days before expiry",
+    "saved": "Settings updated",
+    "loadFailed": "Failed to load settings.",
+    "saveFailed": "Failed to update settings.",
+    "validation": {
+      "number": "Enter a number of days",
+      "integer": "Must be a whole number",
+      "min": "Must be at least {{min}}",
+      "max": "Must be at most {{max}}"
+    }
+  },
+  "checkout": {
+    "planTitle": "Switch to {{name}}",
+    "planSummary": "{{name}} plan",
+    "planPurchased": "Plan purchased",
+    "topupTitle": "Buy credits",
+    "topupSummary": "{{credits}} credits",
+    "creditsAdded": "Credits added",
+    "cardNotCompleted": "The card payment was not completed.",
+    "stillConfirming": "We're still confirming your card payment — it'll update here shortly.",
+    "savedMethod": "Payment method",
+    "newMethod": "New",
+    "payWith": "Pay with",
+    "phone": "Mobile money number",
+    "operator": "Provider",
+    "usdNotice": "Card payments are processed in <strong>USD</strong>; your bank may apply its own conversion. We'll show the exact dollar amount on the next step.",
+    "usdNoticeShort": "Charged in USD; your bank may apply its own currency conversion.",
+    "nameOnCard": "Name on card (optional)",
+    "nameOnCardPlaceholder": "Agency name",
+    "receiptEmail": "Email for receipt (optional)",
+    "receiptEmailPlaceholder": "agency@example.com",
+    "invalidEmail": "Enter a valid email, or leave it blank.",
+    "continueToCard": "Continue to card",
+    "confirmPayment": "Confirm payment · {{amount}}",
+    "youWillBeCharged": "You'll be charged",
+    "chargedFor": "for {{summary}} ({{amount}})",
+    "completingFor": "Completing payment for {{summary}} ({{amount}})",
+    "cardDetails": "Card details",
+    "pay": "Pay {{amount}}",
+    "payNow": "Pay now",
+    "waiting": "Waiting for payment…",
+    "phonePrompt": "Confirm the payment prompt on your phone.",
+    "redirecting": "Redirecting you to your bank to confirm the payment…",
+    "cardConfirmed": "Card confirmed — applying your purchase…",
+    "confirming": "Confirming your payment…",
+    "cardFailed": "The card payment failed. Please try again.",
+    "dialUssd": "Dial <code>{{code}}</code> to approve.",
+    "keepOpen": "This can take up to a couple of minutes. Keep this window open.",
+    "closeKeepProcessing": "Close (we'll keep processing)",
+    "successTitle": "Payment confirmed",
+    "successDescription": "Your account has been updated.",
+    "failedTitle": "Payment failed",
+    "failedDescription": "The payment was not completed. No charge was made — you can try again.",
+    "timeoutTitle": "Still processing",
+    "timeoutDescription": "We couldn't confirm the payment in time. If you completed it, your balance will update shortly — check your history.",
+    "startOver": "Start over",
+    "processedBy": "Processed by",
+    "stripeNote": "Card details go straight to Stripe — they never touch our servers."
+  },
+  "gateways": {
+    "NOTCHPAY": "NotchPay",
+    "MYCOOLPAY": "MyCoolPay",
+    "STRIPE": "Card",
+    "mobileMoneyDescription": "Mobile money — charged in XAF",
+    "cardDescription": "Visa, Mastercard & more — charged in USD"
+  },
+  "card": {
+    "type": "Card type",
+    "fallbackBrand": "CARD",
+    "holderPlaceholder": "Card holder",
+    "valid": "Valid",
+    "loadingForm": "Loading card form…",
+    "loadingSecureForm": "Loading secure card form…",
+    "unavailable": "Card payments are unavailable right now.",
+    "loadFailed": "Could not load the card form. Please try again.",
+    "notReady": "Card form is not ready yet.",
+    "validateFailed": "Could not validate the card.",
+    "chargeFailed": "Your card could not be charged. Please try again.",
+    "notCompleted": "The card payment was not completed. Please try again."
+  },
+  "brands": {
+    "bank": "Bank payments"
+  },
+  "channels": {
+    "card": {
+      "name": "Card payment",
+      "description": "Secured by Stripe"
+    },
+    "mobileMoney": {
+      "name": "Mobile Money",
+      "description": "Approve on your phone"
+    },
+    "poweredBy": "Powered by {{provider}}",
+    "processedBy": "Processed by",
+    "operatorPlaceholder": "Choose an operator",
+    "comingSoon": "Soon",
+    "comingSoonHint": "Airtel Money and Wave are coming soon — pick another operator for now."
+  }
+}

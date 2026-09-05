@@ -1,67 +1,105 @@
+/*
+ * Must stay first: CSS `@import` is only legal ahead of every other rule. Vite
+ * inlines it at build time, so the woff2 files ship in the bundle rather than
+ * being fetched from Google at boot (CAPACITOR-PLAN.md → P2.7).
+ */
+@import './styles/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ─── Wi-Mall · Dispatch Cobalt ────────────────────────────────────────────────
+ * Brand identity for the agency dashboard. A bold cobalt blue reads as trust,
+ * live tracking and logistics tech — the language of last-mile dispatch; a deep
+ * navy "dispatch" shell anchors the brand on every page; gold marks value and
+ * money, and green stays reserved for real success/delivered states. Everything
+ * downstream (pages, primitives, shell) inherits from here.
+ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 214 42% 99%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Cobalt — deep enough that white text and text-primary both clear AA (6.5:1). */
+    --primary: 222 84% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 40% 20%;
+    --muted: 214 30% 96%;
+    --muted-foreground: 216 16% 40%;
+    --accent: 214 62% 93%;
+    --accent-foreground: 222 72% 30%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    /* Success stays green — reserved for delivered / paid / positive money states. */
+    --success: 152 63% 31%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 46%;
+    --gold: 42 90% 45%;
+
+    --border: 214 24% 89%;
+    --input: 214 24% 85%;
+    --ring: 222 84% 47%;
+    --radius: 0.75rem;
+
+    /* Custom Sidebar surface — a deep navy ink that anchors the brand on every
+       page. Rows and active states are expressed against this dark ground. */
+    --sidebar-background: 223 55% 9%;
+    --sidebar-foreground: 214 20% 72%;
+    --sidebar-primary: 214 92% 62%;
+    --sidebar-primary-foreground: 223 60% 8%;
+    --sidebar-accent: 222 40% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 32% 18%;
+    --sidebar-ring: 214 92% 62%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 222 47% 6%;
+    --foreground: 214 22% 96%;
+    --card: 222 40% 9%;
+    --card-foreground: 214 22% 96%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 214 22% 96%;
+
+    --primary: 214 92% 62%;
+    --primary-foreground: 222 47% 8%;
+
+    --secondary: 222 24% 16%;
+    --secondary-foreground: 214 20% 92%;
+    --muted: 222 20% 15%;
+    --muted-foreground: 214 16% 66%;
+    --accent: 222 30% 18%;
+    --accent-foreground: 214 30% 92%;
+
+    --destructive: 0 62% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 58% 46%;
+    --success-foreground: 150 45% 7%;
+    --warning: 38 92% 55%;
+    --gold: 42 90% 58%;
+
+    --border: 222 20% 17%;
+    --input: 222 20% 19%;
+    --ring: 214 92% 62%;
+
+    --sidebar-background: 223 58% 7%;
+    --sidebar-foreground: 214 18% 72%;
+    --sidebar-primary: 214 92% 64%;
+    --sidebar-primary-foreground: 223 60% 6%;
+    --sidebar-accent: 222 34% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 26% 15%;
+    --sidebar-ring: 214 92% 64%;
   }
 }
 
@@ -70,14 +108,38 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  /* Page-level headings speak in the display voice — one confident, brand-owned
+     face across every route. Card/section titles stay in the body face. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.22);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  /* Money and measured figures — tabular so columns of numbers line up. */
+  .font-numeric {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,12 +147,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
+  background: hsl(var(--primary) / 0.22);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--primary) / 0.4);
 }
 
 /* Smooth transitions */
@@ -128,10 +190,259 @@ textarea:focus-visible {
   }
 }
 
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
 
 .animate-slide-in {
   animation: slideIn 0.4s ease-out;
+}
+
+/* Staggered rise for grids/lists — one authored entrance, not per-element noise. */
+.animate-rise {
+  animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Live Tracking map (Leaflet) ─────────────────────────────────────────── */
+.agent-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: hsl(var(--muted));
+  font: inherit;
+}
+
+/* Custom div-icon marker (agent position) */
+.leaflet-marker-icon.agent-marker-icon {
+  background: transparent;
+  border: none;
+  transition: transform 0.6s linear;
+}
+/* Suppress the position transition during zoom so markers don't lag the tiles. */
+.agent-map.agent-map--zooming .leaflet-marker-icon.agent-marker-icon {
+  transition: none;
+}
+.agent-marker__dot,
+.agent-marker__pulse,
+.agent-marker__heading,
+.agent-marker__label {
+  position: absolute;
+}
+.agent-marker__dot {
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #2563eb;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.agent-marker__pulse {
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #2563eb;
+  border-radius: 9999px;
+  opacity: 0.35;
+  animation: agentPulse 2s ease-out infinite;
+}
+@keyframes agentPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  70%,
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+.agent-marker__heading {
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+.agent-marker__arrow {
+  position: absolute;
+  left: 50%;
+  top: 1px;
+  margin-left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid #2563eb;
+}
+.agent-marker__label {
+  left: 50%;
+  top: 26px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.9);
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+/* Selected / focused agent — gold accent */
+.agent-marker-icon--selected .agent-marker__dot {
+  background: #eaa916;
+  transform: scale(1.15);
+}
+.agent-marker-icon--selected .agent-marker__pulse {
+  background: #eaa916;
+}
+.agent-marker-icon--selected .agent-marker__arrow {
+  border-bottom-color: #eaa916;
+}
+.agent-marker-icon--selected .agent-marker__label {
+  background: #eaa916;
+  color: #1f2937;
+  border-color: #eaa916;
+}
+
+/* An agent recedes — but never disappears — while a shipment holds the focus. */
+.agent-marker-icon--muted {
+  opacity: 0.45;
+}
+.agent-marker-icon--muted .agent-marker__pulse {
+  animation: none;
+  opacity: 0;
+}
+
+/* ── Shipment start / end pins ─────────────────────────────────────────────── */
+/* Anchored on the tip (iconAnchor [20, 52]), so the point sits on the address. */
+.leaflet-marker-icon.ship-pin {
+  background: transparent;
+  border: none;
+}
+.ship-pin__body {
+  position: absolute;
+  inset: 0;
+  animation: pinDrop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.ship-pin__svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.35));
+}
+/* A ground ellipse under the tip — what reads as the pin standing on the map. */
+.ship-pin__shadow {
+  position: absolute;
+  left: 50%;
+  top: 49px;
+  width: 16px;
+  height: 5px;
+  margin-left: -8px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.28);
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+.ship-pin__label {
+  position: absolute;
+  left: 50%;
+  top: 55px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.92);
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+@keyframes pinDrop {
+  0% {
+    transform: translateY(-14px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ship-pin__body {
+    animation: none;
+  }
+}
+
+/* Popup themed to match the app */
+.agent-popup-wrap .leaflet-popup-content-wrap {
+  border-radius: 12px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.24);
+}
+.agent-popup-wrap .leaflet-popup-content {
+  margin: 10px 12px;
+}
+.agent-popup-wrap .leaflet-popup-tip {
+  background: hsl(var(--popover));
+}
+.agent-popup__kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 2px;
+}
+.agent-popup__name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.agent-popup__coords {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.agent-popup__meta {
+  font-size: 12px;
+  margin-top: 4px;
+}
+.agent-popup__seen {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 2px;
+}
+.agent-popup__link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+/* Dark-tiles fallback for a provider without a dedicated dark basemap */
+.agent-map.agent-map--dim .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }

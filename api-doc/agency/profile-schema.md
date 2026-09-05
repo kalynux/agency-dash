@@ -18,11 +18,12 @@ Root-level fields on the agency profile response object.
 |-------|------|-------------|-----------|------------|-------------|
 | `id` | `string` | Yes | No (read-only) | — | MongoDB ObjectId as a string. |
 | `agencyName` | `string` | Yes | Yes | Min 1, Max 200 chars | The registered name of the agency. |
-| `email` | `string \| null` | Yes | Yes | Valid email format | Main agency contact email. Distinct from per-location `support_contact.email`. |
+| `email` | `string \| null` | Yes | Yes | Valid email, lowercased ([Contact formats](../README.md#contact-formats-phone--email)) | Main agency contact email. Distinct from per-location `support_contact.email`. |
 | `emailVerified` | `boolean` | Yes | No | — | Whether the main email has been verified. |
-| `phone` | `string \| null` | Yes | Yes | Regex: `/^\+?[0-9\s\-()]+$/` | Main agency phone number. |
+| `phone` | `string \| null` | Yes | Yes | **E.164**, e.g. `+237670000000` ([Contact formats](../README.md#contact-formats-phone--email)) | Main agency phone number. |
 | `phoneVerified` | `boolean` | Yes | No | — | Whether the main phone has been verified. |
-| `logoUrl` | `string \| null` | Yes | Yes | Must be a valid absolute URL | URL to the agency logo image. |
+| `logoFileId` | `string \| null` | Yes | Yes (as `logo_file_id`) | Valid MongoDB ObjectId of a file uploaded via `POST /api/files/upload` | File id of the agency logo. On update send `logo_file_id`; the response returns both this and the derived `logoUrl`. |
+| `logoUrl` | `string \| null` | Yes | No (derived) | — | Public URL of the logo, derived server-side from `logoFileId`. Read-only. |
 | `timezone` | `string` | Yes | Yes | IANA timezone string | Operating timezone. Default: `"Africa/Douala"`. |
 | `coverageAreas` | `string[]` | Yes | Yes | Min 1 item. Values are region keys from `locations.json`. | Regions this agency can serve. |
 | `kycVerified` | `boolean` | Yes | No (admin-only) | — | Whether admin has approved the agency's KYC documents. |
@@ -47,8 +48,9 @@ Root-level fields on the agency profile response object.
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
 | `_id` | `string` | Response only | — | Auto-assigned by the backend. |
-| `region` | `string` | Yes | Min 1, Max 100 chars | State/region name (display label, not the key). E.g. `"Littoral"`. |
-| `city` | `string` | Yes | Min 1, Max 100 chars | City name. E.g. `"Douala"`. |
+| `label` | `string` | Yes on write, `string \| null` on read | Min 1, Max 50 chars | The agency's own name for this location. E.g. `"Douala HQ"`. `null` on entries saved before labels existed — display `"Primary Headquarters"` / `"Branch N"` instead. |
+| `region` | `string \| null` | No — **derived** | Max 100 chars | State/region name, taken from `geo.components.region`. E.g. `"Littoral"`. A sent value is a fallback only, used when the geocode has none. |
+| `city` | `string \| null` | No — **derived** | Max 100 chars | City name, taken from `geo.components.city`. E.g. `"Douala"`. `null` when the geocode resolves no city (rural / landmark results). |
 | `address_description` | `string` | Yes | Min 1, Max 200 chars | Full street address, building name, or landmark. |
 | `support_contact` | `object` | Yes | See below | Dedicated support contact for this specific location. |
 
@@ -56,38 +58,49 @@ Root-level fields on the agency profile response object.
 
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
-| `phone` | `string` | Yes | Min 6, Max 20 chars. Regex: `/^\+?[0-9\s\-()]+$/` | Phone number for location-level customer support. |
-| `email` | `string \| null` | No | Valid email format | Email for location-level support. `null` if not provided. |
+| `phone` | `string` | Yes | **E.164** — leading `+` and country code required, e.g. `+237670000000` ([Contact formats](../README.md#contact-formats-phone--email)) | Phone number for location-level customer support. |
+| `email` | `string \| null` | No | Valid email, lowercased ([Contact formats](../README.md#contact-formats-phone--email)) | Email for location-level support. `null` if not provided. |
 
 ---
 
 ## 3. Payout Details
 
-`payoutDetails` is an **ordered array** of payout method objects.
+`payoutDetails` is an **ordered array** of payout method objects. It is the same schema vendors and
+agents use. **[Payout methods](./payout-methods.md)** carries the full reference — endpoints,
+masking, card policy, and what happens at payout time.
+
+> 🚧 **Only `mobile_money` can be configured right now** — `bank` and `card` are switched off at
+> the write path (`400 VALIDATION_ERROR` on `method`). Stored entries of either kind still read
+> back and are still paid. See
+> [Payout methods](./payout-methods.md#availability).
 
 - **Minimum**: 1 entry required to complete onboarding.
-- **Maximum**: 2 entries (one `mobile_money` and one `bank` — no duplicates of the same type).
+- **Maximum**: 3 entries. Duplicates of the same `method` are allowed (e.g. two mobile-money numbers).
 - **Index 0** is always the **preferred / default** payout method.
-- Sensitive values (`phone_number`, `account_number`) are **masked in all API responses**. The raw values are never returned.
+- Sensitive values (`phone_number`, `account_number`) are **masked in all API responses**. The raw values are never returned. A `card` carries nothing sensitive to mask — see below.
 
 ### `PayoutMethod` Object
 
 | Field | Type | In Response? | Sendable? | Validation | Description |
 |-------|------|-------------|-----------|------------|-------------|
-| `method` | `string` | Yes | Yes | Enum: `"mobile_money"` or `"bank"` | Determines which sub-object is active. |
+| `method` | `string` | Yes | Yes | Readable: `"mobile_money"` · `"bank"` · `"card"`. **Sendable today: `"mobile_money"` only** (🚧 the other two are switched off) | Determines which sub-object is active. |
 | `is_preferred` | `boolean` | Yes | No (read-only) | — | `true` only for index 0. Set by the backend. Do not send this field. |
 | `mobile_money` | `object \| null` | Yes | Yes | Required if `method === "mobile_money"`, else `null` | Mobile money details. |
 | `bank` | `object \| null` | Yes | Yes | Required if `method === "bank"`, else `null` | Bank account details. |
+| `card` | `object \| null` | Yes | Yes | Required if `method === "card"`, else `null` | Card details. **No card number, no CVV — ever.** |
 
 ### `mobile_money` Object
 
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
 | `provider` | `string` | Yes | Min 1 char | Telecom operator name. E.g. `"MTN Mobile Money"`, `"Orange Money"`. |
-| `phone_number` | `string` | Yes | Valid phone format | Momo phone number. **Masked in responses** as `phone_number_masked`. |
+| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required ([Contact formats](../README.md#contact-formats-phone--email)) | Momo phone number. **Masked in responses** as `phone_number_masked`. |
 | `account_name` | `string` | Yes | Min 1 char | Name registered on the Momo account. |
 
-### `bank` Object
+### `bank` Object 🚧 switched off
+
+> **Not sendable right now** — see the notice at the top of this section. Readable if one was stored
+> before the switch.
 
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
@@ -95,6 +108,29 @@ Root-level fields on the agency profile response object.
 | `account_number` | `string` | Yes | Min 1 char | Full bank account number. **Masked in responses** as `account_number_masked`. |
 | `account_name` | `string` | Yes | Min 1 char | Name on the bank account. |
 | `country` | `string` | Yes | Min 1 char | Country where the bank operates. ISO code recommended (e.g. `"CM"`). |
+
+### `card` Object 🚧 switched off
+
+> **Not sendable right now** — see the notice at the top of this section. Readable if one was stored
+> before the switch.
+
+> **Card numbers and CVVs are never accepted.** Sending `number`, `card_number`, `pan`,
+> `account_number`, `cvv`, `cvc`, `cvn` or `security_code` inside `card` is a `400` — refused
+> outright rather than silently dropped, so a success response can never be read as "the number is
+> stored". See [Payout methods → card](./payout-methods.md#card).
+
+| Field | Type | Required? | Validation | Description |
+|-------|------|-----------|------------|-------------|
+| `brand` | `string` | Yes | Enum: `visa` · `mastercard` · `amex` · `discover` · `unionpay` · `jcb` · `diners` · `verve` · `other` | Card network. Case-insensitive on write, lowercase in responses. |
+| `last4` | `string` | Yes | Exactly 4 digits | Last 4 of the card number — the only part that exists here. |
+| `card_holder_name` | `string` | Yes | Min 1 char | Name as embossed on the card. |
+| `expiry_month` | `number` | Yes | Integer 1–12 | |
+| `expiry_year` | `number` | Yes | 4-digit year; must not already be past | A card is valid *through* the last day of its expiry month. |
+| `country` | `string` | Yes | Min 1 char | Issuing country. ISO-2 recommended. |
+| `issuing_bank` | `string \| null` | No | Max 100 chars | |
+| `gateway_provider` | `string \| null` | No | Max 50 chars. **Write-only** | E.g. `"stripe"`. Never returned. |
+| `gateway_token` | `string \| null` | No | Max 255 chars. **Write-only** | The gateway's handle for this card. Never returned. |
+| `number_masked` | `string` | — | Read-only | Rendered from `last4` (`"•••• •••• •••• 4242"`) so one client code path can print every method kind. |
 
 ---
 
@@ -238,8 +274,9 @@ export interface SupportContact {
 
 export interface HeadquartersAddress {
   _id: string;           // Assigned by backend — do not send on create
-  region: string;
-  city: string;
+  label: string | null;  // Required when writing; null on pre-label entries
+  region: string | null; // Derived from geo.components.region
+  city: string | null;   // Derived from geo.components.city
   address_description: string;
   support_contact: SupportContact;
 }
@@ -265,12 +302,39 @@ export interface BankPayout {
   country: string;
 }
 
+export type CardBrand =
+  | 'visa' | 'mastercard' | 'amex' | 'discover'
+  | 'unionpay' | 'jcb' | 'diners' | 'verve' | 'other';
+
+/**
+ * A card payout destination. There is no `number` and no `cvv` — not optional,
+ * ABSENT. Sending either is a 400; the full number lives at the payment gateway,
+ * never here.
+ */
+export interface CardPayout {
+  brand: CardBrand;
+  /** Last 4 digits — the only part of the number that exists. */
+  last4: string;
+  /** Rendered from last4 — only present in API responses. */
+  number_masked?: string;
+  card_holder_name: string;
+  expiry_month: number;
+  expiry_year: number;
+  country: string;
+  issuing_bank: string | null;
+  /** Only present in request payloads — never returned. */
+  gateway_provider?: string | null;
+  /** Only present in request payloads — never returned. */
+  gateway_token?: string | null;
+}
+
 export interface PayoutMethod {
-  method: 'mobile_money' | 'bank';
+  method: 'mobile_money' | 'bank' | 'card';
   /** Set by the backend for index 0. Do not send in request payloads. */
   is_preferred?: boolean;
   mobile_money: MobileMoneyPayout | null;
   bank: BankPayout | null;
+  card: CardPayout | null;
 }
 
 /** Ordered array — index 0 is always the preferred method. */
@@ -366,7 +430,7 @@ export interface DeliveryAgencyProfile {
   emailVerified: boolean;
   phone: string | null;
   phoneVerified: boolean;
-  logoUrl: string | null;
+  logo: FileDetail | null;   // { id, key, url, mimeType, size, originalName } — same shape as product media
   timezone: string;
   coverageAreas: string[];
   headquartersAddresses: HeadquartersAddress[];

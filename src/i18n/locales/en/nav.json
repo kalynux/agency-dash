@@ -1,0 +1,109 @@
+{
+  "primary": {
+    "overview": "Overview",
+    "shipments": "Shipments",
+    "tracking": "Live Tracking",
+    "inventory": "Inventory",
+    "inventoryStock": "Stored SKUs",
+    "inventoryRequests": "Stock requests",
+    "media": "Media",
+    "transactions": "Transactions",
+    "cash": "Cash Management",
+    "cashSummary": "Summary",
+    "cashDeposits": "Deposits",
+    "cashRemittances": "Remittances",
+    "cashDiscrepancies": "Discrepancies",
+    "notifications": "Notifications",
+    "tickets": "Tickets",
+    "agents": "Agents",
+    "agentsConnections": "Connections",
+    "agentsBrowse": "Browse",
+    "vendors": "Vendors",
+    "vendorsConnections": "Connections",
+    "vendorsBrowse": "Browse",
+    "inventoryStatements": "Storage statements"
+  },
+  "footer": {
+    "account": "Account",
+    "accountProfile": "Profile",
+    "accountStore": "Store",
+    "accountLocations": "Locations",
+    "accountSecurity": "Security",
+    "accountBilling": "Billing",
+    "accountPayout": "Payout",
+    "settings": "Settings",
+    "settingsPolicies": "Policies",
+    "settingsNotifications": "Notifications",
+    "settingsPreferences": "Preferences"
+  },
+  "sidebar": {
+    "fallbackAgencyName": "My Agency",
+    "collapse": "Collapse",
+    "expand": "Expand sidebar",
+    "resizeHandle": "Drag to resize",
+    "platform": "Wi-Mall"
+  },
+  "mobile": {
+    "more": "More",
+    "roleLabel": "Agency",
+    "openSettings": "Open account settings",
+    "quickCreate": "Create",
+    "back": "Back",
+    "exitConfirm": "Press back again to exit"
+  },
+  "header": {
+    "searchPlaceholderShort": "Search...",
+    "searchPlaceholder": "Search deliveries, tickets...",
+    "searchLabel": "Open search",
+    "closeSearch": "Close search",
+    "quickActions": "Quick Actions",
+    "notifications": "Notifications",
+    "notificationsWithCount_one": "Notifications, 1 unread",
+    "notificationsWithCount_other": "Notifications, {{count}} unread",
+    "markAllRead": "Mark all read",
+    "noNewNotifications": "No new notifications",
+    "viewAllNotifications": "View all notifications",
+    "profile": "Profile",
+    "logout": "Logout",
+    "logoutConfirmTitle": "Log out?",
+    "logoutConfirmDescription": "You'll need to sign in again to access your dashboard.",
+    "logoutConfirmAction": "Log out",
+    "searchResultsFor": "Search results for \"{{query}}\"",
+    "noResults": "No results for \"{{query}}\"",
+    "noResultsHint": "Try a tracking number, an agent name, or a ticket subject.",
+    "hintNavigate": "to navigate",
+    "hintSelect": "to select",
+    "hintClose": "to close"
+  },
+  "quickActions": {
+    "newTicket": {
+      "label": "New Ticket",
+      "description": "Get help from the team"
+    },
+    "viewShipments": {
+      "label": "View Shipments",
+      "description": "Track and manage shipments"
+    },
+    "viewEarnings": {
+      "label": "View Earnings",
+      "description": "Balance & payout requests"
+    },
+    "viewCash": {
+      "label": "Cash Management",
+      "description": "COD deposits & remittances"
+    },
+    "updateCoverage": {
+      "label": "Update Coverage Areas",
+      "description": "Edit the regions you deliver to"
+    }
+  },
+  "platformStatus": {
+    "operational": "All systems operational",
+    "degraded": "Degraded performance",
+    "down": "Service disruption",
+    "checking": "Checking status…",
+    "label": "Platform status",
+    "offline": "No internet connection",
+    "offlineDetail": "Some information may be out of date until you reconnect."
+  }
+}

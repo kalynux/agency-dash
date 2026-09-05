@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -16,9 +17,10 @@ interface PageBackButtonProps {
  */
 export function PageBackButton({
   fallbackPath,
-  label = 'Back',
+  label,
   className,
 }: PageBackButtonProps) {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -35,10 +37,10 @@ export function PageBackButton({
       variant="ghost"
       size="sm"
       onClick={handleClick}
-      className={cn('gap-1.5 -ml-2 text-muted-foreground', className)}
+      className={cn('gap-1.5 -ms-2 text-muted-foreground', className)}
     >
-      <ArrowLeft className="h-4 w-4" />
-      {label}
+      <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
+      {label ?? t('actions.back')}
     </Button>
   );
 }

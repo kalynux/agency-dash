@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { Step1Logistics } from './steps/Step1Logistics';
 import { Step2Payout } from './steps/Step2Payout';
@@ -6,13 +7,15 @@ import { Step3Branding } from './steps/Step3Branding';
 import { Step4Policies } from './steps/Step4Policies';
 
 function UnknownStepFallback({ step }: { step: number | null }) {
+    const { t } = useTranslation('onboarding');
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <div className="text-4xl mb-4">🤷</div>
-            <h2 className="text-xl font-semibold mb-2">Unexpected onboarding state</h2>
+            <h2 className="text-xl font-semibold mb-2">{t('errors.unknownStepTitle')}</h2>
             <p className="text-muted-foreground text-sm max-w-xs">
-                The server returned an unrecognised onboarding step ({step ?? 'none'}).
-                Please contact support if this persists.
+                {t('errors.unknownStepDescription', {
+                    step: step ?? t('errors.unknownStepNone'),
+                })}
             </p>
         </div>
     );

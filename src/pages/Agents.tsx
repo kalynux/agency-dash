@@ -1,51 +1,46 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { Users, UserPlus } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { useAgentStore } from '@/store';
-import { RosterTab } from '@/components/agents/RosterTab';
-import { ApplicationsTab } from '@/components/agents/ApplicationsTab';
+import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAgentsRoster } from '@/store/agents.store';
+import { ConnectionsTab } from '@/components/agents/ConnectionsTab';
+import { BrowseTab } from '@/components/agents/BrowseTab';
+import { SubPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
-const VALID_TABS = ['roster', 'applications'] as const;
+const VALID_TABS = ['connections', 'browse'] as const;
 type AgentsTab = typeof VALID_TABS[number];
 
-export function Agents() {
-  const { tab } = useParams<{ tab: string }>();
-  const navigate = useNavigate();
-  const { agentRequests } = useAgentStore();
-  const activeTab: AgentsTab = (VALID_TABS as readonly string[]).includes(tab ?? '')
-    ? (tab as AgentsTab)
-    : 'roster';
+/** A 24-char hex ObjectId, which is what a contract deep-link carries. */
+const CONTRACT_ID = /^[a-f\d]{24}$/i;
 
-  const pendingCount = agentRequests.filter((r) => r.status === 'pending').length;
+export function Agents() {
+  const { t } = useTranslation('agents');
+  const { tab } = useParams<{ tab: string }>();
+  const { refetch } = useAgentsRoster();
+  const isTab = (VALID_TABS as readonly string[]).includes(tab ?? '');
+  const activeTab: AgentsTab = isTab ? (tab as AgentsTab) : 'connections';
+
+  // `agent_contract.*` notifications deep-link to `agents/{contractId}`, which
+  // lands on this same route. An id in the tab slot means "open that contract",
+  // not "unknown tab" — the Connections tab is where it lives either way.
+  const openContractId = !isTab && tab && CONTRACT_ID.test(tab) ? tab : null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Agents</h1>
-        <p className="text-muted-foreground">Manage the delivery agents affiliated with your agency</p>
-      </div>
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/agents/${next}`}
+      className="space-y-6 animate-fade-in"
+    >
+      <SubPageHeader
+        path={`/dashboard/agents/${activeTab}`}
+        description={t(`tabs.${activeTab}.description`)}
+        shortDescription={t(`tabs.${activeTab}.short`)}
+      />
 
-      <Tabs value={activeTab} onValueChange={(v) => navigate(`/dashboard/agents/${v}`)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="roster" className="gap-2">
-            <Users className="w-4 h-4" />
-            Roster
-          </TabsTrigger>
-          <TabsTrigger value="applications" className="gap-2">
-            <UserPlus className="w-4 h-4" />
-            Applications
-            {pendingCount > 0 && (
-              <Badge variant="destructive" className="ml-1 px-1.5 h-5 min-w-5 justify-center">
-                {pendingCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="roster" className="mt-6"><RosterTab /></TabsContent>
-        <TabsContent value="applications" className="mt-6"><ApplicationsTab /></TabsContent>
-      </Tabs>
-    </div>
+      {activeTab === 'connections' && (
+        <ConnectionsTab onContractChange={refetch} openContractId={openContractId} />
+      )}
+      {activeTab === 'browse' && <BrowseTab onContractChange={refetch} />}
+    </TabSwipeArea>
   );
 }

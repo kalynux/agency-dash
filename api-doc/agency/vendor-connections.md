@@ -16,7 +16,7 @@ Authorization: Bearer <access_token>
 
 ## Overview
 
-Symmetric counterpart to [Vendor: Agency Connections](../vendor/agency-connections.md) — read
+Symmetric counterpart to Vendor: Agency Connections (`backend/jovi-mall/api-doc/vendor/agency-connections.md` — not mirrored in this repository) — read
 that doc first for the full status lifecycle (`pending → active/rejected/withdrawn`,
 `active ⇄ paused_reapproval`, `→ terminated`, re-request reuses the same record). This doc covers
 the agency side: searching vendors, sending/receiving requests, and approving/rejecting.
@@ -60,7 +60,7 @@ Only vendors with `status ≠ "inactive"` and completed onboarding (`onboardingS
       "id": "507f1f77bcf86cd799439aaa",
       "businessName": "Acme Store",
       "displayName": "Acme",
-      "logoUrl": "https://cdn.example.com/logos/acme.png",
+      "logo": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/acme-logo.png", "url": "https://cdn.example.com/logos/acme.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" },
       "kycVerified": true,
       "primaryAddress": { "label": "Main Shop", "addressLine1": "12 Rue de la Paix", "city": "Douala", "state": "Littoral" },
       "policies": {
@@ -159,7 +159,7 @@ connection paused because the vendor changed its policies (`paused_reapproval �
 
 Identical `ConnectionDto` shape and `AgencyVendorListItemDto`/`AgencyVendorPolicySummaryDto` browse
 shape (mirroring `VendorAgencyListItemDto` on the vendor side) — see
-[Vendor: Agency Connections](../vendor/agency-connections.md#response-field-reference) for the
+Vendor: Agency Connections (`backend/jovi-mall/api-doc/vendor/agency-connections.md #response-field-reference` — not mirrored in this repository) for the
 full `ConnectionDto` reference.
 
 ```typescript
@@ -167,7 +167,7 @@ interface AgencyVendorListItemDto {
   id: string;
   businessName: string;
   displayName: string | null;
-  logoUrl: string | null;
+  logo: FileDetail | null;
   kycVerified: boolean;
   primaryAddress: { label: string; addressLine1: string; city: string; state: string | null } | null;
   policies: {
@@ -188,3 +188,18 @@ POST /api/agency/vendor-connections               { "counterpartyId": "507f1f77b
 GET  /api/agency/vendor-connections?status=active
 POST /api/agency/vendor-connections/665f.../approve
 ```
+
+---
+
+## Notifications
+
+You receive an agency notification (in-app, always; plus your configured secondary channel) for:
+- `connection.request_received` — a vendor sent you a request
+- `connection.approved` — a vendor approved or reapproved a connection
+- `connection.rejected` — a vendor rejected your request
+- `connection.reapproval_needed` — a vendor changed its policies and you need to reapprove
+
+Toggle these as a group via the `connectionUpdated` flag on
+[notification preferences](./notifications.md) (default: on). Vendors receive the symmetric
+notification when you (the agency) are the actor — see
+Vendor Notifications — Events (`backend/jovi-mall/api-doc/vendor/notifications.md #events` — not mirrored in this repository).

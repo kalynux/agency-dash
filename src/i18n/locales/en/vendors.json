@@ -1,0 +1,130 @@
+{
+  "tabs": {
+    "connections": {
+      "description": "Every vendor relationship your agency has, past and present — you only receive orders from connected vendors",
+      "short": "Your vendor connections"
+    },
+    "browse": {
+      "description": "Find vendors you can request a connection with",
+      "short": "Vendors you can connect to"
+    }
+  },
+  "status": {
+    "pending": "Pending",
+    "active": "Active",
+    "paused_reapproval": "Reapproval needed",
+    "rejected": "Rejected",
+    "withdrawn": "Withdrawn",
+    "terminated": "Terminated"
+  },
+  "actions": {
+    "request": "Request",
+    "requestAgain": "Request Again",
+    "withdraw": "Withdraw",
+    "approve": "Approve",
+    "reapprove": "Reapprove",
+    "reject": "Reject",
+    "confirmReject": "Confirm Reject",
+    "terminate": "Terminate",
+    "confirmTerminate": "Confirm Terminate",
+    "connected": "Connected",
+    "pendingEllipsis": "Pending…",
+    "reapprovalNeeded": "Reapproval needed",
+    "awaitingVendor": "Awaiting vendor",
+    "reasonOptional": "Reason (optional)",
+    "noteOptional": "Note (optional)",
+    "rejectConfirmTitle": "Reject this request?"
+  },
+  "toasts": {
+    "requested": "Connection request sent.",
+    "approved": "Connection approved.",
+    "rejected": "Request rejected.",
+    "withdrawn": "Request withdrawn.",
+    "terminated": "Connection terminated."
+  },
+  "errors": {
+    "alreadyExists": "You already have a connection request with this vendor.",
+    "notApprover": "You can't approve or reject a request you sent yourself.",
+    "notRequester": "You can't withdraw a request you didn't send.",
+    "wrongReapprovalParty": "It's the vendor's turn to reapprove this connection, not yours."
+  },
+  "connections": {
+    "searchPlaceholder": "Search connections…",
+    "searchLabel": "Search your connections by vendor name",
+    "filterDescription": "Every vendor relationship your agency has, past and present.",
+    "statusFilter": "Connection status",
+    "all": "All",
+    "paused": "Paused",
+    "history": "History",
+    "loading": "Loading connections…",
+    "loadFailed": "Could not load your connections.",
+    "emptyFiltered": "No connections match your search.",
+    "empty": "No connections in this category yet.",
+    "fallbackName": "Vendor {{suffix}}"
+  },
+  "browse": {
+    "searchPlaceholder": "Search vendors…",
+    "filterDescription": "Find vendors you can request a connection with.",
+    "found_one": "{{count}} vendor found",
+    "found_other": "{{count}} vendors found",
+    "loadFailed": "Failed to load vendors. Please try again.",
+    "emptyFiltered": "No vendors match your search or filters.",
+    "empty": "No vendors are available to connect with yet.",
+    "clearFilters": "Clear all filters"
+  },
+  "filters": {
+    "location": "Location",
+    "locationDescription": "Matches the vendor's registered pickup area.",
+    "city": "City",
+    "cityPlaceholder": "e.g. Douala",
+    "state": "State",
+    "statePlaceholder": "e.g. Littoral",
+    "orderPolicy": "Order policy",
+    "returnsAccepted": "Returns accepted",
+    "returnsAcceptedDescription": "The vendor takes goods back after delivery.",
+    "cancellable": "Cancellable",
+    "cancellableDescription": "Orders can still be called off before pickup."
+  },
+  "card": {
+    "kycVerified": "KYC Verified",
+    "viewDetails": "View details for {{name}}",
+    "returnsAccepted": "Returns accepted",
+    "noReturns": "No returns",
+    "cancellable": "Cancellable",
+    "notCancellable": "Not cancellable"
+  },
+  "detail": {
+    "kycVerified": "KYC Verified",
+    "unverified": "Unverified",
+    "address": "Address",
+    "returnPolicy": "Return Policy",
+    "accepted": "Accepted",
+    "returnWindow": "Return window",
+    "returnWindowValue_one": "{{count}} day after delivery",
+    "returnWindowValue_other": "{{count}} days after delivery",
+    "refundType": "Refund type",
+    "refundTypes": {
+      "full": "Full",
+      "partial": "Partial",
+      "store_credit": "Store credit",
+      "exchange_only": "Exchange only"
+    },
+    "cancellationPolicy": "Cancellation Policy",
+    "cancellableLabel": "Cancellable",
+    "deadline": "Deadline",
+    "deadlines": {
+      "before_shipping": "Before shipping",
+      "before_delivery": "Before delivery",
+      "anytime": "Anytime",
+      "not_allowed": "Not allowed"
+    },
+    "support": "Support",
+    "availability": "Availability",
+    "availabilities": {
+      "24_7": "24/7",
+      "business_hours": "Business hours",
+      "limited": "Limited"
+    },
+    "languages": "Languages"
+  }
+}

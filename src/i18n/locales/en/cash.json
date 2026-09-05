@@ -1,0 +1,166 @@
+{
+  "tabs": {
+    "summary": {
+      "description": "Where your cash-on-delivery money sits right now — what your agents still hold and what you owe the platform",
+      "short": "Your cash position"
+    },
+    "deposits": {
+      "description": "Cash your agents have handed over, and the declarations still waiting on your answer",
+      "short": "Cash received from agents"
+    },
+    "remittances": {
+      "description": "Cash you have transferred to the platform, and what it is still waiting to confirm",
+      "short": "Cash sent to the platform"
+    },
+    "discrepancies": {
+      "description": "Cash problems raised against an agent, and how each one was resolved",
+      "short": "Cash problems with agents"
+    }
+  },
+  "collectionStatus": {
+    "pending": "Pending",
+    "collected": "Collected",
+    "cancelled": "Cancelled"
+  },
+  "depositStatus": {
+    "declared": "Declared",
+    "confirmed": "Confirmed",
+    "rejected": "Rejected"
+  },
+  "remittanceStatus": {
+    "declared": "Declared",
+    "confirmed": "Confirmed",
+    "rejected": "Rejected"
+  },
+  "discrepancyStatus": {
+    "open": "Open",
+    "resolved": "Resolved",
+    "written_off": "Written Off"
+  },
+  "discrepancyType": {
+    "cash_shortfall": "Cash shortfall",
+    "other": "Other"
+  },
+  "recipient": {
+    "agency": "Agency",
+    "platform": "Platform"
+  },
+  "summary": {
+    "loading": "Loading cash position…",
+    "loadFailed": "Could not load your cash position.",
+    "noData": "No data available.",
+    "owedToPlatform": "Owed to Platform",
+    "owedHint": "Falls only when a remittance is confirmed",
+    "unsettled": "Unsettled Collections",
+    "unsettledHint_one": "{{count}} collection blocking earnings",
+    "unsettledHint_other": "{{count}} collections blocking earnings",
+    "heldByAgents": "Held by Agents",
+    "heldByAgentsHint_one": "{{count}} agent currently holding cash",
+    "heldByAgentsHint_other": "{{count}} agents currently holding cash",
+    "searchPlaceholder": "Search agents…",
+    "searchLabel": "Search agents by name",
+    "filterDescription": "Who on your roster is still sitting on collected cash.",
+    "cashPosition": "Cash position",
+    "allAgents": "All agents",
+    "holdingCash": "Holding cash",
+    "settledUp": "Settled up",
+    "agent": "Agent",
+    "cashHeld": "Cash Held",
+    "emptyRoster": "No agents on your roster yet",
+    "emptyFiltered": "No agents match your search or filter"
+  },
+  "deposits": {
+    "alertTitle_one": "{{count}} hand-over awaiting your answer",
+    "alertTitle_other": "{{count}} hand-overs awaiting your answer",
+    "alertBody": "Confirm or reject within 2 days. Leaving a declaration unanswered opens a discrepancy that freezes your rolling-reserve releases.",
+    "review": "Review",
+    "recordTitle": "Record cash received from an agent",
+    "selectAgent": "Select agent",
+    "amount": "Amount",
+    "notePlaceholder": "Note (optional)",
+    "record": "Record Deposit",
+    "recordHint": "If the agent handed over less than they hold, record what you actually received and raise a discrepancy for the difference.",
+    "recorded": "Deposit recorded — the agent's outstanding cash was reduced.",
+    "historyTitle": "Deposit history",
+    "searchPlaceholder": "Search deposits…",
+    "searchLabel": "Search this page by agent, reference or note",
+    "filterDescription": "Status filters every deposit; search looks at the page you're on.",
+    "status": "Status",
+    "allDeposits": "All deposits",
+    "awaitingAnswer": "Awaiting your answer",
+    "table": {
+      "agent": "Agent",
+      "amount": "Amount",
+      "recipient": "Recipient",
+      "status": "Status",
+      "date": "Date",
+      "actions": "Actions",
+      "reference": "Ref: {{reference}}",
+      "awaitingAdmin": "Awaiting admin"
+    },
+    "emptyFiltered": "No deposits match your search",
+    "empty": "No deposits in this view",
+    "confirm": "Confirm",
+    "confirmed": "Deposit confirmed — the money has moved.",
+    "reject": "Reject",
+    "rejectTitle": "Reject declaration",
+    "rejectDescription": "No money moves. The agent's late-deposit clock resumes and an admin can see both sides. Rejecting a claim you dispute is a normal, cost-free action.",
+    "rejectPlaceholder": "e.g. Nothing was handed over at the desk; our till reconciles.",
+    "rejectSubmit": "Reject declaration",
+    "rejected": "Declaration rejected — no money moved.",
+    "agentHeld": "{{amount}} held"
+  },
+  "remittances": {
+    "declareTitle": "Declare a cash transfer to the platform",
+    "amount": "Amount",
+    "referencePlaceholder": "Reference (e.g. bank tx id)",
+    "notePlaceholder": "Note (optional)",
+    "declare": "Declare",
+    "declareHint": "An admin confirms receipt; only then does your liability fall and collections settle (oldest first).",
+    "declared": "Remittance declared — awaiting platform confirmation.",
+    "declareFailed": "Could not declare this remittance.",
+    "loadFailed": "Could not load remittance history.",
+    "searchPlaceholder": "Search remittances…",
+    "searchLabel": "Search this page by reference or note",
+    "filterDescription": "Status filters every remittance; search looks at the page you're on.",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "table": {
+      "reference": "Reference",
+      "amount": "Amount",
+      "status": "Status",
+      "declared": "Declared",
+      "resolved": "Resolved"
+    },
+    "emptyFiltered": "No remittances match your search",
+    "empty": "No remittances in this category yet"
+  },
+  "discrepancies": {
+    "raiseTitle": "Flag a cash problem with an agent",
+    "selectAgent": "Select agent",
+    "amountPlaceholder": "Amount at stake",
+    "notePlaceholder": "Note (optional)",
+    "raise": "Raise",
+    "raiseHint": "A cash shortfall applies an immediate trust penalty and blocks new COD assignments to that agent until resolved.",
+    "raised": "Discrepancy raised — an admin will review and resolve it.",
+    "raiseFailed": "Could not raise this discrepancy.",
+    "loadFailed": "Could not load discrepancy history.",
+    "historyTitle": "Discrepancy history",
+    "searchPlaceholder": "Search discrepancies…",
+    "searchLabel": "Search this page by agent or note",
+    "filterDescription": "Search and filters apply to the page you're on.",
+    "status": "Status",
+    "type": "Type",
+    "allStatuses": "All",
+    "allTypes": "All types",
+    "table": {
+      "agent": "Agent",
+      "type": "Type",
+      "amount": "Amount",
+      "status": "Status",
+      "opened": "Opened"
+    },
+    "empty": "No discrepancies raised yet",
+    "emptyFiltered": "No discrepancies match your search or filters"
+  }
+}

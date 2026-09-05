@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(node node_modules/typescript/bin/tsc --noEmit)"
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(npx eslint *)",
+      "Read(//c/Users/Fante/Desktop/projects/wi-mall/frontend/vendor-dash/src/components/layout/**)"
     ]
   }
 }

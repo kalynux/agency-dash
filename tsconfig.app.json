@@ -7,6 +7,9 @@
     "module": "ESNext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    // Locale files are plain JSON and are imported both as runtime resources and
+    // as the source of the type-safe translation-key union (src/i18n/i18next.d.ts).
+    "resolveJsonModule": true,
 
     // "baseUrl": ".",
     "paths": {

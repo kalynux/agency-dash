@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        The tint Android applies to the notification's small icon and to the
+        app-name line in the shade (P4.1).
+
+        This is the light form of the `primary` design token in
+        src/index.css (hsl 222 84% 47%), because the notification shade has no
+        relationship to the app's own theme and always draws against the
+        system's surface. Leaving it out is not neutral: the platform falls back
+        to a flat grey, which reads as a system message rather than as ours.
+
+        `colorPrimary` / `colorPrimaryDark` / `colorAccent`, referenced by
+        styles.xml, deliberately are NOT declared here. They come from the
+        capacitor-android library, and shadowing them would silently repaint the
+        splash and the action bar.
+    -->
+    <color name="notification_accent">#1350DD</color>
+
+</resources>

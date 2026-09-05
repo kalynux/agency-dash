@@ -1,0 +1,110 @@
+{
+  "primary": {
+    "overview": "نظرة عامة",
+    "shipments": "الشحنات",
+    "tracking": "التتبّع المباشر",
+    "inventory": "المخزون",
+    "media": "الوسائط",
+    "transactions": "المعاملات",
+    "cash": "إدارة النقد",
+    "cashSummary": "الملخّص",
+    "cashDeposits": "الإيداعات",
+    "cashRemittances": "التحويلات",
+    "cashDiscrepancies": "الفروق",
+    "notifications": "الإشعارات",
+    "tickets": "التذاكر",
+    "agents": "المندوبون",
+    "agentsConnections": "العقود",
+    "agentsBrowse": "الدليل",
+    "vendors": "البائعون",
+    "vendorsConnections": "الاتصالات",
+    "vendorsBrowse": "الدليل"
+  },
+  "footer": {
+    "account": "الحساب",
+    "accountProfile": "الملف الشخصي",
+    "accountStore": "المتجر",
+    "accountLocations": "المواقع",
+    "accountSecurity": "الأمان",
+    "accountBilling": "الفوترة",
+    "accountPayout": "المدفوعات",
+    "settings": "الإعدادات",
+    "settingsPolicies": "السياسات",
+    "settingsNotifications": "الإشعارات",
+    "settingsPreferences": "التفضيلات"
+  },
+  "sidebar": {
+    "fallbackAgencyName": "وكالتي",
+    "collapse": "طيّ",
+    "expand": "توسيع الشريط الجانبي",
+    "resizeHandle": "اسحب لتغيير الحجم",
+    "platform": "Wi-Mall"
+  },
+  "mobile": {
+    "more": "المزيد",
+    "roleLabel": "وكالة",
+    "openSettings": "فتح إعدادات الحساب",
+    "quickCreate": "إنشاء",
+    "back": "رجوع",
+    "exitConfirm": "اضغط رجوع مرة أخرى للخروج"
+  },
+  "header": {
+    "searchPlaceholderShort": "بحث…",
+    "searchPlaceholder": "ابحث عن عمليات التوصيل والتذاكر…",
+    "searchLabel": "فتح البحث",
+    "closeSearch": "إغلاق البحث",
+    "quickActions": "إجراءات سريعة",
+    "notifications": "الإشعارات",
+    "notificationsWithCount_zero": "الإشعارات، لا رسائل غير مقروءة",
+    "notificationsWithCount_one": "الإشعارات، رسالة واحدة غير مقروءة",
+    "notificationsWithCount_two": "الإشعارات، رسالتان غير مقروءتين",
+    "notificationsWithCount_few": "الإشعارات، {{count}} رسائل غير مقروءة",
+    "notificationsWithCount_many": "الإشعارات، {{count}} رسالة غير مقروءة",
+    "notificationsWithCount_other": "الإشعارات، {{count}} رسالة غير مقروءة",
+    "markAllRead": "تعليم الكل كمقروء",
+    "noNewNotifications": "لا توجد إشعارات جديدة",
+    "viewAllNotifications": "عرض كل الإشعارات",
+    "profile": "الملف الشخصي",
+    "logout": "تسجيل الخروج",
+    "logoutConfirmTitle": "تسجيل الخروج؟",
+    "logoutConfirmDescription": "ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى لوحة التحكم.",
+    "logoutConfirmAction": "تسجيل الخروج",
+    "searchResultsFor": "نتائج البحث عن «{{query}}»",
+    "noResults": "لا توجد نتائج لـ «{{query}}»",
+    "noResultsHint": "جرّب رقم تتبّع أو اسم مندوب أو موضوع تذكرة.",
+    "hintNavigate": "للتنقل",
+    "hintSelect": "للاختيار",
+    "hintClose": "للإغلاق"
+  },
+  "quickActions": {
+    "newTicket": {
+      "label": "تذكرة جديدة",
+      "description": "احصل على مساعدة من الفريق"
+    },
+    "viewShipments": {
+      "label": "عرض الشحنات",
+      "description": "تتبّع الشحنات وإدارتها"
+    },
+    "viewEarnings": {
+      "label": "عرض الأرباح",
+      "description": "الرصيد وطلبات الصرف"
+    },
+    "viewCash": {
+      "label": "إدارة النقد",
+      "description": "إيداعات وتحويلات الدفع عند الاستلام"
+    },
+    "updateCoverage": {
+      "label": "تحديث مناطق التغطية",
+      "description": "تعديل المناطق التي توصّل إليها"
+    }
+  },
+  "platformStatus": {
+    "operational": "كل الأنظمة تعمل بشكل طبيعي",
+    "degraded": "أداء متدهور",
+    "down": "انقطاع في الخدمة",
+    "checking": "جارٍ التحقق من الحالة…",
+    "label": "حالة المنصّة",
+    "offline": "لا يوجد اتصال بالإنترنت",
+    "offlineDetail": "قد تكون بعض المعلومات قديمة حتى تعود إلى الاتصال."
+  }
+}

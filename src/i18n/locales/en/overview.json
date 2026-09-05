@@ -1,0 +1,47 @@
+{
+  "title": "Overview",
+  "description": "Welcome back! Here's what's happening with your agency.",
+  "descriptionShort": "Welcome back!",
+  "metrics": {
+    "availableEarnings": "Available Earnings",
+    "availableEarningsHint": "Ready to withdraw",
+    "shipmentsNeedingAction": "Shipments Needing Action",
+    "shipmentsNeedingActionHint": "Awaiting your dispatch",
+    "codOwed": "Owed to Platform (COD)",
+    "codOwedHint": "Cash to remit",
+    "agentsOnRoster": "Agents on Roster",
+    "agentsOnRosterHint": "Active riders"
+  },
+  "recentShipments": {
+    "title": "Recent Shipments",
+    "description": "Latest shipments assigned to your agency",
+    "viewAll": "View all",
+    "emptyTitle": "No shipments yet",
+    "emptyDescription": "New assignments from vendors will appear here."
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "description": "Common tasks you might want to perform",
+    "short": "Common tasks",
+    "newTicket": "New Ticket",
+    "newTicketHint": "Get help",
+    "coverage": "Coverage",
+    "coverageHint": "Update regions",
+    "earnings": "Earnings",
+    "earningsHint": "Request payout",
+    "codCash": "COD Cash",
+    "codCashHint": "Deposits"
+  },
+  "attention": {
+    "title": "Attention Needed",
+    "cashDeclarations_one": "{{count}} cash declaration to answer",
+    "cashDeclarations_other": "{{count}} cash declarations to answer",
+    "cashDeclarationsBadge": "2-day SLA",
+    "shipments_one": "{{count}} shipment needs action",
+    "shipments_other": "{{count}} shipments need action",
+    "shipmentsBadge": "Shipments",
+    "vendorRequests_one": "{{count}} vendor connection request",
+    "vendorRequests_other": "{{count}} vendor connection requests",
+    "vendorRequestsBadge": "Vendors"
+  }
+}

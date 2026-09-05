@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "741831724264",
+    "firebase_url": "https://bingoo-22222-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "bingoo-22222",
+    "storage_bucket": "bingoo-22222.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:741831724264:android:33054a26bd81f96ed34d5d",
+        "android_client_info": {
+          "package_name": "com.wi_mall.agency"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJHttEcQVxZXkn_TYP6IJL-tgg8TzmidE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:741831724264:android:bb10ca7dafd7a815d34d5d",
+        "android_client_info": {
+          "package_name": "com.wimall.agent_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJHttEcQVxZXkn_TYP6IJL-tgg8TzmidE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

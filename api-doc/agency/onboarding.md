@@ -87,7 +87,10 @@ currentStep === 4  →  /onboarding/policies
 
 ## 2. Initialization
 
-Called immediately after the user adds the "agency" role. Sets the agency name and unlocks Step 1.
+Called immediately after the user adds the "agency" role. Sets the agency's business name and unlocks Step 1.
+
+> [!NOTE]
+> The `agency_name` you send here is the **business name**, which is stored on the agency's [Magazin](./magazin.md) (its Store-equivalent), not on the profile. Edit it later via `PATCH /api/agency/magazin`. Step 3 (Branding) likewise stores the business `logo` on the Magazin.
 
 - **Endpoint**: `POST /api/agency`
 - **Auth**: Yes (Agency role)
@@ -144,48 +147,63 @@ Once a step is marked complete you may re-submit its endpoint to update the data
 - **Auth**: Yes (Agency role)
 - **Prerequisite**: Agency initialized (`POST /api/agency` called)
 
-Captures the geographic regions served by the agency and at least one physical headquarters address.
+Captures the agency's operating country, the geographic regions served, and at least one physical headquarters address.
+
+> [!NOTE]
+> **`country` is stored on the profile; `coverage_areas` + `headquarters_addresses` are stored on the [Magazin](./magazin.md)** (the agency's business surface), validated against that country:
+> - `coverage_areas` must be **region keys of the country** (from `locations.json`, e.g. `"littoral"`) — otherwise `400 AGENCY_COVERAGE_AREA_INVALID`.
+> - Each `headquarters_addresses` entry must carry a geocoded **`geo`** (a selected `/api/geo/search` result) resolving inside the country — the same flow as a vendor `business_addresses` entry. The bare `location` point, plus `region` and `city`, are all **derived from `geo`** on write (you no longer need to send any of them). Post-onboarding, edit these via `PATCH /api/agency/magazin`.
 
 #### Request Body
 
 ```json
 {
+  "country": "CM",
   "coverage_areas": ["littoral", "centre", "ouest"],
   "headquarters_addresses": [
     {
-      "region": "Littoral",
-      "city": "Douala",
+      "label": "Douala HQ",
       "address_description": "Akwa, Rue Sylvani, immeuble ABC",
       "support_contact": {
         "phone": "+237612345678",
         "email": "douala@fasttrack.cm"
-      }
+      },
+      "geo": { "formatted_address": "Akwa, Douala, Cameroon", "coordinates": { "type": "Point", "coordinates": [9.7043, 4.0511] }, "provider": "nominatim", "components": { "city": "Douala", "region": "Littoral", "country_code": "CM" } }
     },
     {
-      "region": "Centre",
-      "city": "Yaoundé",
+      "label": "Yaoundé branch",
       "address_description": "Bastos, Avenue Kennedy",
       "support_contact": {
         "phone": "+237699876543",
         "email": null
-      }
+      },
+      "geo": { "formatted_address": "Bastos, Yaoundé, Cameroon", "coordinates": { "type": "Point", "coordinates": [11.5174, 3.8480] }, "provider": "nominatim", "components": { "city": "Yaoundé", "region": "Centre", "country_code": "CM" } }
     }
   ],
   "version": 0
 }
 ```
 
+> **`geo` is what you send; the rest of the placement is derived.** Pick the location from
+> `GET /api/geo/search` and submit the selected result verbatim. The server derives `location`
+> (the GeoJSON point auto-assignment measures from), `region` and `city` from it — there is no
+> need to send those, and a `region`/`city` you do send is used only where the geocode has none.
+
 #### Field Reference
 
 | Field | Type | Required? | Validation | Notes |
 |-------|------|-----------|------------|-------|
+| `country` | `string` | **Yes** | Exactly 2 chars, ISO-2 (auto-uppercased) | The country the agency operates in (e.g. `"CM"`). **Locks at onboarding completion** — correctable on step re-edits while onboarding is in progress, immutable afterwards (`403 PROFILE_COUNTRY_IMMUTABLE` on the profile PATCH). All headquarters addresses must geocode inside it. |
 | `coverage_areas` | `string[]` | Yes | Min 1 item. Each string is a region key from `locations.json`. | Keys must be lowercase (e.g. `"littoral"`, `"centre"`). |
 | `headquarters_addresses` | `object[]` | Yes | Min 1 entry. | **Index 0 is always the primary headquarters.** Additional entries are branch offices. |
-| `headquarters_addresses[].region` | `string` | Yes | Min 1, Max 100 chars | State/region name (display label). |
-| `headquarters_addresses[].city` | `string` | Yes | Min 1, Max 100 chars | City name. |
+| `headquarters_addresses[].label` | `string` | **Yes** | Min 1, Max 50 chars | The agency's own name for this location (`"Main depot"`, `"Bonabéri branch"`). The one thing the map result can't supply. Reads back `null` on entries saved before labels existed — fall back to `"Primary Headquarters"` / `"Branch N"` for display. |
+| `headquarters_addresses[].region` | `string \| null` | No | Max 100 chars | **Derived from `geo.components.region`** — don't send it. A value you do send is used only when the geocode resolves no region. Reads back `null` when neither source has one. |
+| `headquarters_addresses[].city` | `string \| null` | No | Max 100 chars | **Derived from `geo.components.city`** — don't send it. Same fallback rule as `region`; Nominatim omits the city for many rural/landmark results, and `null` is the honest answer there. |
 | `headquarters_addresses[].address_description` | `string` | Yes | Min 1, Max 200 chars | Full street address / landmark. |
-| `headquarters_addresses[].support_contact.phone` | `string` | Yes | Min 6, Max 20 chars. Regex `/^\+?[0-9\s\-()]+$/` | Phone number for this location. |
-| `headquarters_addresses[].support_contact.email` | `string \| null` | No | Valid email format | Contact email for this location. |
+| `headquarters_addresses[].support_contact.phone` | `string` | Yes | **E.164** — leading `+` and country code required (e.g. `+237670000000`). [Contact formats](../README.md#contact-formats-phone--email) | Phone number for this location. |
+| `headquarters_addresses[].support_contact.email` | `string \| null` | No | Valid email, lowercased. [Contact formats](../README.md#contact-formats-phone--email) | Contact email for this location. |
+| `headquarters_addresses[].location` | `object` | No | GeoJSON Point `{ type: "Point", coordinates: [lng, lat] }`; lng ∈ [-180,180], lat ∈ [-90,90] | Legacy bare coordinate, **derived from `geo.coordinates`** on write. Accepted only as a fallback for entries with no `geo`. |
+| `headquarters_addresses[].geo` | `object \| null` | **Yes on new/edited entries** | A selected address-search result (`GeoAddress`) — see [Geospatial addresses](../geo/README.md) | The canonical geospatial address (formatted address + coordinates + admin components). **Required on every new or edited entry, and must resolve inside the agency's `country`** — else `400 ADDRESS_GEO_REQUIRED` / `400 ADDRESS_COUNTRY_MISMATCH`. "Unchanged" means same `address_description` and same geocoded place, so legacy `location`-only entries keep working until next touched — and renaming an entry's `label` alone is never treated as a move. |
 | `version` | `number (integer)` | No | Must match profile `version` if provided | Optimistic concurrency guard. |
 
 ---
@@ -216,7 +234,7 @@ Captures the agency's payout methods. The **first entry in the array is always t
 }
 ```
 
-#### Request Body — Mobile Money (preferred) + Bank (fallback)
+#### Request Body — a preferred number + a fallback
 
 ```json
 {
@@ -231,37 +249,42 @@ Captures the agency's payout methods. The **first entry in the array is always t
       "bank": null
     },
     {
-      "method": "bank",
-      "mobile_money": null,
-      "bank": {
-        "bank_name": "UBA Cameroon",
-        "account_number": "10033000000000001",
-        "account_name": "FastTrack Logistics Sarl",
-        "country": "CM"
-      }
+      "method": "mobile_money",
+      "mobile_money": {
+        "provider": "Orange Money",
+        "phone_number": "+237690000000",
+        "account_name": "FastTrack Logistics Sarl"
+      },
+      "bank": null
     }
   ]
 }
 ```
 
+> 🚧 A `bank` or `card` fallback is what this example *will* look like once those kinds are switched
+> back on — today they are refused. See
+> [Payout methods](./payout-methods.md#availability).
+
 #### Field Reference
 
 | Field | Type | Required? | Validation | Notes |
 |-------|------|-----------|------------|-------|
-| `payout_details` | `object[]` | Yes | Min 1 entry, Max 2 entries. No duplicate `method` types. | Ordered array — index 0 is the preferred method. |
-| `payout_details[].method` | `string` | Yes | Enum: `"mobile_money"` or `"bank"` | Determines which sub-object is required. |
+| `payout_details` | `object[]` | Yes | **Min 1 entry, Max 3 entries.** Duplicates of the same `method` are allowed. | Ordered array — index 0 is the preferred method. Full reference, including masking and what happens at payout time: **[Payout methods](./payout-methods.md)**. |
+| `payout_details[].method` | `string` | Yes | **Today: `"mobile_money"` only** — `"bank"` and `"card"` are 🚧 [switched off](./payout-methods.md#availability) | Determines which sub-object is required. |
 | `payout_details[].mobile_money` | `object \| null` | Conditional | Required if `method === "mobile_money"`, otherwise `null`. | See sub-fields below. |
-| `payout_details[].bank` | `object \| null` | Conditional | Required if `method === "bank"`, otherwise `null`. | See sub-fields below. |
+| `payout_details[].bank` | `object \| null` | Conditional | Required if `method === "bank"`, otherwise `null`. | 🚧 Switched off. See sub-fields below. |
+| `payout_details[].card` | `object \| null` | Conditional | Required if `method === "card"`, otherwise `null`. | 🚧 Switched off. See sub-fields below. |
 
 **`mobile_money` sub-fields:**
 
 | Field | Type | Required? | Validation |
 |-------|------|-----------|------------|
 | `provider` | `string` | Yes | Min 1 char. E.g. `"MTN Mobile Money"`, `"Orange Money"` |
-| `phone_number` | `string` | Yes | Valid local phone format |
+| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required (e.g. `+237670000000`). [Contact formats](../README.md#contact-formats-phone--email) |
 | `account_name` | `string` | Yes | Min 1 char |
 
-**`bank` sub-fields:**
+**`bank` sub-fields** — 🚧 **switched off, not configurable right now**
+([why](./payout-methods.md#availability)):
 
 | Field | Type | Required? | Validation |
 |-------|------|-----------|------------|
@@ -270,7 +293,47 @@ Captures the agency's payout methods. The **first entry in the array is always t
 | `account_name` | `string` | Yes | Min 1 char |
 | `country` | `string` | Yes | Min 1 char. ISO country code recommended (e.g. `"CM"`) |
 
-> **Security note:** The API response masks sensitive payout data. `phone_number` is returned as `phone_number_masked` (e.g. `••••0000`) and `account_number` as `account_number_masked`. The raw values are never returned.
+**`card` sub-fields** (Visa / Mastercard / …) — 🚧 **switched off, not configurable right now**
+([why](./payout-methods.md#availability)):
+
+> **The API never accepts a card number or CVV** — send them and the request is **rejected**, not
+> silently ignored. Full rationale and the refused field names:
+> [Payout methods → card](./payout-methods.md#card).
+
+| Field | Type | Required? | Validation |
+|-------|------|-----------|------------|
+| `brand` | `string` | Yes | Enum: `visa` · `mastercard` · `amex` · `discover` · `unionpay` · `jcb` · `diners` · `verve` · `other`. Case-insensitive |
+| `last4` | `string` | Yes | Exactly 4 digits |
+| `card_holder_name` | `string` | Yes | Min 1 char |
+| `expiry_month` | `number` | Yes | Integer 1–12 |
+| `expiry_year` | `number` | Yes | 4-digit year. The card must not already be expired |
+| `country` | `string` | Yes | Issuing country. ISO-2 recommended |
+| `issuing_bank` | `string \| null` | No | Max 100 chars |
+| `gateway_provider` / `gateway_token` | `string \| null` | No | The gateway's handle for this card, if your client tokenized it |
+
+```jsonc
+// 🚧 Refused today with 400 on payout_details.0.method — this is the shape for
+// when `card` is switched back on.
+{
+  "payout_details": [
+    {
+      "method": "card",
+      "mobile_money": null,
+      "bank": null,
+      "card": {
+        "brand": "mastercard",
+        "last4": "1881",
+        "card_holder_name": "FASTTRACK LOGISTICS",
+        "expiry_month": 11,
+        "expiry_year": 2028,
+        "country": "CM"
+      }
+    }
+  ]
+}
+```
+
+> **Security note:** The API response masks sensitive payout data. `phone_number` is returned as `phone_number_masked` (e.g. `••••0000`) and `account_number` as `account_number_masked`. The raw values are never returned. A `card` block is returned unredacted because nothing sensitive is stored for it — only `last4`, never the number.
 
 ---
 
@@ -286,7 +349,7 @@ Captures the agency logo and operating timezone. This step is optional — the u
 
 ```json
 {
-  "logo_url": "https://cdn.example.com/fasttrack-logo.png",
+  "logo_file_id": "507f1f77bcf86cd799439030",
   "timezone": "Africa/Douala",
   "version": 1
 }
@@ -307,7 +370,7 @@ Send `skip: true` to bypass this step without providing branding data. The flow 
 | Field | Type | Required? | Validation | Notes |
 |-------|------|-----------|------------|-------|
 | `skip` | `boolean` | No | — | Set `true` to skip this step entirely and advance to Policy Setup. |
-| `logo_url` | `string \| null` | No | Must be a valid absolute URL | Ignored if `skip: true`. |
+| `logo_file_id` | `string \| null` | No | Valid MongoDB ObjectId of a file uploaded via `POST /api/files/upload` | Ignored if `skip: true`. *Clearable*: `null` or `""` clears. The profile response returns the derived `logoUrl`. Registers a `file_references` row so the file is not garbage-collected while set. |
 | `timezone` | `string` | No | IANA timezone string | Defaults to `"Africa/Douala"` if not provided. Ignored if `skip: true`. |
 | `version` | `number (integer)` | No | Must match profile `version` if provided | Ignored if `skip: true`. |
 
@@ -514,11 +577,12 @@ All `PUT` step submissions return the full updated profile and a `completionStat
       "emailVerified": false,
       "phone": null,
       "phoneVerified": false,
-      "logoUrl": null,
+      "logo": null,
       "coverageAreas": ["littoral", "centre"],
       "headquartersAddresses": [
         {
           "_id": "6641abc123def457",
+          "label": "Douala HQ",
           "region": "Littoral",
           "city": "Douala",
           "address_description": "Akwa, Rue Sylvani",

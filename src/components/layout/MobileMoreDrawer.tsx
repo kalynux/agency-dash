@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight, ChevronDown, Settings, Truck } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { useNotificationStore } from '@/store';
+import { useNotifications } from '@/store/notifications.store';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
+import { useAgentsRoster } from '@/store/agents.store';
+import { useStockRequests } from '@/store/stockRequests.store';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
+import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 // Items already present in the bottom tab bar — hidden from "More".
-const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments', '/dashboard/analytics']);
+const TAB_BAR_PATHS = new Set(['/dashboard', '/dashboard/shipments']);
 
 interface NavHandlers {
   go: (path: string) => void;
@@ -18,6 +22,7 @@ interface NavHandlers {
 }
 
 function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
+  const { t } = useTranslation('nav');
   const Icon = item.icon;
   const hasChildren = !!item.children?.length;
   const [open, setOpen] = useState(false);
@@ -42,7 +47,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
         <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
           <Icon className="w-4 h-4" />
         </div>
-        <span className="flex-1 text-left text-sm font-medium">{item.name}</span>
+        <span className="flex-1 text-start text-sm font-medium">{tx(t, item.labelKey)}</span>
         {badge > 0 && (
           <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center mr-1">
             {badge > 9 ? '9+' : badge}
@@ -53,7 +58,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
             className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')}
           />
         ) : (
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground rtl:-scale-x-100" />
         )}
       </button>
 
@@ -64,7 +69,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
             const childBadge = handlers.badgeCount(child.badge);
             return (
               <button
-                key={child.name}
+                key={child.path}
                 disabled={child.disabled}
                 onClick={() => {
                   if (child.disabled) return;
@@ -78,7 +83,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
                 <div className="w-7 h-7 rounded-lg bg-card border flex items-center justify-center flex-shrink-0">
                   <ChildIcon className="w-3.5 h-3.5" />
                 </div>
-                <span className="flex-1 text-left text-sm">{child.name}</span>
+                <span className="flex-1 text-start text-sm">{tx(t, child.labelKey)}</span>
                 {childBadge > 0 && (
                   <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
                     {childBadge > 9 ? '9+' : childBadge}
@@ -98,7 +103,7 @@ function MenuGroup({ items, handlers }: { items: NavItem[]; handlers: NavHandler
   return (
     <div className="bg-card rounded-xl mx-4 mb-3 overflow-hidden border divide-y">
       {items.map((item) => (
-        <MenuRow key={item.name} item={item} handlers={handlers} />
+        <MenuRow key={item.path} item={item} handlers={handlers} />
       ))}
     </div>
   );
@@ -110,12 +115,15 @@ interface MobileMoreDrawerProps {
 }
 
 export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) {
+  const { t } = useTranslation('nav');
   const navigate = useNavigate();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount } = useNotifications();
   const { pendingActionCount } = useVendorConnections();
+  const { pendingActionCount: agentActionCount } = useAgentsRoster();
+  const { awaitingCount: stockRequestCount } = useStockRequests();
   const roleEntity = useOnboarding().session?.role_entity;
 
-  const agencyName = roleEntity?.agency_name || 'My Agency';
+  const agencyName = roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
   const agencyLogo = roleEntity?.logo_url || null;
 
   const handlers: NavHandlers = {
@@ -126,6 +134,8 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
     badgeCount: (badge) => {
       if (badge === 'notifications') return unreadCount;
       if (badge === 'vendorConnections') return pendingActionCount;
+      if (badge === 'agentContracts') return agentActionCount;
+      if (badge === 'stockRequests') return stockRequestCount;
       return 0;
     },
   };
@@ -139,7 +149,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="px-4 py-4 border-b flex-shrink-0">
-            <h2 className="text-xl font-bold">More</h2>
+            <h2 className="text-xl font-bold">{t('mobile.more')}</h2>
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0">
@@ -154,12 +164,13 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{agencyName}</p>
-                <p className="text-sm text-muted-foreground">Agency</p>
+                <p className="text-sm text-muted-foreground">{t('mobile.roleLabel')}</p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handlers.go('/dashboard/account/profile')}
+                aria-label={t('mobile.openSettings')}
                 className="flex-shrink-0"
               >
                 <Settings className="w-4 h-4" />

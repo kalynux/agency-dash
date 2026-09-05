@@ -6,7 +6,13 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `android` holds generated output, not source: the web bundle copied in by
+  // `cap sync`, Capacitor's own native-bridge.js, and Gradle's intermediates.
+  // Linting it means the problem count moves every time the app is synced or
+  // built, which destroys the only signal this command has — "did my change add
+  // anything?". The Android sources that ARE ours are Java/XML and unlintable
+  // here anyway.
+  globalIgnores(['dist', 'android']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
