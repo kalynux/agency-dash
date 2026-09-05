@@ -20,7 +20,8 @@
     "agentsBrowse": "Annuaire",
     "vendors": "Vendeurs",
     "vendorsConnections": "Connexions",
-    "vendorsBrowse": "Annuaire"
+    "vendorsBrowse": "Annuaire",
+    "inventoryStatements": "Relevés de stockage"
   },
   "footer": {
     "account": "Compte",

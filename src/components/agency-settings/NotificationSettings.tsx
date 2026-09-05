@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { notificationsService } from '@/services/notifications.service';
-import { telegramService, whatsappService } from '@/services/channels.service';
+import { connectionsService } from '@/services/connections.service';
 import { usePushRegistration } from '@/hooks/usePushRegistration';
 import { ChannelSetupDialog } from '@/components/agency-settings/notifications/ChannelSetupDialog';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -281,8 +281,12 @@ export function NotificationSettings() {
     async (ch: NotificationChannel) => {
       setUnlinking(ch);
       try {
-        if (ch === 'telegram') await telegramService.disconnect();
-        else if (ch === 'whatsapp') await whatsappService.unlink();
+        // One endpoint for every channel now — `DELETE /api/me/connections/:channel`.
+        // Email is not a messaging connection and cannot be un-verified, which is
+        // why `CHANNELS` marks it `unlinkable: false` and this never sees it.
+        if (ch === 'telegram' || ch === 'whatsapp') {
+          await connectionsService.disconnect(ch);
+        }
         const { data } = await notificationsService.getPreferences();
         setPrefs(withEventDefaults(data));
         const derived = deriveChannel(data);

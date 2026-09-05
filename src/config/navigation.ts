@@ -26,6 +26,7 @@ import {
   Receipt,
   Image,
   ClipboardList,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -90,6 +91,14 @@ export const PRIMARY_NAV: NavItem[] = [
         path: '/dashboard/inventory/requests',
         icon: ClipboardList,
         badge: 'stockRequests',
+      },
+      // The monthly rent record for the shelves above. No badge: nothing chases
+      // an open statement on either side, so a count here would imply an
+      // obligation the platform does not actually track.
+      {
+        labelKey: 'nav:primary.inventoryStatements',
+        path: '/dashboard/inventory/statements',
+        icon: FileText,
       },
     ],
   },

@@ -2,8 +2,8 @@
 
 Full multi-channel parity with vendor notifications — in-app, push, and one preference-gated
 secondary channel (email/Telegram/WhatsApp), catalog-driven and localized. Architecture mirrors
-[Vendor Notifications](../vendor/notifications.md) exactly; this doc follows the same structure —
-read that doc's [Push notifications (FCM)](../vendor/notifications.md#push-notifications-fcm)
+Vendor Notifications (`backend/jovi-mall/api-doc/vendor/notifications.md` — not mirrored in this repository) exactly; this doc follows the same structure —
+read that doc's Push notifications (FCM) (`backend/jovi-mall/api-doc/vendor/notifications.md #push-notifications-fcm` — not mirrored in this repository)
 section for the full client-side integration guide (Firebase config, service worker,
 foreground/background handling), which applies unchanged against `/api/agency/devices`.
 
@@ -172,7 +172,7 @@ notification off does not stop the clock — so surface that in the settings UI.
 ```
 
 `action` is localized in the agency's language, same rules as vendor notifications — see
-[Vendor Notifications — the action object](../vendor/notifications.md#get-apivendornotifications).
+Vendor Notifications — the action object (`backend/jovi-mall/api-doc/vendor/notifications.md #get-apivendornotifications` — not mirrored in this repository).
 It is `null` only when no deep-link base URL (`AGENCY_APP_URL`) is configured server-side.
 
 **Error Responses**: `400` – `VALIDATION_ERROR` – Invalid query parameters.
@@ -210,7 +210,7 @@ It is `null` only when no deep-link base URL (`AGENCY_APP_URL`) is configured se
 
 **Description**: Register (or refresh) the current device's FCM token so it receives push. Same
 endpoint shape as the vendor one — see
-[Vendor Notifications — Push notifications (FCM)](../vendor/notifications.md#push-notifications-fcm)
+Vendor Notifications — Push notifications (FCM) (`backend/jovi-mall/api-doc/vendor/notifications.md #push-notifications-fcm` — not mirrored in this repository)
 for the full client-side integration guide; everything there applies unchanged, just against
 `/api/agency/devices` with an agency Bearer token.
 
@@ -278,7 +278,7 @@ notification-preferences payload.
 Note the direction: these fire when the **vendor** is the actor on a connection the agency cares
 about (vendor sent a request, approved/rejected/reapproved one). The symmetric vendor-side events
 (fired when the **agency** is the actor) are documented in
-[Vendor Notifications — Events](../vendor/notifications.md#events).
+Vendor Notifications — Events (`backend/jovi-mall/api-doc/vendor/notifications.md #events` — not mirrored in this repository).
 
 #### The `shipmentAssigned` situations in detail
 
@@ -293,7 +293,7 @@ about (vendor sent a request, approved/rejected/reapproved one). The symmetric v
 | `shipment.agent.returned` | Your agent returned the parcel. Terminal. Carries their reason/note when they gave one. |
 
 The four `shipment.agent.*` situations fire only for **agent-driven** transitions
-([`POST /api/agent/shipments/:id/status`](../agent/shipments.md#status)) — your own dashboard
+(`POST /api/agent/shipments/:id/status` (`backend/jovi-mall/api-doc/agent/shipments.md #status` — not mirrored in this repository)) — your own dashboard
 actions are not pushed back at you. `in_transit` is deliberately **not** notified: it is a routine
 progress ping, and the shipment list already shows it. The agent's reason, when present, is their
 own words and is appended to the message after a dash rather than translated; the structured record
@@ -305,14 +305,14 @@ failure notifies — the idempotency key carries the event time, so the second i
 ### Delivery channels
 
 Same rules as vendor — see
-[Vendor Notifications — Delivery channels](../vendor/notifications.md#delivery-channels).
+Vendor Notifications — Delivery channels (`backend/jovi-mall/api-doc/vendor/notifications.md #delivery-channels` — not mirrored in this repository).
 `push` is an always-on companion to `in-app`, not the secondary channel.
 
 ### Verifying a channel
 
 The `*Verified` flags reflect account state (email verification, Telegram link, WhatsApp link) —
 same linking flows as vendor. See
-[Linking Notification Channels](../vendor/notification-channels.md) (role-agnostic; use the agency
+Linking Notification Channels (`backend/jovi-mall/api-doc/vendor/notification-channels.md` — not mirrored in this repository) (role-agnostic; use the agency
 Bearer token and `/api/agency/...` paths where the vendor doc says `/api/vendor/...`).
 
 ### Other behaviour

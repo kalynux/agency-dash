@@ -9,7 +9,7 @@ your role's section. Everything is additive except the two behaviour changes fla
 
 > Reference docs: [Agency → Inventory](./agency/inventory.md) ·
 > [Agency → Stock requests](./agency/stock-requests.md) ·
-> [Vendor → Stock requests](./vendor/stock-requests.md) ·
+> Vendor → Stock requests (`backend/jovi-mall/api-doc/./vendor/stock-requests.md` — not mirrored in this repository) ·
 > [Agency → Magazin](./agency/magazin.md) · [Errors](./errors/README.md)
 
 ---

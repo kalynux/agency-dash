@@ -254,9 +254,34 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                   ) : candidatesError ? (
                     <p className="text-sm text-muted-foreground py-6 text-center">{candidatesError}</p>
                   ) : !candidates || candidates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-6 text-center">
-                      {t('assignment.candidatesEmpty')}
-                    </p>
+                    // An eligibility failure is LOUD on `assign-agent` (a 422
+                    // naming the blocker) and SILENT here: `canTakeCod` swallows
+                    // the refusal along with the candidate, so an ineligible
+                    // agent is simply absent and its reason is discarded.
+                    //
+                    // That makes "the list is shorter than my roster" both normal
+                    // AND the only symptom of a misconfiguration — most often a
+                    // contract whose `cod.threshold` is still its default `0`,
+                    // which silently removes an agent from every COD candidate
+                    // list. So this dead end names the likely cause and points at
+                    // the one endpoint that reports every failing reason at once.
+                    // See api-doc/agency/assignment.md (the box at the top).
+                    <div className="space-y-2 px-1 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {t('assignment.candidatesEmpty')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {detail.paymentMethod === 'cash_on_delivery'
+                          ? t('assignment.candidatesEmptyCodHint')
+                          : t('assignment.candidatesEmptyHint')}
+                      </p>
+                      <Link
+                        to="/dashboard/agents/connections"
+                        className="inline-block text-xs font-medium text-primary hover:underline"
+                      >
+                        {t('assignment.candidatesEmptyCheck')}
+                      </Link>
+                    </div>
                   ) : (
                     candidates.map((c) => (
                       <button

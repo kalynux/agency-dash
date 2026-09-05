@@ -7,6 +7,10 @@
     "requests": {
       "description": "Changements de stock en attente de signature. Sur un SKU que vous entreposez, ni vous ni le vendeur ne pouvez modifier seul la quantité enregistrée.",
       "short": "Changements de stock"
+    },
+    "statements": {
+      "description": "Le relevé mensuel de ce que chaque vendeur vous doit pour le stockage de ses marchandises.",
+      "short": "Loyer de stockage mensuel par vendeur."
     }
   },
   "page": {
@@ -234,5 +238,106 @@
     "lastReconciled": "Dernière vérification avec le catalogue {{when}}",
     "viewShipments": "Expéditions liées",
     "viewVendor": "Connexion vendeur"
+  },
+  "movements": {
+    "sectionTitle": "Enregistrer un mouvement",
+    "quantityField": "Quantité",
+    "reasonOptional": "Note (facultatif)",
+    "reasonRequired": "Motif",
+    "current": "{{onHand}} en stock · {{reserved}} réservé(s)",
+    "currentUncounted": "Cette étagère n'a jamais été comptée. Enregistrer une réception démarre son suivi.",
+    "recordedToast": "Enregistré — {{onHand}} en stock désormais.",
+    "receipt": {
+      "action": "Réceptionner",
+      "title": "Enregistrer une réception",
+      "body": "Des marchandises sont arrivées sur cette étagère.",
+      "reasonPlaceholder": "ex. bon de livraison 4471",
+      "confirm": "Enregistrer la réception",
+      "firstReceiptNotice": "C'est la première réception sur cette étagère. Désormais les ventes feront évoluer son compte, et elle figurera sur le relevé mensuel de stockage."
+    },
+    "return": {
+      "action": "Retourner",
+      "title": "Retour au vendeur",
+      "body": "Des marchandises sont reparties chez le vendeur.",
+      "reasonPlaceholder": "ex. endommagé à l'arrivée",
+      "confirm": "Enregistrer le retour"
+    },
+    "count": {
+      "action": "Compter",
+      "title": "Enregistrer un inventaire physique",
+      "body": "Ce qui se trouve réellement sur l'étagère en ce moment.",
+      "field": "Quantité comptée",
+      "fieldHint": "Saisissez ce que vous avez compté, pas la différence. Nous calculons l’écart nous-mêmes.",
+      "reasonHint": "Obligatoire — c'est le seul enregistrement qui expliquera l'écart par la suite.",
+      "reasonPlaceholder": "ex. inventaire trimestriel",
+      "confirm": "Enregistrer l'inventaire"
+    },
+    "transfer": {
+      "action": "Transférer",
+      "title": "Transférer vers un autre dépôt",
+      "body": "Déplacez ces marchandises vers un autre de vos dépôts.",
+      "destination": "Déplacer vers",
+      "reasonPlaceholder": "ex. regroupement",
+      "confirm": "Transférer",
+      "arrangementNotice": "Ceci déplace les marchandises, pas l'affectation — le produit désigne toujours son dépôt actuel, cette étagère réapparaîtra donc. Pour un déplacement définitif : transférez d'abord, puis changez le dépôt."
+    },
+    "ledger": {
+      "show": "Afficher l'historique de cette étagère",
+      "title": "Historique des mouvements",
+      "empty": "Aucun mouvement sur cette étagère pour l'instant.",
+      "balance": "{{onHand}} en stock après",
+      "automatic": "Automatique",
+      "loadMore": "Charger plus"
+    },
+    "types": {
+      "receipt": "Réceptionné",
+      "return_to_vendor": "Retourné au vendeur",
+      "count_adjustment": "Compté",
+      "transfer_out": "Transféré (sortie)",
+      "transfer_in": "Transféré (entrée)",
+      "reservation": "Réservé par une commande",
+      "reservation_released": "Réservation libérée",
+      "sale": "Vendu",
+      "customer_return": "Retour client"
+    }
+  },
+  "statements": {
+    "recordNotice": "Ceci est un relevé, pas un paiement. La plateforme ne facture pas le vendeur et ne vous verse rien — le règlement enregistre simplement qu'il vous a payé hors plateforme.",
+    "filterStatus": "Statut",
+    "statuses": {
+      "all": "Tous",
+      "open": "Ouvert",
+      "settled": "Réglé",
+      "void": "Annulé"
+    },
+    "empty": "Aucun relevé de stockage pour le moment.",
+    "emptyHint": "Les relevés sont émis le 1er de chaque mois, et seules les étagères que vous avez réellement comptées sont facturées. Enregistrez une réception sur une étagère pour commencer à la facturer.",
+    "rowSummary": "{{skus}} SKU · {{units}} unités",
+    "issued": "Émis le {{date}}",
+    "settledOn": "Réglé le {{date}}",
+    "srTitle": "Relevé de stockage",
+    "detailTitle": "Relevé de stockage — {{period}}",
+    "total": "Total",
+    "lines": "Lignes",
+    "linesFrozen": "Tous les montants ci-dessous ont été figés à l'émission du relevé, y compris la quantité en rayon à cet instant. Modifier votre tarif ne le recalcule pas.",
+    "lineBasis": "{{quantity}} × {{rate}} / mois",
+    "unnamedProduct": "Produit sans nom",
+    "settleNote": "Note de règlement",
+    "voidReason": "Motif d'annulation",
+    "settleAction": "Marquer comme payé",
+    "settleTitle": "Enregistrer comme payé",
+    "settleBody": "Ceci enregistre que le vendeur vous a payé. Aucun mouvement d'argent, aucune vérification — le vendeur verra que vous l'avez déclaré. C'est irréversible.",
+    "settleNoteLabel": "Référence (facultatif)",
+    "settleNotePlaceholder": "ex. virement réf. 88213",
+    "settleConfirm": "Enregistrer comme payé",
+    "settledToast": "Enregistré comme payé.",
+    "voidAction": "Annuler",
+    "voidTitle": "Annuler ce relevé",
+    "voidBody": "À utiliser lorsque le relevé lui-même était erroné. Cela indique que le relevé a été émis par erreur — pas qu'un paiement l'était.",
+    "voidReasonLabel": "Motif",
+    "voidReasonPlaceholder": "ex. doublon du relevé d'août",
+    "voidNoReissue": "Le mois reste attribué : aucun relevé de remplacement ne sera émis pour cette période.",
+    "voidConfirm": "Annuler le relevé",
+    "voidedToast": "Relevé annulé."
   }
 }

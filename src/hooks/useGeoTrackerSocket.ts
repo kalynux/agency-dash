@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeNetworkRestored } from '@/platform/network';
 import { GEO_TRACKER_WS_URL, resolveGeoTrackerToken } from '@/services/geo-tracker.service';
-import type { AgentLiveFix, GeoPosition, LocationBroadcast, TrackingSocketStatus } from '@/types/tracking.types';
+import {
+  normalizeRevokeReason,
+  revokeNeedsFreshToken,
+  type AgentLiveFix,
+  type GeoPosition,
+  type LocationBroadcast,
+  type PermissionRevoked,
+  type TrackingRevokeReason,
+  type TrackingSocketStatus,
+} from '@/types/tracking.types';
 
 /**
  * Auth for the geo-tracker WS mirrors the HTTP side's `credentials: 'include'`:
@@ -73,12 +82,22 @@ export interface GeoTrackerSocket {
   fixes: Record<string, AgentLiveFix>;
   /** Recent positions per agentId (oldest→newest), for drawing a movement trail. */
   trails: Record<string, GeoPosition[]>;
-  /** Agents whose subscription the server revoked (shipment finished, etc.). */
-  revoked: Set<string>;
   /**
-   * Timestamp of the last `permission_revoked` frame, or `null`. A revocation
-   * means the *board* changed (a shipment finished, or a reassignment released
-   * the agent), so it is the one signal worth refetching it on.
+   * Agents whose subscription the server revoked, and **why**.
+   *
+   * ⚠ A revocation is NOT a statement that the delivery finished. Only
+   * `shipment_completed` is; the other two mean the server could not confirm the
+   * viewer and failed closed, and say nothing at all about the shipment. Read
+   * the reason before writing any outcome into the UI — this map is keyed rather
+   * than a bare `Set` precisely so that is impossible to skip.
+   */
+  revoked: Map<string, TrackingRevokeReason>;
+  /**
+   * Timestamp of the last `permission_revoked` frame, or `null`.
+   *
+   * Worth refetching the board on regardless of reason: on
+   * `shipment_completed` the board genuinely changed, and on the other two the
+   * board is the only thing that can say whether the row is still in flight.
    */
   revokedAt: number | null;
   /** The most recent `error` frame, or `null`. Advisory — never fatal. */
@@ -86,9 +105,40 @@ export interface GeoTrackerSocket {
   reconnect: () => void;
 }
 
-/** Stable key for a destination, so a re-subscribe fires only on a real change. */
-function destKey(dest?: GeoPosition | null): string {
-  return dest ? `${dest.latitude},${dest.longitude}` : '';
+/**
+ * How this viewer's ETA target is chosen, per agent.
+ *
+ * The two fields are **alternatives, not a pair**, and `shipmentId` is the one
+ * to prefer: the server resolves the drop-off from that shipment's own tracking
+ * session, so we never hand a customer's coordinates to a second service.
+ * `destination` is an override that nothing replaces for the life of the
+ * subscription.
+ *
+ * Sending **neither** is now also fine and yields an ETA whenever the agent has
+ * exactly one open session. With several deliveries in flight the server
+ * declines rather than guessing — an ETA to the wrong address is worse than
+ * none, because it is wrong in a way that looks right.
+ *
+ * See geo-tracker/tracking-websocket.md § How the destination is resolved.
+ */
+export interface TrackingScope {
+  shipmentId?: string;
+  destination?: GeoPosition;
+}
+
+/**
+ * Stable key for a scope, so a re-subscribe fires only on a real change.
+ *
+ * Both fields participate: switching the selected shipment has to re-subscribe
+ * even though the agent did not change, or the ETA keeps measuring to the
+ * previous delivery.
+ */
+function scopeKey(scope?: TrackingScope | null): string {
+  if (!scope) return '';
+  const dest = scope.destination
+    ? `${scope.destination.latitude},${scope.destination.longitude}`
+    : '';
+  return `${scope.shipmentId ?? ''}|${dest}`;
 }
 
 /**
@@ -96,20 +146,25 @@ function destKey(dest?: GeoPosition | null): string {
  * latest live fix per agent. Handles ack/error/permission_revoked, resubscribes
  * when `agentIds` changes, and reconnects with capped backoff.
  *
- * `destinations` opts an agent's broadcasts into live ETA/distance: supply the
- * selected shipment's drop-off and every `location_broadcast` for that agent is
- * enriched with `etaSeconds`/`distanceMeters`. The destination is per
- * (connection, agent) and is not persisted server-side, so it is re-sent on
- * every reconnect — which this hook does automatically.
+ * `scopes` opts an agent's broadcasts into live ETA/distance — see
+ * {@link TrackingScope}. Whichever field is used, it lives on the **connection**
+ * and is not persisted server-side, so it is re-sent on every reconnect, which
+ * this hook does automatically.
+ *
+ * ⚠ **The ETA can arrive late, and that is normal.** The drop-off is fetched
+ * from jovi-mall out of band when the tracking session opens, so a viewer who
+ * subscribed before that landed starts with no `etaSeconds` and gains one
+ * without reconnecting. Never treat its absence on the first few broadcasts as
+ * final — and never withhold the position waiting for it.
  */
 export function useGeoTrackerSocket(
   agentIds: string[],
-  destinations: Record<string, GeoPosition> = {},
+  scopes: Record<string, TrackingScope> = {},
 ): GeoTrackerSocket {
   const [status, setStatus] = useState<TrackingSocketStatus>('idle');
   const [fixes, setFixes] = useState<Record<string, AgentLiveFix>>({});
   const [trails, setTrails] = useState<Record<string, GeoPosition[]>>({});
-  const [revoked, setRevoked] = useState<Set<string>>(new Set());
+  const [revoked, setRevoked] = useState<Map<string, TrackingRevokeReason>>(new Map());
   const [revokedAt, setRevokedAt] = useState<number | null>(null);
   const [lastError, setLastError] = useState<GeoTrackerErrorFrame | null>(null);
 
@@ -120,11 +175,16 @@ export function useGeoTrackerSocket(
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
   const manualCloseRef = useRef(false);
-  // Latest desired agent set / destinations, read by onopen without re-triggering connect.
+  // Latest desired agent set / ETA scopes, read by onopen without re-triggering connect.
   const desiredRef = useRef<string[]>(agentIds);
   desiredRef.current = agentIds;
-  const destinationsRef = useRef<Record<string, GeoPosition>>(destinations);
-  destinationsRef.current = destinations;
+  const scopesRef = useRef<Record<string, TrackingScope>>(scopes);
+  scopesRef.current = scopes;
+  // `reconnect` is defined below `connect` and calls it, so the message handler
+  // inside `connect` cannot name it directly. A ref breaks that cycle without
+  // making `connect` depend on `reconnect` — which would recreate both on every
+  // render and re-run the mount effect.
+  const reconnectRef = useRef<(() => void) | null>(null);
 
   const send = (frame: Frame) => {
     const s = socketRef.current;
@@ -135,10 +195,11 @@ export function useGeoTrackerSocket(
     const s = socketRef.current;
     if (!s || s.readyState !== WebSocket.OPEN) return;
     const desired = new Set(desiredRef.current);
-    const dests = destinationsRef.current;
+    const scopeFor = scopesRef.current;
 
     for (const id of desired) {
-      const wanted = destKey(dests[id]);
+      const scope = scopeFor[id];
+      const wanted = scopeKey(scope);
       const current = subscribedRef.current.get(id);
       if (current === wanted) continue;
       // A `subscribe` carrying no destination does NOT clear one already stored
@@ -146,7 +207,19 @@ export function useGeoTrackerSocket(
       if (current !== undefined) send({ type: 'unsubscribe', payload: { agentId: id } });
       send({
         type: 'subscribe',
-        payload: { agentId: id, ...(dests[id] ? { destination: dests[id] } : {}) },
+        payload: {
+          agentId: id,
+          // Prefer `shipmentId`: the server resolves that shipment's own
+          // drop-off, so a customer's coordinates never leave jovi-mall. The two
+          // are alternatives — sending both would make `destination` win and
+          // silently ignore the shipment — and sending neither is legal, yielding
+          // an ETA whenever the agent has exactly one open session.
+          ...(scope?.shipmentId
+            ? { shipmentId: scope.shipmentId }
+            : scope?.destination
+              ? { destination: scope.destination }
+              : {}),
+        },
       });
       subscribedRef.current.set(id, wanted);
     }
@@ -224,8 +297,14 @@ export function useGeoTrackerSocket(
           return { ...prev, [b.agentId]: next };
         });
       } else if (frame.type === 'permission_revoked') {
-        const p = frame.payload as { agentId: string };
+        const p = frame.payload as PermissionRevoked;
         if (!p?.agentId) return;
+        // A closed set of three, and only `shipment_completed` is about a
+        // delivery. Anything unrecognised — including an absent value — reads as
+        // `authorization_expired`, which re-authorizes and tells the user
+        // nothing. That fallback is what makes a fourth value safe to add.
+        const reason = normalizeRevokeReason(p.reason);
+
         subscribedRef.current.delete(p.agentId);
         setFixes((prev) => {
           const next = { ...prev };
@@ -238,8 +317,23 @@ export function useGeoTrackerSocket(
           delete next[p.agentId];
           return next;
         });
-        setRevoked((prev) => new Set(prev).add(p.agentId));
+        setRevoked((prev) => new Map(prev).set(p.agentId, reason));
         setRevokedAt(Date.now());
+
+        // `permission_revoked` is an ANSWER, not a transport failure, so it must
+        // never take the ordinary reconnect path — that would sit in backoff
+        // re-asking a question the server has already answered.
+        //
+        // `authorization_expired` is the one exception, and it is not really an
+        // exception: the socket's credential was rejected, and a WebSocket
+        // authenticates exactly once, at the handshake. There is no refresh path
+        // over the socket — geo-tracker forwards a bearer and cannot see
+        // jovi-mall's refresh cookie — so a new handshake with a fresh token is
+        // the only cure. `resolveGeoTrackerToken()` runs inside `connect()`, so
+        // reconnecting is what picks the new token up.
+        if (revokeNeedsFreshToken(reason)) {
+          reconnectRef.current?.();
+        }
       } else if (frame.type === 'error') {
         const e = (frame.payload ?? {}) as GeoTrackerErrorFrame & { agentId?: string };
         setLastError({ code: e.code, message: e.message });
@@ -272,7 +366,7 @@ export function useGeoTrackerSocket(
 
   const reconnect = useCallback(() => {
     attemptRef.current = 0;
-    setRevoked(new Set());
+    setRevoked(new Map());
     setLastError(null);
     // Detach the outgoing socket completely before opening the next one.
     //
@@ -294,6 +388,9 @@ export function useGeoTrackerSocket(
     void connect();
   }, [connect]);
 
+  // Publish it for the message handler (see `reconnectRef` above).
+  reconnectRef.current = reconnect;
+
   // Connect on mount / when we first have agents.
   useEffect(() => {
     mountedRef.current = true;
@@ -311,7 +408,7 @@ export function useGeoTrackerSocket(
   // Resubscribe when the desired agent set — or a selected shipment's
   // destination — changes (while open).
   const subscriptionKey = agentIds
-    .map((id) => `${id}:${destKey(destinations[id])}`)
+    .map((id) => `${id}:${scopeKey(scopes[id])}`)
     .join(',');
   useEffect(() => {
     syncSubscriptions();

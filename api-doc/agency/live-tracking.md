@@ -1,5 +1,19 @@
 # Agency — Live Tracking
 
+> **Verified against source 2026-08-24 (PLAN-3).** Every field of the response below was
+> read off `src/modules/tracking-integration/services/agency-tracking-board.service.ts:34-142`
+> (the `TrackingBoard*` interfaces and `buildTrackingBoard`), the agent set off
+> `…/services/visible-agents.service.ts:25-52` (`TRACKABLE_SHIPMENT_STATUSES` and
+> `trackableShipmentsForAgency`), the route and guard off
+> `src/modules/delivery/agency.routes.ts:15-16,199` and the cap off
+> `…/config/tracking-integration.config.ts:45` (`TRACKING_BOARD_MAX_SHIPMENTS`, default
+> **200**). All matched.
+>
+> **One correction was applied**: step 7 of *Drawing the map* told you a
+> `permission_revoked` frame means "the shipment finished". It does not — that is the single
+> reading the closed three-value `reason` set exists to prevent, and it was the most
+> consequential stale sentence in this repository's tracking docs.
+
 The agency live-tracking map is served by **two** services, and the split is the
 point:
 
@@ -143,22 +157,38 @@ the road, and the replacement agent is tracked from the moment they accept.
    Every `location_broadcast` frame then moves that agent's marker.
 4. On selecting a shipment, plot `origin.address.coordinates` and
    `destination.coordinates`.
-5. **Live ETA to the selected shipment** — re-subscribe with that shipment's
-   drop-off and geo-tracker enriches every broadcast with `etaSeconds` and
-   `distanceMeters`:
+5. **Live ETA to the selected shipment.** Prefer **`shipmentId`** — the server resolves the
+   drop-off from that shipment's own tracking session, so you do not have to hand a
+   customer's coordinates to another service:
    ```json
    { "type": "subscribe",
      "payload": { "agentId": "507f1f77bcf86cd799439101",
-                  "destination": { "latitude": 4.0611, "longitude": 9.7359 } } }
+                  "shipmentId": "507f1f77bcf86cd799439100" } }
    ```
-   The destination is per-subscription and not persisted; send it again after a
-   reconnect.
+   Sending `destination` still works and is an **override** — nothing replaces it for the
+   life of the subscription, and it is per-subscription rather than persisted, so send it
+   again after a reconnect. **Sending neither now also yields an ETA** when the agent has
+   exactly one open session; with several deliveries in flight the server declines rather
+   than guessing. Full resolution table:
+   [geo-tracker/tracking-websocket.md § How the destination is resolved](../geo-tracker/tracking-websocket.md#how-the-destination-is-resolved).
 6. **Road line between the two pins** (optional) — geo-tracker's
    `POST /routing/route` with `{ origin, destination }`. Without it, a straight
-   line between the two pins is a reasonable fallback.
-7. A `permission_revoked` frame means that agent is no longer watchable — the
-   shipment finished, or they were released by a reassignment. Drop the marker
-   and refetch the board.
+   line between the two pins is a reasonable fallback. ⚠ On the default
+   `ROUTING_PROVIDER=osrm` this works; `/routing/geocode` on the same service does **not**
+   — see [geo-tracker/routing.md](../geo-tracker/routing.md).
+7. 🔴 **A `permission_revoked` frame does not mean the delivery finished.** Read
+   `payload.reason` first — it is a **closed set of three** and only
+   `shipment_completed` is about a delivery:
+
+   | `reason` | What it means here | What the board should do |
+   |---|---|---|
+   | `shipment_completed` | jovi-mall was asked and said this agency is no longer entitled to that agent. | Drop the marker, refetch the board. **The only value from which you may show "delivered".** |
+   | `authorization_expired` | The token the socket was opened with was rejected. Nothing is known about the shipment. | Reconnect with a fresh token and re-subscribe. **Say nothing about the delivery.** Keep the row; it is almost certainly still in flight. |
+   | `authorization_unavailable` | jovi-mall could not be asked. Nothing is known. | Retry with backoff. Report no outcome. |
+
+   Treat any unrecognised value as `authorization_expired`. Until 2026-08-19 all three were
+   sent as `shipment_completed`, which is how a dashboard came to tell an operator a delivery
+   had completed because an access token aged out.
 
 ### Refreshing
 

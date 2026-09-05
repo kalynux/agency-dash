@@ -54,7 +54,21 @@ export interface DeliveryAgencyProfile {
   kycVerified: boolean;
   kycDetails?: { registration_number: string | null; transport_license_id: string | null };
   policies: AgencyPolicies | null;
-  wa: { verified: boolean; name?: string } | null;
+  /**
+   * @deprecated **Do not read this.** Connections moved off the profile on
+   * 2026-08-19: they bind to the *User* rather than to a role, so one person who
+   * is both an agency and a customer connects once and it holds everywhere.
+   * `GET /api/me/connections` is the one source now — see
+   * `connections.service.ts`.
+   *
+   * ⚠ Kept as an OPTIONAL field rather than deleted because the two backend
+   * documents disagree: `connections/README.md` (authored 2026-08-24) states
+   * plainly that `wa` was removed from `/api/agency/profile`, while
+   * `agency/profile.md` and `profile-schema.md` — neither of which was
+   * re-verified in that pass — still show `"wa": null` in their examples.
+   * Optional tolerates both answers; nothing in this app reads it either way.
+   */
+  wa?: { verified: boolean; name?: string } | null;
   status: string;
   onboardingStep: number;
   version?: number;

@@ -49,10 +49,18 @@ import {
  */
 type Language = LanguageCode;
 
-/** Lightweight avatar preview ref — `.id` is what the PATCH sends as `avatarFileId`. */
+/**
+ * Lightweight avatar preview ref — `.id` is what the PATCH sends as `avatarFileId`.
+ *
+ * `url` is nullable because `FileRef.url` is: a file in one of the authorized
+ * storage trees has no public URL at all (api-doc/files/private-files.md). An
+ * avatar is never one of those, but the preview has to survive being handed one
+ * rather than render a broken image — and only `.id` is ever sent, so a missing
+ * preview costs nothing on save.
+ */
 interface AvatarRef {
   id: string;
-  url: string;
+  url: string | null;
 }
 
 interface FormState {

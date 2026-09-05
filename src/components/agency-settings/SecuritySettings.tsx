@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Fingerprint, Loader2, Lock, Shield } from 'lucide-react';
 import { SectionHeading } from '@/components/common/InfoHint';
+import { ContactChangeCard } from '@/components/agency-settings/ContactChangeCard';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,10 @@ export function SecuritySettings() {
   return (
     <div className={sectionGroupClass}>
       <ChangePasswordCard />
+      {/* The identifiers this account signs in with. Below the password because
+          that is the one control on this page that actually evicts sessions —
+          a contact change deliberately does not. */}
+      <ContactChangeCard />
       <BiometricUnlockCard />
 
       {/* Not-yet-implemented security features, greyed out (no agency API for these). */}

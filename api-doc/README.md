@@ -1,382 +1,261 @@
-# jovi-mall API — Frontend Integration Guide
+# agency-dash — backend API contract
 
-> **Start here.** This is the index and the shared contract for every jovi-mall HTTP endpoint.
-> Read this page once, then jump to the per-feature docs linked below. Live GPS tracking lives in a
-> **separate service** (geo-tracker) — see [Live Tracking](#live-tracking-geo-tracker).
+**71 files. Rebuilt 2026-08-24 against the two backends as they are actually implemented.**
 
----
+This is the contract the agency dashboard is built from. It is the only dashboard in this
+platform that is a **client of two services**, and almost everything confusing about it follows
+from that.
 
-## Services at a glance
-
-| Service | Stack | Base URL (dev) | Realtime | Docs |
-|---|---|---|---|---|
-| **jovi-mall** (this repo) | Express + TypeScript + MongoDB | `http://localhost:8022/api` | ❌ HTTP only | this folder |
-| **geo-tracker** | Go + Redis + Postgres | `http://localhost:8080` | ✅ WebSocket | `../../geo-tracker/api-doc/` |
-
-jovi-mall owns all users, orders, shipments, money, and the **tracking authorization policy**.
-geo-tracker owns live positions, the tracking WebSocket, and routing. A frontend that shows a live
-map talks to **both**: jovi-mall for data, geo-tracker for the live stream.
+> ### Start here
+>
+> | If you are… | Read |
+> |---|---|
+> | picking this up after a while away | 🔴 [**MIGRATION-2026-08.md**](./MIGRATION-2026-08.md) — **7 live service calls are broken** and one socket frame can make the UI lie |
+> | looking for an endpoint | [**ROUTE-MAP.md**](./ROUTE-MAP.md) — all 132 agency routes, the 56 shared ones, all 22 geo-tracker routes, each mapped to exactly one document |
+> | building the live map | [agency/live-tracking.md](./agency/live-tracking.md) → [geo-tracker/tracking-websocket.md](./geo-tracker/tracking-websocket.md) → [tracking/privacy-gates.md](./tracking/privacy-gates.md) |
+> | handling an error | [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) (603 codes) · [geo-tracker/errors/README.md](./geo-tracker/errors/README.md) |
 
 ---
 
-## The response envelope (read this first)
+## 1 · Two services, and how to tell which you are talking to
 
-Every jovi-mall endpoint returns one of exactly two shapes.
-
-### Success
-
-```json
-{
-  "success": true,
-  "data": { "...": "the payload — object, array, or null" },
-  "meta": { "total": 120, "page": 1, "limit": 20, "pages": 6 },
-  "message": "Optional human-readable note"
-}
-```
-
-- `data` is **always present** on success (object, array, or `null`).
-- `meta` appears **only** on paginated/list responses (and may carry extra summary fields).
-- `message` is optional.
-
-> **Three list endpoints call the pagination block `pagination`, not `meta`** — `GET
-> /api/{role}/tickets` and the two `…/tickets/reference/{orders,products}` lookups. The block's
-> own fields (`total`, `page`, `limit`, `pages`) are identical; only the key differs. Read both
-> keys on those three, or key off the endpoint. See [vendor/tickets.md](./vendor/tickets.md).
-
-### Error
-
-```json
-{
-  "success": false,
-  "requestId": "req_abc123",
-  "error": {
-    "code": "AUTH_INVALID_CREDENTIALS",
-    "message": "Invalid credentials",
-    "statusCode": 401,
-    "category": "authentication",
-    "details": { "fields": [{ "path": "email", "message": "Required" }] }
-  }
-}
-```
-
-- Branch on `error.code` (stable string), not `error.message` (human copy, may change).
-- `error.category` is **always present** — one of nine values (`authentication · authorization ·
-  validation · not_found · conflict · business_rule · rate_limit · external_service · internal`),
-  and the same nine in all three backend services. Use it as your default branch when you have no
-  specific handling for a code. It is *derived* from `(code, statusCode)`, so one code can carry
-  different categories at different statuses.
-- `details.fields[]` is present for validation (`VALIDATION_ERROR`) failures — map each to its form field.
-- On `internal` and `external_service` the `message` is replaced with a generic sentence and
-  `details` is **omitted entirely**, in every environment — `requestId` is the only handle.
-- `requestId` also appears as the `X-Request-Id` response header; quote it in bug reports.
-
-> **⚠️ Breaking change (2026-07-17):** the whole API now uses this envelope uniformly. A handful of
-> endpoints (notably **auth**, WhatsApp/Telegram link status, vendor inventory history/reservations)
-> previously returned bare payloads or a `pagination` object; they now return `{ success, data, meta }`.
-> See [FRONTEND-READINESS.md](../FRONTEND-READINESS.md) for the exact list. Provider **webhooks**
-> (`/webhooks/*`) are the deliberate exception — they answer Stripe/Meta/Telegram, not your frontend,
-> and keep their provider-specific bodies.
-
-Full error catalog: [errors/README.md](./errors/README.md).
-
----
-
-## Pagination
-
-List endpoints accept these query parameters and return a `meta` block:
-
-| Query param | Type | Default | Notes |
-|---|---|---|---|
-| `page` | integer ≥ 1 | `1` | 1-indexed |
-| `limit` | integer 1–100 | `10` | page size |
-| `sort` | string | `-createdAt` | field name; prefix `-` for descending (per-endpoint support varies — see each doc) |
-
-Response `meta`:
-
-```json
-{ "total": 120, "page": 1, "limit": 20, "pages": 6 }
-```
-
-- `total` = total matching records; `pages` = `ceil(total / limit)`.
-- The list itself is in `data` (an array). Some list endpoints add summary fields to `meta`
-  (e.g. inventory reservations add `totalReserved`).
-
----
-
-## Authentication
-
-**Cookie-first, Bearer-fallback JWT.** See [auth/README.md](./auth/README.md) for the full flow.
-
-- **Browser clients**: log in via `POST /api/auth/login`; the server sets `access_token` (15 min) and
-  `refresh_token` (30 d) **HttpOnly** cookies. Send `credentials: 'include'` on every request.
-  Expired access tokens are **silently refreshed** by the server from the refresh cookie — no client action.
-- **Mobile / service clients**: send `Authorization: Bearer <access_token>`. Bearer callers **cannot**
-  silently refresh — on `401` with an expired token, re-login.
-- **Roles**: every account holds one or more of `customer · vendor · agency · agent · admin`. A JWT is
-  scoped to **one active role**; switch roles by logging in again with `role`, or add a role via
-  `POST /api/auth/add-role`.
-- **Current identity**: `GET /api/auth/me` (or `GET /api/auth/auth-me/:role` on app launch to restore + refresh).
-
-### Common auth error codes
-
-| `error.code` | Status | Meaning |
+| | **jovi-mall** ("Project A") | **geo-tracker** ("Project B") |
 |---|---|---|
-| `AUTH_MISSING_TOKEN` | 401 | No token and no refresh cookie |
-| `AUTH_TOKEN_EXPIRED` / `AUTH_SESSION_EXPIRED` | 401 | Token expired, refresh unavailable/failed |
-| `AUTH_PASSWORD_CHANGED` | 401 | The token predates a password change. **Terminal — do not refresh**, the refresh cookie is refused too |
-| `AUTH_TOKEN_INVALID` | 401 | Tampered/invalid signature |
-| `AUTH_ROLE_NOT_FOUND` | 403 | Authenticated but wrong role for this endpoint |
+| Owns | users, orders, shipments, money, inventory, **and the tracking authorization policy** | live positions, the WebSocket fan-out, routing |
+| Base URL | `VITE_API_BASE_URL`, default `http://localhost:8022/api` | `VITE_GEO_TRACKER_URL`, default = the WS origin (`http://localhost:8090`) |
+| Socket | — | `VITE_GEO_TRACKER_WS_URL`, default `ws://localhost:8090/ws/track` |
+| Path prefix | **`/api/…`** | **none** — routes are mounted at the root (`/ws/track`, `/tracking/sessions`) |
+| Credential | the session — httpOnly cookie on the web, bearer token in the Capacitor shell | **the same jovi-mall access token** |
+| Client in `src/` | `services/api.ts` (+ `services/http.ts`) | `services/geo-tracker.service.ts` |
+| Error envelope | `{ success, requestId, error: { code, message, statusCode, category, details? } }` | **the same** since Phase 16 |
+| Rate limit | 900 / min per agency identity | 600 / min per IP; **20 frames/s per socket** |
+
+**One token, two services.** geo-tracker verifies the *same* HS256 access token with the *same*
+signing secret. You never mint anything for it, and you never call
+`GET /api/tracking/visible-agents` yourself for tracking purposes — geo-tracker calls it **as
+you**, forwarding your token.
+
+**Three ways the token reaches the socket**, tried in this order
+(`geo-tracker/internal/modules/tracking/delivery/ws/handler.go:450-472`):
+
+1. the **httpOnly `access_token` cookie**, attached automatically when geo-tracker is same-site
+   with jovi-mall — this is the browser path, and it needs no token handling in JS at all;
+2. `Sec-WebSocket-Protocol: bearer, <token>` — for a client that *holds* the raw token
+   (browsers cannot set `Authorization` on a WebSocket);
+3. `Authorization: Bearer <token>` — native clients.
+
+The Capacitor shell uses (2), reading the token from `window.wiMallGetAccessToken`.
+
+⚠ **geo-tracker allows a closed request-header list** — `Authorization`, `Content-Type`,
+`X-Request-Id`. A custom header on a geo-tracker call fails CORS. `ALLOWED_ORIGINS` drives both
+its HTTP CORS **and** its WebSocket `CheckOrigin`; there is no separate WS setting, so the
+Capacitor origins must be in that one variable.
+
+### The division that explains the whole map
+
+| | Comes from | Refresh cadence |
+|---|---|---|
+| **which** agents, **which** shipments, **where** the pins are | jovi-mall — `GET /api/agency/tracking/board` | minutes; a slow poll, plus on a revoke |
+| **movement** | geo-tracker — `location_broadcast` on `/ws/track` | seconds |
+| the **road line** between two pins | geo-tracker — `POST /routing/route` | on selection |
+| the **GPS trail** of a delivery | geo-tracker — `GET /tracking/sessions/:agentId/checkpoints` | on selection |
+
+**The board never calls geo-tracker.** geo-tracker being down costs you the moving markers and
+nothing else: agents, shipments and both pins still render. Keep it that way — deliveries work
+today when geo-tracker is down and they should keep working.
 
 ---
 
-## Permission matrix
+## 2 · What is deliberately not here
 
-Every route tree is guarded by role. `✅` = full access to that area's endpoints for that role;
-`—` = no access (403 / not mounted). "Self" means scoped to the caller's own records.
+Three files in `geo-tracker/api-doc/` are **not mirrored into this repository**, on the owner's
+decision:
 
-| Area | Anonymous | Customer | Vendor | Agency | Agent | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Auth (register/login/refresh/logout) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Current user / role switch | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Catalog browse / product booking availability | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Published price list (`/public/plans`, `/public/credit-packs`) | ✅⁵ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Published blog (`/public/articles`) | ✅⁵ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Blog editor (`/admin/articles`, `/admin/article-authors`) | — | — | — | — | — | ✅ |
-| Cart & checkout | — | ✅ | — | — | — | — |
-| Customer orders / confirm delivery | — | ✅ (self) | — | — | — | — |
-| Gateway payments (`/payments`) | initiate/verify only³ | ✅ (self) | —⁴ | — | — | ✅ (all) |
-| Vendor store / products / inventory / analytics | — | — | ✅ (self) | — | — | — |
-| Billing (plans/credits) | — | — | ✅ (self) | ✅ (self) | ✅ (self) | ✅ |
-| Earnings & payout requests | — | — | ✅ (self) | ✅ (self) | via COD¹ | ✅ (platform) |
-| Delivery agency management | — | — | — | ✅ (self) | — | ✅ |
-| Agent roster / memberships | — | — | — | ✅ (its agents) | ✅ (self) | ✅ |
-| Shipment status transitions | — | — | — | ✅ | ✅ (own)² | ✅ |
-| COD cash chain | — | — | — | ✅ (collect/remit) | ✅ (collect/deposit) | ✅ (confirm/oversight) |
-| Agency ⇄ vendor connections | — | — | ✅ | ✅ | — | — |
-| Agency ⇄ agent contracts | — | — | — | ✅ | ✅ | ✅ (transfer) |
-| Tickets (support) | — | ✅ | ✅ | ✅ | ✅ | ✅ (all) |
-| Notifications & preferences | — | ✅ (self)⁶ | ✅ (self) | ✅ (self) | ✅ (self) | — |
-| Saved payment methods (`/me/payment-methods`) | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Change password (`/me/password`) | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| File upload / management (`/files`) | — | ✅ | ✅ | ✅ | ✅ | ✅ (+ hard-delete/orphans) |
-| Admin order controls / COD oversight / agent admin | — | — | — | — | — | ✅ |
-| Tracking authorization (`/tracking/visible-agents`) | — | ✅ (own orders) | — | ✅ (its agents) | ✅ (self) | ✅ (all) |
+| Not here | Why |
+|---|---|
+| `webhooks.md` (`POST /webhooks/node`) | inbound, **HMAC-SHA256** from jovi-mall's dispatch worker |
+| `agent-action-audit.md` (`POST /webhooks/agent-actions`) | same — inbound, HMAC, jovi-mall only |
+| `service-data-door.md` (`GET /internal/*`) | a **wi-admin service token** with a configured scope set; inert unless `GEO_TRACKER_ADMIN_TOKEN` is set |
 
-¹ Agents are paid via the ordinary payout pipeline; the platform is the payer. See the COD docs.
-² Both the agency and the assigned agent drive the same state machine by the **same transition
-table**, through two endpoints (`PATCH /api/agency/shipments/:id/status`,
-`POST /api/agent/shipments/:id/status`) — including `handing_over`, so a replacement agent records
-their own pickup after a reassignment. What differs is ownership scoping, the optional failure
-reason only the agent may attach, and the recorded `changedByRole`. Concurrent writes are resolved
-by a from-status compare-and-set: the loser gets `409 SHIPMENT_STATUS_CONFLICT`. `delivered` is
-reachable from neither endpoint (COD: the delivery code; prepaid: the customer's confirmation or the
-7-day sweep). See [agent/shipments.md](./agent/shipments.md) and
-[agency/shipments.md](./agency/shipments.md).
-³ `POST /payments/initiate` and `POST /payments/verify` take no credentials; **`GET
-/payments/:transactionId` requires auth and returns only the caller's own transaction** (breaking
-change, 2026-07-29 — it used to be open). See [payments/README.md](./payments/README.md).
-⁴ Vendors read a *booking's* payment state via `GET /api/bookings/:id/payment-status` for bookings
-they own. Vendor/agency/agent **plan and credit purchases are a different surface** and create no
-`PaymentTransaction` — see [billing-plans-across-roles.md](./billing-plans-across-roles.md).
-⁵ The **only** unauthenticated route tree besides auth, catalog browse and the payment
-initiate/verify pair. It reads the plan catalog, the credit packs and the published blog — the same
-prices and prose the marketing site publishes — and nothing else. Read-only, no identity, no
-owner-scoped data; see [public/README.md](./public/README.md) and
-[public/articles.md](./public/articles.md).
-⁶ Customers have their own notification stack at `/api/customer/notifications` — inbox,
-`unread-count`, mark-one-read, mark-all-read and channel preferences. It is the fourth of the four
-stacks; see [customer/notifications.md](./customer/notifications.md).
+All three are backend-to-backend. Documenting a surface no client of this app can reach invites
+somebody to try, and the credentials involved — a shared HMAC secret, a wi-admin service token —
+must never be anywhere near a browser bundle. They are listed with their auth in
+[ROUTE-MAP.md § 3](./ROUTE-MAP.md) so a reader can tell *"not documented"* from *"not ours"*, and
+the full text is in `backend/geo-tracker/api-doc/` if you ever need it.
+
+The same distinction is drawn for jovi-mall in [ROUTE-MAP.md § 2](./ROUTE-MAP.md) under
+*Deliberately out of scope* — `/api/internal/*`, the other roles' trees, and the gateway webhooks.
+
+⚠ `POST /api/tracking/agent-state` looks callable and is not: it is the service-token receiver
+for geo-tracker's notifications **into** jovi-mall.
 
 ---
 
-## Uploads
+## 3 · Index
 
-`POST /api/files/upload` (multipart, field `files`, 1–10 files) and `POST /api/files/upload/video`
-(field `videos`) are shared by **all authenticated roles**, with per-role size limits
-(customer 100 MB · agency 200 MB · vendor 500 MB · agent 1 GB · admin 2 GB · video 70 MB). Manage with
-`GET/PATCH/DELETE /api/files/:id`, `GET /api/files`, `GET /api/files/storage`. Uploaded files are
-referenced elsewhere by their returned `id` (e.g. product images, branding, KYC) — what a file is
-*for* is decided at that point, not at upload, so each upload is stored by its own detected media
-type (`images/`, `documents/`, `audio/`, `archives/`, `videos/`, `other/`). Full contract:
-[uploads/README.md](./uploads/README.md) (role-neutral) and [vendor/file-management.md](./vendor/file-management.md).
+### Start / cross-cutting
 
----
+| | |
+|---|---|
+| 🔴 [MIGRATION-2026-08.md](./MIGRATION-2026-08.md) | what changed, worst first |
+| [ROUTE-MAP.md](./ROUTE-MAP.md) | every route → exactly one document |
+| [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) | the envelope, the nine categories, all **603** codes |
+| [rate-limits.md](./rate-limits.md) | ceilings, headers, and why a `429` must not sign anyone out |
+| [health.md](./health.md) · [system-uptime-status.md](./system-uptime-status.md) | probes and the status surface |
+| [billing-plans-across-roles.md](./billing-plans-across-roles.md) | the one owner-scoped plan engine |
+| [reviews.md](./reviews.md) 🆕 | the cross-role review model — an agency reviews a **delivery** |
 
-## Live tracking (geo-tracker)
+### Auth & account
 
-The live map/GPS stream is a **separate service**. jovi-mall only answers *"which agents may this
-viewer track?"* via `GET /api/tracking/visible-agents`; geo-tracker does the streaming.
+| | |
+|---|---|
+| [auth/README.md](./auth/README.md) | sessions, roles, the whole auth surface (**+592 lines** on the old copy) |
+| [auth/onboarding.md](./auth/onboarding.md) | first-run |
+| [auth/FRONTEND-CHANGELOG-mobile-auth.md](./auth/FRONTEND-CHANGELOG-mobile-auth.md) · [mobile-auth-backend-spec.md](./mobile-auth-backend-spec.md) | `/api/auth/mobile/*` — the Capacitor namespace |
+| [auth/magic-login.md](./auth/magic-login.md) 🆕 | bot sign-in, and `/reset-password` from a chat — **works for an agency account** |
+| [me/password.md](./me/password.md) · [me/contact-change.md](./me/contact-change.md) 🆕 · [me/account-closure.md](./me/account-closure.md) 🆕 | the shared `/api/me` surface |
+| [connections/README.md](./connections/README.md) 🔴🆕 | messaging connections — **replaces the 7 dead calls** |
 
-- Authorization policy & the visible-agents contract: [tracking/live-tracking.md](./tracking/live-tracking.md),
-  [tracking/agent-tracking-policy.md](./tracking/agent-tracking-policy.md).
-- WebSocket connection, subscribe/heartbeat frames, payloads, reconnect: **geo-tracker**
-  `../../geo-tracker/api-doc/tracking-websocket.md`.
-- Session reads, routing, ETA, locations: `../../geo-tracker/api-doc/`.
+### Files, media, geo
 
-Same JWT signs both services — forward the viewer's access token to geo-tracker.
+| | |
+|---|---|
+| [uploads/README.md](./uploads/README.md) | the shared upload + file library |
+| [files/private-files.md](./files/private-files.md) 🔴🆕 | `FileDetail.url` is `string \| null` — **delivery-proof photos have no URL** |
+| [agency/file-management.md](./agency/file-management.md) · [agency/storage.md](./agency/storage.md) | the agency's own quota and library |
+| [geo/README.md](./geo/README.md) | address search & reverse geocode (**jovi-mall's**, not geo-tracker's) |
 
----
+### Tracking — jovi-mall's half (policy)
 
-## Documentation index
+| | |
+|---|---|
+| [tracking/live-tracking.md](./tracking/live-tracking.md) | *who may watch whom*, and how a revocation is pushed |
+| [tracking/privacy-gates.md](./tracking/privacy-gates.md) 🆕 | **the two gates, as one section.** Read before building the map |
+| [tracking/agent-tracking-policy.md](./tracking/agent-tracking-policy.md) | the admin allow-flag and the internal doors (context; not agency-callable) |
+| [tracking/shipment-destination.md](./tracking/shipment-destination.md) 🆕 | how geo-tracker gets an ETA target without your client sending one |
 
-### Cross-cutting
-- [Auth & sessions](./auth/README.md) · [Onboarding](./auth/onboarding.md)
-- [Change password (`/me/password`, all roles)](./me/password.md)
-- [**Public API (no auth)**](./public/README.md) — the published price list: plan catalog + credit packs, for the marketing site
-- [**Public blog (no auth)**](./public/articles.md) — articles, typed blocks, hreflang & slug redirects. Editor: [admin/articles.md](./admin/articles.md)
-- [**Billing, plans & credit — cross-dashboard guide**](./billing-plans-across-roles.md) (vendor · agency · agent · admin)
-- [Error catalog](./errors/README.md)
-- [Geospatial addresses & address search](./geo/README.md)
-- [Gateway payments (role-neutral)](./payments/README.md) — initiate · verify · read a transaction
-- **Payout methods** — where you get paid *to* (mobile money · bank · **card**), one schema documented per role: [vendor](./vendor/payout-methods.md) · [agency](./agency/payout-methods.md) · [agent](./agent/payout-methods.md). Distinct from *payment* methods, which are what you pay *with*
-- [Uploads (role-neutral)](./uploads/README.md)
-- [**Health probes & metrics**](./health.md) — `/api/health` (frozen — geo-tracker's readiness depends on it), `/api/health/{live,ready}`, `/metrics`
-- [System uptime / status](./system-uptime-status.md) — ⚠ an **unserved** frontend spec; the operator surface is [admin/system.md](./admin/system.md)
-- [WhatsApp](./whatsapp/README.md) · [WhatsApp notification templates](./notifications/whatsapp-templates.md)
-- [Telegram linking & notifications](./telegram/README.md) · [Google Calendar (OAuth)](./integrations/google-calendar.md)
+### Tracking — geo-tracker's half (mechanics)
 
-### Customer
-- [Profile & addresses](./customer/profile.md) · [Cart](./customer/cart.md) · [Orders](./customer/orders.md)
-- [Bookings](./customer/bookings.md) · [Payment methods](./customer/payment-methods.md) · [Digital products](./customer/digital-products.md) · [Tickets](./customer/tickets.md)
+| | |
+|---|---|
+| [geo-tracker/README.md](./geo-tracker/README.md) | the service, its two authorization paths |
+| 🔴 [geo-tracker/tracking-websocket.md](./geo-tracker/tracking-websocket.md) | **the priority file.** Frames, ETA resolution, the three revoke reasons, the WS error codes, reconnect |
+| [geo-tracker/tracking-sessions.md](./geo-tracker/tracking-sessions.md) | a session is **one shipment's** tracking lifecycle |
+| [geo-tracker/locations.md](./geo-tracker/locations.md) | last-known position over HTTP |
+| [geo-tracker/gps-persistence.md](./geo-tracker/gps-persistence.md) 🆕 | live position vs. the downsampled trail; retention |
+| [geo-tracker/routing.md](./geo-tracker/routing.md) | route · ETA · matrix · geocode — and the **`501`** on the default provider |
+| [geo-tracker/tracking-notifications.md](./geo-tracker/tracking-notifications.md) 🆕 | the reverse channel (context — geo-tracker → jovi-mall) |
+| [geo-tracker/health.md](./geo-tracker/health.md) 🆕 · [geo-tracker/rate-limits.md](./geo-tracker/rate-limits.md) 🆕 | probes; the HTTP and **frame** ceilings |
+| [geo-tracker/errors/README.md](./geo-tracker/errors/README.md) | its envelope and status table (one correction noted) |
+| [geo-tracker/FRONTEND-CHANGELOG-phase-2-3.md](./geo-tracker/FRONTEND-CHANGELOG-phase-2-3.md) 🆕 · [phase-4-5](./geo-tracker/FRONTEND-CHANGELOG-phase-4-5.md) 🆕 | what the readiness phases changed for a client |
 
-### Vendor
-- [Store](./vendor/store.md) · [Profile](./vendor/profile.md) · [Onboarding](./vendor/onboarding.md)
-- [Products](./vendor/products.md) · [Product update](./vendor/product-update.md) · [Upload flow](./vendor/product-upload-flow.md) · [Variants](./vendor/variants.md) · [Options & variants](./vendor/option-variant-management.md) · [Digital products](./vendor/digital-products.md)
-- [Inventory](./vendor/inventory.md) · [Orders](./vendor/orders.md) · [Shipping](./vendor/shipping.md) · [Delivery agencies](./vendor/delivery-agencies.md) · [Agency connections](./vendor/agency-connections.md)
-- [Bookings](./vendor/bookings.md) · [Booking guide](./booking-implementation-guide.md) · [Calendar](./vendor/calendar.md) · [Availability rules](./vendor/availability-rules.md)
-- [Billing](./vendor/billing.md) · [Billing overview](./vendor/billing-overview.md) · [Earnings](./vendor/earnings.md) · [Transactions](./vendor/transactions.md) · [Stripe payments](./vendor/stripe-payments.md) · [Payment methods](./vendor/payment-methods.md) (pay *with*) · [**Payout methods**](./vendor/payout-methods.md) (get paid *to* — mobile money only right now; 🚧 bank + card switched off)
-- [Analytics](./vendor/analytics.md) · [Customer management](./vendor/customer-management.md) · [Storage](./vendor/storage.md) · [File management](./vendor/file-management.md)
-- [Notifications](./vendor/notifications.md) · [Notification channels](./vendor/notification-channels.md) · [Tickets](./vendor/tickets.md) — the shared payload reference for every role's ticket surface; the `TicketType` list is [ticket_types.txt](./ticket_types.txt), and the picker gaps still open are in [tickets-reference-frontend-requirements.md](./vendor/tickets-reference-frontend-requirements.md)
+### The agency's own surface — 132 routes
 
-### Agency
-- [Profile](./agency/profile.md) · [Profile schema](./agency/profile-schema.md) · [Onboarding](./agency/onboarding.md)
-- [Agent roster & contracts](./agency/agent-roster.md) — **canonical for the agent↔agency contract**, including [terms negotiation](./agency/agent-roster.md#terms-negotiation) · [Shipments](./agency/shipments.md)
-- [Live tracking](./agency/live-tracking.md) — the map: watchable agents, their active shipments, and each shipment's pickup → drop-off pins (movement itself comes from geo-tracker's socket)
-- [Billing (plans & credit)](./agency/billing.md) · [COD cash management](./agency/cod-cash-management.md) · [Earnings](./agency/earnings.md) · [Payment methods](./agency/payment-methods.md) (pay *with*) · [**Payout methods**](./agency/payout-methods.md) (get paid *to* — mobile money only right now; 🚧 bank + card switched off)
-- [Vendor connections](./agency/vendor-connections.md) · [Vendors](./agency/vendors.md) · [Products](./agency/products.md)
-- [File management](./agency/file-management.md) · [Storage](./agency/storage.md)
-- [Notifications](./agency/notifications.md) · [Tickets](./agency/tickets.md)
+| Area | | Routes |
+|---|---|---:|
+| Agents & contracts | [agency/agent-roster.md](./agency/agent-roster.md) — **canonical for the agent↔agency contract** | 30 |
+| Support | [agency/tickets.md](./agency/tickets.md) · [ticket_types.txt](./ticket_types.txt) | 14 |
+| Billing & money in | [agency/billing.md](./agency/billing.md) (plans, credits, settings, transactions) | 11 |
+| Warehouse | [agency/inventory.md](./agency/inventory.md) (**+151 lines: the physical shelf**) | 11 |
+| COD cash | [agency/cod-cash-management.md](./agency/cod-cash-management.md) | 9 |
+| Vendors | [agency/vendor-connections.md](./agency/vendor-connections.md) · [agency/vendors.md](./agency/vendors.md) · [agency/products.md](./agency/products.md) | 8 + 2 |
+| Notifications | [agency/notifications.md](./agency/notifications.md) · [notifications/whatsapp-templates.md](./notifications/whatsapp-templates.md) · [whatsapp/README.md](./whatsapp/README.md) · [telegram/README.md](./telegram/README.md) | 7 |
+| Onboarding & creation | [agency/onboarding.md](./agency/onboarding.md) | 6 |
+| Assignment | [agency/assignment.md](./agency/assignment.md) | 6 |
+| Stock requests | [agency/stock-requests.md](./agency/stock-requests.md) | 6 |
+| Profile | [agency/profile.md](./agency/profile.md) · [agency/profile-schema.md](./agency/profile-schema.md) | 4 |
+| Shipments | [agency/shipments.md](./agency/shipments.md) | 4 |
+| Storage statements | [agency/storage-invoices.md](./agency/storage-invoices.md) 🆕 | 4 |
+| Earnings & payout | [agency/earnings.md](./agency/earnings.md) · [agency/payout-methods.md](./agency/payout-methods.md) · [agency/payment-methods.md](./agency/payment-methods.md) | 3 |
+| Reviews | [reviews.md](./reviews.md) | 3 |
+| Depots | [agency/magazin.md](./agency/magazin.md) | 2 |
+| Live-tracking board | [agency/live-tracking.md](./agency/live-tracking.md) | 1 |
+| Delivery proof | [files/private-files.md](./files/private-files.md) | 1 |
 
-### Agent
-- **▶ [Shipment discovery — frontend integration guide](./agent-shipment-discovery-integration.md)** — search, earnings, addresses and the pickup→drop-off route. **Start here if you are integrating the agent app**; it carries the two breaking changes and the migration checklist.
-- [Profile, preferences & dispatch settings](./agent/profile.md) · [Vehicle colour & photo](./agent/vehicle-profile.md) · [Onboarding](./agent/onboarding.md) · [Availability & device](./agent/availability-and-device.md) · [Agency membership](./agent/agency-membership.md) — applying, and [negotiating your terms](./agent/agency-membership.md#terms-negotiation)
-- [Shipments](./agent/shipments.md) · [Offers](./agent/offers.md) · [Delivery proof](./agent/delivery-proof.md) · [COD cash](./agent/cod-cash.md) · [Earnings](./agent/earnings.md) · [Billing (plans & credit)](./agent/billing.md) · [Payment methods](./agent/payment-methods.md) (pay *with*) · [**Payout methods**](./agent/payout-methods.md) (get paid *to* — mobile money only right now; 🚧 bank + card switched off)
-- [File management](./agent/file-management.md) · [Storage](./agent/storage.md)
-- [Notifications](./agent/notifications.md) · [Push notifications (Flutter)](./agent/push-notifications.md) — includes offer quick actions, whose rationale record is [offer-quick-actions.md](./agent/offer-quick-actions.md) · [Tickets](./agent/tickets.md)
-
-### Admin
-- [Profile](./admin/profile.md) · [Orders (dispute hold)](./admin/orders.md) · [Agents](./admin/agents.md)
-- [Delivery agencies](./admin/delivery-agencies.md) · [COD oversight](./admin/cod.md) · [Platform earnings](./admin/earnings.md) · [Payout requests](./admin/payout-requests.md)
-- [Billing](./admin/billing.md) · [Billing overview](./admin/billing-overview.md) · [Catalogue vectorisation](./admin/catalogue-vectorisation.md)
-- [Payment methods](./admin/payment-methods.md) · [Tickets](./admin/tickets.md)
-- [**Blog editor**](./admin/articles.md) — articles + bylines; the write side of [public/articles.md](./public/articles.md)
-- [**System operations**](./admin/system.md) — dependency health · integration status · queue depth · cache status · background jobs · operational metrics · the error journal. **Read-only, every route a GET**
-- [**Developer tools**](./admin/dev-tools.md) — the dangerous half: run a worker · replay/prune the outbox · rebuild search vectors · **maintenance mode** · **cache flush**
-- [**The internal admin API**](./admin/internal-service-api.md) — `/api/internal/admin/*`, the service-to-service door wi-admin calls. **Not a frontend surface**; documented so the two mounts can be told apart
-- Internal-only surfaces with no dashboard twin: [Vendors](./admin/vendors.md) (`/api/internal/admin/vendors`) · [Shipments](./admin/shipments.md) (`/api/internal/admin/shipments`)
-
-### Tracking (authorization; streaming is in geo-tracker)
-- [Live tracking](./tracking/live-tracking.md) · [Agent tracking policy](./tracking/agent-tracking-policy.md)
+Changelogs: [agency/FRONTEND-CHANGELOG-phase-2-3.md](./agency/FRONTEND-CHANGELOG-phase-2-3.md) 🆕 ·
+[phase-4-5](./agency/FRONTEND-CHANGELOG-phase-4-5.md) 🆕 ·
+[FRONTEND-CHANGELOG-agency-storage.md](./FRONTEND-CHANGELOG-agency-storage.md) ·
+cross-role [phase-2-3](./FRONTEND-CHANGELOG-phase-2-3.md) 🆕 · [phase-4-5](./FRONTEND-CHANGELOG-phase-4-5.md) 🆕
 
 ---
 
-## Conventions
+## 4 · Ten things this dashboard gets wrong if nobody says them
 
-- **IDs** are MongoDB ObjectIds (24-hex strings).
-- **Timestamps** are ISO-8601 UTC strings (`2026-07-17T10:20:30.000Z`).
-- **Phone numbers** are **E.164, everywhere** — see [Contact formats](#contact-formats-phone--email).
-- **Email addresses** are validated and lowercased — see [Contact formats](#contact-formats-phone--email).
-- **Clearing optional fields** (added 2026-07-22): optional string fields in PATCH/POST bodies are
-  *clearable* unless a doc says otherwise. Three states: **omit** the key → stored value unchanged;
-  send **`null` or `""`** (whitespace-only counts as `""`) → field **cleared**, stored and returned
-  as `null`; send a value → it must satisfy the field's constraint (URL, email, length…), and invalid
-  non-empty values are rejected with `VALIDATION_ERROR`. Required fields (e.g. store `name`) and
-  verified identity fields (vendor `email`/`phone`) are **not** clearable. Numeric/boolean/date
-  fields accept `null` where documented but never `""`.
-- **Money** is stored in the smallest unit is **not** assumed — amounts are numbers in the account
-  currency (default `XAF`); check each endpoint. COD amounts are whole-currency numbers.
-- **Soft delete**: most resources are soft-deleted; list endpoints never return deleted records.
-- **`Content-Type: application/json`** on every non-multipart POST/PATCH/PUT.
+1. **Visibility derives from shipments, not the roster.** A browsable agent is not a watchable
+   one, and an idle roster member never appears on the board. There is no agency route that could
+   make one appear.
+2. **A shipment on an unaccepted offer is absent from the board** even though its status is
+   trackable — `trackableShipmentsForAgency` also requires `agent_id != null`. It appears the
+   moment the agent accepts.
+3. **`failed` is *active* but not *trackable*.** Three status subsets disagree; build the map from
+   the board endpoint and never from a locally-derived active set.
+   [Table](./agency/shipments.md#status-subsets).
+4. **Grants are not pushed.** A newly-authorised viewer is refused until `PERMISSION_CACHE_TTL`
+   (5 min) expires, and **a reconnect does not refresh it** — the cache is user-keyed in Redis and
+   outlives the socket. Revocation *is* pushed. Both are deliberate: the leak direction gets the
+   push, the inconvenience direction does not.
+5. **`permission_revoked` has three reasons and only one is about a delivery.**
+   [§ 2 of the migration](./MIGRATION-2026-08.md#2--permission_revoked-now-carries-one-of-three-reasons).
+6. **An opted-in agent with no delivery is locatable but not tracked.** An empty `checkpoints`
+   array is a normal answer. [The two gates](./tracking/privacy-gates.md).
+7. **A frozen marker with no frame has three possible causes** and the socket distinguishes none
+   of them. `GET /tracking/sessions/:agentId` is the only way to tell them apart.
+8. **`FileDetail` is an object and proof photos carry `url: null`.** Use
+   `GET /api/agency/shipments/:id/delivery-proof/file`.
+9. **Business identity is the Magazin, not the profile.** Business name and logo live on
+   `Magazin`; the profile holds `display_name` + `avatar`.
+10. **The agency plan cap is soft**, driven by `UNTERMINATED_SHIPMENT_STATUSES`; the agent cap is
+    plan-driven. And **`cod.threshold` defaults to `0`**, which silently removes an agent from
+    every COD candidate list —
+    [detail](./agency/cod-cash-management.md#risk-controls-affecting-your-operation).
 
 ---
 
-## Contact formats (phone & email)
+## 5 · How this was verified, and how to re-verify it
 
-**One rule, every endpoint.** Wherever the API accepts a phone number or an email address — auth,
-profiles, store/magazin support contacts, payout destinations, payment channels, agent emergency
-contacts, vendor support channels — the same validation applies. There is no endpoint with a looser
-rule, and no field where "it's optional" means "it's unchecked".
+Every page carries either a **verified-against-source** banner naming the files and line ranges
+it was checked against, or a **corrections** section where the backend's own text was wrong. The
+governing rule was:
 
-### Phone numbers — E.164 only
+> The current backend implementation is the source of truth. Documentation — including the
+> backend's own — is a claim about it, and a claim is not evidence.
 
-```
-+237670000000        ✅
-+237 670 00 00 00    ✅  formatting is stripped for you; stored as +237670000000
-+1 (555) 010-9999    ✅
-670000000            ❌  no country code — VALIDATION_ERROR
-00237670000000       ❌  00-prefixed dialling is not E.164 — send the +
-+0237670000          ❌  a country code cannot start with 0
-+237                 ❌  incomplete
-```
+That is not a slogan: **six** claims in the text this repository copied turned out to be false,
+and one of them (COD's `agent_delivered`) was inverted. They are listed in
+[MIGRATION § 12](./MIGRATION-2026-08.md#corrections-to-the-backends-own-documentation) and filed
+in `backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`.
 
-- A leading **`+` and country calling code are required**. The server will not guess a country: the
-  platform serves several, so a national number has no single correct expansion.
-- 7–15 digits total (the E.164 ceiling is 15).
-- **Spaces, dashes, dots and parentheses are accepted and stripped.** What is stored and echoed back
-  is the canonical form, so send the number however your input mask produces it.
-- This validates *format*, not reachability — a well-formed number may still be unassigned.
+```bash
+# 1 · the 132 agency routes, from the live router
+cd backend/jovi-mall && node -r ts-node/register/transpile-only -r dotenv/config \
+    ../FRONTEND-SYNC/tools/dump-routes.js "$(pwd)/src/app.ts" | grep -c " /api/agency"
 
-### Email addresses
+# 2 · the error-code count must equal error-codes.ts's header
+grep -cE "^\s+[A-Z0-9_]+:\s*'" backend/jovi-mall/src/core/error-codes.ts        # 603
+grep -cE "^\s+[A-Z0-9_]+:\s*'" frontend/agency-dash/api-doc/error-codes.ts     # 603
 
-```
-name@example.com          ✅
-  Name@Example.COM        ✅  trimmed and lowercased; stored as name@example.com
-o'brien+tag@my-shop.io    ✅
-name@example              ❌  no TLD
-root@localhost            ❌  bare host
-"john doe"@example.com     ❌  legal in the RFC, undeliverable in practice
-na..me@example.com        ❌
-```
+# 3 · drift of the mirrored files against the backend
+node backend/FRONTEND-SYNC/tools/doc-drift.js | sed -n '/agency-dash/,/^$/p'
 
-- RFC 5322 dot-atom local part, a real dotted domain with an alphabetic TLD, and the RFC 5321 length
-  limits (64 for the local part, 254 for the whole address).
-- **Addresses are trimmed and lowercased** before storage and comparison, so `Ada@Example.com` and
-  `ada@example.com` are the same account. Log in with either.
-
-### Optional stays optional
-
-Optionality did not change anywhere. A field that was optional is still optional, and a *clearable*
-field can still be cleared with `null`/`""` (see **Clearing optional fields** above). The rule is
-only ever applied to a value that is actually supplied.
-
-### Errors
-
-Failures use the standard envelope with `error.code = "VALIDATION_ERROR"` (HTTP 400) and name the
-offending field in `error.details.fields[]`:
-
-```json
-{
-  "success": false,
-  "requestId": "req_abc123",
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "statusCode": 400,
-    "details": {
-      "fields": [
-        {
-          "path": "phone",
-          "message": "Phone number must be in international E.164 format, including the country code (e.g. +237670000000)",
-          "code": "custom"
-        }
-      ]
-    }
-  }
-}
+# 4 · nothing outside api-doc/ was touched
+git -C frontend/agency-dash status --short | grep -v "api-doc/"                # empty
 ```
 
-> **⚠️ Breaking change:** endpoints that previously accepted a national number (they only checked
-> length — `min(6)`/`min(8)`) now require the country code. `POST /api/auth/login` validates its
-> `identifier` the same way, so **an account whose stored `login_phone` predates this rule must have
-> that number migrated to E.164 before its owner can log in by phone.** Logging in by email is
-> unaffected.
+⚠ **Do not trust `wc -l` on the route dump.** It prints ten boot-log lines and its own `TOTAL`
+footer, so the whole-service figure reads 677 when the real count is **665**. `grep -c` on a
+method prefix is the honest measure; the per-role counts are unaffected.
+
+⚠ **Deliberate drift is expected now, and it is not staleness.** This repository's copies of the
+backend's pages carry verification banners and corrections the backend's own copies do not, so
+`doc-drift.js` reports most files as drifted. Read the banner at the top of a page before
+concluding it is behind: a page that says *"verified against source 2026-08-24"* is ahead of the
+backend's text, not behind it. `error-codes.ts` is reported as an *orphan* — that is also
+expected, it is a copied source file rather than an api-doc page.
+
+### The propagation gap this effort exists to close
+
+Fourteen `FRONTEND-CHANGELOG-*` documents were written by the backend **specifically to tell
+frontends what broke**, and not one of them had ever reached any frontend repository. Seven now
+live here. The durable fix is a release step, not a periodic audit: **when a backend phase writes
+a frontend changelog, copy it into the affected frontends in the same change.** Until that
+happens, re-run the four commands above and read `backend/FRONTEND-SYNC/` before a big release.

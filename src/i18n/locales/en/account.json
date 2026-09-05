@@ -207,5 +207,36 @@
       "noBalance": "No available balance to withdraw yet.",
       "belowMinimum": "Minimum payout is {{amount}}."
     }
+  },
+  "contact": {
+    "title": "Sign-in email and phone",
+    "description": "The email address and phone number you use to sign in. Changing either takes effect only once you confirm it.",
+    "none": "Not set",
+    "change": "Change",
+    "cancelChange": "Cancel this change",
+    "cancelled": "Change cancelled.",
+    "expires": "Expires {{when}}",
+    "noSignOutNotice": "Changing your email or phone does not sign you out anywhere. Only changing your password does that.",
+    "email": {
+      "label": "Sign-in email",
+      "newLabel": "New email address",
+      "placeholder": "you@example.com",
+      "hint": "We will send a confirmation link to the new address. Until you open it, you still sign in with your current email.",
+      "submit": "Send confirmation",
+      "requested": "Check the new address for a confirmation link.",
+      "pendingHint": "Waiting for you to open the link we sent here."
+    },
+    "phone": {
+      "label": "Sign-in phone",
+      "newLabel": "New phone number",
+      "hint": "To prove the new number is yours, connect it on WhatsApp: send /connect to our bot from that number, then confirm here. There is no SMS code.",
+      "submit": "Start the change",
+      "requested": "Now connect that number on WhatsApp, then come back and confirm.",
+      "pendingHint": "Waiting for this number to be connected on WhatsApp.",
+      "confirm": "I've connected it — confirm",
+      "confirmed": "Your sign-in phone has been changed.",
+      "unproven": "That number is not connected on WhatsApp yet. Send /connect to our bot from the new number, redeem the code, then confirm again.",
+      "connectLink": "Go to messaging channels"
+    }
   }
 }

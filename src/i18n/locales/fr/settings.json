@@ -313,7 +313,7 @@
   "channelSetup": {
     "connectTitle": "Connecter {{channel}}",
     "connectedTitle": "{{channel}} connecté",
-    "connectDescription": "Reliez votre {{channel}} pour y recevoir les notifications. Cette configuration se fait une seule fois.",
+    "connectDescription": "Connectez votre compte {{channel}} pour y recevoir les notifications. Une seule connexion suffit : elle vaut pour tous les rôles de votre compte.",
     "connectedDescription": "Votre {{channel}} est vérifié. Vous pouvez maintenant l'activer comme canal de diffusion.",
     "allSet": "Tout est prêt — fermez cette fenêtre et choisissez {{channel}} comme canal.",
     "preparing": "Préparation…",
@@ -325,18 +325,16 @@
       "step2": "Ouvrez l'e-mail et cliquez sur le lien pour vérifier, puis actualisez ci-dessous.",
       "resend": "Renvoyer l'e-mail"
     },
-    "telegram": {
-      "step1": "Ouvrez notre bot Telegram et appuyez sur <strong>Démarrer</strong>.",
-      "open": "Ouvrir Telegram",
-      "expires": "Le lien expire à {{time}}.",
-      "step2": "Une fois que le bot confirme, actualisez ci-dessous."
-    },
-    "whatsapp": {
-      "step1": "Ouvrez WhatsApp et envoyez la commande pré-remplie à notre bot.",
-      "open": "Ouvrir WhatsApp",
+    "copyFailed": "Copie impossible. Sélectionnez la commande et copiez-la manuellement.",
+    "connect": {
+      "step1": "Ouvrez <strong>{{bot}}</strong> et envoyez <code>{{command}}</code>.",
+      "step2": "Le bot répond avec un code de 6 caractères.",
+      "step3": "Saisissez ce code ci-dessous. Il est valable 10 minutes.",
+      "open": "Ouvrir {{channel}}",
       "copyCommand": "Copier la commande",
-      "step2": "Après la réponse du bot, actualisez ci-dessous."
-    },
-    "copyFailed": "Copie impossible. Sélectionnez la commande et copiez-la manuellement."
+      "codePlaceholder": "A7K9P2",
+      "codeLabel": "Le code envoyé par le bot",
+      "submit": "Connecter"
+    }
   }
 }

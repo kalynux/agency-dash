@@ -66,8 +66,10 @@
     "eta": "ETA {{minutes}} min",
     "updated": "Updated {{when}}",
     "openInGoogleMaps": "Open in Google Maps ↗",
-    "trackingEnded": "Tracking ended (shipment finished).",
-    "awaitingPosition": "Awaiting a position from this agent."
+    "trackingEnded": "Tracking ended — this delivery is no longer yours to watch.",
+    "awaitingPosition": "Awaiting a position from this agent.",
+    "trackingReauthorizing": "Reconnecting — the delivery is unaffected and is almost certainly still in progress.",
+    "trackingUnavailable": "Live position unavailable right now. Nothing is known about the delivery — retrying."
   },
   "relative": {
     "justNow": "just now",

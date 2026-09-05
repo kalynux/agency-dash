@@ -15,7 +15,9 @@ jovi-mall must never serve a live position. If an endpoint here starts answering
 agent?"*, the boundary has been broken.
 
 Related: [live-tracking](./live-tracking.md) answers *who may watch whom*. This page answers
-*may this agent be tracked at all*. Both live in jovi-mall for the same reason.
+*may this agent be tracked at all*. [shipment-destination](./shipment-destination.md) answers
+*where is the parcel going* — the other internal door on the same token. All three live in
+jovi-mall for the same reason.
 
 ---
 
@@ -56,7 +58,7 @@ watch an unaffiliated person move around.
 
 **Authorization**: Bearer token with `admin` role.
 
-### PUT /api/admin/agents/:agentId/tracking-allow
+### PUT /api/internal/admin/agents/:agentId/tracking-allow
 
 **Request Body**:
 ```json
@@ -84,7 +86,7 @@ Emits the domain event `agent.tracking_allow_changed`, so revocation can be **pu
 geo-tracker rather than waiting for a cache to expire — revoking is time-critical in a way that
 granting is not.
 
-### GET /api/admin/agents/:agentId/tracking-policy
+### GET /api/internal/admin/agents/:agentId/tracking-policy
 
 Returns exactly what geo-tracker would see. Use it to answer "why isn't this agent streaming?"
 without reproducing the logic.

@@ -14,21 +14,35 @@
 //
 //   `catalogStock.quantity`  the AGREED quantity — the vendor's catalogue number,
 //                            which on a warehoused SKU neither party can change
-//                            alone any more (see stock-request.types.ts). Real.
-//   `quantityOnHand`         the COUNTED quantity — what somebody physically
-//   `quantityReserved`       verified on a shelf. Still structurally 0.
+//                            alone (see stock-request.types.ts).
+//   `quantityOnHand`         the COUNTED quantity — what is physically on the
+//   `quantityReserved`       shelf. Moved by US (receipts, returns, counts,
+//                            transfers) and by the order path as customers buy.
 //
-// Phase 1 has no intake flow, stock does not move on delivery, and nothing counts
-// a shelf, so the second pair stays zero and `countsAreDerived: true` /
-// `source: "derived"` describe THEM ONLY. The honest label for them is still "not
-// counted"; the honest label for the first is "agreed". When counting lands
-// (reservation at checkout, settlement on delivery) rows flip to
-// `source: "counted"`, and a client that branches on `source` needs no change.
+// BOTH ARE REAL NOW. The physical shelf shipped: receipts, returns, physical
+// counts, depot-to-depot transfers and a movement ledger (§6–§7 of the doc). The
+// two numbers are ALLOWED TO DISAGREE, and the disagreement is information
+// rather than an error — a vendor sells the same SKU through other channels, a
+// delivery arrived but was not booked in, a box is missing. `POST /:id/count` is
+// how the difference is settled.
+//
+// ⚠ `source: "derived"` with quantities of `0` does NOT mean "we hold none". It
+// means NOBODY HAS SAID. Until a receipt is recorded the platform makes no claim
+// about that shelf, its storage fee quotes 0, the monthly statement skips it
+// entirely, and the order path leaves its counters alone. "Not counted yet" and
+// "empty" are different sentences and must render differently.
+//
+// `countsAreDerived` at the top level is COMPUTED — true only when *every* row in
+// the response is uncounted. On a mixed page it is `false` while uncounted rows
+// are still present, so read the per-row `source`; the top-level flag is a
+// shortcut for a screen that has not started counting at all.
 //
 // NO LONGER READ-ONLY. The agency has three levers over a product it warehouses —
 // move it to another depot, suspend it off the storefront, put it back — plus the
 // proposing half of the two-signature stock flow. All four are keyed on
 // `productId`, which only the DETAIL response carries (see `InventoryDetail`).
+// The four counting verbs are keyed on the ROW instead, because a receipt is a
+// physical event at one shelf.
 //
 // This is not the vendor's catalogue: a `pickup_based` product of the same vendor
 // never appears here, because we hold none of it.
@@ -41,13 +55,19 @@ import type { FileRef } from '@/types/file.types';
 import type { AddressDetail } from '@/types/shipment.types';
 
 /**
- * Where a row's numbers come from.
+ * Where a row's counted numbers come from.
  *
- * `derived` — nobody counted; the row exists because a vendor configured the
- * product to be stored here. Quantities are structurally 0 and must not be
- * rendered as a stock level.
- * `counted` — the later phase, where checkout reserves and delivery settles.
- * Not emitted yet; branch on it now so the screen needs no change when it lands.
+ * `derived` — **nobody has counted this shelf.** The row exists only because a
+ * vendor configured the product to be stored here. Its quantities are `0`
+ * because there is no claim to make, not because the shelf is empty, and they
+ * must never be rendered as a stock level. The storage statement skips the row
+ * and the order path leaves its counters alone.
+ *
+ * `counted` — somebody recorded a receipt, and from that moment the row is live:
+ * checkout reserves against it, sales decrement it, returns restore it, and the
+ * monthly storage statement bills it.
+ *
+ * **The first receipt is what flips it.** There is no other transition.
  */
 export type InventoryCountSource = 'derived' | 'counted';
 
@@ -206,11 +226,19 @@ export interface InventoryListItem {
    * Find them with `locationId: 'unassigned'` and re-point the product.
    */
   location: InventoryDepot | null;
-  /** COUNTED, always 0 in Phase 1 — see the header. Not `catalogStock.quantity`. */
+  /**
+   * COUNTED — what is physically on this shelf. Not `catalogStock.quantity`.
+   *
+   * ⚠ **Can go negative**, and that is a signal rather than a bug: more has been
+   * sold from this shelf than was ever recorded as arriving, usually a delivery
+   * nobody booked in. Our own verbs refuse to go below zero; the ORDER path does
+   * not, because refusing there would fail a customer's checkout over our
+   * paperwork, and clamping would hide the gap for good. Settle it with a count.
+   */
   quantityOnHand: number;
-  /** COUNTED, always 0 in Phase 1 — see the header. */
+  /** COUNTED — units held by checkouts that have not completed or lapsed. */
   quantityReserved: number;
-  /** `max(0, onHand − reserved)`. Never negative. */
+  /** `max(0, onHand − reserved)`. Never negative, even when `quantityOnHand` is. */
   quantityAvailable: number;
   /** Describes the two COUNTED figures above only — never `catalogStock`. */
   source: InventoryCountSource;
@@ -388,6 +416,150 @@ export interface UnsuspendBlocker {
   code: string;
   message: string;
   details?: unknown;
+}
+
+// ─── The physical shelf (all keyed on the ROW id, from the list) ──────────────
+//
+// Four verbs, keyed on the STOCK ROW rather than on the product — a receipt is a
+// physical event at one shelf, and two variants of one product can arrive on
+// different days. All four answer `201` with the row's new balances.
+
+/**
+ * `POST /agency/inventory/:id/receipts` and `POST /:id/returns`.
+ *
+ * A receipt is goods arriving; a return is goods going back to the vendor. Same
+ * body, opposite sign.
+ *
+ * ⚠ **The first receipt on a row is what makes it counted** — it flips `source`
+ * to `"counted"`, after which sales move its counters and the monthly storage
+ * statement bills against it. Until then the platform makes no claim about that
+ * shelf at all.
+ *
+ * A return is refused with `422 INVENTORY_INSUFFICIENT_STOCK` when the shelf does
+ * not hold that many; `details` carries `quantityOnHand`, `quantityReserved` and
+ * `requested`.
+ */
+export interface StockMovementPayload {
+  /** A positive integer. */
+  quantity: number;
+  /** Free text — e.g. a delivery-note number. */
+  reason?: string;
+}
+
+/**
+ * `POST /agency/inventory/:id/count` — a physical count.
+ *
+ * ⚠ **Send what you counted, not the difference.** The platform works out the
+ * delta against whatever the record says at that instant, *inside the same
+ * transaction that applies it*, so a sale landing mid-count cannot turn a
+ * correction into a second error. `0` is a legitimate count.
+ *
+ * `reason` is **required** here and optional everywhere else: this is the only
+ * verb that moves stock with no physical event behind it, so it is the only
+ * record that will ever explain the difference between "we miscounted" and "a
+ * box is missing".
+ *
+ * A count that matches the record still writes a movement, with a delta of 0.
+ * "We checked, and it was right" is worth having in the ledger.
+ */
+export interface StockCountPayload {
+  /** The absolute figure counted on the shelf. Never a delta. `0` is valid. */
+  countedQuantity: number;
+  /** Required. The only thing that will ever explain the difference. */
+  reason: string;
+}
+
+/**
+ * `POST /agency/inventory/:id/transfers` — move stock between our own depots.
+ *
+ * Two movements land in one transaction, so the units are never in both
+ * buildings or in neither. The destination row is created if we have never held
+ * that SKU there.
+ *
+ * ⚠ **A transfer moves goods; it does not move the arrangement.** The product
+ * still names the depot its vendor chose, so the next reconcile re-derives the
+ * original row. To make the SKU *live* at the other depot, follow up with
+ * {@link MoveDepotPayload} — and note the order matters, because re-pointing now
+ * answers `409 INVENTORY_DEPOT_CHANGE_HOLDS_STOCK` while counted units are still
+ * on the old shelf. Transfer first, then re-point. That matches physical reality,
+ * which is the point.
+ */
+export interface StockTransferPayload {
+  /** One of our own depots. `null` means the primary depot. */
+  toLocationId: string | null;
+  quantity: number;
+  reason?: string;
+}
+
+/** What all four counting verbs answer with: the row's new balances. */
+export interface StockMovementResult {
+  stockLevelId: string;
+  quantityOnHand: number;
+  quantityReserved: number;
+  movementId: string;
+  /** The signed change this call actually applied. `0` on a count that matched. */
+  appliedDelta: number;
+}
+
+export interface StockMovementResponse {
+  success: true;
+  data: StockMovementResult;
+  message?: string;
+}
+
+/**
+ * What moved a shelf, and who moved it.
+ *
+ * The `agency` rows are ours — the four verbs above. The `system` rows are the
+ * order path, and we never write them: a checkout holds units (`reservation`),
+ * gives them up (`reservation_released`), completes (`sale`), or a delivered
+ * parcel comes back (`customer_return`).
+ */
+export type StockMovementType =
+  | 'receipt'
+  | 'return_to_vendor'
+  | 'count_adjustment'
+  | 'transfer_out'
+  | 'transfer_in'
+  | 'reservation'
+  | 'reservation_released'
+  | 'sale'
+  | 'customer_return';
+
+export type StockMovementActor = 'agency' | 'system';
+
+/**
+ * One line of a shelf's ledger.
+ *
+ * `onHandAfter` / `reservedAfter` are the balances *this movement produced*, so
+ * the ledger reads as a running account. A row's current quantities are always
+ * the sum of its deltas — a scheduled sweep checks exactly that and repairs the
+ * row if they ever disagree.
+ */
+export interface StockMovement {
+  id: string;
+  type: StockMovementType;
+  onHandDelta: number;
+  reservedDelta: number;
+  onHandAfter: number;
+  reservedAfter: number;
+  reason: string | null;
+  actorRole: StockMovementActor;
+  /** What the movement was about — e.g. `order` — or `null` for an agency verb. */
+  refType: string | null;
+  refId: string | null;
+  createdAt: string;
+}
+
+export interface ListMovementsParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface ListMovementsResponse {
+  success: true;
+  data: StockMovement[];
+  meta: InventoryListMeta;
 }
 
 // ─── Display helpers ──────────────────────────────────────────────────────────

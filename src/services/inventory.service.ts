@@ -3,10 +3,16 @@ import type {
   ListInventoryParams,
   ListInventoryResponse,
   InventoryDetailResponse,
+  ListMovementsParams,
+  ListMovementsResponse,
   SummaryInventoryParams,
   InventorySummaryResponse,
   MoveDepotPayload,
   MoveDepotResponse,
+  StockCountPayload,
+  StockMovementPayload,
+  StockMovementResponse,
+  StockTransferPayload,
   SuspendProductPayload,
   SuspendProductResponse,
 } from '@/types/inventory.types';
@@ -112,5 +118,82 @@ export const inventoryService = {
    */
   unsuspendProduct(productId: string): Promise<SuspendProductResponse> {
     return api.post<SuspendProductResponse>(`/agency/inventory/products/${productId}/unsuspend`);
+  },
+
+  // ─── The physical shelf ─────────────────────────────────────────────────────
+  //
+  // Keyed on the stock-level ROW, not on the product: a receipt is a physical
+  // event at one shelf, and two variants of one product can arrive on different
+  // days. Contrast the three above, which are per-product by construction
+  // because the depot is named once on `product.delivery.pickup_location`.
+
+  /**
+   * POST /agency/inventory/:id/receipts — goods arrived.
+   *
+   * **The first receipt on a row is what makes it counted.** Before it the row
+   * reports `source: "derived"` with quantities of 0, which means "nobody has
+   * said" rather than "we hold none": the storage statement skips it and the
+   * order path leaves its counters alone. After it, sales move the shelf and the
+   * monthly statement bills against it.
+   */
+  receiveStock(id: string, payload: StockMovementPayload): Promise<StockMovementResponse> {
+    return api.post<StockMovementResponse>(`/agency/inventory/${id}/receipts`, payload);
+  },
+
+  /**
+   * POST /agency/inventory/:id/returns — goods went back to the vendor.
+   *
+   * Refused with `422 INVENTORY_INSUFFICIENT_STOCK` when the shelf does not hold
+   * that many; `details` carries `quantityOnHand`, `quantityReserved` and
+   * `requested`, which is enough to phrase the refusal precisely.
+   */
+  returnStock(id: string, payload: StockMovementPayload): Promise<StockMovementResponse> {
+    return api.post<StockMovementResponse>(`/agency/inventory/${id}/returns`, payload);
+  },
+
+  /**
+   * POST /agency/inventory/:id/count — a physical count.
+   *
+   * Send the **absolute** figure counted, never a delta: the platform computes
+   * the difference against whatever the record says at that instant, inside the
+   * same transaction that applies it, so a sale landing mid-count cannot turn a
+   * correction into a second error.
+   *
+   * `reason` is required — this is the only verb that moves stock with no
+   * physical event behind it, so it is the only record that will ever explain
+   * the difference between "we miscounted" and "a box is missing".
+   */
+  countStock(id: string, payload: StockCountPayload): Promise<StockMovementResponse> {
+    return api.post<StockMovementResponse>(`/agency/inventory/${id}/count`, payload);
+  },
+
+  /**
+   * POST /agency/inventory/:id/transfers — move stock to another of our depots.
+   *
+   * Both movements land in one transaction, so the units are never in two
+   * buildings or in none. `toLocationId: null` means the primary depot, and the
+   * destination row is created if we have never held that SKU there.
+   *
+   * ⚠ This moves the GOODS, not the arrangement: the product still names the
+   * depot its vendor chose, so the next reconcile re-derives the original row.
+   * To move the arrangement too, follow with {@link moveDepot} — in that order,
+   * because re-pointing answers `409 INVENTORY_DEPOT_CHANGE_HOLDS_STOCK` while
+   * counted units are still on the old shelf.
+   */
+  transferStock(id: string, payload: StockTransferPayload): Promise<StockMovementResponse> {
+    return api.post<StockMovementResponse>(`/agency/inventory/${id}/transfers`, payload);
+  },
+
+  /**
+   * GET /agency/inventory/:id/movements — that shelf's ledger, newest first.
+   *
+   * Includes the order path's own movements (`reservation`, `sale`,
+   * `customer_return`) as well as ours, which is what makes it possible to see
+   * why a shelf disagrees with the vendor's catalogue number.
+   */
+  movements(id: string, params: ListMovementsParams = {}): Promise<ListMovementsResponse> {
+    return api.get<ListMovementsResponse>(
+      `/agency/inventory/${id}/movements${buildQueryString(params as ListInventoryParams)}`,
+    );
   },
 };

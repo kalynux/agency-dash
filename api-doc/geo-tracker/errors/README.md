@@ -36,7 +36,7 @@ X-Request-ID: 3f9a…
 ### `error.category`
 
 The same nine values all three services use. See
-[jovi-mall's error guide](../../../jovi-mall/api-doc/errors/README.md) for the full table and
+jovi-mall's error guide (`backend/jovi-mall/api-doc/errors/README.md` — not mirrored in this repository) for the full table and
 what a client should do with each.
 
 Two of them — `external_service` and `internal` — carry a **fixed generic message and no

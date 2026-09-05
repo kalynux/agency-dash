@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Clock, Loader2, MapPin, MapPinOff, Package, Store, Truck, Warehouse } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ClipboardCheck,
+  Clock,
+  Loader2,
+  MapPin,
+  MapPinOff,
+  Package,
+  PackageMinus,
+  PackagePlus,
+  Store,
+  Truck,
+  Warehouse,
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -13,6 +26,11 @@ import {
 import { StorageFeePanel } from '@/components/inventory/StorageFeePanel';
 import { SuspensionPanel } from '@/components/inventory/SuspensionPanel';
 import { DepotMoveDialog } from '@/components/inventory/DepotMoveDialog';
+import { MovementLedger } from '@/components/inventory/MovementLedger';
+import {
+  StockMovementDialog,
+  type StockMovementKind,
+} from '@/components/inventory/StockMovementDialog';
 import { RaiseStockRequestDialog } from '@/components/inventory/RaiseStockRequestDialog';
 import { inventoryService } from '@/services/inventory.service';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -59,6 +77,8 @@ export function InventoryDetailSheet({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [depotOpen, setDepotOpen] = useState(false);
   const [raiseOpen, setRaiseOpen] = useState(false);
+  /** Which of the four counting verbs is open, if any. */
+  const [movementKind, setMovementKind] = useState<StockMovementKind | null>(null);
 
   const load = useCallback(async (id: string) => {
     setIsLoading(true);
@@ -178,7 +198,9 @@ export function InventoryDetailSheet({
       {/* Header — picture, name, SKU, how the numbers were arrived at */}
       <div className="flex-shrink-0 px-5 pb-2 pr-12 pt-2">
         <div className="flex items-start gap-3">
-          {detail.image ? (
+          {/* `url` is nullable — see FileRef. Product media is public, so this
+              falls through to the placeholder only defensively. */}
+          {detail.image?.url ? (
             <img
               src={detail.image.url}
               alt=""
@@ -224,6 +246,60 @@ export function InventoryDetailSheet({
           />
 
           <StockLevelSection detail={detail} />
+
+          {/* The four things an operator can say about a shelf.
+              Kept together and directly under the counted figures, because each
+              one exists to change exactly those figures.
+              `count` leads on an uncounted row: recording a receipt is the only
+              way a shelf becomes counted at all, and until it is, this row is
+              invisible to the storage statement and to the order path. */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('movements.sectionTitle')}
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant={detail.source === 'derived' ? 'default' : 'outline'}
+                className="gap-1.5"
+                onClick={() => setMovementKind('receipt')}
+              >
+                <PackagePlus className="h-3.5 w-3.5" />
+                {t('movements.receipt.action')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setMovementKind('count')}
+              >
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                {t('movements.count.action')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setMovementKind('return')}
+              >
+                <PackageMinus className="h-3.5 w-3.5" />
+                {t('movements.return.action')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setMovementKind('transfer')}
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                {t('movements.transfer.action')}
+              </Button>
+            </div>
+          </section>
+
+          {/* Why the shelf and the catalogue disagree — the only surface that
+              can say. Opens on demand; most visits are not about history. */}
+          <MovementLedger stockLevelId={detail.id} />
 
           <SuspensionPanel detail={detail} onChanged={handleMutated} />
 
@@ -271,14 +347,19 @@ export function InventoryDetailSheet({
                 {t('detail.images')}
               </h3>
               <div className="flex flex-wrap gap-2">
-                {detail.images.map((image) => (
-                  <img
-                    key={image.id}
-                    src={image.url}
-                    alt=""
-                    className="h-16 w-16 rounded-md border object-cover"
-                  />
-                ))}
+                {/* Skip any picture with no public URL rather than render a
+                    broken tile — `FileRef.url` is nullable for the authorized
+                    storage trees (api-doc/files/private-files.md). */}
+                {detail.images
+                  .filter((image) => image.url)
+                  .map((image) => (
+                    <img
+                      key={image.id}
+                      src={image.url!}
+                      alt=""
+                      className="h-16 w-16 rounded-md border object-cover"
+                    />
+                  ))}
               </div>
             </section>
           )}
@@ -335,6 +416,17 @@ export function InventoryDetailSheet({
         open={raiseOpen}
         onOpenChange={setRaiseOpen}
         onRaised={handleMutated}
+      />
+      {/* Keyed on the row AND the verb: switching from a receipt to a count has
+          to clear the quantity box, because the two ask for different numbers
+          and carrying "12" across would submit a figure nobody typed for the
+          question being asked. */}
+      <StockMovementDialog
+        key={`movement-${detail.id}-${movementKind ?? 'none'}`}
+        detail={detail}
+        kind={movementKind}
+        onClose={() => setMovementKind(null)}
+        onRecorded={handleMutated}
       />
     </>
   ) : null;

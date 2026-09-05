@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { ShipmentMoneySection } from '@/components/shipments/ShipmentMoney';
 import { AssignmentPanel } from '@/components/shipments/AssignmentPanel';
+import { DeliveryProofPanel } from '@/components/shipments/DeliveryProofPanel';
+import { DeliveryReviewPanel } from '@/components/shipments/DeliveryReviewPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
 import { getNextActions, canRejectStatus, isTerminalStatus } from '@/components/shipments/shipment-actions';
 import { shipmentsService } from '@/services/shipments.service';
@@ -148,7 +150,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                     {/* The picture is what lets someone identify a parcel by
                         sight instead of reading labels. `images[0]` is the same
                         thumbnail the list row shows for this item. */}
-                    {item.images.length > 0 && (
+                    {item.images[0]?.url && (
                       <img
                         src={item.images[0].url}
                         alt=""
@@ -285,6 +287,28 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               {detail.trackingNumber ?? t('common:values.notAvailable')}
             </p>
           </section>
+
+          {/* Both are keyed on the shipment so that pointing this sheet at a
+              different one REMOUNTS them. Each holds fetched state of its own —
+              a blob URL, an eligibility answer — and a remount is what discards
+              it, in place of a reset effect that would set state mid-render. */}
+
+          {/* The agent's proof photo. Fetched through the shipment's own route
+              rather than from a URL — the `shipments/` storage tree is not
+              publicly served. Renders nothing before `agent_delivered`. */}
+          <DeliveryProofPanel
+            key={`proof-${detail.id}`}
+            shipmentId={detail.id}
+            status={detail.status}
+          />
+
+          {/* Rate the run. Renders nothing until `delivered`, and the rating goes
+              to the AGENT's trust score, never to this agency's own rating. */}
+          <DeliveryReviewPanel
+            key={`review-${detail.id}`}
+            shipmentId={detail.id}
+            status={detail.status}
+          />
 
           {/* Status history */}
           <section>

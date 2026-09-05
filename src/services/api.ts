@@ -275,10 +275,23 @@ async function fetchResilient(url: string, init: RequestInit): Promise<Response>
 
 // ─── Core request function ────────────────────────────────────────────────────
 
+/**
+ * How to read a successful body.
+ *
+ * `blob` exists for the authorized file routes — the three storage trees that
+ * left the static mount serve raw bytes, not an envelope, and the only way to
+ * render one is to fetch it *with the session* and turn it into an object URL.
+ * It rides this function rather than a bare `fetch` so an expired access token
+ * still triggers the shared refresh-and-replay instead of showing the user a
+ * broken image. See api-doc/files/private-files.md.
+ */
+type ResponseKind = 'json' | 'blob';
+
 async function request<T>(
     path: string,
     init: RequestInit = {},
     isRetry = false,
+    kind: ResponseKind = 'json',
 ): Promise<T> {
     const url = `${BASE_URL}${path}`;
 
@@ -322,7 +335,8 @@ async function request<T>(
             if (isRefreshing) {
                 return new Promise<T>((resolve, reject) => {
                     pendingQueue.push({
-                        resolve: () => request<T>(path, init, true).then(resolve).catch(reject),
+                        resolve: () =>
+                            request<T>(path, init, true, kind).then(resolve).catch(reject),
                         reject,
                     });
                 });
@@ -341,7 +355,7 @@ async function request<T>(
                 isRefreshing = false;
                 refreshBlockedBy = null;
                 flushQueue(); // resolve all queued requests
-                return request<T>(path, init, true); // retry original
+                return request<T>(path, init, true, kind); // retry original
             } catch (refreshErr) {
                 isRefreshing = false;
                 const apiErr =
@@ -371,6 +385,8 @@ async function request<T>(
 
     // 204 No Content
     if (res.status === 204) return undefined as T;
+
+    if (kind === 'blob') return (await res.blob()) as T;
 
     return res.json() as Promise<T>;
 }
@@ -413,5 +429,22 @@ export const api = {
             method: 'DELETE',
             body: body !== undefined ? JSON.stringify(body) : undefined,
         });
+    },
+
+    /**
+     * GET raw bytes — for the authorized file routes, which answer with the file
+     * itself rather than the JSON envelope.
+     *
+     * Goes through the same path as every other request on purpose: an authorized
+     * file is fetched *with the session*, so a 15-minute-old access token has to
+     * refresh and replay here exactly as it would on a JSON call. A bare `fetch`
+     * would instead surface as an image that is intermittently missing.
+     *
+     * A 404 from one of these routes means "no such file, or not yours" — the two
+     * are deliberately indistinguishable — and is a normal answer for a shipment
+     * whose agent recorded no proof.
+     */
+    getBlob(path: string): Promise<Blob> {
+        return request<Blob>(path, { method: 'GET' }, false, 'blob');
     },
 };

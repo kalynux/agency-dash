@@ -31,10 +31,14 @@ import {
  * matches Wi-Vendor's sign-up field for field. Someone who runs both apps sets
  * up the second one from muscle memory.
  *
- * Phone and WhatsApp **verification is deliberately absent**. It already exists
- * in-app under agency settings (`WhatsappLinkCard`, `ChannelSetupDialog`), and
- * putting a verification wall between "create account" and "start onboarding"
- * would be a second place to maintain it and a step to abandon sign-up on.
+ * Phone and WhatsApp **verification is deliberately absent**. Connecting a
+ * messaging channel already exists in-app under agency settings
+ * (`ChannelSetupDialog` → `POST /api/me/connections`), and putting a
+ * verification wall between "create account" and "start onboarding" would be a
+ * second place to maintain it and a step to abandon sign-up on. It could not
+ * live here in any case: the code is minted by the bot and redeemed by an
+ * **authenticated** caller, so there is no session to redeem it with until this
+ * form has already succeeded.
  */
 export function Register() {
   const { t } = useTranslation('auth');

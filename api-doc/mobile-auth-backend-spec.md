@@ -12,7 +12,7 @@ JavaScript inside a WebView, which cannot use the cookie session. It needs a bea
 
 | # | Change | Size | Priority |
 |---|---|---|---|
-| **C0** | Restore the password check in `login` — **currently any password is accepted** | 1 line | 🔴 Ship today |
+| **C0** | Restore the password check in `login` | 1 line | ✅ **Done** — `login` verifies the password |
 | **C1** | A `X-Client-Type: mobile` request marker + helper | Small | Required |
 | **C2** | Return tokens in the response body on the 4 token-minting endpoints, mobile mode only | Medium | Required |
 | **C3** | A mobile refresh endpoint that takes the refresh token in the body | Medium | Required |
@@ -68,33 +68,33 @@ Confirmed by reading the source. These need no changes and should not be touched
 
 ---
 
-## 3. 🔴 C0 — Restore the password check (unrelated to mobile, ship first)
+## 3. ✅ C0 — Restore the password check (done)
 
-`src/modules/auth/auth.service.ts:203-204`:
+**Resolved.** `POST /api/auth/login` verifies the password, and the ask's second half was answered
+in the stricter direction: there is deliberately **no** environment escape hatch — a bypass whose
+failure direction is "open on a typo" is exactly what the environment validator exists to argue
+against. A seed or fixture that relied on the old behaviour needs a real password rather than a
+flag.
 
-```ts
-const isValid = await bcrypt.compare(input.password, user.password_hash);
-// if (!isValid) throw createAppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, 401);
-```
+The premise of the ask holds and is worth keeping on the record: everything below issues a 30-day,
+self-renewing credential, and the longer the session the more the login gate matters.
 
-The comparison runs and the result is discarded. **Anyone who knows a registered phone number or
-email can sign in to that account with any password, as any role.** The suspension check below still
-runs, so the account must be `active` — that is the only remaining gate.
+> One thing that changed *after* this document was written, and that a client of `login` needs:
+> **customers do not sign in here.** They hold a system-generated password nobody knows and sign
+> in through the bot instead — see auth/customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository). Vendor,
+> agency and agent are unaffected.
 
-The surrounding comment acknowledges this, so we assume it is a development convenience rather than
-an accident. Two asks:
+**Related — and this paragraph was itself the example.** It used to read *"the backend's own
+`CLAUDE.md` notes `JWT_SECRET` falls back to the literal string `'secret'` when unset"*. That was
+**already false when it was written**: the fallback had been removed and `getJwtSecret()` fails
+closed. The claim had survived in three documents and reached this spec, which is how a frontend
+team came to quote a fixed defect back at the backend team.
 
-1. Uncomment the line before anything else in this document ships.
-2. If it genuinely needs to be disabled in local development, make it an explicit environment check
-   (`if (process.env.AUTH_ALLOW_ANY_PASSWORD !== 'true')`) rather than a comment, so it cannot be
-   committed by accident again.
-
-**Why it is on this document:** everything below issues a 30-day, self-renewing credential. The
-longer the session, the more the login gate matters. We should not extend session lifetime while the
-gate is open.
-
-**Related:** the backend's own `CLAUDE.md` notes `JWT_SECRET` falls back to the literal string
-`'secret'` when unset. Worth confirming production sets it, in the same pass.
+**Current behaviour, verified in source 2026-08-19:** `JWT_SECRET` is **required** on both
+services. jovi-mall throws `CONFIG_MISSING_JWT_SECRET` and refuses to boot
+(`config/secrets.config.ts` → `assertSigningSecrets()`); geo-tracker's `validate()` does the same,
+with the same minimum length and the same placeholder list. A deploy that forgets it does not
+start, on either side. Nothing for a client to work around.
 
 ---
 
@@ -462,14 +462,14 @@ Please treat these as the definition of done.
 
 **Security**
 
-- [ ] A wrong password is rejected (C0).
+- [x] A wrong password is rejected (C0). ✅ Done.
 - [ ] `tokens` does not appear in application logs.
 
 ---
 
 ## 14. Suggested order of work
 
-1. **C0** — the password fix, on its own, today.
+1. ~~**C0** — the password fix, on its own, today.~~ ✅ Done.
 2. **C1 + C4** — the marker and the extract-token branch. Small, and nothing depends on them being
    right yet.
 3. **C2** — token delivery on the four endpoints. At this point we can log in from the app and start

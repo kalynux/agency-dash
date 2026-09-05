@@ -81,10 +81,11 @@ Every feature store is its own file and calls the real API:
 | `MagazinProvider` | `store/magazin.store.tsx` | Store (magazin) profile |
 
 They are mounted in [src/App.tsx](src/App.tsx). The mock product/order/vendor/
-analytics/ticket/storage stores and `src/data/mockData.ts` were deleted once no
-screen read them; several types in [src/types/index.ts](src/types/index.ts)
-(`Order`, `Customer`, `AnalyticsMetrics`, `StorageItem`, …) are leftovers from
-that era and have no consumer.
+analytics/ticket/storage stores, `src/data/mockData.ts` and the leftover
+`src/types/index.ts` barrel (`Order`, `Customer`, `AnalyticsMetrics`,
+`StorageItem`, …) were all deleted once nothing read them. Every type now lives
+in a named file under `src/types/`, imported by its full path — there is no
+`@/types` barrel to import from.
 
 The onboarding subsystem has its own context at [src/onboarding/store/onboarding.store.tsx](src/onboarding/store/onboarding.store.tsx). It caches form drafts before API calls to support back-navigation without data loss.
 
@@ -99,10 +100,19 @@ The onboarding subsystem has its own context at [src/onboarding/store/onboarding
 ```typescript
 api.get<T>(path)
 api.post<T>(path, body?)
+api.postForm<T>(path, formData)   // multipart uploads
 api.patch<T>(path, body?)
 api.put<T>(path, body?)
-api.delete<T>(path)
+api.delete<T>(path, body?)
+api.getBlob(path)                 // authorized files — raw bytes, not an envelope
 ```
+
+`getBlob` exists for the three storage trees that left the public file mount on
+2026-08-19 (`digital/`, `shipments/`, `ticket-attachments/`). Their `FileDetail`
+carries `url: null` / `access: 'authorized'`, so the bytes must be fetched **with
+the session** and turned into an object URL. For this dashboard that means every
+delivery-proof photo — see
+[api-doc/files/private-files.md](api-doc/files/private-files.md).
 
 Every service and feature store calls the real API — there is no mock data left
 in the app.
@@ -115,4 +125,16 @@ in the app.
 
 - `AgencyOnboardingStep`: `0=complete`, `1=logistics`, `2=payout`, `3=branding` (skippable), `4=policies` — drives route guards
 - `AgencyRoleEntity` — full agency profile returned by `/auth/me`
-- `ApiUser` — backend user shape; `User` — frontend-normalized shape
+- `ApiUser` — the backend user shape (`src/types/api.ts`)
+
+### Three things this dashboard gets wrong if nobody says them
+
+1. **`permission_revoked` has three reasons and only one is about a delivery.**
+   Branch on `payload.reason` before writing any outcome into the UI; treat an
+   unrecognised value as `authorization_expired`. See
+   [api-doc/MIGRATION-2026-08.md](api-doc/MIGRATION-2026-08.md) § 2.
+2. **Build the live map from `GET /api/agency/tracking/board`, never from a
+   locally-derived "active shipments" set.** Three status subsets disagree —
+   `failed` is *active* but not *trackable*.
+3. **An inventory row with `source: "derived"` and quantities of `0` has not been
+   counted.** That is not "we hold none"; render the two differently.

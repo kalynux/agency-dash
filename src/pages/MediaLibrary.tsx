@@ -206,11 +206,15 @@ function FileArtwork({
   const kind = kindFromMime(file.mimeType);
   const Icon = KIND_ICONS[kind];
   const [broken, setBroken] = useState(false);
+  // `null` when the file has no public URL at all — one of the three authorized
+  // storage trees (api-doc/files/private-files.md). Folded into the same branch
+  // as a load failure because the outcome for this component is identical: fall
+  // back to the kind icon rather than mount a media element that cannot paint.
   const url = resolveFileUrl(file);
 
   // Local-provider files are served by the API behind the session cookie, so the
   // media elements have to send credentials.
-  if (kind === 'image' && !broken) {
+  if (kind === 'image' && !broken && url) {
     return (
       <img
         src={url}
@@ -223,7 +227,7 @@ function FileArtwork({
     );
   }
 
-  if (kind === 'video' && !broken) {
+  if (kind === 'video' && !broken && url) {
     if (controls) {
       return (
         <video
@@ -278,7 +282,20 @@ function FilePreview({ file }: { file: ApiFile }) {
         <div className={cn('rounded-xl p-4', KIND_TINTS.audio)}>
           <Music className="h-8 w-8" />
         </div>
-        <audio src={url} controls className="w-full max-w-sm" />
+        {url && <audio src={url} controls className="w-full max-w-sm" />}
+      </div>
+    );
+  }
+
+  // A document with no public URL has nothing to open — render the same tile
+  // without the link rather than an anchor with no `href`, which is focusable,
+  // looks clickable, and does nothing.
+  if (!url) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <div className={cn('rounded-xl p-4', KIND_TINTS.document)}>
+          <FileText className="h-8 w-8" />
+        </div>
       </div>
     );
   }

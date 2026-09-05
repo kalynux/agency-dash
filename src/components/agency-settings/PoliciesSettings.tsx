@@ -534,7 +534,14 @@ export function PoliciesSettings() {
               onSelect={(picked) =>
                 setDocuments((prev) => [
                   ...prev,
-                  ...picked.slice(0, 2 - prev.length).map((f) => resolveFileUrl(f)),
+                  // `resolveFileUrl` returns null for a file with no public URL.
+                  // A policy document is stored *as a URL*, so one we cannot
+                  // resolve has nothing to store — drop it rather than push a
+                  // null into an array the API expects to be `string[]`.
+                  ...picked
+                    .slice(0, 2 - prev.length)
+                    .map((f) => resolveFileUrl(f))
+                    .filter((url): url is string => url !== null),
                 ])
               }
             />

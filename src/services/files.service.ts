@@ -12,6 +12,7 @@ import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
 import type {
   ApiFile,
   ApiFileDetail,
+  FileAccess,
   FileDetailResponse,
   FileKind,
   FileListParams,
@@ -96,12 +97,42 @@ const FILE_PUBLIC_BASE: string =
  * through the API instead of reaching for `crossOrigin`.
  *
  * See CAPACITOR-PLAN.md → P5b.4 for the incident this came out of.
+ *
+ * ⚠ **Returns `null` for an `authorized` file, and callers must handle that.**
+ * Three storage trees — `digital/`, `shipments/` and `ticket-attachments/` —
+ * left the static mount on 2026-08-19, so they have no public URL at all. The
+ * `key` fallback below would manufacture one that looks exactly like a real URL
+ * and serves 401/404 to everybody; `null` is what stops that. For this dashboard
+ * the tree that matters is `shipments/` — i.e. **every delivery-proof photo**,
+ * which is fetched through `shipmentsService.getDeliveryProofFile` instead.
+ * See api-doc/files/private-files.md.
  */
-export function resolveFileUrl(file: Pick<ApiFile, 'url' | 'key'>): string {
+export function resolveFileUrl(
+  file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
+): string | null {
+  if (isAuthorizedFile(file)) return null;
   if (file.url) return file.url;
   const base = FILE_PUBLIC_BASE.replace(/\/$/, '');
   const key = file.key.replace(/^\//, '');
   return `${base}/${key}`;
+}
+
+/** The three storage trees that left the public mount. */
+const AUTHORIZED_KEY_PREFIXES = ['digital/', 'shipments/', 'ticket-attachments/'] as const;
+
+/**
+ * True when a file must be fetched through its owning entity's route.
+ *
+ * Reads `access` when the payload carries it, and falls back to the key prefix
+ * — which is the same thing the backend routes on, so the two cannot disagree.
+ * The fallback is what covers a response written before `access` existed.
+ */
+export function isAuthorizedFile(
+  file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
+): boolean {
+  if (file.access) return file.access === 'authorized';
+  const key = file.key.replace(/^\//, '');
+  return AUTHORIZED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
 }
 
 /** Coarse UI category from a MIME type. */

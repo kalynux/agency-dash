@@ -1,5 +1,34 @@
 # Live Tracking WebSocket
 
+> ### For the agency dashboard — read this box first
+>
+> **This is the only source of movement on your map.** Everything else — which agents,
+> which shipments, which pins — comes from jovi-mall
+> ([`agency/live-tracking.md`](../agency/live-tracking.md)). This socket carries positions
+> and nothing else.
+>
+> As an **agency** you are a *viewer*. You send exactly two of the five inbound frame kinds:
+> `subscribe` and `unsubscribe`. The other three (`location_update`, `device_state`,
+> `app_state`) are the **agent app's**; sending one from here is answered with
+> `error` / `TRACKING_AGENT_IDENTITY_MISMATCH`.
+>
+> 🔴 **The one thing that changed and can make your UI lie:** `permission_revoked.reason`
+> is now **a closed set of three**, where it used to be the single literal
+> `shipment_completed` for all three outcomes. Only `shipment_completed` licenses a
+> delivery-outcome message. See [the table below](#permission_revoked), and
+> [`../MIGRATION-2026-08.md`](../MIGRATION-2026-08.md) § 2.
+>
+> **Verified against source 2026-08-24** (PLAN-3). Every frame kind, payload field and
+> revoke reason on this page was read off:
+> `geo-tracker/internal/modules/tracking/domain/entity.go:84-187` (outbound kinds,
+> `LocationBroadcast`, `RevokedPayload`, the three `RevokeReason*` constants,
+> `AckPayload`, `ErrorPayload`),
+> `…/delivery/ws/message.go:15-90` (the five inbound kinds and their payloads),
+> `…/delivery/ws/handler.go:117-380` (handshake, token transports, dispatch, error paths)
+> and `…/delivery/ws/connection.go:16-22` (keepalive, frame cap, buffer).
+> Two corrections are recorded in
+> [§ Where this document is wrong](#where-this-document-is-wrong) at the foot.
+
 The real-time channel: agents publish their position here, and authorized
 viewers (admin / agency / customer) receive it.
 
@@ -15,7 +44,7 @@ no sessions — they watch, they are not tracked.
 >
 > A **tracking session is one shipment's** tracking lifecycle. It is opened by
 > jovi-mall reporting the shipment active, and closed only by jovi-mall reporting
-> it terminal (see [webhooks.md](./webhooks.md)). This socket only *binds* to
+> it terminal (see webhooks.md (`backend/geo-tracker/api-doc/webhooks.md` — backend-to-backend, HMAC; not mirrored here)). This socket only *binds* to
 > sessions that already exist.
 >
 > - **Connecting** resumes whatever deliveries are already in flight
@@ -137,11 +166,56 @@ A heartbeat also recovers an impaired session (`disconnected` / `degraded` /
 #### `subscribe` — viewers
 ```json
 { "type": "subscribe",
-  "payload": { "agentId": "<agentId>", "destination": { "latitude": 4.06, "longitude": 9.71 } } }
+  "payload": { "agentId": "<agentId>",
+               "shipmentId": "<shipmentId>",
+               "destination": { "latitude": 4.06, "longitude": 9.71 } } }
 ```
-`destination` is **optional**: supply it (a customer knows their own delivery
-address) and every broadcast to you is enriched with an ETA. Answered with
-`ack`, or `error` if you are not authorized to see that agent.
+Answered with `ack`, or `error` if you are not authorized to see that agent.
+
+**Both extra fields are optional, both are additive, and they are alternatives
+rather than a pair** — every client written before either existed is unaffected.
+They answer one question: *where is this viewer's ETA measured to?*
+
+| Field | What it does |
+|---|---|
+| `destination` | You state the target yourself. An **override**: nothing replaces it for the life of the subscription. |
+| `shipmentId` | The server resolves the target from that shipment's tracking session. Use it when the agent may be running several deliveries. |
+
+##### How the destination is resolved
+
+You no longer have to know a customer's address to get an ETA. The drop-off is
+pulled from jovi-mall when a delivery's tracking session opens, so an **agency or
+admin viewer that sends neither field still gets `etaSeconds`** — which was
+previously impossible, since no such client has ever sent a `destination`.
+
+First hit wins:
+
+| | Rule | Result |
+|---|---|---|
+| ① | you sent `destination` | that point, always |
+| ② | you sent `shipmentId` | that shipment's drop-off — and **nothing** if that shipment has no open session |
+| ③ | you sent neither, and the agent has **exactly one** open session | that delivery's drop-off |
+| ④ | otherwise | no ETA |
+
+Two properties are deliberate and worth relying on:
+
+- **③ refuses to guess.** An agent running several deliveries has several
+  drop-offs, and nothing in "watch agent X" says which one you mean. An ETA to
+  the wrong address is worse than none — it is wrong in a way that looks right —
+  so a multi-drop agent yields no ETA unless you scope with `shipmentId`.
+- **② does not fall back to ③.** If you name a shipment that has no session, you
+  get no ETA rather than a different delivery's.
+
+**The ETA can arrive late, and that is normal.** The drop-off is fetched from
+jovi-mall out of band when the session opens, so a viewer who subscribed *before*
+that landed starts with no ETA and gains one without reconnecting, on the next
+lifecycle event for that agent. Do not treat the absence of `etaSeconds` on the
+first few broadcasts as final.
+
+**No ETA is always a valid state**, and always has been: a legacy order with no
+geocoded address, a deploy with no jovi-mall service token, or a routing provider
+that is briefly unreachable all produce a position with no `etaSeconds`. Render
+the position regardless.
 
 #### `unsubscribe`
 ```json
@@ -216,9 +290,17 @@ promotes the agent back to `ONLINE`. Agents only; answered with `ack`.
   } }
 ```
 `headingDegrees`/`speedMps` appear only if the agent's device reported them.
-`etaSeconds`/`distanceMeters` appear only if you supplied a `destination` at
-subscribe **and** the routing provider returned an estimate; ETA failures are
-silently skipped rather than dropping the position.
+
+`etaSeconds`/`distanceMeters` appear only when a destination was resolved for
+you (see the resolution table under `subscribe` — you no longer have to supply
+one) **and** the routing provider returned an estimate. An ETA failure is
+silently skipped rather than dropping the position, so a broadcast without them
+is normal and must still be rendered.
+
+They are also **throttled**: an estimate is recomputed at most once per
+`ETA_MIN_INTERVAL` (default 30 s) per agent and destination, so the value may
+lag the position by up to that much. Two viewers of the same delivery see the
+same number, from one routing call. See [routing.md](./routing.md#eta-on-the-broadcast-path-and-its-throttle).
 
 #### `permission_revoked`
 ```json
@@ -226,8 +308,45 @@ silently skipped rather than dropping the position.
   "payload": { "agentId": "agent-1", "reason": "shipment_completed" } }
 ```
 Your subscription to that agent has ended and no further broadcasts for them
-will arrive. Sent the moment the shipment finishes — see the authorization
-section in [README.md](./README.md).
+will arrive. See the authorization section in [README.md](./README.md).
+
+**`reason` is a closed set of three values, and only one of them is about a
+delivery.** The subscription is dropped in all three cases — the server fails
+closed on any viewer it cannot confirm — but what you should show a user differs
+completely:
+
+| `reason` | What actually happened | What the client should do |
+|---|---|---|
+| `shipment_completed` | jovi-mall was asked and answered: this viewer is no longer entitled to this agent. The delivery ended, or the entitlement did. | Stop watching. This is the only value from which you may report a delivery outcome. |
+| `authorization_expired` | jovi-mall **rejected the access token** you connected with (401/403). Nothing is known about the shipment. | Obtain a fresh access token, reconnect, and re-subscribe. Show nothing about the delivery. |
+| `authorization_unavailable` | jovi-mall **could not be asked** — unreachable, 5xx, or the check timed out. Nothing is known about the shipment *or* your entitlement. | Retry with backoff. Report no outcome. |
+
+**Treat any value you do not recognise as `authorization_expired`** — re-authorize,
+and tell the user nothing. That rule is what makes adding a fourth value safe;
+adding one is a change to this table in the same commit.
+
+> **Until 2026-08-19 all three were sent as `shipment_completed`.** A client acting
+> on that string told somebody their delivery was complete because an access token
+> had aged out. If you have shipped against the old single-value contract, the fix
+> is to branch on the table above — the value and meaning of `shipment_completed`
+> itself are unchanged.
+
+##### ⚠ The token is checked at handshake, and never again on a timer
+
+Nothing re-validates your access token while the socket is open. But when a
+revocation check fires — a shipment settling, a webhook from jovi-mall — the
+server re-asks jovi-mall **using the token you handed it at the handshake**. Past
+the access-token TTL (15 minutes) that token is expired, the re-check fails, and
+your subscription is dropped with `authorization_expired`.
+
+So a socket held open past the TTL keeps working right up until something happens
+to trigger a re-check, and then stops. There is no refresh path over the socket:
+geo-tracker forwards a bearer token and has no access to jovi-mall's refresh
+cookie.
+
+**Reconnect with a fresh token on a cadence shorter than the access TTL.** And
+never infer a delivery outcome from a `permission_revoked` frame without reading
+`reason` first.
 
 #### `ack`
 ```json
@@ -238,12 +357,84 @@ section in [README.md](./README.md).
 
 #### `error`
 ```json
-{ "type": "error", "payload": { "message": "not authorized" } }
+{ "type": "error", "payload": { "code": "TRACKING_NOT_AUTHORIZED",
+                                "message": "not authorized" } }
 ```
 Errors are frame-level, not fatal: the connection stays open.
+
+**`code` is declared `omitempty` but is populated at every send site**, so in practice it is
+always present — `handler.go`'s `sendError` takes the code as a required argument and there is
+no path that emits an error frame without one (`handler.go:438-446`). Branch on `code`, not on
+`message`; the message is free text and two of the codes below have carried the same one.
+
+The eleven codes an **agency viewer** can actually receive, and what each means for the map:
+
+| `code` | When | What the dashboard should do |
+|---|---|---|
+| `TRACKING_NOT_AUTHORIZED` | your `subscribe` was refused for that agent | Do not retry blind — refetch `GET /api/agency/tracking/board`. Usually the shipment ended between the board load and the subscribe. |
+| `WS_MESSAGE_INVALID` | the frame was not parseable, or `agentId` was empty | Client bug. Fix the frame; retrying identical bytes cannot succeed. |
+| `WS_UNKNOWN_MESSAGE_TYPE` | `type` is not one of the five | Client bug. |
+| `WS_RATE_LIMITED` | over 20 inbound frames/s on this connection (burst 40) | Slow down. **The frame was dropped and the socket is still open.** See [rate-limits.md](./rate-limits.md). |
+| `TRACKING_AGENT_IDENTITY_MISMATCH` | you sent `location_update`, `device_state` or `app_state` | Those are agent-only. An agency dashboard must never send them. |
+| `LOCATION_COORDINATE_INVALID` · `LOCATION_JUMP_IMPLAUSIBLE` · `LOCATION_STORE_UNAVAILABLE` · `TRACKING_ALLOW_LOCKED` | — | **Agent-app only.** An agency connection cannot produce these; they are listed so a shared client library's exhaustive `switch` is complete. |
+
+Error frames are **best-effort and throttled** to roughly one per five seconds per connection
+(`handler.go:92`, `errorFrames = ratelimit.New(0.2, 2, …)`). The outbound buffer holds 32
+frames and drops when full, so a client must never require an error frame per rejected
+message. Full code table: [errors/README.md](./errors/README.md).
 
 ## Keepalive
 
 The server pings every ~54s and expects a pong; a client silent for 60s is
 disconnected. Frames are capped at 64 KiB. A client that stops draining its
 socket has frames dropped rather than stalling other subscribers.
+
+Exact values, from `connection.go:16-22`:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `pingInterval` | **54 s** (`pongWait × 9 / 10`) | server → client ping cadence |
+| `pongWait` | **60 s** | read deadline; a client silent this long is disconnected |
+| `writeWait` | **10 s** | per-frame write deadline |
+| `maxMessageSize` | **64 KiB** (`1 << 16`) | inbound frame cap |
+| `sendBuffer` | **32 frames** | per-connection outbound queue; **drops when full** |
+
+A browser `WebSocket` answers pings in the platform layer, so no client code is needed for the
+keepalive. What *does* need client code is the reconnect — see the box below.
+
+---
+
+## Reconnect strategy for this dashboard
+
+Three separate reasons to reconnect, and they are not interchangeable.
+
+1. **Token age.** The access token is checked **at the handshake and never again on a timer**,
+   but `RevokeForAgent` forwards *that same stale token* back to jovi-mall when a revocation
+   fires. Past the 15-minute access TTL the re-check fails and you are dropped with
+   `authorization_expired`. **Reconnect on a cadence shorter than 15 minutes** — the cheapest
+   correct implementation is to reconnect whenever the main API refreshes its session.
+2. **Transport loss.** Exponential backoff from ~1 s to a ~30 s ceiling, with jitter. On
+   reconnect you must **re-send every `subscribe`** — subscriptions live on the connection, and
+   so does any `destination` you supplied.
+3. **`permission_revoked`.** Do **not** reconnect on this. It is an answer, not a failure.
+   Branch on `reason` (table above) and refetch the board.
+
+A reconnect on the agent's side resumes the **same** tracking session — same `sessionId`, same
+trail, same history — so an agency watching a flapping agent sees the marker pause and resume,
+never a new delivery.
+
+---
+
+## Where this document is wrong
+
+Two corrections found by reading the source on 2026-08-24. Both are in the **backend's own**
+copy of this file (`geo-tracker/api-doc/tracking-websocket.md`) and are filed in
+`backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`.
+
+| # | The claim | The source |
+|---|---|---|
+| 1 | The `error` frame example shows `{ "message": … }` with no `code`, and the field is documented only in `errors/README.md`. | `code` is set at **every** call site (`handler.go:438-446`); it is never absent in practice. Corrected above. |
+| 2 | `errors/README.md`'s status table lists **`409`** as a live status on `/ws/track` and "session", described as new in Phase 16. | `http.StatusConflict` **appears nowhere in the geo-tracker codebase**. `TRACKING_ALLOW_LOCKED` is emitted only as a WebSocket error frame (`handler.go:312`) exactly as it was before Phase 16. A `409` branch against this service is dead code. |
+
+Neither affects an agency dashboard's behaviour, and neither is a reason to distrust the rest
+of the page: every frame kind, payload field and revoke reason was checked and matched.

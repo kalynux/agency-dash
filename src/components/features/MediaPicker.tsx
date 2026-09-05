@@ -157,9 +157,14 @@ function describeAccepted(types: FileKind[], t: AnyTFunction): string {
 function FileThumb({ file }: { file: ApiFile }) {
   const kind = kindFromMime(file.mimeType);
   const Icon = KIND_ICONS[kind];
+  // `null` for a file with no public URL — one of the three authorized storage
+  // trees (api-doc/files/private-files.md). The library only ever lists this
+  // agency's own general-intake uploads, which are public, so this is a
+  // defensive branch rather than an expected one: fall through to the kind icon
+  // instead of rendering an <img> that can only ever be broken.
   const url = resolveFileUrl(file);
 
-  if (kind === 'image') {
+  if (kind === 'image' && url) {
     return (
       <img
         src={url}
@@ -170,7 +175,7 @@ function FileThumb({ file }: { file: ApiFile }) {
       />
     );
   }
-  if (kind === 'video') {
+  if (kind === 'video' && url) {
     return (
       <div className="relative h-full w-full bg-black">
         <video

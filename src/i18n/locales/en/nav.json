@@ -20,7 +20,8 @@
     "agentsBrowse": "Browse",
     "vendors": "Vendors",
     "vendorsConnections": "Connections",
-    "vendorsBrowse": "Browse"
+    "vendorsBrowse": "Browse",
+    "inventoryStatements": "Storage statements"
   },
   "footer": {
     "account": "Account",

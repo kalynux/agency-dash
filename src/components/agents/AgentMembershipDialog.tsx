@@ -883,7 +883,11 @@ function MembershipBody({
             />
             {/* Only the DETAIL endpoint resolves this; the roster list omits the
                 key entirely, so its absence is normal rather than an error. */}
-            {agent.vehicleInfo?.photo && (
+            {/* `photo.url` is nullable — a file in an authorized storage tree
+                has no public URL. A vehicle photo is a general-intake upload
+                and so always public, but there is nothing to render without a
+                URL, so the tile is dropped rather than shown broken. */}
+            {agent.vehicleInfo?.photo?.url && (
               <div className="col-span-2 rounded-xl border bg-card p-3 sm:col-span-1">
                 <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   <VehicleIcon className="h-3 w-3" /> {t('membership.tiles.vehiclePhoto')}

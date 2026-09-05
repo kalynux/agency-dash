@@ -59,10 +59,18 @@ type EditableKey =
   | 'supportPhone'
   | 'supportWhatsapp';
 
-/** Lightweight logo preview ref — `.id` is what the PATCH sends as `logoFileId`. */
+/**
+ * Lightweight logo preview ref — `.id` is what the PATCH sends as `logoFileId`.
+ *
+ * `url` is nullable because `FileRef.url` is: a file in one of the authorized
+ * storage trees has no public URL at all (api-doc/files/private-files.md). A
+ * logo is never one of those, but the preview has to survive being handed one
+ * rather than render a broken image — and only `.id` is ever sent, so a missing
+ * preview costs nothing on save.
+ */
 interface LogoRef {
   id: string;
-  url: string;
+  url: string | null;
 }
 
 interface FormState {
@@ -257,7 +265,7 @@ export function MagazinSettings() {
               onSelect={(media) => set('logo', media)}
               className="h-16 w-16 rounded-xl border bg-muted shadow-sm"
             >
-              {form.logo ? (
+              {form.logo?.url ? (
                 <img
                   src={form.logo.url}
                   alt={t('store.logoAlt')}

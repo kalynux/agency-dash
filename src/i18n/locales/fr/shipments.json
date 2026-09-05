@@ -58,7 +58,8 @@
     "markFailed": "Marquer échouée",
     "retryDelivery": "Relancer la livraison",
     "markReturned": "Marquer retournée",
-    "statusChanged": "Expédition marquée « {{label}} »."
+    "statusChanged": "Expédition marquée « {{label}} ».",
+    "markPickedUpAfterHandover": "Confirmer la prise en charge"
   },
   "autoAssign": {
     "label": "Affectation auto",
@@ -124,7 +125,10 @@
     "notOfferable": "Aucun livreur ne peut recevoir cette expédition dans son état actuel.",
     "handoverTitle": "Point de passation",
     "handoverNote": "Note : {{note}}",
-    "handoverFallback": "Lieu de repli — le point d'origine n'a pas pu être déterminé."
+    "handoverFallback": "Lieu de repli — le point d'origine n'a pas pu être déterminé.",
+    "candidatesEmptyHint": "Les agents sont écartés sans avertissement lorsqu'ils sont à pleine capacité, en pause, ou hors de la zone de cette livraison.",
+    "candidatesEmptyCodHint": "Pour une livraison contre remboursement, les agents sont aussi écartés sans avertissement si leur plafond de liquidités est trop bas — un nouveau contrat démarre à zéro, ce qui retire l'agent de toutes les listes COD jusqu'à ce que vous le releviez.",
+    "candidatesEmptyCheck": "Vérifier l'éligibilité d'un agent"
   },
   "reassignDialog": {
     "title": "Réaffecter l'expédition",
@@ -192,6 +196,26 @@
     "trackingNumber": "Numéro de suivi",
     "history": "Historique",
     "rejected": "Refusée : {{reason}}",
-    "rejectedWithNote": "Refusée : {{reason}} — {{note}}"
+    "rejectedWithNote": "Refusée : {{reason}} — {{note}}",
+    "deliveryProof": "Preuve de livraison",
+    "deliveryProofShow": "Afficher la photo de preuve",
+    "deliveryProofLoading": "Chargement de la photo de preuve…",
+    "deliveryProofAlt": "Photo de preuve de livraison de l'agent",
+    "deliveryProofNone": "Aucune photo de preuve n'a été enregistrée pour cette livraison."
+  },
+  "review": {
+    "title": "Évaluer cette livraison",
+    "explainer": "Ceci évalue l'agent qui a transporté le colis et alimente son score de confiance. Cela n'affecte pas votre propre note d'agence, qui provient de vos clients.",
+    "ratingLabel": "Note sur 5",
+    "ratingValue": "{{value}} sur 5",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Titre (facultatif)",
+    "bodyLabel": "Commentaires",
+    "bodyPlaceholder": "Quelque chose à signaler ? (facultatif)",
+    "prosePending": "Comme vous avez écrit un commentaire, un modérateur le vérifiera avant qu'il ne soit pris en compte. Une note seule est prise en compte immédiatement.",
+    "submit": "Envoyer la note",
+    "submittedLive": "Note enregistrée.",
+    "submittedHeld": "Envoyé — un modérateur vérifiera vos commentaires avant leur prise en compte.",
+    "notEligible": "Cette livraison ne peut pas être évaluée."
   }
 }

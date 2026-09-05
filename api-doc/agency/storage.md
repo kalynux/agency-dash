@@ -33,7 +33,7 @@ The limit caps the **total bytes of media the agency owns**:
 - any **images / documents** uploaded through `POST /api/files/upload`
 - any **videos** uploaded through `POST /api/files/upload/video`
 - **agent delivery proofs** — an agent's optional proof-of-delivery photo is
-  uploaded on the **agency's** storage (see [Agent → Delivery proof](../agent/delivery-proof.md)),
+  uploaded on the **agency's** storage (see Agent → Delivery proof (`backend/jovi-mall/api-doc/agent/delivery-proof.md` — not mirrored in this repository)),
   so it counts here, not against the agent.
 
 There is no digital-asset class for agencies, so nothing is subtracted — an

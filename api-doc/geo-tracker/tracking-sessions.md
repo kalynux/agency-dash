@@ -77,7 +77,7 @@ state, and the current GPS it surfaces. It owns **no** orders, shipments,
 payments or users — those stay in jovi-mall. It holds a shipment's **id** so a
 session can be scoped to it, and nothing else about the shipment: which statuses
 count as trackable or terminal is jovi-mall's policy, pushed here as a verdict
-(see [webhooks.md](./webhooks.md)).
+(see webhooks.md (`backend/geo-tracker/api-doc/webhooks.md` — backend-to-backend, HMAC; not mirrored here)).
 
 "Eligibility" below is **not** the authorization policy (who may *watch* an agent
 — jovi-mall's, enforced at subscribe time); it is the geo-tracker-owned question

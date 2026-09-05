@@ -6,10 +6,12 @@ import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { PinMark } from '@/components/tracking/PinMark';
 import { formatDistance, formatFixAge } from '@/components/tracking/format';
 import { cn } from '@/lib/utils';
+import { isConclusiveRevoke } from '@/types/tracking.types';
 import type {
   AgentLiveFix,
   TrackingBoardAgent,
   TrackingBoardShipment,
+  TrackingRevokeReason,
 } from '@/types/tracking.types';
 
 /**
@@ -26,8 +28,19 @@ interface TrackedAgentCardProps {
   agent: TrackingBoardAgent;
   /** Live fix from the socket, if the agent is broadcasting. */
   fix?: AgentLiveFix;
-  /** The socket revoked this agent — the shipment finished or released them. */
-  isRevoked: boolean;
+  /**
+   * Why the socket dropped this agent's subscription, or `null` if it has not.
+   *
+   * ⚠ **Not a boolean, deliberately.** All three reasons drop the marker, but
+   * only `shipment_completed` says anything about the delivery — the other two
+   * mean the server could not confirm us as a viewer and failed closed, which is
+   * a statement about our token or about jovi-mall's availability and says
+   * nothing whatsoever about the parcel. This card used to render "Tracking
+   * ended (shipment finished)" for all three, which is precisely how a dashboard
+   * comes to tell an operator a delivery completed because an access token aged
+   * out. See api-doc/MIGRATION-2026-08.md § 2.
+   */
+  revokeReason: TrackingRevokeReason | null;
   isSelected: boolean;
   selectedShipmentId: string | null;
   isDark: boolean;
@@ -145,7 +158,7 @@ function ShipmentRow({
 export function TrackedAgentCard({
   agent,
   fix,
-  isRevoked,
+  revokeReason,
   isSelected,
   selectedShipmentId,
   isDark,
@@ -154,7 +167,23 @@ export function TrackedAgentCard({
 }: TrackedAgentCardProps) {
   const { t } = useTranslation('tracking');
   const count = agent.shipments.length;
-  const signalLabel = fix ? t('agent.live') : isRevoked ? t('agent.ended') : t('agent.noSignal');
+  const isRevoked = revokeReason !== null;
+  // Only a conclusive revocation may be shown as "Ended". The inconclusive two
+  // are dimmer versions of "no signal" — which is exactly what they are: we
+  // stopped receiving, and nobody has told us why.
+  const isEnded = revokeReason !== null && isConclusiveRevoke(revokeReason);
+  const signalLabel = fix ? t('agent.live') : isEnded ? t('agent.ended') : t('agent.noSignal');
+  // The sentence under the telemetry row. Each reason gets its own, because the
+  // three call for three different reactions from whoever is reading it.
+  const stateNote = fix
+    ? t('agent.updated', { when: formatFixAge(fix.receivedAt) })
+    : revokeReason === 'shipment_completed'
+      ? t('agent.trackingEnded')
+      : revokeReason === 'authorization_expired'
+        ? t('agent.trackingReauthorizing')
+        : revokeReason === 'authorization_unavailable'
+          ? t('agent.trackingUnavailable')
+          : t('agent.awaitingPosition');
 
   return (
     <div
@@ -215,7 +244,10 @@ export function TrackedAgentCard({
                 'h-2 w-2 shrink-0 rounded-full',
                 fix
                   ? 'animate-pulse bg-green-500'
-                  : isRevoked
+                  : // Grey means "this is over". An inconclusive revocation is
+                    // not over — it stays amber, alongside every other agent we
+                    // are simply not hearing from.
+                    isEnded
                     ? 'bg-muted-foreground/50'
                     : 'bg-amber-400',
               )}
@@ -260,13 +292,7 @@ export function TrackedAgentCard({
                 {t('agent.speed', { value: (fix.speedMps * 3.6).toFixed(0) })}
               </span>
             )}
-            <span>
-              {fix
-                ? t('agent.updated', { when: formatFixAge(fix.receivedAt) })
-                : isRevoked
-                  ? t('agent.trackingEnded')
-                  : t('agent.awaitingPosition')}
-            </span>
+            <span>{stateNote}</span>
           </div>
 
           {count > 0 ? (

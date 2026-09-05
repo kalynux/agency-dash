@@ -20,18 +20,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
 import { PageHeader } from '@/components/layout/PageContainer';
 import { useResource } from '@/hooks/useResource';
-import { useGeoTrackerSocket } from '@/hooks/useGeoTrackerSocket';
+import { useGeoTrackerSocket, type TrackingScope } from '@/hooks/useGeoTrackerSocket';
 import { useIsBelowDesktop } from '@/hooks/use-mobile';
 import { useUIStore } from '@/store';
 import { trackingService } from '@/services/tracking.service';
-import { geoTrackerService, toPath } from '@/services/geo-tracker.service';
+import { geoTrackerService, toPath, warnGeoTrackerDegraded } from '@/services/geo-tracker.service';
 import { LiveTrackingMap, type ShipmentPin } from '@/components/tracking/LiveTrackingMap';
 import { PinMark } from '@/components/tracking/PinMark';
 import { TrackingPanel, type SignalFilter } from '@/components/tracking/TrackingPanel';
 import { formatDistance } from '@/components/tracking/format';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { cn } from '@/lib/utils';
-import type { GeoPosition, TrackingSocketStatus } from '@/types/tracking.types';
+import { isConclusiveRevoke } from '@/types/tracking.types';
+import type { TrackingSocketStatus } from '@/types/tracking.types';
 
 const STATUS_META: Record<
   TrackingSocketStatus,
@@ -127,19 +128,28 @@ export function LiveTracking() {
   const selectedAgent = agents.find((a) => a.agentId === selected) ?? null;
   const shipment = selectedAgent?.shipments.find((s) => s.shipmentId === selectedShipment) ?? null;
 
-  // A live ETA is opt-in per subscription: hand the socket the selected
-  // shipment's drop-off and every broadcast for that agent comes back enriched
-  // with `etaSeconds` / `distanceMeters`.
-  const destinations = useMemo<Record<string, GeoPosition>>(() => {
-    const coords = shipment?.destination?.coordinates;
-    if (!selected || !coords) return {};
-    return { [selected]: { latitude: coords.lat, longitude: coords.lng } };
+  // A live ETA is scoped per subscription, and we scope it by SHIPMENT rather
+  // than by coordinates: the server resolves that shipment's own drop-off from
+  // its tracking session, so the customer's address never has to be handed to a
+  // second service to get an ETA out of it.
+  //
+  // Naming the shipment also settles the multi-drop case. An agent running
+  // several deliveries has several drop-offs, and "watch agent X" does not say
+  // which one is meant — the server declines to guess, so without this the
+  // selected row would show no ETA at all.
+  const scopes = useMemo<Record<string, TrackingScope>>(() => {
+    if (!selected || !shipment) return {};
+    return { [selected]: { shipmentId: shipment.shipmentId } };
   }, [selected, shipment]);
 
-  const socket = useGeoTrackerSocket(agentIds, destinations);
+  const socket = useGeoTrackerSocket(agentIds, scopes);
 
-  // A revocation means the board itself changed — a shipment finished, or a
-  // reassignment released the agent. It is the one frame worth refetching on.
+  // Refetch the board on ANY revocation, whatever the reason.
+  //
+  // On `shipment_completed` the board genuinely changed. On the other two
+  // nothing is known about the shipment — and the board is the only thing that
+  // can say whether the row is still in flight, which is exactly why we ask it
+  // rather than concluding anything from the frame.
   useEffect(() => {
     if (socket.revokedAt) board.refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,13 +213,19 @@ export function LiveTracking() {
         ...(selectedShipment ? { shipment: selectedShipment } : {}),
       });
       return toPath(checkpoints);
-    } catch {
+    } catch (err) {
       // geo-tracker being unreachable costs the drawn path and nothing else.
+      warnGeoTrackerDegraded('checkpoint trail', err);
       return [];
     }
   }, [selected, selectedShipment]);
 
   // ── The road line between the two pins ────────────────────────────────────
+  // geo-tracker owns routing; wi-mall's board deliberately ships pins only. The
+  // two ways this comes back empty are different problems and must not look the
+  // same in the log: a THROW is geo-tracker or its provider chain (the code and
+  // requestId say which), an empty `geometry` is a provider that answered with a
+  // distance and no line.
   const originCoords = shipment?.origin?.address?.coordinates ?? null;
   const destCoords = shipment?.destination?.coordinates ?? null;
   const route = useResource(async () => {
@@ -219,9 +235,16 @@ export function LiveTracking() {
         { latitude: originCoords.lat, longitude: originCoords.lng },
         { latitude: destCoords.lat, longitude: destCoords.lng },
       );
-      return result.geometry.length >= 2 ? result.geometry : null;
-    } catch {
+      if (result.geometry.length >= 2) return result.geometry;
+      warnGeoTrackerDegraded('road geometry', {
+        reason: 'provider returned a route with no drawable geometry',
+        points: result.geometry.length,
+        distanceMeters: result.distanceMeters,
+      });
+      return null;
+    } catch (err) {
       // Optional by design — the map falls back to a straight line between the pins.
+      warnGeoTrackerDegraded('road route', err);
       return null;
     }
   }, [originCoords?.lat, originCoords?.lng, destCoords?.lat, destCoords?.lng]);
@@ -275,7 +298,12 @@ export function LiveTracking() {
   const query = search.trim().toLowerCase();
   const visibleAgents = agents.filter((a) => {
     const live = !!socket.fixes[a.agentId];
-    const ended = socket.revoked.has(a.agentId);
+    // "Ended" means the platform confirmed we are no longer entitled to this
+    // agent. An inconclusive revocation — our token was rejected, or jovi-mall
+    // could not be reached — says nothing about the delivery, so it belongs
+    // under "no signal" alongside every other agent we are not hearing from.
+    const reason = socket.revoked.get(a.agentId) ?? null;
+    const ended = reason !== null && isConclusiveRevoke(reason);
     if (signalFilter === 'live' && !live) return false;
     if (signalFilter === 'ended' && !ended) return false;
     if (signalFilter === 'no_signal' && (live || ended)) return false;

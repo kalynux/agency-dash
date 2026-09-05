@@ -430,7 +430,7 @@ export interface FieldError {
  * three backend services. It is *derived* from `(code, statusCode)`, so one code
  * can carry different categories at different statuses — never key a lookup on
  * the pair. Its purpose is to be the default branch: no client will ever have
- * specific handling for all 547 codes.
+ * specific handling for all 603 codes.
  * See api-doc/errors/README.md.
  */
 export const ERROR_CATEGORIES = [
@@ -469,7 +469,16 @@ export const REFRESHABLE_AUTH_CODE = 'AUTH_TOKEN_EXPIRED';
  * `AUTH_TOKEN_INVALID` (tampered / bad signature) is not in the backend's table
  * but is documented at api-doc/README.md and is terminal for the same reason.
  *
- * See api-doc/auth/README.md ("Revocation — `iat` is load-bearing").
+ * `AUTH_SESSION_CAP_REACHED` is the one every client gets wrong. A sign-in is
+ * bounded at **90 days regardless of activity** (`AUTH_ABSOLUTE_SESSION_CAP`,
+ * default 7776000s), and the cap is measured from the `auth_time` claim — which
+ * is *copied*, never restamped, through every refresh and every `auth-me`. So a
+ * retry presents the very claim that just failed. It is the one 401 on this API
+ * that no credential you hold can fix, and a client that treats it as transient
+ * loops until it is killed. See api-doc/MIGRATION-2026-08.md § 4.
+ *
+ * See api-doc/auth/README.md ("Revocation — `iat` is load-bearing",
+ * "The 90-day absolute cap").
  */
 export const TERMINAL_AUTH_CODES: ReadonlySet<string> = new Set([
   'AUTH_MISSING_TOKEN',
@@ -479,6 +488,10 @@ export const TERMINAL_AUTH_CODES: ReadonlySet<string> = new Set([
   'AUTH_ACCOUNT_SUSPENDED',
   'AUTH_USER_NOT_FOUND',
   'AUTH_TOKEN_INVALID',
+  // The 90-day sign-in ceiling. Terminal by construction — see above.
+  'AUTH_SESSION_CAP_REACHED',
+  // The account was closed. There is nothing left to refresh into.
+  'AUTH_ACCOUNT_CLOSED',
 ]);
 
 export class ApiError extends Error {

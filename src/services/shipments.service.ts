@@ -36,6 +36,34 @@ export const shipmentsService = {
     return api.get<ShipmentDetailResponse>(`/agency/shipments/${id}`);
   },
 
+  /**
+   * GET /agency/shipments/:id/delivery-proof/file — the agent's proof photo, as
+   * bytes.
+   *
+   * There is **no public URL for this image and there will not be one.** The
+   * `shipments/` storage tree left the static mount on 2026-08-19 precisely
+   * because a delivery-proof photo is a place and a time about a real
+   * customer's address, and the old URL was fetchable forever by anyone who had
+   * ever seen it. Every `FileDetail` in that tree now reports `url: null` /
+   * `access: 'authorized'`, so there is nothing to put in an `<img src>`.
+   *
+   * Authorization is the **shipment's own** — the same `findByIdAndAgency`
+   * predicate `getById` uses, re-used rather than re-derived. So if you can read
+   * the shipment you can read its proof, and a shipment that is not yours 404s
+   * rather than 403s.
+   *
+   * There is deliberately **no upload or delete twin here**: the proof is the
+   * *agent's* record of what they did. The agency reads it and does not author
+   * it. There is also no agency-side metadata route — a `404` is the only way to
+   * learn there is no proof, and it is a perfectly normal answer.
+   *
+   * Callers turn the blob into an object URL and must revoke it on unmount.
+   * See api-doc/files/private-files.md and api-doc/MIGRATION-2026-08.md § 3.
+   */
+  getDeliveryProofFile(id: string): Promise<Blob> {
+    return api.getBlob(`/agency/shipments/${id}/delivery-proof/file`);
+  },
+
   /** PATCH /agency/shipments/:id/status — advance to the next agency-triggerable status. */
   updateStatus(id: string, status: ShipmentActionableStatus): Promise<ShipmentMutationResponse> {
     return api.patch<ShipmentMutationResponse>(`/agency/shipments/${id}/status`, { status });

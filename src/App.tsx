@@ -282,8 +282,28 @@ function AppContent() {
 
   // Standardized session-expiry handling: the API layer dispatches `auth:logout`
   // when a token refresh fails. Route the user to login from a single place.
+  //
+  // The event carries the CAUSE, and the cause is worth keeping. Three of the
+  // codes that reach here are terminal in a way a user can act on and a generic
+  // "please sign in" hides:
+  //
+  //   AUTH_PASSWORD_CHANGED     to somebody who did not change their password,
+  //                             this is the first sign that somebody else did;
+  //   AUTH_SESSION_CAP_REACHED  the 90-day sign-in ceiling — retrying is futile
+  //                             by construction, so saying why stops the user
+  //                             hunting for a fault that is not there;
+  //   AUTH_ACCOUNT_SUSPENDED    the account, not the session, is what is refused.
+  //
+  // It rides router state rather than a store: it is read exactly once, by the
+  // screen we are navigating to, and it must not survive a reload.
   useEffect(() => {
-    const onLogout = () => reactNavigate('/login');
+    const onLogout = (event: Event) => {
+      const cause = (event as CustomEvent<{ code?: string } | undefined>).detail;
+      reactNavigate('/login', {
+        replace: true,
+        state: cause?.code ? { signedOutBy: cause.code } : undefined,
+      });
+    };
     window.addEventListener('auth:logout', onLogout);
     return () => window.removeEventListener('auth:logout', onLogout);
   }, [reactNavigate]);

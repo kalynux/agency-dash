@@ -10,16 +10,43 @@
 // `usage` object on GET /files/:id, never from `usageCount` (stale on legacy data).
 
 /**
+ * Which of the two storage worlds a file lives in.
+ *
+ * `public` — served by the static mount. `url` is a real, fetchable, sessionless
+ * URL and `<img src>` works from any origin.
+ * `authorized` — `digital/`, `shipments/` and `ticket-attachments/` left that
+ * mount on 2026-08-19. `url` is `null` and the bytes come from the owning
+ * entity's own route (for us: `GET /api/agency/shipments/:id/delivery-proof/file`).
+ *
+ * See api-doc/files/private-files.md.
+ */
+export type FileAccess = 'public' | 'authorized';
+
+/**
  * A resolved file reference as it appears *embedded* in other resources — an
- * agency avatar, a magazin logo, product media, etc. Same shape everywhere:
- * `{ id, key, url, mimeType, size, originalName }`. Distinct from
- * {@link UploadedFile}, which is the richer payload returned by the upload
- * endpoint itself.
+ * agency avatar, a magazin logo, product media, a delivery proof.
+ *
+ * ⚠ **`url` is nullable, and that is the migration signal.** The backend made it
+ * `string | null` rather than handing back an authorized path *on purpose*: a
+ * path here would be a string indistinguishable from a public URL, so every
+ * client would keep `<img src={url}>` and silently render nothing for a file it
+ * is not entitled to fetch that way — a bug that reads as "the photo is
+ * sometimes missing" and takes a week to find. `null` breaks the build instead.
+ *
+ * Branch on {@link FileAccess}, never on `url` being truthy, and never rebuild a
+ * URL from `key` for an `authorized` file — see `resolveFileUrl`.
  */
 export interface FileRef {
   id: string;
   key: string;
-  url: string;
+  /** `null` for an `authorized` file. Never put a null-checked fallback path here. */
+  url: string | null;
+  /**
+   * Which world this file is in. Optional only defensively — the backend always
+   * sends it now, but a payload predating 2026-08-19 has none, and an absent
+   * value with a populated `url` is a public file.
+   */
+  access?: FileAccess;
   mimeType: string;
   size: number;
   originalName: string;
@@ -72,7 +99,14 @@ export type MediaCategory = FileKind | 'archive' | 'other';
 export interface ApiFile {
   id: string;
   key: string;
-  url?: string;
+  /**
+   * `null`/absent for an `authorized` file — see {@link FileAccess}. A missing
+   * `url` on a `public` file is the legacy case `resolveFileUrl` rebuilds from
+   * `key`; on an authorized one it must never be rebuilt.
+   */
+  url?: string | null;
+  /** Which storage world this is. Absent on payloads predating 2026-08-19. */
+  access?: FileAccess;
   provider: StorageProvider;
   mimeType: string;
   size: number;

@@ -4,15 +4,15 @@
 **Status:** backend shipped. Nothing is behind a flag. Everything is **additive** — no existing
 endpoint changed its request, its response, or its cookies.
 
-This is the reply to [mobile-auth-backend-spec.md](./mobile-auth-backend-spec.md). §1 answers
+This is the reply to [mobile-auth-backend-spec.md](../mobile-auth-backend-spec.md). §1 answers
 C0–C7 and your §15 questions; §2–§4 are what you build against.
 
 > **If you read only two things:** §1.2 — *there is no `X-Client-Type` header, the route
 > namespace is the switch* — and §1.5 — *your §7 request would have broken the browser and the
 > agent app, so we did half of it.*
 
-> Reference: [Auth → Mobile namespace](./auth/README.md#mobile-namespace--bearer-clients) ·
-> [Rate limits](./rate-limits.md) · [Errors](./errors/README.md)
+> Reference: Auth → Mobile namespace (`backend/jovi-mall/api-doc/auth/auth/README.md #mobile-namespace--bearer-clients` — not mirrored in this repository) ·
+> Rate limits (`backend/jovi-mall/api-doc/auth/rate-limits.md` — not mirrored in this repository) · Errors (`backend/jovi-mall/api-doc/auth/errors/README.md` — not mirrored in this repository)
 
 ---
 

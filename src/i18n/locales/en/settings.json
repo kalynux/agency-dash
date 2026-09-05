@@ -312,7 +312,7 @@
   "channelSetup": {
     "connectTitle": "Connect {{channel}}",
     "connectedTitle": "{{channel}} connected",
-    "connectDescription": "Link your {{channel}} to receive notifications there. This is a one-time setup.",
+    "connectDescription": "Connect your {{channel}} account to receive notifications there. You connect once, and it applies to every role on your account.",
     "connectedDescription": "Your {{channel}} is verified. You can now enable it as your delivery channel.",
     "allSet": "All set — close this and choose {{channel}} as your channel.",
     "preparing": "Preparing…",
@@ -324,18 +324,16 @@
       "step2": "Open the email and click the link to verify, then refresh below.",
       "resend": "Resend email"
     },
-    "telegram": {
-      "step1": "Open our Telegram bot and press <strong>Start</strong>.",
-      "open": "Open Telegram",
-      "expires": "Link expires {{time}}.",
-      "step2": "Once the bot confirms, refresh below."
-    },
-    "whatsapp": {
-      "step1": "Open WhatsApp and send the pre-filled command to our bot.",
-      "open": "Open WhatsApp",
-      "copyCommand": "Copy command",
-      "step2": "After the bot replies, refresh below."
-    },
-    "copyFailed": "Could not copy. Select the command and copy it manually."
+    "copyFailed": "Could not copy. Select the command and copy it manually.",
+    "connect": {
+      "step1": "Open <strong>{{bot}}</strong> and send <code>{{command}}</code>.",
+      "step2": "The bot replies with a 6-character code.",
+      "step3": "Type that code below. It is valid for 10 minutes.",
+      "open": "Open {{channel}}",
+      "copyCommand": "Copy the command",
+      "codePlaceholder": "A7K9P2",
+      "codeLabel": "The code the bot sent you",
+      "submit": "Connect"
+    }
   }
 }

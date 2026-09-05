@@ -57,7 +57,8 @@
     "markFailed": "Mark Failed",
     "retryDelivery": "Retry Delivery",
     "markReturned": "Mark Returned",
-    "statusChanged": "Shipment marked “{{label}}”."
+    "statusChanged": "Shipment marked “{{label}}”.",
+    "markPickedUpAfterHandover": "Confirm the handover pickup"
   },
   "autoAssign": {
     "label": "Auto-assign",
@@ -123,7 +124,10 @@
     "notOfferable": "No agent can be offered in this shipment's current state.",
     "handoverTitle": "Handover pickup",
     "handoverNote": "Note: {{note}}",
-    "handoverFallback": "Fallback location — original point could not be resolved."
+    "handoverFallback": "Fallback location — original point could not be resolved.",
+    "candidatesEmptyHint": "Agents are left out silently when they are at capacity, paused, or outside this delivery’s area.",
+    "candidatesEmptyCodHint": "For a cash-on-delivery run, agents are also left out silently when their cash limit is too low — a new contract starts at zero, which removes the agent from every COD list until you raise it.",
+    "candidatesEmptyCheck": "Check an agent’s eligibility"
   },
   "reassignDialog": {
     "title": "Reassign shipment",
@@ -191,6 +195,26 @@
     "trackingNumber": "Tracking Number",
     "history": "History",
     "rejected": "Rejected: {{reason}}",
-    "rejectedWithNote": "Rejected: {{reason}} — {{note}}"
+    "rejectedWithNote": "Rejected: {{reason}} — {{note}}",
+    "deliveryProof": "Delivery proof",
+    "deliveryProofShow": "Show the proof photo",
+    "deliveryProofLoading": "Loading the proof photo…",
+    "deliveryProofAlt": "The agent's delivery proof photo",
+    "deliveryProofNone": "No proof photo was recorded for this delivery."
+  },
+  "review": {
+    "title": "Rate this delivery",
+    "explainer": "This rates the agent who carried the parcel and feeds their trust score. It does not affect your own agency rating, which comes from your customers.",
+    "ratingLabel": "Rating out of 5",
+    "ratingValue": "{{value}} out of 5",
+    "titleLabel": "Headline",
+    "titlePlaceholder": "Headline (optional)",
+    "bodyLabel": "Comments",
+    "bodyPlaceholder": "Anything worth recording? (optional)",
+    "prosePending": "Because you have written something, this will be checked by a moderator before it counts. A rating on its own counts straight away.",
+    "submit": "Submit rating",
+    "submittedLive": "Rating recorded.",
+    "submittedHeld": "Submitted — a moderator will review your comments before it counts.",
+    "notEligible": "This delivery cannot be rated."
   }
 }

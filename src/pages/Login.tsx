@@ -62,6 +62,25 @@ export function Login() {
   const { session, adoptSession } = useOnboarding();
   const [apiError, setApiError] = useState<string | null>(null);
 
+  /**
+   * Why the session ended, when the app bounced the user here rather than the
+   * user arriving on their own.
+   *
+   * Read straight off the router state that `App.tsx` attaches to the
+   * `auth:logout` navigation. It matters most for the two terminal codes a
+   * generic "please sign in" actively misleads about: `AUTH_PASSWORD_CHANGED`
+   * (to someone who did not change theirs, the first sign that somebody else
+   * did) and `AUTH_SESSION_CAP_REACHED` (the 90-day ceiling — no credential can
+   * fix it, so "try again" is the wrong instinct to leave them with).
+   *
+   * Resolved through the shared error catalogue, so it is the same sentence the
+   * code would have produced anywhere else in the app.
+   */
+  const signedOutBy = (location.state as { signedOutBy?: string } | null)?.signedOutBy;
+  const signedOutMessage = signedOutBy
+    ? getApiErrorMessage(new ApiError(401, signedOutBy, ''))
+    : null;
+
   /** `null` until the native round trip answers — neither control renders yet. */
   const [biometry, setBiometry] = useState<BiometricSignInStatus | null>(null);
   /** The opt-in on *this* sign-in. Only meaningful while `canOptIn` is true. */
@@ -237,6 +256,11 @@ export function Login() {
         </>
       }
     >
+      {/* Why the session ended, when we brought them here. Suppressed once they
+          have actually tried to sign in — at that point `apiError` is the newer
+          and more relevant answer, and stacking two red boxes reads as two
+          faults. */}
+      {!apiError && signedOutMessage && <AuthError message={signedOutMessage} />}
       <AuthError message={apiError} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

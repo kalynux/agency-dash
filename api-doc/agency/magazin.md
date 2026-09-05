@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Magazin** is a delivery agency's business surface — the single source of truth for its **public business identity and its logistics footprint**: business name, description, logo, support contacts, the **regions it serves** (`coverageAreas`) and its physical **headquarters / pickup locations** (`headquartersAddresses`). It is the counterpart of a vendor's [Store](../vendor/store.md): the agency **profile** (`/api/agency/profile`) holds only personal + account data (contact display name, avatar, payout, policies, KYC) plus the set-once `country` that anchors coverage/HQ, while the **magazin** holds everything business/operational.
+The **Magazin** is a delivery agency's business surface — the single source of truth for its **public business identity and its logistics footprint**: business name, description, logo, support contacts, the **regions it serves** (`coverageAreas`) and its physical **headquarters / pickup locations** (`headquartersAddresses`). It is the counterpart of a vendor's Store (`backend/jovi-mall/api-doc/vendor/store.md` — not mirrored in this repository): the agency **profile** (`/api/agency/profile`) holds only personal + account data (contact display name, avatar, payout, policies, KYC) plus the set-once `country` that anchors coverage/HQ, while the **magazin** holds everything business/operational.
 
 Each agency has exactly one magazin, **auto-created on first access** (and provisioned at signup / when `POST /api/agency` sets the initial name).
 

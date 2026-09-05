@@ -175,6 +175,25 @@ export const geoTrackerService = {
   },
 };
 
+/**
+ * Report a geo-tracker read that failed and was degraded around.
+ *
+ * Every caller of this service swallows its errors on purpose — a missing trail
+ * or road line must not take the map down. The cost of that is a screen whose
+ * *degraded* state and whose *healthy* state look almost identical: a dashed
+ * corridor is what you get both when routing is unavailable and when nobody ever
+ * asked for it. So the swallow is never silent — one line naming the code and
+ * the requestId turns "why is the line dashed" into a lookup in geo-tracker's
+ * log rather than a bisect through two services.
+ */
+export function warnGeoTrackerDegraded(what: string, cause: unknown): void {
+  const detail =
+    cause instanceof ApiError
+      ? { status: cause.status, code: cause.code, message: cause.message, requestId: cause.requestId }
+      : cause;
+  console.warn(`[geo-tracker] ${what} unavailable — degrading`, detail);
+}
+
 /** Checkpoints (newest first) → a drawable path (oldest→newest). */
 export function toPath(checkpoints: TrackingCheckpoint[]): GeoPosition[] {
   return checkpoints

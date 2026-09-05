@@ -6,7 +6,11 @@ import {
 } from '@/components/common/SearchFilterBar';
 import { TrackedAgentCard } from '@/components/tracking/TrackedAgentCard';
 import { cn } from '@/lib/utils';
-import type { AgentLiveFix, TrackingBoardAgent } from '@/types/tracking.types';
+import type {
+  AgentLiveFix,
+  TrackingBoardAgent,
+  TrackingRevokeReason,
+} from '@/types/tracking.types';
 
 export type SignalFilter = 'all' | 'live' | 'no_signal' | 'ended';
 
@@ -18,7 +22,8 @@ interface TrackingPanelProps {
   signalFilter: SignalFilter;
   onSignalFilterChange: (value: SignalFilter) => void;
   fixes: Record<string, AgentLiveFix>;
-  revoked: Set<string>;
+  /** agentId → why the socket dropped it. Keyed, not a Set, so the reason cannot be skipped. */
+  revoked: Map<string, TrackingRevokeReason>;
   selectedAgentId: string | null;
   selectedShipmentId: string | null;
   isDark: boolean;
@@ -95,7 +100,7 @@ export function TrackingPanel({
               key={agent.agentId}
               agent={agent}
               fix={fixes[agent.agentId]}
-              isRevoked={revoked.has(agent.agentId)}
+              revokeReason={revoked.get(agent.agentId) ?? null}
               isSelected={agent.agentId === selectedAgentId}
               selectedShipmentId={agent.agentId === selectedAgentId ? selectedShipmentId : null}
               isDark={isDark}

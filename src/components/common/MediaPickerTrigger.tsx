@@ -72,7 +72,13 @@ export function MediaPickerTrigger({
         acceptedTypes={acceptedTypes}
         onSelect={(picked) => {
           const file = picked[0];
-          if (file) onSelect({ id: file.id, url: resolveFileUrl(file) });
+          if (!file) return;
+          // `null` means the file has no public URL (an authorized storage
+          // tree). Nothing in the media library is one, but a slot that stores
+          // a URL cannot hold a placeholder for it — so drop the pick rather
+          // than write a value that renders as a broken image later.
+          const url = resolveFileUrl(file);
+          if (url) onSelect({ id: file.id, url });
         }}
       />
     </>

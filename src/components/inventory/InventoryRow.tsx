@@ -26,7 +26,10 @@ export function ProductCell({ item }: { item: InventoryListItem }) {
   const { t } = useTranslation('inventory');
   return (
     <div className="flex items-start gap-3">
-      {item.image ? (
+      {/* `image.url` is nullable (an authorized storage tree has no public URL).
+          Product media is public, so this only ever falls through defensively —
+          to the same placeholder a picture-less SKU gets. */}
+      {item.image?.url ? (
         <img
           src={item.image.url}
           alt=""

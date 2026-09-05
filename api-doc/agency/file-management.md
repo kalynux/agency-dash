@@ -7,7 +7,7 @@ role uses), automatically scoped to the authenticated agency.
 > This page is the agency-scoped summary. For the complete, role-neutral request/
 > response contract (filters, sorting, `File` shape, deletion semantics) see
 > [Uploads (role-neutral)](../uploads/README.md) and
-> [Vendor → File Management](../vendor/file-management.md) — the contract is
+> Vendor → File Management (`backend/jovi-mall/api-doc/vendor/file-management.md` — not mirrored in this repository) — the contract is
 > identical, only the owner scope differs. For the storage cap + usage widget see
 > [Storage](./storage.md).
 
@@ -39,7 +39,7 @@ Notes specific to the agency:
   file by `id` and display it by `url`.
 - **Agent delivery proofs** are agency-owned files but are **not** uploaded or
   deleted here — the agent manages them through
-  `/api/agent/shipments/:id/delivery-proof` (see [Agent → Delivery proof](../agent/delivery-proof.md)).
+  `/api/agent/shipments/:id/delivery-proof` (see Agent → Delivery proof (`backend/jovi-mall/api-doc/agent/delivery-proof.md` — not mirrored in this repository)).
   They do appear in the agency's storage usage and, when referenced, block a raw
   delete the same way any referenced file does.
 - Every referenced file is returned as a `FileDetail`

@@ -7,6 +7,10 @@
     "requests": {
       "description": "Stock changes awaiting a signature. On a SKU you warehouse, neither you nor the vendor can change the recorded quantity alone.",
       "short": "Stock changes"
+    },
+    "statements": {
+      "description": "The monthly record of what each vendor owes you for warehousing their stock.",
+      "short": "Monthly storage rent per vendor."
     }
   },
   "page": {
@@ -232,5 +236,106 @@
     "lastReconciled": "Last checked against the catalogue {{when}}",
     "viewShipments": "Shipments with this",
     "viewVendor": "Vendor connection"
+  },
+  "movements": {
+    "sectionTitle": "Record a movement",
+    "quantityField": "Quantity",
+    "reasonOptional": "Note (optional)",
+    "reasonRequired": "Reason",
+    "current": "{{onHand}} on hand · {{reserved}} reserved",
+    "currentUncounted": "This shelf has never been counted. Recording a receipt is what starts tracking it.",
+    "recordedToast": "Recorded — {{onHand}} now on hand.",
+    "receipt": {
+      "action": "Receive",
+      "title": "Record a receipt",
+      "body": "Goods arrived at this shelf.",
+      "reasonPlaceholder": "e.g. delivery note 4471",
+      "confirm": "Record receipt",
+      "firstReceiptNotice": "This is the first receipt on this shelf. From now on sales will move its count, and it will appear on the monthly storage statement."
+    },
+    "return": {
+      "action": "Return",
+      "title": "Return to the vendor",
+      "body": "Goods went back to the vendor.",
+      "reasonPlaceholder": "e.g. damaged on arrival",
+      "confirm": "Record return"
+    },
+    "count": {
+      "action": "Count",
+      "title": "Record a physical count",
+      "body": "What is actually on the shelf right now.",
+      "field": "Counted quantity",
+      "fieldHint": "Enter what you counted, not the difference. We work out the change ourselves.",
+      "reasonHint": "Required — this is the only record that will explain the difference later.",
+      "reasonPlaceholder": "e.g. quarterly count",
+      "confirm": "Record count"
+    },
+    "transfer": {
+      "action": "Transfer",
+      "title": "Transfer to another depot",
+      "body": "Move these goods to another of your depots.",
+      "destination": "Move to",
+      "reasonPlaceholder": "e.g. consolidating",
+      "confirm": "Transfer",
+      "arrangementNotice": "This moves the goods, not the arrangement — the product still names its current depot, so this shelf will reappear. To move it for good, transfer first, then change the depot."
+    },
+    "ledger": {
+      "show": "Show this shelf’s history",
+      "title": "Movement history",
+      "empty": "Nothing has moved on this shelf yet.",
+      "balance": "{{onHand}} on hand after",
+      "automatic": "Automatic",
+      "loadMore": "Load more"
+    },
+    "types": {
+      "receipt": "Received",
+      "return_to_vendor": "Returned to vendor",
+      "count_adjustment": "Counted",
+      "transfer_out": "Transferred out",
+      "transfer_in": "Transferred in",
+      "reservation": "Reserved by a checkout",
+      "reservation_released": "Reservation released",
+      "sale": "Sold",
+      "customer_return": "Customer return"
+    }
+  },
+  "statements": {
+    "recordNotice": "This is a record, not a payment. The platform does not charge the vendor or pay you — settling simply records that they paid you out of band.",
+    "filterStatus": "Status",
+    "statuses": {
+      "all": "All",
+      "open": "Open",
+      "settled": "Settled",
+      "void": "Void"
+    },
+    "empty": "No storage statements yet.",
+    "emptyHint": "Statements are issued on the 1st of each month, and only shelves you have actually counted are billed. Record a receipt on a shelf to start billing it.",
+    "rowSummary": "{{skus}} SKUs · {{units}} units",
+    "issued": "Issued {{date}}",
+    "settledOn": "Settled {{date}}",
+    "srTitle": "Storage statement",
+    "detailTitle": "Storage statement — {{period}}",
+    "total": "Total",
+    "lines": "Lines",
+    "linesFrozen": "Every figure below was frozen when the statement was issued, including the quantity on the shelf at that moment. Changing your rate does not restate it.",
+    "lineBasis": "{{quantity}} × {{rate}} / month",
+    "unnamedProduct": "Unnamed product",
+    "settleNote": "Settlement note",
+    "voidReason": "Void reason",
+    "settleAction": "Mark as paid",
+    "settleTitle": "Record this as paid",
+    "settleBody": "This records that the vendor paid you. No money moves, and nothing is verified — the vendor will see that you said so. There is no way to undo it.",
+    "settleNoteLabel": "Reference (optional)",
+    "settleNotePlaceholder": "e.g. bank transfer ref 88213",
+    "settleConfirm": "Record as paid",
+    "settledToast": "Recorded as paid.",
+    "voidAction": "Void",
+    "voidTitle": "Void this statement",
+    "voidBody": "Use this when the statement itself was wrong. It says the statement was issued in error — not that a payment was.",
+    "voidReasonLabel": "Reason",
+    "voidReasonPlaceholder": "e.g. duplicate of the August statement",
+    "voidNoReissue": "The month stays claimed, so no replacement statement will be issued for it.",
+    "voidConfirm": "Void statement",
+    "voidedToast": "Statement voided."
   }
 }

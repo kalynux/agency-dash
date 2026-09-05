@@ -26,7 +26,7 @@
 > (accept / reject / ignore-timeout), and the shipment gains an `agent_id` only on acceptance. The
 > full assignment surface — manual offer, auto-assignment, candidate preview, offer cancellation, and
 > the auto-assignment toggle — is documented in [assignment.md](assignment.md); the agent's side is
-> [agent/offers.md](../agent/offers.md).
+> agent/offers.md (`backend/jovi-mall/api-doc/agent/offers.md` — not mirrored in this repository).
 
 Ownership is enforced at the query level on every endpoint below — an agency can only see/act on
 shipments whose `agency_id` matches its own. A shipment outside the agency's scope is reported as
@@ -36,7 +36,7 @@ shipments whose `agency_id` matches its own. A shipment outside the agency's sco
 > out — **before payment, before any vendor review.** Every endpoint here (list, detail, and every
 > action) treats a `pending` shipment as if it doesn't exist yet. It only becomes visible once the
 > vendor explicitly dispatches the paid order via
-> [`POST /api/vendor/orders/:id/dispatch`](../vendor/orders.md#dispatch) (or the vendor has
+> `POST /api/vendor/orders/:id/dispatch` (`backend/jovi-mall/api-doc/vendor/orders.md #dispatch` — not mirrored in this repository) (or the vendor has
 > `auto_redirect_orders_to_agency` enabled, which does the same thing automatically on payment).
 > This is the vendor's review/approval step before an order reaches the agency's dashboard.
 
@@ -58,7 +58,7 @@ pending → assigned → picked_up → in_transit → agent_delivered → delive
 
 > **Two actors drive this state machine, by the same rules.** The agency does, via `PATCH
 > .../status` below; the assigned **agent** does too, via
-> [`POST /api/agent/shipments/:id/status`](../agent/shipments.md#status). The transition table is
+> `POST /api/agent/shipments/:id/status` (`backend/jovi-mall/api-doc/agent/shipments.md #status` — not mirrored in this repository). The transition table is
 > **identical** for both — including `handing_over`, so a replacement agent records their own pickup
 > after a reassignment. What differs is ownership (your `agency_id` vs their `agent_id`), the
 > optional failure reason only the agent may attach, and
@@ -75,7 +75,7 @@ pending → assigned → picked_up → in_transit → agent_delivered → delive
 | `picked_up` | **Agency** or **agent** | Physically picked up / pulled from storage. |
 | `in_transit` | **Agency** or **agent** | Out for delivery. |
 | `agent_delivered` | **Agency** or **agent** | Agent reports delivered — **awaiting customer confirmation**. |
-| `delivered` | **System** (customer confirms, or the 7-day sweep) | Terminal, and neither an agency nor an agent can set it directly. **Prepaid:** the customer confirms via [`POST …/confirm-delivery`](../customer/orders.md#confirm-shipment), or the sweep does it for them after 7 days at `agent_delivered`. **COD:** the agent submits the customer's delivery code, or — after 7 days at `agent_delivered` — the sweep records the cash as collected without one. COD never reaches `delivered` without a cash collection behind it. |
+| `delivered` | **System** (customer confirms, or the 7-day sweep) | Terminal, and neither an agency nor an agent can set it directly. **Prepaid:** the customer confirms via `POST …/confirm-delivery` (`backend/jovi-mall/api-doc/customer/orders.md #confirm-shipment` — not mirrored in this repository), or the sweep does it for them after 7 days at `agent_delivered`. **COD:** the agent submits the customer's delivery code, or — after 7 days at `agent_delivered` — the sweep records the cash as collected without one. COD never reaches `delivered` without a cash collection behind it. |
 | `failed` | **Agency** or **agent** | A delivery attempt failed (e.g. customer unreachable). Non-terminal — the parcel is still with the agent. When the **agent** reports it they may attach a reason + note, appended to the shipment's `deliveryFailures` log; the agency endpoint records none. |
 | `returned` | **Agency** or **agent** | Terminal. Goods returned after a failed attempt. Same optional agent-supplied reason as `failed`. |
 | `rejected` | **Agency** (`POST .../reject`) | Terminal for this shipment. Agency declined the assignment; its items move to `pending_agency_reassignment` for the vendor to reroute. |
@@ -85,8 +85,63 @@ Every status change is appended to `status_history` (`{ status, changedAt, chang
 which feeds the merged multi-agency timeline returned on the [shipment detail](#detail) endpoint
 and on the vendor's `GET /api/vendor/orders/:id` (`deliveryTimeline`).
 
+<a name="status-subsets"></a>
+### 🔴 There are THREE status subsets, and they disagree
+
+**Added 2026-08-24 (PLAN-3), from source.** This is the single most dangerous omission in this
+page's previous versions. The eleven statuses above are grouped **three different ways** for
+three different purposes, and no two groupings agree. A dashboard that derives one from another
+will be wrong — silently, and in a way that looks like a backend fault.
+
+| Status | **Trackable**<br>(live map) | **Active**<br>(agent capacity) | **Unterminated**<br>(agency plan cap) |
+|---|:---:|:---:|:---:|
+| `pending` | — | — | ✅ |
+| `assigned` | ✅ | ✅ | ✅ |
+| `handing_over` | ✅ | ✅ | ✅ |
+| `picked_up` | ✅ | ✅ | ✅ |
+| `in_transit` | ✅ | ✅ | ✅ |
+| `agent_delivered` | ✅ | ✅ | ✅ |
+| **`failed`** | **—** | **✅** | **—** |
+| `pending_agency_reassignment` | — | — | ✅ |
+| `delivered` | — | — | — |
+| `returned` | — | — | — |
+| `rejected` | — | — | — |
+| | **5 statuses** | **6 statuses** | **7 statuses** |
+
+| Subset | Source | What it decides |
+|---|---|---|
+| `TRACKABLE_SHIPMENT_STATUSES` | `src/modules/tracking-integration/services/visible-agents.service.ts:25-31` | whether this agency may watch the agent, and whether geo-tracker opens a tracking session |
+| `ACTIVE_SHIPMENT_STATUSES` | `src/modules/agents/config/agent.config.ts:164-171` | whether the shipment occupies one of the agent's capacity slots |
+| `UNTERMINATED_SHIPMENT_STATUSES` | `src/modules/shipments/shipment.model.ts:33-41` | whether it counts against the agency's plan cap (the soft-cap sweep) |
+
+#### The three disagreements, and what each one breaks
+
+**1. `failed` is *active* but not *trackable*.** The parcel is still in the agent's van, so it
+still consumes a capacity slot — but the shipment is not tracked. **This is the trap:** a
+dashboard that builds its live map from its own "active shipments" set will render a marker for
+a `failed` shipment, subscribe for that agent, and then show a map that never streams. Build the
+map from `GET /api/agency/tracking/board` (which selects on `TRACKABLE_SHIPMENT_STATUSES`) and
+never from a locally-derived active set.
+
+**2. `failed` is *active* but not *unterminated*.** It does not count against the agency plan
+cap even while it occupies an agent's slot. So "shipments against my cap" and "shipments my
+agents are carrying" are genuinely different numbers, and neither is wrong.
+
+**3. `pending` and `pending_agency_reassignment` are *unterminated* only.** Neither is trackable
+(no agent) nor active (no agent). `pending` is additionally **invisible to the agency** — it has
+not been dispatched yet.
+
+#### One more rule that is not a status subset
+
+`trackableShipmentsForAgency` adds **`agent_id: { $ne: null }`** on top of the trackable statuses
+(`visible-agents.service.ts:46-52`), and the source is explicit that this is part of the rule
+rather than an optimisation: *a shipment offered but not yet accepted is trackable in status only
+— there is no agent bound to it, so there is nobody to track.* So a shipment sitting on an
+unaccepted offer is `assigned` (trackable status) and still absent from the board. It appears the
+moment the agent accepts.
+
 Each status change also recomputes the parent order's `fulfillment_status` — see
-[vendor/orders.md#fulfillment-lifecycle](../vendor/orders.md#fulfillment-lifecycle).
+vendor/orders.md#fulfillment-lifecycle (`backend/jovi-mall/api-doc/vendor/orders.md #fulfillment-lifecycle` — not mirrored in this repository).
 
 <a name="cod"></a>
 ### Cash-on-delivery (COD) shipments — different rules
@@ -104,9 +159,25 @@ the whole cash chain), three rules change:
    COD cash-exposure/trust gate is enforced when the offer is made and re-checked on acceptance
    (see [assignment.md](assignment.md)). The customer's delivery code is issued **at acceptance**
    (not at pickup) — they hold it before the agent reaches the door.
-3. **`agent_delivered` is rejected; `delivered` happens via the delivery code.** The agent submits
-   the customer's code (`POST /api/agent/shipments/:id/cod/collect`), which atomically records the
-   cash and marks the shipment `delivered`. There is no customer app confirmation step for COD.
+3. 🔴 **`agent_delivered` is *accepted* for COD — it is the expected state.** `delivered` happens
+   via the delivery code: the agent submits the customer's code
+   (`POST /api/agent/shipments/:id/cod/collect`), which atomically records the cash and marks the
+   shipment `delivered`. There is no customer app confirmation step for COD.
+
+   > **Corrected 2026-08-24 (PLAN-3).** The backend's own copy of this page said
+   > *"`agent_delivered` is rejected"*. **That is false, and inverted.** For a COD shipment
+   > `agent_delivered` means *"I am at the door"*, not *"this is delivered"* — it is accepted, and
+   > it is a deliberate **dead end**: nothing but the delivery code (or the 7-day sweep) moves it
+   > on. Reaching it is precisely what triggers the "submit the code" prompt
+   > (`shipment.service.ts:1421`, `requiresDeliveryCode = isCod && status === 'agent_delivered'`),
+   > it is a member of `COLLECTIBLE_SHIPMENT_STATUSES`
+   > (`cod/services/cash-collection.service.ts:58`), and the auto-collect sweep is keyed on a COD
+   > shipment *sitting at* it past the dispute window (`…:383-473`). The only COD-specific
+   > refusal in the transition core concerns `delivered`, never `agent_delivered`
+   > (`shipment.service.ts:1212-1226`).
+   >
+   > **Do not hide or disable the `agent_delivered` action for COD shipments.** Filed in
+   > `backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`.
 
 Both the [list](#list) and the [detail](#detail) carry a `cod` block for these shipments:
 `{ expectedAmount, currency, status: "pending" | "collected" | "cancelled" | null, collectedAt }`
@@ -129,7 +200,7 @@ same arithmetic the collection will snapshot; treat a `null` status as "no agent
 - `status` (string, optional) — filter by shipment status (see lifecycle table above).
 - `q` (string, optional, **min 2 chars**, max 100) — free-text search over the customer's name and
   phone, the product titles on the shipment, the order number and the tracking number. Identical to
-  the agent list's search — see [agent/shipments.md](../agent/shipments.md#list) for the full table.
+  the agent list's search — see agent/shipments.md (`backend/jovi-mall/api-doc/agent/shipments.md #status` — not mirrored in this repository) for the full table.
 - `page` (integer, optional, default 1)
 - `limit` (integer, optional, default 20, max 100)
 
@@ -401,8 +472,8 @@ How the pickup is chosen (and how the agency overrides it) is documented under
 [agency/assignment.md → reassign](./assignment.md#reassign).
 
 > **`items[].pickupLocation`** — each product is individually configured by its vendor (subject to
-> this agency's own policy — see [Delivery Agencies](../vendor/delivery-agencies.md) and
-> [Vendor Products](../vendor/products.md#update-product)), so a single shipment can mix items with
+> this agency's own policy — see Delivery Agencies (`backend/jovi-mall/api-doc/vendor/delivery-agencies.md` — not mirrored in this repository) and
+> Vendor Products (`backend/jovi-mall/api-doc/vendor/products.md #update-product` — not mirrored in this repository)), so a single shipment can mix items with
 > different pickup locations even though they're all the same vendor. `mode: "storage_based"` /
 > `alreadyInYourStorage: true` means the item already sits in the agency's own warehouse — nothing
 > to go collect (`address` is the agency's own HQ, resolved live, not vendor-specific). `mode:
@@ -441,8 +512,8 @@ one transaction.
 
 | Paid | `agent_delivered` → `delivered` when | Auto-confirm? |
 |---|---|---|
-| Online | the **customer** confirms that shipment ([customer orders](../customer/orders.md)) | Yes — after a **7-day** dispute window |
-| COD | the **agent submits the customer's delivery code** ([`collect`](../agent/cod-cash.md#collect)) | Yes — after **7 days** the cash is recorded as collected *without* a code |
+| Online | the **customer** confirms that shipment (customer orders (`backend/jovi-mall/api-doc/customer/orders.md` — not mirrored in this repository)) | Yes — after a **7-day** dispute window |
+| COD | the **agent submits the customer's delivery code** (`collect` (`backend/jovi-mall/api-doc/agent/cod-cash.md #collect` — not mirrored in this repository)) | Yes — after **7 days** the cash is recorded as collected *without* a code |
 
 > **COD:** `delivered` is rejected as a status change — a recorded cash collection is the only way
 > there, so `delivered` and "cash collected" are always the same event. The normal route is the agent
@@ -484,7 +555,7 @@ one transaction.
 `requiresDeliveryCode` is `true` only for a COD shipment that just reached `agent_delivered`;
 `nextAction` accompanies it. Both are absent/false otherwise. `recordedFailure` is always `null`
 here — reasons are recorded only when the **agent** reports the outcome
-([agent/shipments.md](../agent/shipments.md#status)).
+(agent/shipments.md (`backend/jovi-mall/api-doc/agent/shipments.md #status` — not mirrored in this repository)).
 
 **Error Responses**:
 - `404` – `SHIPMENT_NOT_FOUND` – Shipment does not exist or is not handled by this agency.

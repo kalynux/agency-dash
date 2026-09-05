@@ -207,5 +207,36 @@
       "noBalance": "Aucun solde disponible à retirer pour l'instant.",
       "belowMinimum": "Le versement minimum est de {{amount}}."
     }
+  },
+  "contact": {
+    "title": "E-mail et téléphone de connexion",
+    "description": "L'adresse e-mail et le numéro de téléphone que vous utilisez pour vous connecter. Toute modification ne prend effet qu'après confirmation.",
+    "none": "Non renseigné",
+    "change": "Modifier",
+    "cancelChange": "Annuler cette modification",
+    "cancelled": "Modification annulée.",
+    "expires": "Expire {{when}}",
+    "noSignOutNotice": "Modifier votre e-mail ou votre téléphone ne vous déconnecte nulle part. Seul un changement de mot de passe le fait.",
+    "email": {
+      "label": "E-mail de connexion",
+      "newLabel": "Nouvelle adresse e-mail",
+      "placeholder": "vous@exemple.com",
+      "hint": "Nous enverrons un lien de confirmation à la nouvelle adresse. Tant que vous ne l'ouvrez pas, vous vous connectez avec l'adresse actuelle.",
+      "submit": "Envoyer la confirmation",
+      "requested": "Consultez la nouvelle adresse pour le lien de confirmation.",
+      "pendingHint": "En attente de l'ouverture du lien envoyé ici."
+    },
+    "phone": {
+      "label": "Téléphone de connexion",
+      "newLabel": "Nouveau numéro de téléphone",
+      "hint": "Pour prouver que le nouveau numéro est le vôtre, connectez-le sur WhatsApp : envoyez /connect à notre bot depuis ce numéro, puis confirmez ici. Il n'y a pas de code SMS.",
+      "submit": "Démarrer la modification",
+      "requested": "Connectez maintenant ce numéro sur WhatsApp, puis revenez confirmer.",
+      "pendingHint": "En attente de la connexion de ce numéro sur WhatsApp.",
+      "confirm": "C'est connecté — confirmer",
+      "confirmed": "Votre téléphone de connexion a été modifié.",
+      "unproven": "Ce numéro n'est pas encore connecté sur WhatsApp. Envoyez /connect à notre bot depuis le nouveau numéro, validez le code, puis confirmez à nouveau.",
+      "connectLink": "Aller aux canaux de messagerie"
+    }
   }
 }

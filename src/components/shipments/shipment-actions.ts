@@ -29,6 +29,19 @@ export interface ShipmentNextAction {
  */
 export const NEXT_ACTIONS: Partial<Record<ShipmentStatus, ShipmentNextAction[]>> = {
   assigned: [{ status: 'picked_up', labelKey: 'shipments:actions.markPickedUp', icon: PackageCheck }],
+  // A picked-up parcel that was reassigned off its agent. The transition table
+  // is identical for both actors, so the replacement agent can record this
+  // pickup from their own app — but the agency can too, and could not before.
+  // `returned` is the other way out: the handover was abandoned.
+  // See api-doc/agency/shipments.md → status lifecycle.
+  handing_over: [
+    {
+      status: 'picked_up',
+      labelKey: 'shipments:actions.markPickedUpAfterHandover',
+      icon: PackageCheck,
+    },
+    { status: 'returned', labelKey: 'shipments:actions.markReturned', icon: RotateCcw, variant: 'destructive' },
+  ],
   picked_up: [{ status: 'in_transit', labelKey: 'shipments:actions.markInTransit', icon: Truck }],
   in_transit: [
     { status: 'agent_delivered', labelKey: 'shipments:actions.markDelivered', icon: CircleCheck },
@@ -80,4 +93,35 @@ export function canRejectStatus(status: ShipmentStatus): boolean {
 
 export function isTerminalStatus(status: ShipmentStatus): boolean {
   return TERMINAL_STATUSES.includes(status);
+}
+
+/**
+ * The statuses at which a delivery-proof photo can exist.
+ *
+ * An agent records the proof when they report the delivery, so nothing before
+ * `agent_delivered` can have one and asking would spend a request to be told
+ * `404`. `failed` and `returned` are included because an agent can photograph a
+ * doorstep, a refusal or a returned parcel too, and `delivered` because the
+ * proof outlives the confirmation that followed it.
+ */
+const PROOF_BEARING_STATUSES: ShipmentStatus[] = [
+  'agent_delivered',
+  'delivered',
+  'failed',
+  'returned',
+];
+
+export function canHaveDeliveryProof(status: ShipmentStatus): boolean {
+  return PROOF_BEARING_STATUSES.includes(status);
+}
+
+/**
+ * Only a `delivered` shipment is reviewable, for every author role.
+ *
+ * `agent_delivered` is not enough: the agent claiming arrival is not the
+ * delivery completing, and the eligibility endpoint refuses it. Checking here
+ * saves a round trip on every other shipment. See api-doc/reviews.md § 2.
+ */
+export function canReviewDelivery(status: ShipmentStatus): boolean {
+  return status === 'delivered';
 }
