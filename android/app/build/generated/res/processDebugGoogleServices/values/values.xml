@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="firebase_database_url" translatable="false">https://bingoo-22222-default-rtdb.asia-southeast1.firebasedatabase.app</string>
+    <string name="gcm_defaultSenderId" translatable="false">741831724264</string>
+    <string name="google_api_key" translatable="false">AIzaSyBJHttEcQVxZXkn_TYP6IJL-tgg8TzmidE</string>
+    <string name="google_app_id" translatable="false">1:741831724264:android:33054a26bd81f96ed34d5d</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBJHttEcQVxZXkn_TYP6IJL-tgg8TzmidE</string>
+    <string name="google_storage_bucket" translatable="false">bingoo-22222.firebasestorage.app</string>
+    <string name="project_id" translatable="false">bingoo-22222</string>
+</resources>

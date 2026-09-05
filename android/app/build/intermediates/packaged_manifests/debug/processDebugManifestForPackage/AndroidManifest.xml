@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only manifest overlay (CAPACITOR-PLAN.md → P2.8).
+
+  Android 9+ blocks cleartext HTTP outright, so a debug build talking to a dev
+  backend at http://192.168.x.x:8022 fails before the request leaves the device.
+  This grants that permission for the *debug* build type only — the manifest
+  merger never applies src/debug/ to a release build, so a store artifact cannot
+  inherit it no matter what env/.env.mobile.local happens to contain.
+
+  The matching WebView-side allowance is `allowMixedContent`, which is set from
+  the CAP_LAN_DEV flag in capacitor.config.ts.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.wi_mall.agency"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="36" />
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+        Phase 4 capabilities (CAPACITOR-PLAN.md → P4.1, P4.3, P4.4). None of the
+        plugins declares its own runtime permission; each ships only the service,
+        the queries or the manifest stub it needs, so every grant below has to be
+        asked for here.
+
+        Each is requested at the point of use and never at startup — see the
+        `requestPermissions` call in the matching src/platform/ module.
+    -->
+    <!-- P4.1 — push. Runtime-granted from Android 13; implicit before that. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        Biometric sign-in (src/lib/biometricUnlock.ts).
+
+        Install-time, not runtime: there is no prompt to grant, and asking for
+        a fingerprint is itself the consent. `androidx.biometric` declares this
+        in its own manifest, so the merger would add it either way — it is
+        written out here because a permission the app ships with should be
+        readable in the app's own manifest rather than inferred from a
+        transitive AAR.
+
+        Deliberately NOT paired with a `uses-feature`: an implied
+        `android.hardware.fingerprint` would let Play hide the app from every
+        device without a sensor, and biometric unlock is an opt-in convenience
+        that the settings screen already degrades gracefully without.
+    -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!--
+ P4.4 — "use my location" in the address picker. Coarse is enough to
+         geocode to the right neighbourhood, so a user who grants only the
+         approximate one still gets a filled address.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!--
+ P4.3 — camera and gallery.
+         READ_MEDIA_* replaced READ_EXTERNAL_STORAGE in Android 13, hence the
+         maxSdkVersion on the old one: without it the Play Console flags a
+         storage permission the app cannot use on a modern device.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!--
+        Declared NOT required, all three.
+
+        A `uses-permission` implies the matching `uses-feature` as REQUIRED
+        unless it is overridden here, and Play uses that to decide which devices
+        may install the app. Left implicit, a dashboard whose camera and GPS are
+        conveniences would be hidden from every device lacking either — and the
+        agency staff who only ever read shipments would be the ones locked out.
+    -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /> <!-- suppress DeprecatedClassUsageInspection -->
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" /> <!-- Required by older versions of Google Play services to create IID tokens -->
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
+    <permission
+        android:name="com.wi_mall.agency.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.wi_mall.agency.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+
+    <application
+        android:allowBackup="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+        android:debuggable="true"
+        android:extractNativeLibs="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true" >
+        <activity
+            android:name="com.wi_mall.agency.MainActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:launchMode="singleTask"
+            android:theme="@style/AppTheme.NoActionBarLaunch" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Deep links (CAPACITOR-PLAN.md → P4.2). `launchMode="singleTask"`
+                above is what makes these arrive as `appUrlOpen` on the RUNNING
+                instance instead of stacking a second copy of the app.
+
+                The custom scheme is the one that works today: it needs no
+                server-side proof, so it is what a notification payload and a
+                manual `adb shell am start -d wiagency://shipments/<id>` can both
+                rely on. Its path is dashboard-relative — `wiagency://shipments/
+                {id}` — matching the `action.path` the backend already mints.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="wiagency" />
+            </intent-filter>
+
+            <!--
+                App Links for the real domain, so a link opened from an email or
+                a browser lands in the app rather than on the web dashboard.
+
+                ⚠ `autoVerify` only takes effect once
+                https://agency.wi-mall.com/.well-known/assetlinks.json exists and
+                names this package plus its signing-certificate fingerprint —
+                which cannot be produced before Phase 7 mints the release key.
+                Until then Android silently declines to verify and these links
+                keep opening the browser; nothing breaks, the app just does not
+                claim them yet. The filter is here so the ops task has something
+                concrete to point at.
+            -->
+            <intent-filter android:autoVerify="true" >
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="agency.wi-mall.com"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+        <!--
+            FCM presentation defaults (P4.1). All three are read by the Firebase
+            messaging SDK when it draws a notification the app never sees —
+            which is every push that lands while the app is backgrounded or
+            killed, i.e. the ones that matter most.
+
+            ⚠ Without the icon line Android falls back to `android:icon`, and a
+            status-bar icon is a MASK: only its alpha survives and every opaque
+            pixel is painted white. The launcher icon is a filled square, so the
+            fallback is a featureless white box. `ic_stat_wi_agency` is the same
+            mark reduced to line art, with the eyes and smile as real holes.
+
+            The channel id must match the one the client creates at runtime
+            (src/platform/push.ts) AND the one the backend addresses
+            (`ANDROID_CHANNELS.DEFAULT` in fcm-push.service.ts). It is only a
+            fallback here — the backend names the channel on every send — but a
+            payload that ever arrived without one would otherwise land in the
+            SDK's own "Miscellaneous" channel, which the user cannot recognise
+            and will mute.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_wi_agency" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.wi_mall.agency.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name="com.aparajita.capacitor.biometricauth.AuthActivity"
+            android:label="@string/title_activity_auth_activity"
+            android:theme="@style/AppTheme.Transparent" />
+        <activity
+            android:name="com.capacitorjs.plugins.browser.BrowserControllerActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name="io.ionic.libs.ioncameralib.view.IONCAMRLoadingActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+        <activity
+            android:name="io.ionic.libs.ioncameralib.view.IONCAMRImageEditorActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar" />
+        <activity
+            android:name="io.ionic.libs.ioncameralib.view.IONCAMROpenPhotoPickerActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" /> <!-- Trigger Google Play services to install the backported photo picker module. -->
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
+            android:enabled="false"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+
+            <meta-data
+                android:name="photopicker_activity:0:required"
+                android:value="" />
+        </service>
+
+        <provider
+            android:name="io.ionic.libs.ioncameralib.IONCAMRFileProvider"
+            android:authorities="com.wi_mall.agency.camera.provider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/ioncamera_paths" />
+        </provider>
+
+        <receiver
+            android:name="com.google.firebase.iid.FirebaseInstanceIdReceiver"
+            android:exported="true"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="com.google.android.gms.cloudmessaging.FINISHED_AFTER_HANDLED"
+                android:value="true" />
+        </receiver>
+        <!--
+             FirebaseMessagingService performs security checks at runtime,
+             but set to not exported to explicitly avoid allowing another app to call it.
+        -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:directBootAware="true"
+            android:exported="false" >
+            <intent-filter android:priority="-500" >
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name="com.google.firebase.components.ComponentDiscoveryService"
+            android:directBootAware="true"
+            android:exported="false" >
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingKtxRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsKtxRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+            <meta-data
+                android:name="com.google.firebase.components:com.google.firebase.datatransport.TransportRegistrar"
+                android:value="com.google.firebase.components.ComponentRegistrar" />
+        </service>
+
+        <activity
+            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="com.wi_mall.agency.androidx-startup"
+            android:exported="false" >
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup" />
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup" />
+            <meta-data
+                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+                android:value="androidx.startup" />
+        </provider>
+        <!--
+        Service for holding metadata. Cannot be instantiated.
+        Metadata will be merged from other manifests.
+        -->
+        <service
+            android:name="androidx.camera.core.impl.MetadataHolderService"
+            android:enabled="false"
+            android:exported="false" />
+
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="com.wi_mall.agency.firebaseinitprovider"
+            android:directBootAware="true"
+            android:exported="false"
+            android:initOrder="100" />
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            android:directBootAware="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.DUMP" >
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            android:exported="false" >
+            <meta-data
+                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+                android:value="cct" />
+        </service>
+        <service
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" >
+        </service>
+
+        <receiver
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

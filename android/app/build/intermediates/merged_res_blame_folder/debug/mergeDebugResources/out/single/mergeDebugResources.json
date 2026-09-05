@@ -1,0 +1,250 @@
+[
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-mdpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-mdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-xxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-xxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-hdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-hdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-ldpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-ldpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-xhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-xhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-hdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-hdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/layout_activity_main.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-xxxhdpi_ic_stat_wi_agency.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-xxxhdpi/ic_stat_wi_agency.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-ldpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-ldpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-xxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-xxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-xhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-xhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-xxxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-xxxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-xhdpi_ic_stat_wi_agency.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-xhdpi/ic_stat_wi_agency.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-xxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-xxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-mdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-mdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xhdpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xhdpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-mdpi_ic_stat_wi_agency.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-mdpi/ic_stat_wi_agency.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-mdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-mdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-xhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-xhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-hdpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-hdpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-xxhdpi_ic_stat_wi_agency.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-xxhdpi/ic_stat_wi_agency.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-xxxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-xxxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-ldpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-ldpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-ldpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-ldpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/xml_config.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/xml/config.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-hdpi_ic_stat_wi_agency.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-hdpi/ic_stat_wi_agency.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-v24_ic_launcher_foreground.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-v24/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxxhdpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxxhdpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-ldpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-ldpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-xhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-xhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-xxxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-xxxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-ldpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-ldpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-ldpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-ldpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-night_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-night/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-hdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-hdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/xml_file_paths.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/xml/file_paths.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-mdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-mdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-land-night-xxxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-land-night-xxxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-mdpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-mdpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxhdpi_ic_launcher_background.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxhdpi/ic_launcher_background.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-ldpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-ldpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-mdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-mdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-hdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-hdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-hdpi_ic_launcher_foreground.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-hdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/drawable-port-night-xxhdpi_splash.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/drawable-port-night-xxhdpi/splash.png"
+    },
+    {
+        "merged": "com.wi_mall.agency.app-debug-55:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.wi_mall.agency.app-main-57:/mipmap-xhdpi/ic_launcher.png"
+    }
+]

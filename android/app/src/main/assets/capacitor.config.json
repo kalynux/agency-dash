@@ -1,0 +1,21 @@
+{
+	"appId": "com.wi_mall.agency",
+	"appName": "Wi-Agency",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "http",
+		"hostname": "agency.wi-mall.internal"
+	},
+	"android": {
+		"allowMixedContent": true
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": true,
+			"launchShowDuration": 2000,
+			"backgroundColor": "#fcfdfe",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_CROP"
+		}
+	}
+}
