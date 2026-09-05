@@ -1,0 +1,522 @@
+{
+  "tabs": {
+    "connections": {
+      "description": "Every agent contract your agency has, past and present — only contracted agents can take your shipments",
+      "short": "Your agent contracts"
+    },
+    "browse": {
+      "description": "Every agent on the platform who could take your shipments",
+      "short": "Find agents to contract"
+    }
+  },
+  "agentStatus": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended"
+  },
+  "membershipStatus": {
+    "pending": "Pending",
+    "active": "Active",
+    "paused": "Paused",
+    "suspended": "Suspended",
+    "rejected": "Rejected",
+    "withdrawn": "Withdrawn",
+    "deactivated": "Ended"
+  },
+  "availability": {
+    "online": "Online",
+    "on_break": "On break",
+    "offline": "Offline",
+    "any": "Any"
+  },
+  "workingState": {
+    "idle": "Free",
+    "working": "On a job",
+    "at_capacity": "At capacity"
+  },
+  "vehicle": {
+    "unknown": "Unknown",
+    "none": "No vehicle",
+    "any": "Any",
+    "bike": "Bike",
+    "bicycle": "Bicycle",
+    "motorbike": "Motorbike",
+    "motorcycle": "Motorcycle",
+    "car": "Car",
+    "van": "Van",
+    "truck": "Truck",
+    "on_foot": "On foot",
+    "foot": "On foot",
+    "_colorsComment": "Lowercase English tokens from the agent's profile. Free text is accepted at their end, so an unknown one falls back to its title-cased form and gets no swatch.",
+    "colors": {
+      "black": "Black",
+      "white": "White",
+      "grey": "Grey",
+      "gray": "Grey",
+      "silver": "Silver",
+      "red": "Red",
+      "dark_red": "Dark red",
+      "blue": "Blue",
+      "dark_blue": "Dark blue",
+      "light_blue": "Light blue",
+      "green": "Green",
+      "dark_green": "Dark green",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "brown": "Brown",
+      "beige": "Beige",
+      "gold": "Gold",
+      "purple": "Purple",
+      "pink": "Pink"
+    }
+  },
+  "_originComment": "How a contract began. An open union server-side, so an unknown token falls back to its humanized form.",
+  "origin": {
+    "invitation": "Agency offer",
+    "join_request": "Agent applied",
+    "transfer": "Transfer",
+    "admin": "Admin",
+    "migration": "Migration"
+  },
+  "card": {
+    "kycVerified": "KYC Verified",
+    "viewDetails": "View details for {{name}}",
+    "serviceRadius": "{{km}} km",
+    "trust": "Trust {{score}}",
+    "availabilityWithState": "{{availability}} · {{state}}"
+  },
+  "filters": {
+    "vehicle": "Vehicle",
+    "availability": "Availability",
+    "availabilityDescription": "What the agent wants right now — not how loaded they are.",
+    "trust": "Trust",
+    "trustDescription": "Composite 0–100 score from their delivery record.",
+    "minTrust": "Minimum trust score",
+    "minTrustPlaceholder": "e.g. 80",
+    "sortBy": "Sort by",
+    "sortTrust": "Highest trust",
+    "sortName": "Name A–Z"
+  },
+  "browse": {
+    "searchPlaceholder": "Search agents…",
+    "searchLabel": "Search agents by name or home base",
+    "filterDescription": "Every agent on the platform who could take your shipments.",
+    "found_one": "{{count}} agent found",
+    "found_other": "{{count}} agents found",
+    "emptyFiltered": "No agents match your search or filters.",
+    "empty": "No agents are available to contract with yet.",
+    "clearFilters": "Clear all filters",
+    "offer": "Offer a contract",
+    "offerAgain": "Offer again",
+    "reviewOffer": "Review offer",
+    "onRoster": "On your roster"
+  },
+  "connections": {
+    "searchPlaceholder": "Search agents…",
+    "searchLabel": "Search your agents by name, email, or phone",
+    "filterDescription": "Every agent contract your agency has, past and present.",
+    "statusFilter": "Contract status",
+    "chips": {
+      "all": "All",
+      "requests": "Offers",
+      "active": "Active",
+      "change_requested": "Change requested",
+      "terms_proposed": "Terms proposed",
+      "paused": "Paused",
+      "suspended": "Suspended",
+      "history": "History"
+    },
+    "loading": "Loading contracts…",
+    "emptyFiltered": "No agents match your search.",
+    "empty": "No agent contracts yet — find an agent in the Browse tab.",
+    "emptyCategory": "Nothing in this category yet.",
+    "holdsCash": "Holds {{amount}}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "withdraw": "Withdraw",
+    "proposeTerms": "Propose terms",
+    "view": "View",
+    "manage": "Manage"
+  },
+  "detail": {
+    "kycVerified": "KYC Verified",
+    "unverified": "Unverified",
+    "homeBase": "Home base",
+    "serviceRadius": "Works within {{km}} km of here",
+    "trackRecord": "Track record",
+    "trustScore": "Trust score",
+    "trustOutOf": "{{score}} / 100",
+    "deliveriesCompleted": "Deliveries completed",
+    "onTime": "On time",
+    "notEnoughDeliveries": "Not enough deliveries yet",
+    "onTimeRate": "{{percent}}%",
+    "ratings": "Ratings",
+    "notRated": "Not rated yet",
+    "ratingCount": "({{count}})",
+    "fromCustomers": "From customers",
+    "fromAgencies": "From agencies",
+    "fromVendors": "From vendors",
+    "rightNow": "Right now",
+    "availability": "Availability",
+    "workload": "Workload",
+    "privacyNote": "Phone, email and live position aren't shown here — those come with the contract, not the directory.",
+    "availabilityLong": {
+      "online": "Online — wants work",
+      "on_break": "On a break",
+      "offline": "Offline"
+    },
+    "workingStateLong": {
+      "idle": "Free right now",
+      "working": "On a job",
+      "at_capacity": "At capacity"
+    }
+  },
+  "statusRequest": {
+    "raised": "Raised {{date}}",
+    "quoted": "“{{text}}”",
+    "_incomingComment": "A change the AGENT proposed — ours to approve or reject.",
+    "incoming": {
+      "pause": {
+        "label": "Wants to pause",
+        "description": "They want to stop taking new assignments for a while, keeping the contract alive."
+      },
+      "reactivate": {
+        "label": "Wants to resume",
+        "description": "They want to come back off a pause and start receiving assignments again."
+      },
+      "deactivate": {
+        "label": "Wants to leave",
+        "description": "They want to leave your roster. Any cash and unpaid earnings must be settled first."
+      },
+      "fallbackDescription": "A contract change awaiting your decision."
+    },
+    "_outgoingComment": "A change WE proposed — ours to cancel, theirs to answer.",
+    "outgoing": {
+      "pause": {
+        "label": "Pause proposed",
+        "description": "Waiting on the agent to agree. Until they do, nothing about the contract changes."
+      },
+      "reactivate": {
+        "label": "Resume proposed",
+        "description": "Waiting on the agent to agree. Until they do, nothing about the contract changes."
+      },
+      "deactivate": {
+        "label": "Removal proposed",
+        "description": "Waiting on the agent to agree. The contract ends only once they do and any cash and unpaid earnings are settled."
+      },
+      "fallbackDescription": "A contract change you proposed, waiting on the agent."
+    },
+    "blocked": {
+      "title": "Settle up before approving",
+      "outstandingCod": "They still hold {{amount}} of your COD cash.",
+      "outstandingPayment": "You still owe them {{amount}} in earnings.",
+      "recheckMine": "Re-checked when the agent agrees — until it clears, their approval would be refused.",
+      "recheckTheirs": "Checked again when you approve — approving now would be refused."
+    },
+    "notePlaceholder": "Add a note for the agent (optional)…",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel request",
+    "addNote": "Add a note"
+  },
+  "termsProposal": {
+    "raised": "Raised {{date}}",
+    "quoted": "“{{text}}”",
+    "mineBadge": "Terms change proposed",
+    "theirsBadge": "Wants to change the terms",
+    "mineDescription": "Waiting on the agent. Your agreed terms stay in force until they accept — nothing has changed yet.",
+    "theirsDescription": "The terms below are what they are asking for. Your current terms stay in force until you accept — nothing has changed yet.",
+    "noChange": "This proposal restates the current terms — nothing would actually change.",
+    "notePlaceholder": "Add a note for the agent (optional)…",
+    "accept": "Accept terms",
+    "decline": "Decline",
+    "counter": "Counter",
+    "withdraw": "Withdraw proposal",
+    "addNote": "Add a note",
+    "states": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "superseded": "Superseded"
+    }
+  },
+  "offerDialog": {
+    "title": "Offer {{name}} a contract",
+    "description": "They can accept these terms, decline, or come back with their own. Nothing starts until they accept.",
+    "feeSplitRequired": "A fee split is required — it is what pays the agent.",
+    "send": "Send offer"
+  },
+  "membership": {
+    "srDescription": "Contract details for {{name}} — COD limit, negotiated terms, settlements and history.",
+    "primary": "Primary",
+    "ending": {
+      "rejected": "The agent turned down your request",
+      "withdrawn": "The request was withdrawn before it was answered",
+      "deactivated": "Contract ended",
+      "transferred": "Ended — an admin transferred this agent to another agency",
+      "quotedReason": "“{{reason}}”",
+      "noReason": "No reason was given.",
+      "newContractHint": "Contracting with this agent again starts a new contract; this one stays as history."
+    },
+    "tiles": {
+      "email": "Email",
+      "phone": "Phone",
+      "vehicle": "Vehicle",
+      "vehiclePhoto": "Vehicle photo",
+      "vehiclePhotoAlt": "The agent's vehicle",
+      "trustScore": "Trust score",
+      "trustOutOf": "/ 100",
+      "activeJobs": "Active jobs",
+      "availability": "Availability"
+    },
+    "cod": {
+      "held": "COD cash held",
+      "cap": "Current cap",
+      "noCap": "No cap",
+      "placeholder": "New COD threshold (0 = none)",
+      "editLabel": "Change the cap",
+      "set": "Set",
+      "hint": "A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool."
+    },
+    "terms": {
+      "title": "Contract terms",
+      "titleOnTable": "Terms on the table",
+      "summaryFallback": "Employment, fee split, remittance and limits",
+      "modeStaged": "This contract is live, so its terms are pricing deliveries right now. Changes here are <strong>proposed</strong> to {{name}} — the current terms keep applying until they accept. Employment details are yours alone and save immediately.",
+      "modeOursToAnswer": "{{name}} has put these terms forward. Accept them as they are, or change them below to send a counter-offer back.",
+      "modeNeedsTerms": "{{name}} applied without naming terms, so there is nothing to accept yet. Set the fee split below and send it — the contract starts when they agree.",
+      "modeTheirsToAnswer": "Your offer is with {{name}}. You can revise these figures while they think about it; the contract starts when they accept.",
+      "noteLabel": "Note for the agent",
+      "notePlaceholder": "Why you're proposing this (optional)…",
+      "nothingChanged": "Nothing changed yet.",
+      "proposalBlocked": "You already have a change waiting on this agent — withdraw it first.",
+      "proposalBlockedHint": "A change is already waiting on this agent — withdraw it above first.",
+      "unsaved": "Unsaved changes",
+      "onlyChanged": "Only changed fields are sent.",
+      "saveEmployment": "Save employment",
+      "sendCounterProposal": "Send counter-proposal",
+      "proposeToAgent": "Propose to agent",
+      "sendCounterOffer": "Send counter-offer",
+      "sendTerms": "Send terms"
+    },
+    "trail": {
+      "title": "Terms history",
+      "summary": "Every change proposed to this contract",
+      "you": "You",
+      "byline": "{{who}} · {{date}}",
+      "diffEntry": "{{label}}: ",
+      "noChange": "No effective change.",
+      "quotedNote": "“{{note}}”",
+      "empty": "No terms changes have been proposed on this contract."
+    },
+    "settlements": {
+      "title": "Settlements",
+      "summary": "Outstanding cash and deposits on this contract",
+      "outstanding": "Outstanding",
+      "lifetimeSettled": "Settled lifetime",
+      "hint": "Outstanding cash must reach zero before this contract can end. Last settled {{date}}.",
+      "depositLine": "{{date}} · to {{recipient}}",
+      "noDeposits": "No deposits recorded under this contract.",
+      "loadFailed": "Could not load settlements."
+    },
+    "eligibility": {
+      "title": "Assignment eligibility",
+      "summary": "Whether this agent can take a shipment right now",
+      "checking": "Checking…",
+      "eligible": "Eligible now",
+      "notEligible": "Not eligible",
+      "capacity": "({{active}}/{{max}} capacity)",
+      "ruleWithReason": "{{rule}} — {{reason}}",
+      "loadFailed": "Could not load eligibility.",
+      "rules": {
+        "platform_ban": "Platform ban",
+        "kyc": "KYC",
+        "active": "Agent active",
+        "approved": "Contract in force",
+        "available": "Available",
+        "tracking_allowed": "Tracking allowed",
+        "device_location": "Device location",
+        "capacity": "Capacity"
+      },
+      "reasons": {
+        "agent_not_found": "agent not found",
+        "platform_banned": "banned from the platform",
+        "kyc_not_verified": "KYC not verified",
+        "agent_not_active": "the agent's account is not active",
+        "membership_not_approved": "the contract is not in force",
+        "not_available": "not available right now",
+        "tracking_not_allowed": "tracking not allowed",
+        "device_location_disabled": "device location off",
+        "device_location_unknown": "device location unknown",
+        "at_capacity": "at capacity"
+      }
+    },
+    "history": {
+      "title": "History",
+      "summary": "Everything that has happened with this agent",
+      "empty": "No history."
+    },
+    "reason": {
+      "suspend": "Reason for suspension",
+      "pause": "Reason for pausing (optional)",
+      "reject": "Reason for declining (optional)",
+      "terminate": "Reason for removal (optional)",
+      "placeholder": "Add a reason…",
+      "pauseHint": "A mutual break: no new assignments, shipments already in flight are untouched. Reinstate whenever you both want to restart.",
+      "terminateHint": "This proposes termination — the contract ends once the agent agrees and any outstanding cash and unpaid earnings are settled."
+    },
+    "footer": {
+      "waitingOnYou": "{{name}} is waiting on your answer to the terms above.",
+      "acceptTerms": "Accept terms",
+      "counter": "Counter",
+      "decline": "Decline",
+      "waitingOnThem": "Waiting on {{name}} to accept your terms. You can revise them above while they decide.",
+      "withdrawOffer": "Withdraw offer",
+      "needsTerms": "{{name}} applied without naming terms. Send them an offer to start the contract.",
+      "proposeTerms": "Propose terms",
+      "pause": "Pause",
+      "suspend": "Suspend",
+      "remove": "Remove",
+      "reinstate": "Reinstate",
+      "manage": "Manage"
+    }
+  },
+  "_historyEventsComment": "Membership-log event types. Append-only server-side, so an unrecognised token falls back to its humanized form.",
+  "historyEvents": {
+    "invited": "Offer sent",
+    "invite_accepted": "Offer accepted",
+    "invite_declined": "Offer declined",
+    "invite_revoked": "Offer revoked",
+    "join_requested": "Agent applied",
+    "approved": "Contract started",
+    "request_declined": "Request declined",
+    "withdrawn": "Request withdrawn",
+    "suspended": "Suspended",
+    "paused": "Paused",
+    "reinstated": "Reinstated",
+    "removed": "Contract ended",
+    "transferred_out": "Transferred out",
+    "transferred_in": "Transferred in",
+    "primary_changed": "Primary agency changed",
+    "employment_updated": "Employment updated",
+    "terms_updated": "Terms updated",
+    "cod_limit_changed": "COD limit changed"
+  },
+  "terms": {
+    "employmentTypes": {
+      "employee": "Employee",
+      "contractor": "Contractor",
+      "freelancer": "Freelancer"
+    },
+    "cadences": {
+      "per_delivery": "Per delivery",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "biweekly": "Every two weeks",
+      "monthly": "Monthly",
+      "on_demand": "On demand"
+    },
+    "feeModels": {
+      "percentage": "Percentage of the delivery fee",
+      "flat": "Flat fee per delivery"
+    },
+    "summaryFlat": "{{amount}} flat",
+    "summaryShare": "{{percent}}% share",
+    "fields": {
+      "employment": "Employment",
+      "employmentType": "Type",
+      "employmentRef": "Employee ref",
+      "employmentRefPlaceholder": "EMP-042",
+      "employmentStarted": "Started",
+      "employmentEnds": "Ends",
+      "employmentHint": "Your own record about this agent — saved on its own, without needing their agreement, and per contract: the same person can be your employee and another agency's freelancer.",
+      "feeSplit": "Fee split",
+      "model": "Model",
+      "modelPercentage": "Percentage",
+      "modelFlat": "Flat fee",
+      "flatFee": "Flat fee per delivery",
+      "flatFeePlaceholder": "1500",
+      "sharePercent": "Agent share (%)",
+      "sharePercentPlaceholder": "40",
+      "currency": "Currency",
+      "currencyPlaceholder": "XAF",
+      "feeSplitHint": "The agent's cut comes <strong>out of</strong> your delivery fee, never on top — the vendor pays the same either way. The platform pays it from the agent's own earnings account.",
+      "remittance": "COD remittance",
+      "cadence": "Cadence",
+      "graceHours": "Grace hours",
+      "graceHoursPlaceholder": "24",
+      "dayOfWeek": "Day of week",
+      "dayOfWeekHint": "0 = Sunday",
+      "dayOfMonth": "Day of month",
+      "dayOfMonthHint": "1–28",
+      "remittanceHint": "How often the agent hands over the cash they collect. Tightening it needs their agreement — the cadence feeds a trust penalty, so a change they never signed would start docking their score.",
+      "coverage": "Coverage & limits",
+      "regions": "Coverage regions",
+      "regionsHint": "Where this agent works for you. Pick from your country's regions — you can name one you're expanding into, not only the ones you already serve. Select none to place no restriction at all.",
+      "regionsPlaceholder": "Douala, Bonabéri",
+      "ceiling": "Shipment value ceiling",
+      "ceilingHint": "The most this agent may carry on one shipment. Leave empty for no cap.",
+      "ceilingPlaceholder": "No cap",
+      "emptySelect": "—"
+    },
+    "errors": {
+      "percentageNeedsShare": "A percentage split needs an agent share.",
+      "flatNeedsFee": "A flat split needs a flat fee.",
+      "shareOutOfRange": "The agent share must be between 0 and 100."
+    },
+    "_pathsComment": "Keyed by the API's dotted diff path. Nested to match, because `.` is i18next's nesting separator — a flat \"fee_split.model\" key would never resolve.",
+    "paths": {
+      "fee_split": {
+        "model": "Fee split model",
+        "agent_share_percent": "Agent share (%)",
+        "agent_flat_fee": "Flat fee per delivery",
+        "currency": "Currency"
+      },
+      "remittance_terms": {
+        "cadence": "Remittance cadence",
+        "day_of_week": "Remittance day of week",
+        "day_of_month": "Remittance day of month",
+        "grace_hours": "Grace hours"
+      },
+      "coverage": {
+        "regions": "Coverage regions",
+        "area": "Coverage area"
+      },
+      "shipment_value_ceiling": "Shipment value ceiling"
+    },
+    "values": {
+      "noCap": "No cap",
+      "notSet": "Not set",
+      "none": "None",
+      "allRegions": "All regions — no restriction",
+      "mapArea": "A map area"
+    },
+    "coverage": {
+      "yoursBadge": "Yours",
+      "invalidTitle": "Some regions weren't accepted",
+      "invalidBody": "A coverage region has to be a region of your country — a city or a misspelling won't do. The rejected ones are shown below; the list has been refreshed from what the server accepts."
+    }
+  },
+  "toasts": {
+    "offerSent": "Offer sent — the agent can accept it, decline it, or come back with their own terms.",
+    "withdrawn": "Request withdrawn.",
+    "approved": "Agent approved.",
+    "declined": "Request declined.",
+    "suspended": "Agent suspended — they keep current shipments but receive no new ones.",
+    "paused": "Agent paused — they keep current shipments but receive no new ones.",
+    "reinstated": "Agent reinstated.",
+    "removalRequested": "Removal requested — the contract ends once the agent agrees and cash is settled.",
+    "employmentUpdated": "Employment details updated.",
+    "termsCountered": "Terms sent — the agent has to accept them before the contract starts.",
+    "proposalSent": "Proposal sent — your current terms stay in force until the agent answers.",
+    "proposalApproved": "Terms updated — the new split applies from now on.",
+    "proposalDeclined": "Proposal declined. Your current terms are unchanged.",
+    "counterProposalSent": "Counter-proposal sent — the agent has to answer it.",
+    "proposalWithdrawn": "Proposal withdrawn — the contract is unchanged.",
+    "requestApproved": "Request approved.",
+    "requestRejected": "Request rejected.",
+    "requestCancelled": "Request cancelled — the contract is unchanged.",
+    "codUpdated": "COD threshold updated."
+  }
+}

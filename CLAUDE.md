@@ -20,8 +20,17 @@ No test runner is configured.
 **Path alias:** `@` maps to `./src`.
 
 **Environment variables:**
-- `VITE_API_BASE_URL` — backend base URL (default: `http://localhost:8022/api`)
-- `VITE_APP_NAME` — app display name (default: `"Jovi Mall"`)
+- `VITE_API_BASE_URL` — backend base URL (default: `http://localhost:8022/api`; production `https://api.wi-mall.com/api`)
+- `VITE_APP_NAME` — app display name (default: `"Wi-Agency"`)
+- `VITE_LOGIN_URL` — where `/login` redirects (default: `http://localhost:3000/login`; production `https://wi-mall.com/login`)
+
+Env files live in `env/`, not the project root (`vite.config.ts` → `envDir`).
+`.env.development` and `.env.production` are both committed; see [env/README.md](env/README.md).
+
+**Naming:** the platform is **Wi-Mall** (`wi-mall`), this app is **Wi-Agency**
+(`wi-agency`). Always hyphenated — `wimall.com` is another company's domain.
+Production hosts: `agency.wi-mall.com` (this app), `agent.wi-mall.com`,
+`vendor.wi-mall.com`, `api.wi-mall.com`, `wi-mall.com` (main site).
 
 ### App Structure
 
@@ -41,34 +50,42 @@ src/
 │   ├── schemas/        # Zod schemas for onboarding forms
 │   └── steps/          # Step page components
 ├── types/               # Shared TypeScript types
-├── data/                # Mock data (used by all stores)
 └── constants/           # locations.json, onboarding-steps.ts
 ```
 
 ### Routing
 
-- `/login` — redirects externally to `http://localhost:3000/login`
-- `/onboarding/*` — 3-step flow (logistics → payout → branding), gated by `OnboardingGuard` + `StepGuard`
+- `/login` — redirects externally to `VITE_LOGIN_URL` (the main Wi-Mall site's login)
+- `/onboarding/*` — 4-step flow (logistics → payout → branding → policies), gated by `OnboardingGuard` + `StepGuard`. Each step is its own `PUT /api/agency/onboarding/{logistics,payout,branding,policies}`; there is no `PATCH .../onboarding/step`
 - `/dashboard/*` — main app, gated by authentication + completed onboarding
 
 **Route guards:** `OnboardingGuard` checks auth; `StepGuard` prevents step skipping using server-driven `role_entity.onboarding_step`.
 
 ### State Management
 
-All state is React Context (Zustand is installed but unused). All contexts live in [src/store/index.tsx](src/store/index.tsx) and are composed into a single `StoreProvider`:
+All state is React Context (Zustand is installed but unused).
 
-| Context | Manages |
-|---|---|
-| `AuthStoreContext` | `user`, `isAuthenticated`, `login()`, `logout()` |
-| `UIStoreContext` | `sidebarCollapsed`, `theme`, `settingsTab` |
-| `ProductStoreContext` | Products CRUD + selection |
-| `OrderStoreContext` | Orders + status filters |
-| `VendorStoreContext` | Vendor approval/suspension/commission |
-| `NotificationStoreContext` | Notifications + unread count |
-| `AnalyticsStoreContext` | Metrics, sales data, date range |
-| `MediaStoreContext` | File/folder management, view mode |
+[src/store/index.tsx](src/store/index.tsx) holds `StoreProvider` / `useUIStore`, which
+owns only the theme (`theme`, `resolvedTheme`, `setTheme`) plus sidebar collapse.
+Note the layout's sidebar state actually comes from `UIContext` in
+[src/App.tsx](src/App.tsx), not from this store.
 
-**All stores currently use mock data** from [src/data/mockData.ts](src/data/mockData.ts) with simulated async delays.
+Every feature store is its own file and calls the real API:
+
+| Provider | File | Manages |
+|---|---|---|
+| `ShipmentsProvider` | `store/shipments.store.tsx` | Shipments + assignment |
+| `AgentsRosterProvider` | `store/agents.store.tsx` | Agent roster + contracts |
+| `NotificationsProvider` | `store/notifications.store.tsx` | Notifications + unread count |
+| `VendorConnectionsProvider` | `store/vendorConnections.store.tsx` | Vendor connections |
+| `MagazinProvider` | `store/magazin.store.tsx` | Store (magazin) profile |
+
+They are mounted in [src/App.tsx](src/App.tsx). The mock product/order/vendor/
+analytics/ticket/storage stores, `src/data/mockData.ts` and the leftover
+`src/types/index.ts` barrel (`Order`, `Customer`, `AnalyticsMetrics`,
+`StorageItem`, …) were all deleted once nothing read them. Every type now lives
+in a named file under `src/types/`, imported by its full path — there is no
+`@/types` barrel to import from.
 
 The onboarding subsystem has its own context at [src/onboarding/store/onboarding.store.tsx](src/onboarding/store/onboarding.store.tsx). It caches form drafts before API calls to support back-navigation without data loss.
 
@@ -83,12 +100,22 @@ The onboarding subsystem has its own context at [src/onboarding/store/onboarding
 ```typescript
 api.get<T>(path)
 api.post<T>(path, body?)
+api.postForm<T>(path, formData)   // multipart uploads
 api.patch<T>(path, body?)
 api.put<T>(path, body?)
-api.delete<T>(path)
+api.delete<T>(path, body?)
+api.getBlob(path)                 // authorized files — raw bytes, not an envelope
 ```
 
-Only the onboarding service ([src/services/onboarding.service.ts](src/services/onboarding.service.ts)) and auth service ([src/services/auth.service.ts](src/services/auth.service.ts)) currently call the real API. Dashboard stores still use mock data.
+`getBlob` exists for the three storage trees that left the public file mount on
+2026-08-19 (`digital/`, `shipments/`, `ticket-attachments/`). Their `FileDetail`
+carries `url: null` / `access: 'authorized'`, so the bytes must be fetched **with
+the session** and turned into an object URL. For this dashboard that means every
+delivery-proof photo — see
+[api-doc/files/private-files.md](api-doc/files/private-files.md).
+
+Every service and feature store calls the real API — there is no mock data left
+in the app.
 
 ### Legacy Compatibility Layer
 
@@ -96,6 +123,18 @@ Only the onboarding service ([src/services/onboarding.service.ts](src/services/o
 
 ### Key Data Models
 
-- `AgencyOnboardingStep` enum: `0=complete`, `1=logistics`, `2=payout`, `3=branding` — drives route guards
+- `AgencyOnboardingStep`: `0=complete`, `1=logistics`, `2=payout`, `3=branding` (skippable), `4=policies` — drives route guards
 - `AgencyRoleEntity` — full agency profile returned by `/auth/me`
-- `ApiUser` — backend user shape; `User` — frontend-normalized shape
+- `ApiUser` — the backend user shape (`src/types/api.ts`)
+
+### Three things this dashboard gets wrong if nobody says them
+
+1. **`permission_revoked` has three reasons and only one is about a delivery.**
+   Branch on `payload.reason` before writing any outcome into the UI; treat an
+   unrecognised value as `authorization_expired`. See
+   [api-doc/MIGRATION-2026-08.md](api-doc/MIGRATION-2026-08.md) § 2.
+2. **Build the live map from `GET /api/agency/tracking/board`, never from a
+   locally-derived "active shipments" set.** Three status subsets disagree —
+   `failed` is *active* but not *trackable*.
+3. **An inventory row with `source: "derived"` and quantities of `0` has not been
+   counted.** That is not "we hold none"; render the two differently.

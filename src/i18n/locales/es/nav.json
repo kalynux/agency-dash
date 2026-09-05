@@ -1,0 +1,106 @@
+{
+  "primary": {
+    "overview": "Resumen",
+    "shipments": "Envíos",
+    "tracking": "Seguimiento en directo",
+    "inventory": "Inventario",
+    "media": "Multimedia",
+    "transactions": "Transacciones",
+    "cash": "Gestión de efectivo",
+    "cashSummary": "Resumen",
+    "cashDeposits": "Depósitos",
+    "cashRemittances": "Remesas",
+    "cashDiscrepancies": "Discrepancias",
+    "notifications": "Notificaciones",
+    "tickets": "Tickets",
+    "agents": "Repartidores",
+    "agentsConnections": "Contratos",
+    "agentsBrowse": "Directorio",
+    "vendors": "Vendedores",
+    "vendorsConnections": "Conexiones",
+    "vendorsBrowse": "Directorio"
+  },
+  "footer": {
+    "account": "Cuenta",
+    "accountProfile": "Perfil",
+    "accountStore": "Tienda",
+    "accountLocations": "Ubicaciones",
+    "accountSecurity": "Seguridad",
+    "accountBilling": "Facturación",
+    "accountPayout": "Pagos",
+    "settings": "Ajustes",
+    "settingsPolicies": "Políticas",
+    "settingsNotifications": "Notificaciones",
+    "settingsPreferences": "Preferencias"
+  },
+  "sidebar": {
+    "fallbackAgencyName": "Mi agencia",
+    "collapse": "Contraer",
+    "expand": "Desplegar la barra lateral",
+    "resizeHandle": "Arrastra para redimensionar",
+    "platform": "Wi-Mall"
+  },
+  "mobile": {
+    "more": "Más",
+    "roleLabel": "Agencia",
+    "openSettings": "Abrir los ajustes de la cuenta",
+    "quickCreate": "Crear",
+    "back": "Atrás",
+    "exitConfirm": "Pulsa atrás otra vez para salir"
+  },
+  "header": {
+    "searchPlaceholderShort": "Buscar…",
+    "searchPlaceholder": "Buscar entregas, tickets…",
+    "searchLabel": "Abrir la búsqueda",
+    "closeSearch": "Cerrar la búsqueda",
+    "quickActions": "Acciones rápidas",
+    "notifications": "Notificaciones",
+    "notificationsWithCount_one": "Notificaciones, 1 sin leer",
+    "notificationsWithCount_other": "Notificaciones, {{count}} sin leer",
+    "markAllRead": "Marcar todo como leído",
+    "noNewNotifications": "No hay notificaciones nuevas",
+    "viewAllNotifications": "Ver todas las notificaciones",
+    "profile": "Perfil",
+    "logout": "Cerrar sesión",
+    "logoutConfirmTitle": "¿Cerrar sesión?",
+    "logoutConfirmDescription": "Tendrás que iniciar sesión de nuevo para acceder a tu panel.",
+    "logoutConfirmAction": "Cerrar sesión",
+    "searchResultsFor": "Resultados para «{{query}}»",
+    "noResults": "Sin resultados para «{{query}}»",
+    "noResultsHint": "Prueba con un número de seguimiento, el nombre de un repartidor o el asunto de un ticket.",
+    "hintNavigate": "para navegar",
+    "hintSelect": "para seleccionar",
+    "hintClose": "para cerrar"
+  },
+  "quickActions": {
+    "newTicket": {
+      "label": "Nuevo ticket",
+      "description": "Obtener ayuda del equipo"
+    },
+    "viewShipments": {
+      "label": "Ver envíos",
+      "description": "Seguir y gestionar envíos"
+    },
+    "viewEarnings": {
+      "label": "Ver ganancias",
+      "description": "Saldo y solicitudes de pago"
+    },
+    "viewCash": {
+      "label": "Gestión de efectivo",
+      "description": "Depósitos y remesas COD"
+    },
+    "updateCoverage": {
+      "label": "Actualizar zonas de cobertura",
+      "description": "Editar las regiones a las que repartes"
+    }
+  },
+  "platformStatus": {
+    "operational": "Todos los sistemas operativos",
+    "degraded": "Rendimiento degradado",
+    "down": "Interrupción del servicio",
+    "checking": "Comprobando el estado…",
+    "label": "Estado de la plataforma",
+    "offline": "Sin conexión a Internet",
+    "offlineDetail": "Puede que algunos datos no estén actualizados hasta que se restablezca la conexión."
+  }
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only manifest overlay (CAPACITOR-PLAN.md → P2.8).
+
+  Android 9+ blocks cleartext HTTP outright, so a debug build talking to a dev
+  backend at http://192.168.x.x:8022 fails before the request leaves the device.
+  This grants that permission for the *debug* build type only — the manifest
+  merger never applies src/debug/ to a release build, so a store artifact cannot
+  inherit it no matter what env/.env.mobile.local happens to contain.
+
+  The matching WebView-side allowance is `allowMixedContent`, which is set from
+  the CAP_LAN_DEV flag in capacitor.config.ts.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+</manifest>

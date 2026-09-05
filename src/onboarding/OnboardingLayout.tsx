@@ -1,19 +1,24 @@
 import { type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Truck, LogOut, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { LogOut, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { tx } from '@/i18n/tx';
 import { Button } from '@/components/ui/button';
+import { AppLogo } from '@/components/common/AppLogo';
+import { LanguagePicker } from '@/components/common/LanguagePicker';
 import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
 import type { AgencyOnboardingStep } from '@/types/api';
 
 // ─── Step metadata ────────────────────────────────────────────────────────────
+// Labels are `onboarding:layout.steps.*` keys — this table is module-scope data.
 
-const STEPS: { step: Exclude<AgencyOnboardingStep, 0>; label: string }[] = [
-    { step: 1, label: 'Logistics' },
-    { step: 2, label: 'Payout' },
-    { step: 3, label: 'Branding' },
-    { step: 4, label: 'Policies' },
+const STEPS: { step: Exclude<AgencyOnboardingStep, 0>; labelKey: string }[] = [
+    { step: 1, labelKey: 'logistics' },
+    { step: 2, labelKey: 'payout' },
+    { step: 3, labelKey: 'branding' },
+    { step: 4, labelKey: 'policies' },
 ];
 
 // ─── Shared select class helper (exported for use in step components) ─────────
@@ -36,6 +41,7 @@ function StepProgress({
     current: number;
     maxReached: number;
 }) {
+    const { t } = useTranslation('onboarding');
     const navigate = useNavigate();
 
     const handleStepClick = (step: number) => {
@@ -51,7 +57,8 @@ function StepProgress({
     return (
         <div className="w-full flex items-center justify-center px-6 pt-5 pb-4">
             <div className="flex items-center gap-0 w-full max-w-sm">
-                {STEPS.map(({ step, label }, i) => {
+                {STEPS.map(({ step, labelKey }, i) => {
+                    const label = tx(t, `layout.steps.${labelKey}`);
                     const isCompleted = step < current || (step < maxReached && step < current);
                     const isActive = step === current;
                     const isUnlocked = step <= maxReached;
@@ -69,7 +76,11 @@ function StepProgress({
                                     transition={{ duration: 0.2 }}
                                     onClick={() => handleStepClick(step)}
                                     disabled={!isClickable && !isUnlocked}
-                                    title={isClickable ? `Go to ${label}` : `Complete earlier steps first`}
+                                    title={
+                                        isClickable
+                                            ? t('layout.goToStep', { label })
+                                            : t('layout.lockedStep')
+                                    }
                                     className={cn(
                                         'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all duration-200',
                                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
@@ -78,7 +89,11 @@ function StepProgress({
                                         !isActive && !isCompleted && isUnlocked && 'bg-white dark:bg-zinc-800 border-primary text-primary hover:bg-primary/5 cursor-pointer',
                                         !isUnlocked && 'bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed',
                                     )}
-                                    aria-label={isClickable ? `Go to step ${step}: ${label}` : `Step ${step} (${label}) is locked`}
+                                    aria-label={
+                                        isClickable
+                                            ? t('layout.goToStepAria', { step, label })
+                                            : t('layout.lockedStepAria', { step, label })
+                                    }
                                     aria-current={isActive ? 'step' : undefined}
                                 >
                                     {isCompleted
@@ -125,33 +140,45 @@ interface OnboardingLayoutProps {
 }
 
 export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverride }: OnboardingLayoutProps) {
+    const { t } = useTranslation('onboarding');
     const { session, logout, currentStep, viewingStep } = useOnboarding();
-    const agencyName = session?.role_entity.agency_name ?? 'Your Agency';
+    const agencyName = session?.role_entity.agency_name ?? t('layout.fallbackAgencyName');
     const displayStep = viewingStepOverride ?? viewingStep ?? currentStep;
     const maxReached = currentStep ?? 1;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col">
-            {/* ── Header ── */}
-            <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
+            {/* ── Header ──
+                The padding and the matching height keep the bar 4rem tall while
+                letting its own white fill the status-bar band on a device
+                drawing edge to edge (CAPACITOR-PLAN.md → P3.3). `env()` is 0 in
+                every browser, so this is `h-16` as before on the web. */}
+            <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-                        <Truck className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <AppLogo decorative className="shadow-sm" />
                     <div className="flex flex-col leading-tight">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white leading-none">Jovi Mall</span>
+                        <span className="font-bold text-sm text-slate-900 dark:text-white leading-none">
+                            {t('layout.platform')}
+                        </span>
                         <span className="text-[10px] text-slate-400 leading-none truncate max-w-[140px] mt-0.5">{agencyName}</span>
                     </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
-                    <LogOut className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm">Sign out</span>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    {/* Onboarding is still "the very beginning" — someone who
+                        registered in the wrong language should not have to
+                        finish four steps of forms before they can reach the
+                        Account → Profile picker. */}
+                    <LanguagePicker />
+                    <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden sm:inline text-sm">{t('layout.signOut')}</span>
+                    </Button>
+                </div>
             </header>
 
             {/* ── Clickable Step progress ── */}
             {displayStep !== null && displayStep !== 0 && (
-                <nav aria-label="Onboarding progress" className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                <nav aria-label={t('layout.progressLabel')} className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     <StepProgress current={displayStep as number} maxReached={maxReached as number} />
                 </nav>
             )}
@@ -180,9 +207,13 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                 )}
             </main>
 
-            {/* ── Sticky mobile CTA ── */}
+            {/* ── Sticky mobile CTA ──
+                `pb` clears the gesture bar the shell now draws behind (P3.3).
+                Capacitor zeroes the bottom inset while the keyboard is up, so
+                the button rides the keys rather than sitting a bar's width
+                above them. */}
             {ctaSlot && (
-                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 flex-shrink-0">
+                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
                     {ctaSlot}
                 </div>
             )}

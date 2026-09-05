@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.wi_mall.agency",
+      "sha256_cert_fingerprints": [
+        "CE:E3:38:25:30:28:A6:7F:1F:CE:84:D2:B1:E9:89:4D:8B:B1:D3:22:E1:45:09:F9:CF:11:0D:20:A8:BD:D5:74"
+      ]
+    }
+  }
+]

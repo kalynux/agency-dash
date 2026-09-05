@@ -1,0 +1,31 @@
+{
+  "_comment": "Notification titles, messages and action labels are rendered by the backend in the agency's `preferred_language` — the same setting that drives this dashboard. Only the page chrome lives here.",
+  "page": {
+    "title": "Notifications",
+    "description": "Stay updated with your agency activity",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
+    "refresh": "Refresh",
+    "settings": "Notification settings"
+  },
+  "stats": {
+    "unread": "Unread",
+    "total": "Total"
+  },
+  "filters": {
+    "searchPlaceholder": "Search notifications…",
+    "searchLabel": "Search notifications by title or message",
+    "description": "Search and filters apply to the page you're on.",
+    "readStatus": "Read status",
+    "all": "All",
+    "unread": "Unread",
+    "read": "Read"
+  },
+  "empty": {
+    "narrowedTitle": "Nothing matches",
+    "narrowedDescription": "Try a different search or filter — these only look at the page you are on.",
+    "title": "No notifications yet",
+    "description": "You're all caught up."
+  },
+  "pagination": "Page {{page}} of {{pages}} · {{total}} total"
+}

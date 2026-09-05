@@ -44,7 +44,7 @@ export const onboardingService = {
     /**
      * PUT /api/agency/onboarding/branding
      *
-     * Step 3 (Optional): Submits logo_url and timezone.
+     * Step 3 (Optional): Submits logo_file_id (from POST /api/files/upload) and timezone.
      * Send `{ skip: true }` to skip this step and complete onboarding immediately.
      */
     submitBranding(payload: BrandingPayload): Promise<OnboardingStepResponse> {

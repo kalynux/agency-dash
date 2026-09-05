@@ -1,0 +1,242 @@
+{
+  "tabs": {
+    "profile": {
+      "description": "Your contact details, and the language this dashboard and your notifications speak",
+      "short": "Your details and language"
+    },
+    "store": {
+      "description": "Your agency's business identity — the name, logo and contacts vendors and customers see",
+      "short": "Name, logo and contacts"
+    },
+    "locations": {
+      "description": "The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency",
+      "short": "Where you operate"
+    },
+    "security": {
+      "description": "Your password and the extra checks that keep this account yours",
+      "short": "Password and 2FA"
+    },
+    "billing": {
+      "description": "Your plan, credit wallet, storage and saved payment methods",
+      "short": "Plan, credits and cards"
+    },
+    "payout": {
+      "description": "Your delivery-fee balance, and where those earnings are sent",
+      "short": "Earnings and payout methods"
+    }
+  },
+  "profile": {
+    "saveError": "Please fix the highlighted fields before saving.",
+    "loading": "Loading your profile…",
+    "saved": "Profile updated",
+    "fallbackName": "My Agency",
+    "identity": {
+      "title": "Profile Information",
+      "description": "Your personal contact details — separate from your business identity.",
+      "short": "Your contact details",
+      "storeHint": "Your business name & logo live on the Store tab.",
+      "avatarHint": "Click your photo to pick a new one.",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "e.g. Jean-Paul (FastTrack)",
+      "displayNameTooShort": "Display name must be at least 2 characters.",
+      "email": "Email",
+      "emailLocked": "Email can't be changed here — contact support.",
+      "phone": "Phone",
+      "phonePlaceholder": "+237 6XX XXX XXX",
+      "phoneLocked": "Phone can't be changed here — contact support."
+    },
+    "localization": {
+      "title": "Localization",
+      "description": "Your operating country, timezone, and dashboard language.",
+      "short": "Country, timezone, language",
+      "country": "Country",
+      "countryAria": "Country (read-only)",
+      "countryLocked": "Set once during onboarding.",
+      "timezone": "Timezone",
+      "timezonePlaceholder": "Select timezone",
+      "language": "Language",
+      "languagePlaceholder": "Select a language",
+      "languageHint": "Used for this dashboard and for all your notifications.",
+      "languagePreviewHint": "The dashboard switches straight away. Save to keep it."
+    },
+    "kyc": {
+      "title": "KYC / Verification",
+      "description": "Business registration details reviewed by our team.",
+      "short": "Business registration",
+      "verified": "Verified",
+      "pending": "Pending review",
+      "registrationNumber": "Business registration number",
+      "registrationNumberPlaceholder": "e.g. RC/DLA/2020/B/1234",
+      "transportLicense": "Transport license ID",
+      "transportLicensePlaceholder": "e.g. TL-00998877"
+    }
+  },
+  "security": {
+    "password": {
+      "title": "Change Password",
+      "description": "Use a strong password you don't use anywhere else.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "rules": "At least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character.",
+      "submit": "Update Password",
+      "success": "Password updated successfully."
+    },
+    "twoFactor": {
+      "title": "Two-Factor Authentication",
+      "comingSoon": "Coming soon",
+      "description": "Add an extra layer of security to your account.",
+      "enable": "Enable 2FA",
+      "enableAria": "Enable two-factor authentication",
+      "notAvailable": "Not available yet — this will be enabled in a future update."
+    },
+    "biometric": {
+      "title": "Biometric sign-in",
+      "description": "Use your phone's fingerprint or face unlock to get back into Wi-Agency, instead of typing your password.",
+      "enable": "Unlock with biometrics",
+      "toggleAria": "Enable biometric sign-in",
+      "enabledHint": "Wi-Agency asks for your fingerprint when you open it and after it has been in the background for a while.",
+      "disabledHint": "Turn this on and Wi-Agency will ask for your fingerprint instead of your password.",
+      "signOutNote": "Signing out clears the saved session. Any sign-in details you saved for the fingerprint button stay on this phone until you turn this off.",
+      "unsupported": "This device does not offer biometric unlock.",
+      "notEnrolled": "No fingerprint or face is registered on this device yet. Add one in your device settings, then come back.",
+      "openSettings": "Open device settings",
+      "webOnly": "Available in the Wi-Agency mobile app.",
+      "enabledToast": "Biometric sign-in is on.",
+      "disabledToast": "Biometric sign-in is off.",
+      "cancelledToast": "Biometric sign-in was not turned on."
+    }
+  },
+  "payout": {
+    "title": "Payout Methods",
+    "description": "Where your delivery earnings are sent. The first entry is your preferred method.",
+    "short": "Where earnings are sent",
+    "saved": "Payout methods saved!",
+    "incompleteSave": "Fill in every field of each payout method before saving.",
+    "empty": "No payout method yet. Add one so we know where to send your earnings.",
+    "addMethod": "Add payout method",
+    "addTitle": "Add payout method",
+    "addDescription": "Pick how you want to be paid, then fill in the destination.",
+    "editTitle": "Edit payout method",
+    "editDescription": "Change where this payout lands. The account name must match the name registered with the provider.",
+    "saveMethod": "Save method",
+    "atLimit": "You can save up to {{max}} payout methods.",
+    "keepOne": "Keep at least one payout method.",
+    "preferred": "Preferred",
+    "setPreferred": "Set preferred",
+    "setPreferredAria": "Make {{label}} the preferred payout method",
+    "editAria": "Edit {{label}}",
+    "removeAria": "Remove {{label}}",
+    "removeTitle": "Remove payout method?",
+    "removeDescription": "{{label}} will no longer be used for payouts.",
+    "incomplete": "Incomplete",
+    "incompleteHint": "Re-enter the account details before saving.",
+    "reenterSecret": "We only ever show a masked number, so retype it to save this method.",
+    "makePreferred": "Make this the preferred method",
+    "makePreferredHint": "Used first for every payout.",
+    "paymentMethod": "Payout method",
+    "mobileMoney": "Mobile Money",
+    "mobileMoneyShort": "Mobile",
+    "bankTransfer": "Bank Transfer",
+    "bankShort": "Bank",
+    "card": "Card",
+    "cardShort": "Card",
+    "comingSoon": "Soon",
+    "comingSoonHint": "Bank and card payouts are coming soon — use mobile money for now.",
+    "provider": "Provider",
+    "providerPlaceholder": "Choose an operator",
+    "phoneNumber": "Phone Number",
+    "accountName": "Account Name",
+    "bankName": "Bank Name",
+    "accountNumber": "Account Number",
+    "bankCountry": "Bank Country",
+    "countryPlaceholder": "Select country",
+    "cardSecurityNote": "Card numbers and security codes are never accepted or stored — only the network, last 4 digits, holder and expiry are kept, and an admin confirms the destination from those before sending your money.",
+    "cardBrand": "Card Network",
+    "cardBrandOther": "Other",
+    "cardLast4": "Last 4 Digits",
+    "cardHolder": "Cardholder Name",
+    "cardHolderPlaceholder": "As embossed on the card",
+    "cardExpiry": "Expiry",
+    "cardExpiryMonth": "Month",
+    "cardExpiryYear": "Year",
+    "cardCountry": "Issuing Country",
+    "issuingBank": "Issuing Bank (optional)",
+    "issuingBankPlaceholder": "e.g. Afriland First Bank",
+    "unavailableKind": "Unavailable",
+    "unavailableKindHint": "This kind of destination cannot be saved right now. Replace it with mobile money — it is still paid until you do."
+  },
+  "earnings": {
+    "title": "Earnings",
+    "description": "Your delivery-fee balance — held while orders are in flight, released once completed",
+    "descriptionShort": "Your delivery-fee balance",
+    "aboutLabel": "About earnings",
+    "loading": "Loading earnings…",
+    "noData": "No data available.",
+    "refresh": "Refresh",
+    "howItWorksLead": "Your delivery-fee balance — held while orders are in flight, released once completed.",
+    "howItWorks": "You earn a delivery fee when the agent delivers the shipment — not when the customer pays — and one entry is created per shipment. What lands here is the fee <strong>minus the delivering agent's contracted share</strong>, which the platform pays them directly. It becomes available once the whole order completes and the hold window elapses (for COD, also once the cash is remitted and confirmed). A shipment that comes back earns your return-to-origin fee instead.",
+    "balance": {
+      "aboutLabel": "About your {{label}} balance",
+      "available": "Available",
+      "availableHint": "Withdrawable now via a payout request",
+      "pending": "Pending",
+      "pendingHint": "Held during the hold window, or COD cash not yet settled",
+      "reserve": "Reserve",
+      "reserveHint": "COD security margin — parked 30 days",
+      "requested": "Requested",
+      "requestedHint": "Earmarked for your pending payout request"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "automatic": "Automatic"
+    },
+    "requestedOn": "requested {{date}}",
+    "viewInTickets": "View in Tickets",
+    "withdraw": "Withdraw {{amount}}",
+    "requestWithdrawal": "Request Withdrawal",
+    "requesting": "Requesting…",
+    "requested": "Payout of {{amount}} requested — track it under Tickets.",
+    "autoPayoutLabel": "About automatic payouts",
+    "autoPayout": "If your available balance reaches {{threshold}}, we automatically request a payout on your behalf so funds don't sit unclaimed. Make sure a payout method is saved — otherwise the automatic request can't be created.",
+    "blocked": {
+      "noMethod": "Add a payout method below before requesting a withdrawal.",
+      "pendingRequest": "You already have a pending payout request.",
+      "noBalance": "No available balance to withdraw yet.",
+      "belowMinimum": "Minimum payout is {{amount}}."
+    }
+  },
+  "contact": {
+    "title": "Sign-in email and phone",
+    "description": "The email address and phone number you use to sign in. Changing either takes effect only once you confirm it.",
+    "none": "Not set",
+    "change": "Change",
+    "cancelChange": "Cancel this change",
+    "cancelled": "Change cancelled.",
+    "expires": "Expires {{when}}",
+    "noSignOutNotice": "Changing your email or phone does not sign you out anywhere. Only changing your password does that.",
+    "email": {
+      "label": "Sign-in email",
+      "newLabel": "New email address",
+      "placeholder": "you@example.com",
+      "hint": "We will send a confirmation link to the new address. Until you open it, you still sign in with your current email.",
+      "submit": "Send confirmation",
+      "requested": "Check the new address for a confirmation link.",
+      "pendingHint": "Waiting for you to open the link we sent here."
+    },
+    "phone": {
+      "label": "Sign-in phone",
+      "newLabel": "New phone number",
+      "hint": "To prove the new number is yours, connect it on WhatsApp: send /connect to our bot from that number, then confirm here. There is no SMS code.",
+      "submit": "Start the change",
+      "requested": "Now connect that number on WhatsApp, then come back and confirm.",
+      "pendingHint": "Waiting for this number to be connected on WhatsApp.",
+      "confirm": "I've connected it — confirm",
+      "confirmed": "Your sign-in phone has been changed.",
+      "unproven": "That number is not connected on WhatsApp yet. Send /connect to our bot from the new number, redeem the code, then confirm again.",
+      "connectLink": "Go to messaging channels"
+    }
+  }
+}

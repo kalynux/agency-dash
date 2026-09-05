@@ -2,10 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multi-Vendor E-commerce Dashboard</title>
-    <script type="module" crossorigin src="./assets/index-rjzADpRY.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-B6VVntZ-.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      The app's own `--background`, light and dark, not the green that used to
+      be here: that predates the Dispatch Cobalt identity and painted a browser
+      chrome no colour in the app matched (noted in CAPACITOR-PLAN.md → P2.9).
+      Same two values as the splash screen in capacitor.config.ts — keep them in
+      step. This drives Chrome's address bar and an installed PWA's title bar;
+      the *native* status bar is transparent and edge-to-edge, and takes only
+      its icon colour from src/platform/shell/statusBar.ts.
+    -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfdfe" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080c17" />
+    <title>Wi-Agency — Wi-Mall</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="./favicon-256.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+    <!--
+      Paint the stored theme before the first frame. Without this, React applies
+      `.dark` only after hydration and a dark-mode user gets a white flash on
+      every load. Blocking and inline on purpose — it must run before the CSS
+      paints. Keep the storage key in sync with src/lib/theme.ts.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('agency-dash:theme');
+          if (t !== 'light' && t !== 'dark') t = 'system';
+          var dark =
+            t === 'dark' ||
+            (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {
+          /* blocked storage — React applies the theme on mount instead */
+        }
+      })();
+    </script>
+    <!--
+      Plus Jakarta Sans, Sora and JetBrains Mono used to load from Google Fonts
+      here. They are now vendored into the bundle and declared in
+      src/styles/fonts.css — a packaged app cannot depend on a network round trip
+      to render its own type. See CAPACITOR-PLAN.md → P2.7.
+    -->
+    <script type="module" crossorigin src="./assets/index-BrfJAtaw.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BW1nltEt.css">
   </head>
   <body>
     <div id="root"></div>

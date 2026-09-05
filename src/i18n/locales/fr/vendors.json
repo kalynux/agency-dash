@@ -1,0 +1,132 @@
+{
+  "tabs": {
+    "connections": {
+      "description": "Toutes les relations vendeurs de votre agence, passées et présentes — vous ne recevez de commandes que des vendeurs connectés",
+      "short": "Vos connexions vendeurs"
+    },
+    "browse": {
+      "description": "Trouvez des vendeurs auxquels demander une connexion",
+      "short": "Vendeurs à connecter"
+    }
+  },
+  "status": {
+    "pending": "En attente",
+    "active": "Active",
+    "paused_reapproval": "Réapprobation requise",
+    "rejected": "Refusée",
+    "withdrawn": "Retirée",
+    "terminated": "Résiliée"
+  },
+  "actions": {
+    "request": "Demander",
+    "requestAgain": "Redemander",
+    "withdraw": "Retirer",
+    "approve": "Approuver",
+    "reapprove": "Réapprouver",
+    "reject": "Refuser",
+    "confirmReject": "Confirmer le refus",
+    "terminate": "Résilier",
+    "confirmTerminate": "Confirmer la résiliation",
+    "connected": "Connecté",
+    "pendingEllipsis": "En attente…",
+    "reapprovalNeeded": "Réapprobation requise",
+    "awaitingVendor": "En attente du vendeur",
+    "reasonOptional": "Motif (facultatif)",
+    "noteOptional": "Note (facultatif)",
+    "rejectConfirmTitle": "Refuser cette demande ?"
+  },
+  "toasts": {
+    "requested": "Demande de connexion envoyée.",
+    "approved": "Connexion approuvée.",
+    "rejected": "Demande refusée.",
+    "withdrawn": "Demande retirée.",
+    "terminated": "Connexion résiliée."
+  },
+  "errors": {
+    "alreadyExists": "Vous avez déjà une demande de connexion avec ce vendeur.",
+    "notApprover": "Vous ne pouvez pas approuver ou refuser une demande que vous avez vous-même envoyée.",
+    "notRequester": "Vous ne pouvez pas retirer une demande que vous n'avez pas envoyée.",
+    "wrongReapprovalParty": "C'est au vendeur de réapprouver cette connexion, pas à vous."
+  },
+  "connections": {
+    "searchPlaceholder": "Rechercher des connexions…",
+    "searchLabel": "Rechercher vos connexions par nom de vendeur",
+    "filterDescription": "Toutes les relations vendeurs de votre agence, passées et présentes.",
+    "statusFilter": "Statut de la connexion",
+    "all": "Toutes",
+    "paused": "Suspendues",
+    "history": "Historique",
+    "loading": "Chargement des connexions…",
+    "loadFailed": "Impossible de charger vos connexions.",
+    "emptyFiltered": "Aucune connexion ne correspond à votre recherche.",
+    "empty": "Aucune connexion dans cette catégorie pour l'instant.",
+    "fallbackName": "Vendeur {{suffix}}"
+  },
+  "browse": {
+    "searchPlaceholder": "Rechercher des vendeurs…",
+    "filterDescription": "Trouvez des vendeurs auxquels demander une connexion.",
+    "found_one": "{{count}} vendeur trouvé",
+    "found_many": "{{count}} vendeurs trouvés",
+    "found_other": "{{count}} vendeurs trouvés",
+    "loadFailed": "Impossible de charger les vendeurs. Veuillez réessayer.",
+    "emptyFiltered": "Aucun vendeur ne correspond à votre recherche ou à vos filtres.",
+    "empty": "Aucun vendeur n'est disponible pour une connexion pour l'instant.",
+    "clearFilters": "Effacer tous les filtres"
+  },
+  "filters": {
+    "location": "Localisation",
+    "locationDescription": "Correspond à la zone d'enlèvement enregistrée du vendeur.",
+    "city": "Ville",
+    "cityPlaceholder": "ex. Douala",
+    "state": "Région",
+    "statePlaceholder": "ex. Littoral",
+    "orderPolicy": "Conditions de commande",
+    "returnsAccepted": "Retours acceptés",
+    "returnsAcceptedDescription": "Le vendeur reprend la marchandise après livraison.",
+    "cancellable": "Annulable",
+    "cancellableDescription": "Les commandes peuvent encore être annulées avant l'enlèvement."
+  },
+  "card": {
+    "kycVerified": "KYC vérifié",
+    "viewDetails": "Voir le détail de {{name}}",
+    "returnsAccepted": "Retours acceptés",
+    "noReturns": "Pas de retours",
+    "cancellable": "Annulable",
+    "notCancellable": "Non annulable"
+  },
+  "detail": {
+    "kycVerified": "KYC vérifié",
+    "unverified": "Non vérifié",
+    "address": "Adresse",
+    "returnPolicy": "Politique de retour",
+    "accepted": "Acceptés",
+    "returnWindow": "Délai de retour",
+    "returnWindowValue_one": "{{count}} jour après la livraison",
+    "returnWindowValue_many": "{{count}} jours après la livraison",
+    "returnWindowValue_other": "{{count}} jours après la livraison",
+    "refundType": "Type de remboursement",
+    "refundTypes": {
+      "full": "Intégral",
+      "partial": "Partiel",
+      "store_credit": "Avoir en boutique",
+      "exchange_only": "Échange uniquement"
+    },
+    "cancellationPolicy": "Politique d'annulation",
+    "cancellableLabel": "Annulable",
+    "deadline": "Date limite",
+    "deadlines": {
+      "before_shipping": "Avant l'expédition",
+      "before_delivery": "Avant la livraison",
+      "anytime": "À tout moment",
+      "not_allowed": "Non autorisée"
+    },
+    "support": "Assistance",
+    "availability": "Disponibilité",
+    "availabilities": {
+      "24_7": "24 h/24, 7 j/7",
+      "business_hours": "Heures ouvrées",
+      "limited": "Limitée"
+    },
+    "languages": "Langues"
+  }
+}

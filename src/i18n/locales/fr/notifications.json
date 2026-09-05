@@ -1,0 +1,30 @@
+{
+  "page": {
+    "title": "Notifications",
+    "description": "Suivez l'activité de votre agence",
+    "markAllRead": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "refresh": "Actualiser",
+    "settings": "Paramètres de notification"
+  },
+  "stats": {
+    "unread": "Non lues",
+    "total": "Total"
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher des notifications…",
+    "searchLabel": "Rechercher des notifications par titre ou message",
+    "description": "La recherche et les filtres portent sur la page affichée.",
+    "readStatus": "Statut de lecture",
+    "all": "Toutes",
+    "unread": "Non lues",
+    "read": "Lues"
+  },
+  "empty": {
+    "narrowedTitle": "Aucune correspondance",
+    "narrowedDescription": "Essayez une autre recherche ou un autre filtre — ils ne portent que sur la page affichée.",
+    "title": "Aucune notification pour l'instant",
+    "description": "Vous êtes à jour."
+  },
+  "pagination": "Page {{page}} sur {{pages}} · {{total}} au total"
+}

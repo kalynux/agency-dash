@@ -1,0 +1,86 @@
+// ─── Media picker trigger ─────────────────────────────────────────────────────
+// A single-file slot (avatar, logo, cover…) whose *preview itself* is the click
+// target — no separate upload button. Clicking opens the MediaPicker filtered to
+// the kinds the slot accepts; uploading happens inside the picker, so every file
+// in the app goes through the one upload endpoint and comes back as an id.
+//
+// The caller stores `{ id, url }`: the id is what the PATCH/PUT sends, the url is
+// only for the preview.
+
+import { useState, type ReactNode } from 'react';
+import { ImagePlus } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { MediaPicker } from '@/components/features/MediaPicker';
+import { resolveFileUrl } from '@/services/files.service';
+import type { FileKind } from '@/types/file.types';
+
+/** What a single-file slot holds: the id to submit, the URL to render. */
+export interface MediaRef {
+  id: string;
+  url: string;
+}
+
+export interface MediaPickerTriggerProps {
+  onSelect: (media: MediaRef) => void;
+  /** Kinds this slot accepts — also seeds the picker's type filter. */
+  acceptedTypes?: FileKind[];
+  /** Overlay wording and accessible name, e.g. "Change logo". */
+  label: string;
+  /** Shape/size of the click target — the preview inside fills it. */
+  className?: string;
+  disabled?: boolean;
+  children: ReactNode;
+}
+
+export function MediaPickerTrigger({
+  onSelect,
+  acceptedTypes = ['image'],
+  label,
+  className,
+  disabled,
+  children,
+}: MediaPickerTriggerProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        className={cn(
+          'group relative block overflow-hidden transition-opacity',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          disabled ? 'cursor-default opacity-60' : 'cursor-pointer',
+          className,
+        )}
+      >
+        {children}
+        {!disabled && (
+          <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <ImagePlus className="h-5 w-5" />
+            <span className="px-1 text-center text-[10px] font-medium leading-tight">{label}</span>
+          </span>
+        )}
+      </button>
+
+      <MediaPicker
+        open={open}
+        onClose={() => setOpen(false)}
+        acceptedTypes={acceptedTypes}
+        onSelect={(picked) => {
+          const file = picked[0];
+          if (!file) return;
+          // `null` means the file has no public URL (an authorized storage
+          // tree). Nothing in the media library is one, but a slot that stores
+          // a URL cannot hold a placeholder for it — so drop the pick rather
+          // than write a value that renders as a broken image later.
+          const url = resolveFileUrl(file);
+          if (url) onSelect({ id: file.id, url });
+        }}
+      />
+    </>
+  );
+}

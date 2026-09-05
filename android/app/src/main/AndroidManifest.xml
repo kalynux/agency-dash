@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Deep links (CAPACITOR-PLAN.md → P4.2). `launchMode="singleTask"`
+                above is what makes these arrive as `appUrlOpen` on the RUNNING
+                instance instead of stacking a second copy of the app.
+
+                The custom scheme is the one that works today: it needs no
+                server-side proof, so it is what a notification payload and a
+                manual `adb shell am start -d wiagency://shipments/<id>` can both
+                rely on. Its path is dashboard-relative — `wiagency://shipments/
+                {id}` — matching the `action.path` the backend already mints.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wiagency" />
+            </intent-filter>
+
+            <!--
+                App Links for the real domain, so a link opened from an email or
+                a browser lands in the app rather than on the web dashboard.
+
+                ⚠ `autoVerify` only takes effect once
+                https://agency.wi-mall.com/.well-known/assetlinks.json exists and
+                names this package plus its signing-certificate fingerprint —
+                which cannot be produced before Phase 7 mints the release key.
+                Until then Android silently declines to verify and these links
+                keep opening the browser; nothing breaks, the app just does not
+                claim them yet. The filter is here so the ops task has something
+                concrete to point at.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="agency.wi-mall.com" />
+            </intent-filter>
+        </activity>
+
+
+        <!--
+            FCM presentation defaults (P4.1). All three are read by the Firebase
+            messaging SDK when it draws a notification the app never sees —
+            which is every push that lands while the app is backgrounded or
+            killed, i.e. the ones that matter most.
+
+            ⚠ Without the icon line Android falls back to `android:icon`, and a
+            status-bar icon is a MASK: only its alpha survives and every opaque
+            pixel is painted white. The launcher icon is a filled square, so the
+            fallback is a featureless white box. `ic_stat_wi_agency` is the same
+            mark reduced to line art, with the eyes and smile as real holes.
+
+            The channel id must match the one the client creates at runtime
+            (src/platform/push.ts) AND the one the backend addresses
+            (`ANDROID_CHANNELS.DEFAULT` in fcm-push.service.ts). It is only a
+            fallback here — the backend names the channel on every send — but a
+            payload that ever arrived without one would otherwise land in the
+            SDK's own "Miscellaneous" channel, which the user cannot recognise
+            and will mute.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_wi_agency" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Phase 4 capabilities (CAPACITOR-PLAN.md → P4.1, P4.3, P4.4). None of the
+        plugins declares its own runtime permission; each ships only the service,
+        the queries or the manifest stub it needs, so every grant below has to be
+        asked for here.
+
+        Each is requested at the point of use and never at startup — see the
+        `requestPermissions` call in the matching src/platform/ module.
+    -->
+
+    <!-- P4.1 — push. Runtime-granted from Android 13; implicit before that. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Biometric sign-in (src/lib/biometricUnlock.ts).
+
+        Install-time, not runtime: there is no prompt to grant, and asking for
+        a fingerprint is itself the consent. `androidx.biometric` declares this
+        in its own manifest, so the merger would add it either way — it is
+        written out here because a permission the app ships with should be
+        readable in the app's own manifest rather than inferred from a
+        transitive AAR.
+
+        Deliberately NOT paired with a `uses-feature`: an implied
+        `android.hardware.fingerprint` would let Play hide the app from every
+        device without a sensor, and biometric unlock is an opt-in convenience
+        that the settings screen already degrades gracefully without.
+    -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <!-- P4.4 — "use my location" in the address picker. Coarse is enough to
+         geocode to the right neighbourhood, so a user who grants only the
+         approximate one still gets a filled address. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- P4.3 — camera and gallery.
+         READ_MEDIA_* replaced READ_EXTERNAL_STORAGE in Android 13, hence the
+         maxSdkVersion on the old one: without it the Play Console flags a
+         storage permission the app cannot use on a modern device. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!--
+        Declared NOT required, all three.
+
+        A `uses-permission` implies the matching `uses-feature` as REQUIRED
+        unless it is overridden here, and Play uses that to decide which devices
+        may install the app. Left implicit, a dashboard whose camera and GPS are
+        conveniences would be hidden from every device lacking either — and the
+        agency staff who only ever read shipments would be the ones locked out.
+    -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+</manifest>

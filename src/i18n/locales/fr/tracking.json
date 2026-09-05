@@ -1,0 +1,85 @@
+{
+  "page": {
+    "title": "Suivi en direct",
+    "description": "Positions en temps réel des agents sur vos expéditions en cours",
+    "shortDescription": "Agents en expédition active"
+  },
+  "panel": {
+    "title": "Agents ({{count}})",
+    "openMobile": "Agents · {{count}}",
+    "show": "Afficher la liste des agents",
+    "hide": "Masquer la liste des agents"
+  },
+  "connection": {
+    "idle": "Inactif",
+    "connecting": "Connexion…",
+    "open": "En direct",
+    "closed": "Déconnecté",
+    "error": "Erreur de connexion",
+    "errorBanner": "Impossible de joindre le service de suivi en direct. Il s'authentifie avec le cookie de votre session (même site) — si geo-tracker tourne sur un autre domaine, un jeton bearer est requis (voir env/README.md)."
+  },
+  "board": {
+    "truncated": "Vous avez plus d'expéditions en cours que la carte ne peut en afficher — certaines ne sont pas listées.",
+    "carriedBy": "assurée par {{name}}",
+    "etaPending": "Calcul de l'ETA…",
+    "etaNoSignal": "L'ETA nécessite une position en direct de cet agent.",
+    "clearShipment": "Désélectionner l'expédition"
+  },
+  "shipment": {
+    "heading_one": "Livraison",
+    "heading_other": "Livraisons ({{count}})",
+    "originUnknown": "Adresse de collecte indisponible",
+    "destinationUnknown": "Adresse de livraison indisponible",
+    "morePickups_one": "+{{count}} collecte",
+    "morePickups_other": "+{{count}} collectes",
+    "notMappable": "Sans coordonnées — non traçable",
+    "none": "Aucune livraison active pour cet agent."
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher un agent ou un numéro de suivi…",
+    "searchLabel": "Rechercher un agent suivi par nom, numéro de suivi ou numéro de commande",
+    "description": "Filtre les cartes d'agents. La carte affiche toujours tout le monde.",
+    "signal": "Signal",
+    "signalAll": "Tous",
+    "signalLive": "En direct",
+    "signalNoSignal": "Aucun signal",
+    "signalEnded": "Terminé",
+    "noMatches": "Aucun agent ne correspond à votre recherche ou à vos filtres."
+  },
+  "empty": {
+    "title": "Aucun agent à suivre pour le moment",
+    "description": "Les agents apparaissent ici pendant qu'ils livrent une expédition active pour votre agence.",
+    "waiting": "En attente de la première position…",
+    "noPositions": "Aucune position en direct pour l'instant."
+  },
+  "focus": {
+    "notBroadcasting": "<strong>{{name}}</strong> ne diffuse aucune position en direct pour le moment. Cet agent apparaîtra ici dès qu'il sera en tournée sur une expédition active."
+  },
+  "agent": {
+    "fallbackName": "Agent {{code}}",
+    "live": "En direct",
+    "ended": "Terminé",
+    "noSignal": "Aucun signal",
+    "noVehicle": "Aucun véhicule",
+    "speed": "{{value}} km/h",
+    "heading": "{{value}}°",
+    "eta": "ETA {{minutes}} min",
+    "updated": "Mis à jour {{when}}",
+    "openInGoogleMaps": "Ouvrir dans Google Maps ↗",
+    "trackingEnded": "Suivi terminé — cette livraison n'est plus sous votre surveillance.",
+    "awaitingPosition": "En attente d'une position de cet agent.",
+    "trackingReauthorizing": "Reconnexion en cours — la livraison est intacte et se poursuit très probablement.",
+    "trackingUnavailable": "Position en direct momentanément indisponible. Rien n'est connu sur la livraison — nouvelle tentative en cours."
+  },
+  "relative": {
+    "justNow": "à l'instant",
+    "secondsAgo": "il y a {{value}} s",
+    "minutesAgo": "il y a {{value}} min"
+  },
+  "map": {
+    "fitAll": "Afficher tous les agents",
+    "fitScene": "Cadrer la livraison sélectionnée",
+    "pinStart": "Collecte",
+    "pinEnd": "Livraison"
+  }
+}

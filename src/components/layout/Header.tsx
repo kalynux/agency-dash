@@ -1,6 +1,10 @@
+import { formatDate } from '@/lib/format';
 import { useState } from 'react';
-import { useAuth, useRouter } from '@/App';
-import { useNotificationStore } from '@/store';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useNotifications } from '@/store/notifications.store';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import type { AgencyNotification } from '@/types/notification.types';
 import {
   Search,
   Bell,
@@ -8,14 +12,13 @@ import {
   Command,
   X,
   ArrowRight,
-  ShoppingCart,
-  Package,
-  Users,
-  FileText,
+  SearchX,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,47 +27,70 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog';
+import { QUICK_ACTIONS, type QuickAction } from '@/config/quickActions';
+import { notificationVisual, notificationHref } from '@/lib/notification-display';
+import { tx } from '@/i18n/tx';
 
-const quickActions = [
-  { name: 'Create Product', icon: Package, route: 'products' as const },
-  { name: 'Create Order', icon: ShoppingCart, route: 'orders' as const },
-  { name: 'Add Customer', icon: Users, route: 'customers' as const },
-  { name: 'Generate Report', icon: FileText, route: 'analytics' as const },
-];
-
-const recentSearches = [
-  'Order #1001',
-  'Wireless Headphones',
-  'Alice Johnson',
-  'Tech Gadgets Pro',
-];
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export function Header() {
+  const { t } = useTranslation(['nav', 'common']);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, logout } = useAuth();
-  const { navigate } = useRouter();
-  const { notifications, unreadCount, markAllAsRead } = useNotificationStore();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  // The sign-out call itself lives in `LogoutConfirmDialog` now; this only
+  // needs the session for the avatar and the name beside it.
+  const { session } = useOnboarding();
+  const roleEntity = session?.role_entity;
 
-  const toggleSearch = () => {
-    setIsSearchOpen(!isSearchOpen);
+  const agencyName = roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
+  const agencyLogo = roleEntity?.logo_url || null;
+  const agencyEmail = roleEntity?.email ?? '';
+
+  const toggleSearch = () => setIsSearchOpen((v) => !v);
+
+  const handleQuickAction = (action: QuickAction) => {
+    setIsSearchOpen(false);
+    navigate(
+      `/dashboard/${action.route}`,
+      action.intent ? { state: { create: true } } : undefined,
+    );
   };
 
-  const unreadNotifications = notifications.filter((n: { read: boolean }) => !n.read).slice(0, 5);
+  const goToProfile = () => navigate('/dashboard/account/profile');
+
+  const unreadNotifications = notifications.filter((n) => !n.isRead).slice(0, 5);
+
+  const openNotification = (n: AgencyNotification) => {
+    markAsRead(n.id);
+    navigate(notificationHref(n.action));
+  };
 
   return (
     <>
       <header className="h-16 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-        <div className="h-full px-6 flex items-center justify-between">
-          {/* Left - Breadcrumbs could go here */}
+        <div className="h-full mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          {/* Left - search */}
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
               className="h-9 gap-2 text-muted-foreground"
               onClick={toggleSearch}
+              aria-label={t('header.searchLabel')}
             >
               <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Search...</span>
+              <span className="hidden sm:inline">{t('header.searchPlaceholderShort')}</span>
               <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
                 <Command className="w-3 h-3" />
                 <span>K</span>
@@ -77,21 +103,31 @@ export function Header() {
             {/* Quick Actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  aria-label={t('header.quickActions')}
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel>{t('header.quickActions')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {quickActions.map((action) => (
+                {QUICK_ACTIONS.map((action) => (
                   <DropdownMenuItem
-                    key={action.name}
-                    onClick={() => navigate(action.route)}
+                    key={action.id}
+                    onClick={() => handleQuickAction(action)}
                     className="gap-3"
                   >
                     <action.icon className="w-4 h-4" />
-                    <span className="flex-1">{action.name}</span>
+                    <div className="flex flex-col">
+                      <span>{tx(t, action.labelKey)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {tx(t, action.descriptionKey)}
+                      </span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -100,10 +136,15 @@ export function Header() {
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 relative">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 relative"
+                  aria-label={t('header.notifications')}
+                >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -end-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -111,7 +152,7 @@ export function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80">
                 <div className="flex items-center justify-between px-3 py-2">
-                  <DropdownMenuLabel className="m-0">Notifications</DropdownMenuLabel>
+                  <DropdownMenuLabel className="m-0">{t('header.notifications')}</DropdownMenuLabel>
                   {unreadCount > 0 && (
                     <Button
                       variant="ghost"
@@ -119,7 +160,7 @@ export function Header() {
                       onClick={() => markAllAsRead()}
                       className="h-auto py-1 px-2 text-xs"
                     >
-                      Mark all read
+                      {t('header.markAllRead')}
                     </Button>
                   )}
                 </div>
@@ -127,25 +168,20 @@ export function Header() {
                 {unreadNotifications.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
                     <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No new notifications</p>
+                    <p className="text-sm">{t('header.noNewNotifications')}</p>
                   </div>
                 ) : (
-                  unreadNotifications.map((notification: { id: string; type: string; title: string; message: string; createdAt: string; actionUrl?: string }) => (
+                  unreadNotifications.map((notification) => (
                     <DropdownMenuItem
                       key={notification.id}
-                      onClick={() => notification.actionUrl && navigate('notifications')}
+                      onClick={() => openNotification(notification)}
                       className="flex flex-col items-start gap-1 p-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-2 w-full">
-                        <span className={
-                          notification.type === 'order' ? 'w-2 h-2 rounded-full bg-blue-500' :
-                          notification.type === 'alert' ? 'w-2 h-2 rounded-full bg-red-500' :
-                          notification.type === 'customer' ? 'w-2 h-2 rounded-full bg-green-500' :
-                          'w-2 h-2 rounded-full bg-gray-500'
-                        } />
+                        <span className={`w-2 h-2 rounded-full ${notificationVisual(notification.type).dot}`} />
                         <span className="font-medium text-sm flex-1">{notification.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(notification.createdAt).toLocaleDateString()}
+                          {formatDate(notification.createdAt)}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 pl-4">
@@ -156,11 +192,11 @@ export function Header() {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => navigate('notifications')}
+                  onClick={() => navigate('/dashboard/notifications')}
                   className="justify-center text-sm text-primary"
                 >
-                  View all notifications
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  {t('header.viewAllNotifications')}
+                  <ArrowRight className="w-4 h-4 ms-1 rtl:-scale-x-100" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -168,42 +204,50 @@ export function Header() {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                  <img
-                    src={user?.avatar || `https://i.pravatar.cc/150?u=${user?.id}`}
-                    alt={user?.name}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={agencyLogo ?? undefined} alt={agencyName} />
+                    <AvatarFallback className="text-xs font-semibold">
+                      {initialsOf(agencyName)}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span>{user?.name}</span>
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {user?.email}
-                    </span>
+                    <span className="truncate">{agencyName}</span>
+                    {agencyEmail && (
+                      <span className="text-xs text-muted-foreground font-normal truncate">
+                        {agencyEmail}
+                      </span>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('settings')}>
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('settings')}>
-                  Profile
+                <DropdownMenuItem onClick={goToProfile} className="gap-2">
+                  <User className="w-4 h-4" />
+                  {t('header.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={logout}
-                  className="text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setLogoutOpen(true);
+                  }}
+                  className="gap-2 text-destructive focus:text-destructive"
                 >
-                  Log out
+                  <LogOut className="w-4 h-4" />
+                  {t('header.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </header>
+
+      {/* Logout confirmation — shared with Account → Profile on mobile. */}
+      <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} />
 
       {/* Global Search Overlay */}
       {isSearchOpen && (
@@ -221,7 +265,7 @@ export function Header() {
                 <Search className="w-5 h-5 text-muted-foreground" />
                 <Input
                   id="global-search"
-                  placeholder="Search orders, products, customers..."
+                  placeholder={t('header.searchPlaceholder')}
                   className="flex-1 border-0 bg-transparent text-lg focus-visible:ring-0 placeholder:text-muted-foreground"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -234,6 +278,7 @@ export function Header() {
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => setIsSearchOpen(false)}
+                  aria-label={t('header.closeSearch')}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -242,70 +287,33 @@ export function Header() {
               {/* Search Results */}
               <div className="max-h-[60vh] overflow-auto">
                 {searchQuery ? (
-                  <div className="p-4">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Search results for &quot;{searchQuery}&quot;
+                  // Global search has no backend endpoint yet — say so plainly
+                  // rather than painting placeholder rows that never resolve.
+                  <div className="p-8 text-center">
+                    <SearchX className="w-8 h-8 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-sm font-medium">
+                      {t('header.noResults', { query: searchQuery })}
                     </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <ShoppingCart className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="font-medium">Order #1001</p>
-                          <p className="text-sm text-muted-foreground">Alice Johnson - $284.97</p>
-                        </div>
-                        <Badge variant="secondary">Order</Badge>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <Package className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="font-medium">Wireless Bluetooth Headphones</p>
-                          <p className="text-sm text-muted-foreground">SKU: WBH-001 - $149.99</p>
-                        </div>
-                        <Badge variant="secondary">Product</Badge>
-                      </div>
-                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t('header.noResultsHint')}
+                    </p>
                   </div>
                 ) : (
                   <div className="p-4">
-                    {/* Quick Actions */}
-                    <div className="mb-6">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        Quick Actions
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {quickActions.map((action) => (
-                          <button
-                            key={action.name}
-                            onClick={() => {
-                              navigate(action.route);
-                              setIsSearchOpen(false);
-                            }}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-left transition-colors"
-                          >
-                            <action.icon className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{action.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Recent Searches */}
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        Recent Searches
-                      </p>
-                      <div className="space-y-1">
-                        {recentSearches.map((search, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setSearchQuery(search)}
-                            className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent text-left transition-colors"
-                          >
-                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{search}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                      {t('header.quickActions')}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {QUICK_ACTIONS.map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => handleQuickAction(action)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-start transition-colors"
+                        >
+                          <action.icon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{tx(t, action.labelKey)}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -316,16 +324,16 @@ export function Header() {
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <kbd className="bg-muted px-1.5 py-0.5 rounded border">↑↓</kbd>
-                    to navigate
+                    {t('header.hintNavigate')}
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="bg-muted px-1.5 py-0.5 rounded border">↵</kbd>
-                    to select
+                    {t('header.hintSelect')}
                   </span>
                 </div>
                 <span className="flex items-center gap-1">
                   <kbd className="bg-muted px-1.5 py-0.5 rounded border">esc</kbd>
-                  to close
+                  {t('header.hintClose')}
                 </span>
               </div>
             </div>

@@ -1,0 +1,85 @@
+{
+  "page": {
+    "title": "Live Tracking",
+    "description": "Real-time positions of agents on your active shipments",
+    "shortDescription": "Agents on active shipments"
+  },
+  "panel": {
+    "title": "Agents ({{count}})",
+    "openMobile": "Agents · {{count}}",
+    "show": "Show the agent list",
+    "hide": "Hide the agent list"
+  },
+  "connection": {
+    "idle": "Idle",
+    "connecting": "Connecting…",
+    "open": "Live",
+    "closed": "Disconnected",
+    "error": "Connection error",
+    "errorBanner": "Couldn't reach the live-tracking service. It authenticates on your session cookie (same-site) — if geo-tracker runs on a different domain, a bearer token is required (see env/README.md)."
+  },
+  "board": {
+    "truncated": "You have more shipments in flight than the map can show at once — some are not listed.",
+    "carriedBy": "carried by {{name}}",
+    "etaPending": "Working out the ETA…",
+    "etaNoSignal": "ETA needs a live position from this agent.",
+    "clearShipment": "Clear the selected shipment"
+  },
+  "shipment": {
+    "heading_one": "Delivery",
+    "heading_other": "Deliveries ({{count}})",
+    "originUnknown": "Pickup address unavailable",
+    "destinationUnknown": "Drop-off address unavailable",
+    "morePickups_one": "+{{count}} pickup",
+    "morePickups_other": "+{{count}} pickups",
+    "notMappable": "No coordinates — can't be drawn",
+    "none": "No active deliveries for this agent."
+  },
+  "filters": {
+    "searchPlaceholder": "Search agents or tracking numbers…",
+    "searchLabel": "Search tracked agents by name, tracking number or order number",
+    "description": "Narrows the agent cards. The map always shows everyone.",
+    "signal": "Signal",
+    "signalAll": "All",
+    "signalLive": "Live",
+    "signalNoSignal": "No signal",
+    "signalEnded": "Ended",
+    "noMatches": "No agents match your search or filter."
+  },
+  "empty": {
+    "title": "No agents to track right now",
+    "description": "Agents appear here while they're delivering an active shipment for your agency.",
+    "waiting": "Waiting for the first position…",
+    "noPositions": "No live positions yet."
+  },
+  "focus": {
+    "notBroadcasting": "<strong>{{name}}</strong> isn't broadcasting a live position right now. They'll appear here once they're out on an active shipment."
+  },
+  "agent": {
+    "fallbackName": "Agent {{code}}",
+    "live": "Live",
+    "ended": "Ended",
+    "noSignal": "No signal",
+    "noVehicle": "No vehicle",
+    "speed": "{{value}} km/h",
+    "heading": "{{value}}°",
+    "eta": "ETA {{minutes}} min",
+    "updated": "Updated {{when}}",
+    "openInGoogleMaps": "Open in Google Maps ↗",
+    "trackingEnded": "Tracking ended — this delivery is no longer yours to watch.",
+    "awaitingPosition": "Awaiting a position from this agent.",
+    "trackingReauthorizing": "Reconnecting — the delivery is unaffected and is almost certainly still in progress.",
+    "trackingUnavailable": "Live position unavailable right now. Nothing is known about the delivery — retrying."
+  },
+  "relative": {
+    "justNow": "just now",
+    "secondsAgo": "{{value}}s ago",
+    "minutesAgo": "{{value}}m ago"
+  },
+  "map": {
+    "fitAll": "Fit all agents",
+    "fitScene": "Fit the selected delivery",
+    "pinStart": "Pickup",
+    "pinEnd": "Drop-off"
+  }
+}
