@@ -7,7 +7,7 @@ admin), with per-role size limits. Uploaded files are referenced elsewhere by th
 - **Base URL**: `http://localhost:8022/api`
 - **Auth**: Required on every route (`requireAuth`) — cookie or `Bearer`.
 - **Permissions**: any authenticated role; a few management routes are `admin`-only (noted below).
-- **Response envelope**: standard `{ success, data, meta?, message? }` — see [../README.md](../README.md#the-response-envelope-read-this-first).
+- **Response envelope**: standard `{ success, data, meta?, message? }` — see [../README.md](../README.md).
 
 > This is the role-neutral contract. Vendor-specific storage/quota details are in
 > ../vendor/storage.md (`backend/jovi-mall/api-doc/vendor/storage.md` — not mirrored in this repository) and ../vendor/file-management.md (`backend/jovi-mall/api-doc/vendor/file-management.md` — not mirrored in this repository).

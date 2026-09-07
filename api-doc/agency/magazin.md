@@ -117,7 +117,7 @@ Update the authenticated agency's magazin.
 - `supportPhone` (string, **E.164** e.g. `+237612345678`, *clearable*).
 - `supportWhatsapp` (string, **E.164**, *clearable*).
 
-> Phone and email formats are platform-wide — see [Contact formats](../README.md#contact-formats-phone--email).
+> Phone and email formats are platform-wide — see [Contact formats](../README.md).
 - `coverage_areas` (`string[]`, min 1): **Full replace.** Region keys of the agency's `country` (from `locations.json`). Entries that aren't regions of that country → `400 AGENCY_COVERAGE_AREA_INVALID`.
   - The **same catalogue** now backs the coverage picker on an agent contract's terms (`coverage.regions`) — see [Coverage regions are picked, not typed](./agent-roster.md#coverage-regions-are-picked-not-typed). A contract may name any region of the country, not only the ones listed here; these are shown alongside as "regions this agency serves".
 - `headquarters_addresses` (`object[]`, min 1): **Full replace**; index 0 = primary. Each entry is `{ id?, label, address_description, support_contact:{ phone, email? }, geo }`. Every **new or edited** entry must carry a geocoded `geo` (a selected `/api/geo/search` result) resolving inside the agency's `country` — else `400 ADDRESS_GEO_REQUIRED` / `400 ADDRESS_COUNTRY_MISMATCH`. `location`, `region` and `city` are all derived from `geo` on write. Same flow as a vendor `business_addresses` entry.
@@ -129,7 +129,7 @@ Update the authenticated agency's magazin.
   - "Unchanged" (grandfathered, geo not required) means the **same geocoded place**, plus *either* the same `address_description` *or* a matching `id`. Adding or renaming a `label`, omitting `region`/`city`, and (when you send `id`) correcting the address text are therefore not "edits" — re-saving the list never forces a re-geocode of legacy rows. Moving the pin always is an edit, `id` or not.
 - `version` (**required**, number): current magazin version for optimistic locking.
 
-**Clearing a field**: every *clearable* field accepts `null` **or `""`** (stored/returned as `null`); omit a key to leave it unchanged. `name`, `coverage_areas`, and `headquarters_addresses` are full-replace, not clearable. See [Conventions](../README.md#conventions).
+**Clearing a field**: every *clearable* field accepts `null` **or `""`** (stored/returned as `null`); omit a key to leave it unchanged. `name`, `coverage_areas`, and `headquarters_addresses` are full-replace, not clearable. See [Conventions](../README.md).
 
 #### Response
 
@@ -143,8 +143,8 @@ Update the authenticated agency's magazin.
 | `AGENCY_COVERAGE_AREA_INVALID` | 400 | A coverage area is not a region of the agency's country |
 | `ADDRESS_GEO_REQUIRED` | 400 | A new/edited HQ address is missing its geocoded `geo` |
 | `ADDRESS_COUNTRY_MISMATCH` | 400 | An HQ address resolves outside the agency's country |
-| `UNAUTHORIZED` | 401 | Missing or invalid JWT token |
-| `FORBIDDEN` | 403 | Wrong role |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
 | `MAGAZIN_CONFLICT` | 409 | Optimistic-locking version mismatch, **or** an HQ entry carries an `id` not on this magazin (`details.unknownIds`) — refresh and retry in both cases |
 | `MAGAZIN_LOCATION_IN_USE` | 409 | A removed HQ entry still holds stored products (`details.locations[] = { id, label, skuCount }`). **Retrying will not help** — re-point or clear those products first. See [Inventory](./inventory.md) |
 
@@ -155,7 +155,7 @@ Update the authenticated agency's magazin.
 > `locationId`, re-point each, then retry this save. Note that a product **you have
 > storage-suspended** still holds its depot open, which is correct: the goods are still in
 > the building. See [Inventory §4–5](./inventory.md#4-move-a-product-to-another-depot).
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
+| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:1530`) |
 
 ---
 

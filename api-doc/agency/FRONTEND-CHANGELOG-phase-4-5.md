@@ -100,7 +100,7 @@ change, so your compiler produces the migration list instead of your users.
 
 ## 2 · 🔴 The 90-day absolute session cap
 
-Full explanation in [the cross-role page § 2](../FRONTEND-CHANGELOG-phase-4-5.md#2--a-sign-in-is-now-bounded-at-90-days-whatever-it-does-in-between).
+Full explanation in [the cross-role page § 2](../FRONTEND-CHANGELOG-phase-4-5.md#2---a-sign-in-is-now-bounded-at-90-days-whatever-it-does-in-between).
 
 | | |
 |---|---|

@@ -51,7 +51,6 @@ never sent.
 | `401` | Missing/invalid token, or a bad webhook signature | all authenticated routes |
 | `403` | Authenticated but forbidden — e.g. a vendor opening a tracking socket | `/ws/track` |
 | `404` | Not found **or** not authorized to see it — deliberately identical | `/locations/{agentID}` |
-| `409` | The state refuses this right now — e.g. Tracking Allow while a shipment is active | `/ws/track`, session |
 | `413` | Body over the 1 MiB cap, refused before the signature is checked | `/webhooks/*` |
 | `422` | Well-formed and refused by a rule — e.g. an implausible position jump | location |
 | `429` | Rate limited | any (see [rate-limits.md](../rate-limits.md)) |
@@ -60,8 +59,14 @@ never sent.
 | `502` | An upstream failed: a routing provider, or jovi-mall while verifying authorization | `/routing/*`, `/locations/*`, `/ws/track` |
 | `503` | A required dependency is not configured | `/webhooks/*`, `/readyz` |
 
-**409 and 429 are new.** `TRACKING_ALLOW_LOCKED` previously only ever surfaced as a WebSocket
-frame and had no HTTP status at all; 429 did not exist because nothing was limited.
+**429 is new** — nothing was rate limited before Phase 16.
+
+> ⚠ **There is no `409`, and this table listed one until 2026-09-06** (DOC-PROGRAM F-39).
+> `http.StatusConflict` appears **nowhere** in this service. `TRACKING_ALLOW_LOCKED` — the
+> mid-shipment Tracking-Allow refusal the removed row described — is still a **WebSocket frame
+> only**, raised at `tracking/delivery/ws/handler.go:312` via `sendError`, exactly as it was
+> before Phase 16. Do not write a `409` branch for this service, and do not infer from that row
+> that device state can be changed over HTTP: there is no such endpoint.
 
 > **The 404-not-403 on `/locations/{agentID}` is deliberate and is preserved.** An unauthorized
 > viewer and a non-existent agent get byte-identical answers, so the endpoint never confirms

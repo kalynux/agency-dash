@@ -338,8 +338,8 @@ same variant at two depots is two rows and this drills into one shelf.
 | Code | HTTP | Meaning |
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Bad query param, or `:id` is not an ObjectId |
-| `UNAUTHORIZED` | 401 | Missing or invalid token |
-| `FORBIDDEN` | 403 | Wrong role |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
 | `INVENTORY_STOCK_LEVEL_NOT_FOUND` | 404 | No such row **for this agency** — another agency's row 404s rather than 403s |
 
 ---
@@ -432,7 +432,7 @@ delivery-agency cascade follows. Hide the button unless `productStatus === "acti
 
 The product's rows **stay on this screen** with `suspension` populated. The goods are
 still in your building, so the row still counts toward
-[depot-deletion protection](#6-how-rows-appear-and-disappear) and toward your storage
+[depot-deletion protection](#6-counting-what-is-on-the-shelf) and toward your storage
 fee.
 
 ### Unsuspend

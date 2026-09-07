@@ -6,7 +6,7 @@
 
 This document is at the `api-doc/` root rather than in a role folder because a review is
 the same object whoever writes it, and splitting it four ways would be four copies of one
-eligibility table. Each role's endpoints are listed under [Endpoints](#endpoints).
+eligibility table. Each role's endpoints are listed under [Endpoints](#4--endpoints).
 
 ---
 

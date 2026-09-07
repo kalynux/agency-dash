@@ -239,7 +239,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 > **Clearable fields**: nullable strings (`avatarFileId`, `kyc_details.registration_number`,
 > `kyc_details.transport_license_id`, HQ `support_contact.email`) accept `null` **or `""`** to clear —
 > both are stored and returned as `null`. Omit a key to leave it unchanged.
-> See [Conventions](../README.md#conventions).
+> See [Conventions](../README.md).
 
 #### Response
 
@@ -392,10 +392,10 @@ Authorization: Bearer <jwt_token>
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
 | `VALIDATION_ERROR` | 400 | Request body failed validation |
-| `UNAUTHORIZED` | 401 | Missing or invalid JWT token |
-| `FORBIDDEN` | 403 | Insufficient permissions (wrong role) |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`) — the message really is *"Insufficient permissions"* and `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
 | `DELIVERY_AGENCY_NOT_FOUND` | 404 | No agency profile exists for the authenticated user |
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
+| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:1530`) |
 
 ---
 

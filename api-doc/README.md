@@ -99,7 +99,7 @@ for geo-tracker's notifications **into** jovi-mall.
 |---|---|
 | 🔴 [MIGRATION-2026-08.md](./MIGRATION-2026-08.md) | what changed, worst first |
 | [ROUTE-MAP.md](./ROUTE-MAP.md) | every route → exactly one document |
-| [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) | the envelope, the nine categories, all **603** codes |
+| [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) | the envelope, the nine categories, and the code registry — **625** codes as of 2026-09-07 |
 | [rate-limits.md](./rate-limits.md) | ceilings, headers, and why a `429` must not sign anyone out |
 | [health.md](./health.md) · [system-uptime-status.md](./system-uptime-status.md) | probes and the status surface |
 | [billing-plans-across-roles.md](./billing-plans-across-roles.md) | the one owner-scoped plan engine |

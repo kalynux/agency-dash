@@ -101,7 +101,7 @@ Every text field is **trimmed first, then length-checked**: `"   "` is refused, 
 | Field | Type | Required? | Validation |
 |---|---|---|---|
 | `provider` | `string` | Yes | Min 1 char after trim. E.g. `"MTN Mobile Money"`, `"Orange Money"` |
-| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code (e.g. `+237670000000`). [Contact formats](../README.md#contact-formats-phone--email) |
+| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code (e.g. `+237670000000`). [Contact formats](../README.md) |
 | `account_name` | `string` | Yes | Min 1 char after trim |
 
 ```json

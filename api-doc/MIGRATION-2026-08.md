@@ -29,8 +29,15 @@ change says so and says what the change is; making it is the frontend team's cal
 
 ## 1 · Seven dead service calls
 
-🔴 **All seven are in [`src/services/channels.service.ts`](../src/services/channels.service.ts).**
+🔴 **All seven were in `src/services/channels.service.ts`.**
 Every one returns `404`. WhatsApp and Telegram linking is non-functional in this dashboard today.
+
+> ⚠ **That file no longer exists** (checked 2026-09-07: `agency-dash/src/services/` holds 28
+> files and none is `channels.service.ts`). The link was de-linked rather than repointed —
+> this is a **historical migration record**, and guessing a successor would put a claim about
+> today's source into a document describing 2026-08. `connections.service.ts` is the closest
+> live file, and the unified messaging-connection work is the likely reason the old one went;
+> **verify against source before treating that as the successor.**
 
 > **The plan for this work said six. It is seven** — the same seventh call PLAN-1 found in
 > `vendor-dash`. It was found by opening all **402** API path literals in `agency-dash/src/`

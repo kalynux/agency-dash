@@ -18,9 +18,9 @@ Root-level fields on the agency profile response object.
 |-------|------|-------------|-----------|------------|-------------|
 | `id` | `string` | Yes | No (read-only) | — | MongoDB ObjectId as a string. |
 | `agencyName` | `string` | Yes | Yes | Min 1, Max 200 chars | The registered name of the agency. |
-| `email` | `string \| null` | Yes | Yes | Valid email, lowercased ([Contact formats](../README.md#contact-formats-phone--email)) | Main agency contact email. Distinct from per-location `support_contact.email`. |
+| `email` | `string \| null` | Yes | Yes | Valid email, lowercased ([Contact formats](../README.md)) | Main agency contact email. Distinct from per-location `support_contact.email`. |
 | `emailVerified` | `boolean` | Yes | No | — | Whether the main email has been verified. |
-| `phone` | `string \| null` | Yes | Yes | **E.164**, e.g. `+237670000000` ([Contact formats](../README.md#contact-formats-phone--email)) | Main agency phone number. |
+| `phone` | `string \| null` | Yes | Yes | **E.164**, e.g. `+237670000000` ([Contact formats](../README.md)) | Main agency phone number. |
 | `phoneVerified` | `boolean` | Yes | No | — | Whether the main phone has been verified. |
 | `logoFileId` | `string \| null` | Yes | Yes (as `logo_file_id`) | Valid MongoDB ObjectId of a file uploaded via `POST /api/files/upload` | File id of the agency logo. On update send `logo_file_id`; the response returns both this and the derived `logoUrl`. |
 | `logoUrl` | `string \| null` | Yes | No (derived) | — | Public URL of the logo, derived server-side from `logoFileId`. Read-only. |
@@ -58,8 +58,8 @@ Root-level fields on the agency profile response object.
 
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
-| `phone` | `string` | Yes | **E.164** — leading `+` and country code required, e.g. `+237670000000` ([Contact formats](../README.md#contact-formats-phone--email)) | Phone number for location-level customer support. |
-| `email` | `string \| null` | No | Valid email, lowercased ([Contact formats](../README.md#contact-formats-phone--email)) | Email for location-level support. `null` if not provided. |
+| `phone` | `string` | Yes | **E.164** — leading `+` and country code required, e.g. `+237670000000` ([Contact formats](../README.md)) | Phone number for location-level customer support. |
+| `email` | `string \| null` | No | Valid email, lowercased ([Contact formats](../README.md)) | Email for location-level support. `null` if not provided. |
 
 ---
 
@@ -94,7 +94,7 @@ masking, card policy, and what happens at payout time.
 | Field | Type | Required? | Validation | Description |
 |-------|------|-----------|------------|-------------|
 | `provider` | `string` | Yes | Min 1 char | Telecom operator name. E.g. `"MTN Mobile Money"`, `"Orange Money"`. |
-| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required ([Contact formats](../README.md#contact-formats-phone--email)) | Momo phone number. **Masked in responses** as `phone_number_masked`. |
+| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code required ([Contact formats](../README.md)) | Momo phone number. **Masked in responses** as `phone_number_masked`. |
 | `account_name` | `string` | Yes | Min 1 char | Name registered on the Momo account. |
 
 ### `bank` Object 🚧 switched off

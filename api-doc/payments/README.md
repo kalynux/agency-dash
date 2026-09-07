@@ -4,7 +4,7 @@ One payment surface, shared by every flow that takes money from a **customer**: 
 payment, a whole multi-vendor cart in one charge, or a service booking.
 
 - **Base URL**: `http://localhost:8022/api`
-- **Response envelope**: standard `{ success, ... }` — see [../README.md](../README.md#the-response-envelope-read-this-first).
+- **Response envelope**: standard `{ success, ... }` — see [../README.md](../README.md).
 - **Gateways**: `NOTCHPAY` and `MYCOOLPAY` (mobile money), `STRIPE` (cards).
 
 > ### All three gateways are live
@@ -81,7 +81,7 @@ transaction rather than charging twice.
 `channel.customerEmail` must be a valid email — both are forwarded to the gateway, so a malformed
 value would otherwise surface as an opaque gateway failure or a receipt nobody receives. Both stay
 **optional**; the rule applies only when the field is sent. See
-[Contact formats](../README.md#contact-formats-phone--email).
+[Contact formats](../README.md).
 
 **At least one** of `cartId` / `orderId` is required — sending neither is a `400` naming
 `cartId`. Sending *both* is not rejected: `cartId` wins and `orderId` is ignored, so send the

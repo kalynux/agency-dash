@@ -119,7 +119,7 @@ A user can hold **multiple roles** and log in under any of them independently.
 > through a session. A legacy `roles: ["admin"]` row may still exist; it cannot be
 > authenticated as, and auto-role-resolution filters it out rather than picking it.
 >
-> The platform-wide permission matrix in [../README.md](../README.md#permission-matrix) still
+> The platform-wide permission matrix in [../README.md](../README.md) still
 > lists an Admin column — that is the wi-admin operator, reaching these routes over the
 > internal service surface. It is not a session you can mint here.
 
@@ -326,11 +326,11 @@ Creates a new user and a role profile in one step. Sets both auth cookies on suc
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `phone` | string | ✅ | **E.164, with the `+` and country code** (`+2348012345678`). Used as login identifier. Must be unique. Stored canonicalised — formatting you send (spaces, dashes, parentheses) is stripped. See [Contact formats](../README.md#contact-formats-phone--email). |
+| `phone` | string | ✅ | **E.164, with the `+` and country code** (`+2348012345678`). Used as login identifier. Must be unique. Stored canonicalised — formatting you send (spaces, dashes, parentheses) is stripped. See [Contact formats](../README.md). |
 | `password` | string | **conditionally** | Min 6 characters. **Required for every role EXCEPT `customer`** — see the note below. |
 | `name` | string | ✅ | Min 2 characters. Used for all roles. |
 | `role` | string | ❌ | One of: `customer`, `vendor`, `agency`, `agent`. **Defaults to `vendor`** — a body that omits it registers a vendor, so send it explicitly. `admin` is refused. |
-| `email` | string | ❌ | Optional for **every** role, including vendor. Must be unique. Validated and **lowercased** — see [Contact formats](../README.md#contact-formats-phone--email). |
+| `email` | string | ❌ | Optional for **every** role, including vendor. Must be unique. Validated and **lowercased** — see [Contact formats](../README.md). |
 | `business_name` | string | ❌ | For `vendor`. Falls back to `name`. Stored on the vendor's **Store**, not on the vendor profile — see [`role_entity` Shapes](#role_entity-shapes). |
 | `agency_name` | string | ❌ | For `agency`. Falls back to `name`. Stored on the agency's **Magazin**, not on the agency profile. |
 
@@ -425,7 +425,7 @@ Authenticates and sets role-scoped JWT cookies.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `identifier` | string | ✅ | Phone number **in E.164** (`+2348012345678`) or email address. Whichever it is, it must be valid — see [Contact formats](../README.md#contact-formats-phone--email). |
+| `identifier` | string | ✅ | Phone number **in E.164** (`+2348012345678`) or email address. Whichever it is, it must be valid — see [Contact formats](../README.md). |
 | `password` | string | ✅ | Account password |
 | `role` | string | ❌ | Required if the user has multiple roles. |
 

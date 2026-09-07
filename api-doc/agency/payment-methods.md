@@ -204,7 +204,7 @@ Content-Type: application/json
 
 > The nullable display fields (`brand`, `last4`, `holder_name`) treat `""` as `null` — an empty form
 > input is stored as `null`, never rejected. A non-empty invalid value (e.g. a 3-digit `last4`) is
-> still rejected. See [Conventions](../README.md#conventions).
+> still rejected. See [Conventions](../README.md).
 
 **Example — card:**
 

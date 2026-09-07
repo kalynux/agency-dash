@@ -64,6 +64,6 @@ Authorization: Bearer <token>
 
 | Status | Code | Reason |
 |---|---|---|
-| `401` | `UNAUTHORIZED` | Missing or invalid JWT token |
-| `403` | `FORBIDDEN` | Authenticated user is not an agency |
-| `500` | `INTERNAL_ERROR` | Unexpected server error |
+| `401` | `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` | No token, an expired one, or a malformed one. ⚠ **There is no `UNAUTHORIZED` code** |
+| `403` | `AUTH_ROLE_NOT_FOUND` | Authenticated user is not an agency. ⚠ **There is no `FORBIDDEN` code** |
+| `500` | `INTERNAL_SERVER_ERROR` | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** |
