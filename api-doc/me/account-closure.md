@@ -1,5 +1,10 @@
 # Close Account API
 
+**Verified against source on 2026-09-08** — the route and verb, the exact `confirm` literal, the
+two 422 refusals with their `details`, the 409 compare-and-set, the cookie clear and the
+`password_changed_at` stamp, against `jovi-mall/src/modules/users/user.controller.ts:89-130`,
+`account-closure.service.ts` and `user.validator.ts:77-104`.
+
 Reference for closing — and anonymising — the authenticated **customer's** own account.
 
 > [!IMPORTANT]
@@ -8,6 +13,14 @@ Reference for closing — and anonymising — the authenticated **customer's** o
 > resolve; what is removed is the person. Design record:
 > ADR-A02 (`backend/docs/ADR-A02-ACCOUNT-CLOSURE.md` — not mirrored in this repository).
 >
+> [!NOTE]
+> **A customer can also close their account from a chat**, since MCP parity step 7 — as a
+> deliberate **two step**: `account_close_preview` (a read) answers `canClose`, the two
+> blockers, and the anonymise-and-retain sentence **already localised**, and only then does
+> `account_close` run. The sentence is written on the backend for the reason this whole
+> paragraph exists: the automation layer has no copy table, and "deleted" is exactly the word
+> it would reach for. Contract: `api-doc/n8n/bot-surface.md` § 16.3.
+
 > ADR-A02 **D-2** is explicit about the second half: no statutory erasure obligation has been
 > established in this market, so nothing here — in your UI copy, in a help page or in a privacy
 > policy — may describe this as satisfying a legal right. It satisfies a reasonable

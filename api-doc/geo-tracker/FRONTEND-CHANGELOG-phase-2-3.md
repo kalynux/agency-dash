@@ -1,5 +1,9 @@
 # Frontend changelog — Phase 2 and Phase 3 (geo-tracker)
 
+**Verified against source on 2026-09-08** — the behavioural claims re-checked against
+`geo-tracker/internal/` and, for the 90-day session cap, `jovi-mall/src/core/auth/token.issuer.ts:47-49`.
+No corrections were needed.
+
 Everything Phases **2** (Deployability) and **3** (Cross-service correctness) of
 `PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` (`backend/PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` — not mirrored in this repository)
 changed for a client of **this** service.

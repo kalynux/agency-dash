@@ -1,5 +1,11 @@
 # Tracking — the two privacy gates
 
+**Verified against source on 2026-09-08** — every one of the seven source citations in the table
+below was opened and checked, including `TrackingAllow` (`entity.go:145-147`), `Persists`
+(`entity.go:264`) and the five trackable statuses. **No corrections were needed. This page states
+the two-gate rule correctly, and it was more accurate than geo-tracker's own `locations.md`,**
+which claimed the live position needs an active session and was fixed on the same date.
+
 **Authored 2026-08-24 (PLAN-3) from source.** This page exists because the single most common
 misunderstanding in this domain is that "tracking" is one permission. It is **two independent
 gates**, they are owned by **different services**, they are gated on **different facts**, and

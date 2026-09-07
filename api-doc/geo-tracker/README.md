@@ -1,5 +1,9 @@
 # geo-tracker API Documentation
 
+**Verified against source on 2026-09-08** — the `PORT` default, the five per-role visibility rules
+and the five `TRACKABLE_SHIPMENT_STATUSES` against `geo-tracker/internal/platform/config/config.go`
+and `jovi-mall/src/.../visible-agents.service.ts:25-31,101-109`.
+
 > ### Reading this from the agency dashboard
 >
 > This is the **second** of the two backends this app talks to, on its own origin with **no
