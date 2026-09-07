@@ -7,6 +7,16 @@
 > one shared shape changes, and the change is deliberately a *type* change so your compiler
 > points at every place that needs looking at.
 
+> 🆕 **UPDATE 2026-09-07 — `access` gained a THIRD value, `"quota_blocked"`.** This changelog
+> was written when there were two. Everything below is still accurate about the private-tree
+> case; what it does **not** cover is a file whose owner has run out of storage allowance.
+> Jump to [§ The third value](#the-third-value-quota_blocked) — it affects **every** surface
+> that renders a file, public trees included, not just delivery proof.
+
+**Verified against source on 2026-09-08** — the `FileDetail` shape, all three `access` values and
+their precedence, against `jovi-mall/src/modules/catalog/read-models/file-detail.resolver.ts`,
+`.../product-detail.read-model.ts` and `src/core/storage/storage-trees.ts`.
+
 ---
 
 ## What changed, in one paragraph
@@ -57,7 +67,7 @@ nullable:
 | Field | Type | Meaning |
 |---|---|---|
 | `url` | `string \| null` | fetchable directly when a string. **`null` means there is no public URL** — use the authorized route below. |
-| `access` | `"public" \| "authorized"` | which of the two this is. Always present. |
+| `access` | `"public" \| "authorized" \| "quota_blocked"` | which kind of file this is. **Always present.** Anything but `"public"` means `url` is `null`. |
 
 **`url` is `null` rather than the authorized path on purpose.** An authorized path is a string
 that looks exactly like a public URL, so a client keeps `<img src={url}>` and silently renders
@@ -104,6 +114,44 @@ what makes its single-use consumption, its counter and its revocation actually m
 attachment today is an ordinary general-intake upload that lands in `images/` or `documents/`
 and stays **public**. Making those private needs a dedicated upload path and is not in this
 release — do not read this changelog as having closed that gap.
+
+## The third value: `quota_blocked`
+
+Added **2026-09-07**, after this changelog was first written. `access` is now:
+
+| `access` | `url` | What it means, and what to render |
+|---|---|---|
+| `"public"` | a real URL | ordinary media — render it |
+| `"authorized"` | **`null`** | the file is in a private tree; fetch the bytes from the owning entity's route, keyed on `id` (everything above) |
+| `"quota_blocked"` | **`null`** | **the owner is over their storage plan.** Not deleted, not private, not their fault. |
+
+**`quota_blocked` is a billing state, and the right screen is not an error screen.** The file
+still exists, the bytes are untouched, and it still counts toward the owner's used storage —
+blocking is what an owner gets *instead* of losing data when a plan downgrade puts them over the
+cap. It comes back **unchanged** the moment they upgrade or free room.
+
+So: render a **placeholder and an upgrade prompt**. Never a broken image. Never "file missing" or
+"file deleted" — both are wrong, and "deleted" starts a support conversation about data loss that
+did not happen.
+
+⚠ **`quota_blocked` outranks `authorized`.** A blocked file that also sits in a private tree
+reports `quota_blocked`, not `authorized`. If you branch on `authorized` first you will send the
+client to the owning entity's byte route, and the answer it gets back will describe a permissions
+problem when the real one is billing.
+
+```ts
+// Order matters: check the blocked case before the private one.
+switch (file.access) {
+  case 'public':        return <img src={file.url!} alt={file.originalName ?? ''} />;
+  case 'quota_blocked': return <StoragePlaceholder onUpgrade={goToPlanPage} />;
+  case 'authorized':    return <AuthorizedImage id={file.id} />;
+}
+```
+
+**This applies to public trees too.** Product photos, avatars and logos all live in public trees
+and can all come back `quota_blocked` — the tree classification and the quota check are
+independent. A page that only handles `quota_blocked` on the private surfaces will still show
+broken images on the ordinary ones.
 
 ## What did NOT change
 

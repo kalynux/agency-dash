@@ -1,5 +1,14 @@
 # Billing, Plans & Credit — Cross-Dashboard Guide
 
+**Verified against source on 2026-09-08** — the per-role caps and free-tier numbers, the four
+`BILLING_LIMIT_EXCEEDED` paths and its `details` shape, and the admin base path, against
+`jovi-mall/scripts/seed/seed-pricing-plans.ts`,
+`jovi-mall/src/modules/billing/services/entitlement.service.ts`,
+`src/modules/catalog/controllers/vendor-product.controller.ts`,
+`src/modules/catalog/domain/services/ProductBulkOperationsService.ts`,
+`src/modules/catalog/repositories/mongo/product.repository.mongo.ts` and `src/api/index.ts`.
+**Corrected:** the Admin base path was the deleted `/api/admin` mount.
+
 One billing engine now serves **four dashboards**: vendor, agency, agent, and
 admin. Vendors already had plans + a credit wallet; **agencies and agents now have
 the identical surface** under their own role roots, and admin manages the catalog
@@ -27,20 +36,69 @@ server job). Activating a plan grants its `credit_allowance` once into the role'
 
 ## Per-dashboard summary
 
+> ⚠ **The Admin column is NOT a browser surface.** jovi-mall's public `/api/admin/*` mount was
+> deleted at the Phase 5 cutover (`src/api/index.ts:186-195`) and the live route census has **zero**
+> `/api/admin/*` routes. The admin billing surface is eight routes under
+> `/api/internal/admin/billing/*`, reachable only by **wi-admin** with a service token — no browser
+> session of any role can reach it, and the admin dashboard talks to wi-admin's `/api/v1/*`, never
+> to this. Corrected 2026-09-08; this table listed the dead mount.
+
 | | Vendor | Agency | Agent | Admin |
 |---|---|---|---|---|
-| **Base path** | `/api/vendor` | `/api/agency` | `/api/agent` | `/api/admin` |
+| **Base path** | `/api/vendor` | `/api/agency` | `/api/agent` | `/api/internal/admin/billing` ⚠ |
 | **Doc** | vendor/billing.md (`backend/jovi-mall/api-doc/./vendor/billing.md` — not mirrored in this repository) | [agency/billing.md](./agency/billing.md) | agent/billing.md (`backend/jovi-mall/api-doc/./agent/billing.md` — not mirrored in this repository) | admin/billing.md (`backend/jovi-mall/api-doc/./admin/billing.md` — not mirrored in this repository) |
 | **Free tier** | `starter` | `agency_free` | `agent_free` | — |
 | **Plan limit** | products / storage / commission | `max_unterminated_shipments` (**soft**) | `max_unterminated_shipments` (**hard**) | defines all |
-| **Free-tier limit** | 15 products, 1 GB, 7% | **1000** unterminated shipments | **20** concurrent deliveries | — |
-| **Enforcement** | product create blocked at cap (`403 BILLING_LIMIT_EXCEEDED`) | never blocks — alert only | offer-accept blocked at cap (`422 AGENT_AT_CAPACITY`) | — |
+| **Free-tier limit** | 15 products, 1 GB storage, 7% commission | **1000** unterminated shipments, **5 GB** storage | **20** concurrent deliveries, **1 GB** storage | — |
+| **Enforcement** | **four** catalogue paths blocked at cap (`403 BILLING_LIMIT_EXCEEDED`) — see below | never blocks — alert only | offer-accept blocked at cap (`422 AGENT_AT_CAPACITY`) | — |
 | **Paid tiers today** | active | `is_active:false` (build UI, not yet buyable) | `is_active:false` | manage via catalog |
 
 > **Launch state:** for agency and agent, **only the free tier is active** right now
 > (`GET /{role}/plans` returns one plan). The two paid tiers per role are seeded but
 > inactive. Build the upgrade UI to render whatever active plans the catalog returns
 > — don't hardcode tiers — and it lights up when the paid tiers are switched on.
+
+### `403 BILLING_LIMIT_EXCEEDED` — four paths, and its `details` is the message
+
+The product cap is checked at **four** places, not one. Three of them used to succeed silently and
+now refuse, so a dashboard built before 2026-09 will meet a 403 it does not handle:
+
+| Path | Endpoint |
+|---|---|
+| create a product | `POST /api/vendor/products` (and the simple-product create) |
+| **un-archive** a product | `PATCH /api/vendor/products/:id/status` — only when the current status is `archived` |
+| **duplicate** a product | `POST /api/vendor/products/:id/duplicate` — a duplicate lands as a draft, and a draft occupies a slot |
+| **bulk status change** | the vendor bulk-operations endpoint — counted as a batch, refused **all-or-nothing** |
+
+⚠ **The bulk path is arithmetic, not a threshold.** It asks "is there room for *N* more", where the
+single-product check asks "is there room for one more" — so un-archiving fifty products with one
+free slot is refused once, rather than passing fifty identical checks and overshooting the cap.
+
+`details` carries the numbers a good message needs:
+
+```json
+{
+  "success": false,
+  "requestId": "3f9a1c22-6b0e-4a5f-9d31-0c7b2e84a110",
+  "error": {
+    "code": "BILLING_LIMIT_EXCEEDED",
+    "statusCode": 403,
+    "category": "business_rule",
+    "message": "Your 'starter' plan allows up to 15 products, and you have room for 2 more. Upgrade, or archive some first.",
+    "details": { "limit": 15, "current": 13, "requested": 5, "available": 2 }
+  }
+}
+```
+
+**Use `available` and `requested`, not just `limit`.** "You selected 5 and have room for 2" is the
+difference between a vendor deselecting three items and a vendor giving up. The server's own
+`message` already says this and is safe to show — the code's category is `business_rule`, so it is
+**not** replaced at the boundary the way an `internal` or `external_service` message is.
+
+⚠ **A draft occupies a slot.** "Occupies a catalog slot" means *not deleted, status is not
+`archived`, and not already suspended by the quota sweep* — so drafts and active products both
+count, and only archiving frees a slot. A vendor looking at 12 published products will not
+understand a 15-product refusal unless your UI says which products are consuming slots.
 
 ## The catalog is also readable without a session
 
