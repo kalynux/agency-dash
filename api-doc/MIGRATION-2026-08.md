@@ -1,5 +1,7 @@
 # MIGRATION — what changed since this repository's docs were written
 
+**Verified against source on 2026-09-08** — § 1's "seven dead service calls" re-checked directly in this repository's `src/` (`connections.service.ts:46,62,74`); they are fixed.
+
 **Written 2026-08-24** · Source of truth: the two backends' current implementation, read
 directly. Nothing on this page comes from a document.
 
@@ -18,7 +20,7 @@ change says so and says what the change is; making it is the frontend team's cal
 
 | | | Why |
 |---|---|---|
-| 1 | [§ 1 · Seven dead service calls](#1--seven-dead-service-calls) | **Broken right now.** Messaging connections do not work. |
+| 1 | [§ 1 · Seven dead service calls](#1--seven-dead-service-calls) | ✅ **Fixed** — read only for what replaced them. |
 | 2 | [§ 2 · `permission_revoked` has three reasons](#2--permission_revoked-now-carries-one-of-three-reasons) | **The dashboard can lie to an operator.** |
 | 3 | [§ 3 · Delivery-proof photos have no URL](#3--delivery-proof-photos-have-no-public-url) | Images render blank. |
 | 4 | [§ 4 · A 90-day absolute session cap](#4--a-90-day-absolute-session-cap) | Sign-outs you cannot currently explain. |
@@ -29,15 +31,22 @@ change says so and says what the change is; making it is the frontend team's cal
 
 ## 1 · Seven dead service calls
 
-🔴 **All seven were in `src/services/channels.service.ts`.**
-Every one returns `404`. WhatsApp and Telegram linking is non-functional in this dashboard today.
+✅ **FIXED — this section is now a historical record, not a defect.**
 
-> ⚠ **That file no longer exists** (checked 2026-09-07: `agency-dash/src/services/` holds 28
-> files and none is `channels.service.ts`). The link was de-linked rather than repointed —
-> this is a **historical migration record**, and guessing a successor would put a claim about
-> today's source into a document describing 2026-08. `connections.service.ts` is the closest
-> live file, and the unified messaging-connection work is the likely reason the old one went;
-> **verify against source before treating that as the successor.**
+**Verified in this repository's `src/` on 2026-09-08.** `channels.service.ts` is gone; the
+successor is `src/services/connections.service.ts`, and it calls the live routes —
+`GET /me/connections` (line 46), `POST /me/connections` (62), `DELETE /me/connections/:channel`
+(74). A grep for `webhooks/telegram`, `webhooks/whatsapp/link` and `request-wa-verification`
+outside comments returns nothing; the only hits are the migration table this service file keeps
+in its own header.
+
+> ⚠ **The previous edition said "non-functional in this dashboard today", and by 2026-09-07 had
+> been half-corrected** — it recorded that `channels.service.ts` was gone but declined to name a
+> successor, correctly refusing to guess. That refusal was right; the missing step was going and
+> looking, which is what closed it. Messaging connections work.
+
+All seven were in the deleted `channels.service.ts` and every one returned `404`. Kept below
+because the **replacement mapping** is still the contract.
 
 > **The plan for this work said six. It is seven** — the same seventh call PLAN-1 found in
 > `vendor-dash`. It was found by opening all **402** API path literals in `agency-dash/src/`

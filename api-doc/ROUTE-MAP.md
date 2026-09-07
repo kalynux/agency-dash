@@ -1,5 +1,7 @@
 # ROUTE MAP — every backend route this dashboard can call
 
+**Verified against source on 2026-09-08** — the route census, the per-tree counts and the five routes added since 2026-08-24, against the live route table.
+
 **Generated 2026-08-24 (PLAN-3) from a live router dump, not from documentation.**
 
 This file exists to make one claim measurable: **every route is documented in exactly one
@@ -14,11 +16,14 @@ cd backend/jovi-mall && node -r ts-node/register/transpile-only -r dotenv/config
     ../FRONTEND-SYNC/tools/dump-routes.js "$(pwd)/src/app.ts" | grep " /api/agency" | wc -l
 ```
 
-⚠ The dumper prints ten boot-log lines and its own `TOTAL` footer, so `wc -l` on the whole
-dump over-counts by 12. The workspace-wide figure is **665 routes**, not the 677 quoted in
-`FRONTEND-SYNC/README.md`; `grep -cE "^(GET|POST|PUT|PATCH|DELETE) /"` is the honest count,
-and it agrees with the tool's own footer. The 132 agency figure below is unaffected — it
-comes from a filtered grep.
+⚠ The dumper prints ten boot-log lines, a blank line and its own `TOTAL` footer, so `wc -l` on
+the whole dump over-counts by 12. `grep -cE "^(GET|POST|PUT|PATCH|DELETE) /"` is the honest
+count, and it agrees with the tool's own footer.
+
+**Re-measured 2026-09-08: the workspace-wide figure is 764 routes** (`wc -l` reads 776). It was
+665 when this page was written and 677 in an edition before that — **do not quote it from
+memory.** The **132** agency figure below is unaffected and was re-verified on the same day; it
+comes from a filtered grep and has not moved.
 
 ---
 

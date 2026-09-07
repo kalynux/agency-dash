@@ -1,6 +1,20 @@
 # agency-dash — backend API contract
 
-**71 files. Rebuilt 2026-08-24 against the two backends as they are actually implemented.**
+**Verified against source on 2026-09-08** — every count below re-measured, not carried forward.
+
+| Measured 2026-09-08 | Was |
+|---|---|
+| Files in this directory | **72** (70 `.md` + `error-codes.ts` + `ticket_types.txt`) — was 71 |
+| `/api/agency` routes | **132** — unchanged |
+| Error registry ([`error-codes.ts`](./error-codes.ts), which is current) | **640** codes — was quoted as 603 in one place and 625 in another |
+| jovi-mall whole-service census | **764** routes — was 665 |
+
+⚠ **Re-measure; never copy a number forward.** The registry figure alone has read
+541 → 621 → 623 → 625 → **640** across editions of this program, and stale values were quoted
+onward into other repositories before anyone noticed.
+
+Rebuilt 2026-08-24 against the two backends as they are actually implemented; re-verified
+2026-09-08.
 
 This is the contract the agency dashboard is built from. It is the only dashboard in this
 platform that is a **client of two services**, and almost everything confusing about it follows
@@ -10,10 +24,10 @@ from that.
 >
 > | If you are… | Read |
 > |---|---|
-> | picking this up after a while away | 🔴 [**MIGRATION-2026-08.md**](./MIGRATION-2026-08.md) — **7 live service calls are broken** and one socket frame can make the UI lie |
+> | picking this up after a while away | 🔴 [**MIGRATION-2026-08.md**](./MIGRATION-2026-08.md) — one socket frame can make the UI lie. ✅ Its "7 broken service calls" are **fixed** (re-checked in `src/` on 2026-09-08) |
 > | looking for an endpoint | [**ROUTE-MAP.md**](./ROUTE-MAP.md) — all 132 agency routes, the 56 shared ones, all 22 geo-tracker routes, each mapped to exactly one document |
 > | building the live map | [agency/live-tracking.md](./agency/live-tracking.md) → [geo-tracker/tracking-websocket.md](./geo-tracker/tracking-websocket.md) → [tracking/privacy-gates.md](./tracking/privacy-gates.md) |
-> | handling an error | [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) (603 codes) · [geo-tracker/errors/README.md](./geo-tracker/errors/README.md) |
+> | handling an error | [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) (**640** codes, re-counted 2026-09-08) · [geo-tracker/errors/README.md](./geo-tracker/errors/README.md) |
 
 ---
 
@@ -99,7 +113,7 @@ for geo-tracker's notifications **into** jovi-mall.
 |---|---|
 | 🔴 [MIGRATION-2026-08.md](./MIGRATION-2026-08.md) | what changed, worst first |
 | [ROUTE-MAP.md](./ROUTE-MAP.md) | every route → exactly one document |
-| [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) | the envelope, the nine categories, and the code registry — **625** codes as of 2026-09-07 |
+| [errors/README.md](./errors/README.md) · [error-codes.ts](./error-codes.ts) | the envelope, the nine categories, and the code registry — **640** codes as of 2026-09-08 (the file itself was already current; only this line was behind) |
 | [rate-limits.md](./rate-limits.md) | ceilings, headers, and why a `429` must not sign anyone out |
 | [health.md](./health.md) · [system-uptime-status.md](./system-uptime-status.md) | probes and the status surface |
 | [billing-plans-across-roles.md](./billing-plans-across-roles.md) | the one owner-scoped plan engine |
@@ -231,8 +245,8 @@ cd backend/jovi-mall && node -r ts-node/register/transpile-only -r dotenv/config
     ../FRONTEND-SYNC/tools/dump-routes.js "$(pwd)/src/app.ts" | grep -c " /api/agency"
 
 # 2 · the error-code count must equal error-codes.ts's header
-grep -cE "^\s+[A-Z0-9_]+:\s*'" backend/jovi-mall/src/core/error-codes.ts        # 603
-grep -cE "^\s+[A-Z0-9_]+:\s*'" frontend/agency-dash/api-doc/error-codes.ts     # 603
+grep -cE "^\s+[A-Z0-9_]+:\s*'" backend/jovi-mall/src/core/error-codes.ts        # 640 on 2026-09-08
+grep -cE "^\s+[A-Z0-9_]+:\s*'" frontend/agency-dash/api-doc/error-codes.ts     # must match
 
 # 3 · drift of the mirrored files against the backend
 node backend/FRONTEND-SYNC/tools/doc-drift.js | sed -n '/agency-dash/,/^$/p'
@@ -241,9 +255,11 @@ node backend/FRONTEND-SYNC/tools/doc-drift.js | sed -n '/agency-dash/,/^$/p'
 git -C frontend/agency-dash status --short | grep -v "api-doc/"                # empty
 ```
 
-⚠ **Do not trust `wc -l` on the route dump.** It prints ten boot-log lines and its own `TOTAL`
-footer, so the whole-service figure reads 677 when the real count is **665**. `grep -c` on a
-method prefix is the honest measure; the per-role counts are unaffected.
+⚠ **Do not trust `wc -l` on the route dump.** It prints ten boot-log lines, a blank line and its
+own `TOTAL` footer — twelve extra lines. On 2026-09-08 `wc -l` reads **776** where the honest
+count is **764**. `grep -cE '^(GET|POST|PUT|PATCH|DELETE) '` is the measure to use; the per-role
+counts are unaffected. (This note previously read "677 … really 665"; both halves were a census
+old — the whole-service figure has since grown to 764 while `/api/agency` stayed at 132.)
 
 ⚠ **Deliberate drift is expected now, and it is not staleness.** This repository's copies of the
 backend's pages carry verification banners and corrections the backend's own copies do not, so
