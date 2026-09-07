@@ -1,5 +1,7 @@
 # Agency Media Storage
 
+**Verified against source on 2026-09-08** — the file routes this page cites and the agency-owned-bytes rule, against `jovi-mall/src/api/controllers/file-upload.controller.ts` and `src/core/storage/`.
+
 How media storage works for a delivery agency: the per-plan limit, how to read
 usage, how uploads are gated, and the storage-alert notifications. Mirrors the
 vendor storage model — an agency just stores different media.
@@ -116,7 +118,7 @@ nothing is stored:
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "UPLOAD_POLICY_VIOLATION",
     "statusCode": 400,

@@ -1,5 +1,7 @@
 # Storage statements
 
+**Verified against source on 2026-09-08** — all 4 routes, the counted-stock-only billing basis (`source: "counted"`, `quantity_on_hand > 0`), the `0 2 1 * *` schedule and the `409 STORAGE_INVOICE_NOT_OPEN` compare-and-set, against `jovi-mall/src/modules/inventory/`.
+
 > 🆕 **New to this repository on 2026-08-24 (PLAN-3).** These **four live routes have never
 > been documented here**, so the agency dashboard has no screen for a monthly bill its
 > operators are already accruing. Verified against

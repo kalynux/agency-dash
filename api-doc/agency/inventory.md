@@ -1,5 +1,7 @@
 # Agency Inventory
 
+**Verified against source on 2026-09-08** — all 11 routes and the counted-vs-derived stock distinction that decides what is billed, against `jovi-mall/src/modules/inventory/routes.ts`, `repositories/agency-stock-level.repository.ts` and `services/`.
+
 > 🆕 **This page was 151 lines behind in this repository until 2026-08-24 (PLAN-3).** The whole
 > of the **physical-shelf** surface was missing: receipts, returns, physical counts,
 > depot-to-depot transfers and the movement ledger (§ 6 and § 7 below), together with the
@@ -339,8 +341,8 @@ same variant at two depots is two rows and this drills into one shelf.
 | Code | HTTP | Meaning |
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Bad query param, or `:id` is not an ObjectId |
-| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
-| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no bare `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no bare `FORBIDDEN` code** |
 | `INVENTORY_STOCK_LEVEL_NOT_FOUND` | 404 | No such row **for this agency** — another agency's row 404s rather than 403s |
 
 ---
@@ -433,7 +435,7 @@ delivery-agency cascade follows. Hide the button unless `productStatus === "acti
 
 The product's rows **stay on this screen** with `suspension` populated. The goods are
 still in your building, so the row still counts toward
-[depot-deletion protection](#6-counting-what-is-on-the-shelf) and toward your storage
+[depot-deletion protection](#8-how-rows-appear-and-disappear) and toward your storage
 fee.
 
 ### Unsuspend
@@ -449,7 +451,7 @@ anything blocks it you get:
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "INVENTORY_PRODUCT_UNSUSPEND_BLOCKED",
     "statusCode": 422,

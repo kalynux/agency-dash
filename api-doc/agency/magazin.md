@@ -1,5 +1,7 @@
 # Agency Magazin Management API Documentation
 
+**Verified against source on 2026-09-08** — both routes and the error catalogue, against `jovi-mall/src/modules/magazin/routes.ts` and `src/core/error-codes.ts`.
+
 ## Overview
 
 The **Magazin** is a delivery agency's business surface — the single source of truth for its **public business identity and its logistics footprint**: business name, description, logo, support contacts, the **regions it serves** (`coverageAreas`) and its physical **headquarters / pickup locations** (`headquartersAddresses`). It is the counterpart of a vendor's Store (`backend/jovi-mall/api-doc/vendor/store.md` — not mirrored in this repository): the agency **profile** (`/api/agency/profile`) holds only personal + account data (contact display name, avatar, payout, policies, KYC) plus the set-once `country` that anchors coverage/HQ, while the **magazin** holds everything business/operational.
@@ -70,7 +72,7 @@ Retrieve the authenticated agency's magazin.
 ```
 
 **Field notes**:
-- `logo` is a resolved **file object** (`{ id, key, url, mimeType, size, originalName }`) or `null`, not a URL string — same shape as product media and the Store logo. Upload via `POST /api/files/upload`, then submit the returned id as `logoFileId`.
+- `logo` is a resolved **file object** (`{ id, key, url, access, mimeType, size, originalName }`) or `null`, not a URL string — same shape as product media and the Store logo. Upload via `POST /api/files/upload`, then submit the returned id as `logoFileId`.
 - `coverageAreas` are region keys of the agency's `country`.
 - `headquartersAddresses[]` are the agency's physical / pickup locations (index 0 = primary). Each carries a geocoded `geo`; `location`, `region` and `city` are all **derived from it** on write — `location` is the GeoJSON point kept for map/proximity use. `_id` identifies each entry.
 - ⚠️ **`_id` is a durable reference — echo it back on PATCH.** A vendor can point a product at a specific depot (`delivery.pickupLocation.agencyAddressId`), and orders carry that id through to the agent's pickup address. The PATCH below is a full-array replace, so **every entry you keep must be sent back with its `id`**; an entry sent without one is treated as a brand-new location and gets a new `_id`, silently re-pointing every product that named the old one at the primary depot instead. See the `headquarters_addresses` notes there.
@@ -144,8 +146,8 @@ Update the authenticated agency's magazin.
 | `AGENCY_COVERAGE_AREA_INVALID` | 400 | A coverage area is not a region of the agency's country |
 | `ADDRESS_GEO_REQUIRED` | 400 | A new/edited HQ address is missing its geocoded `geo` |
 | `ADDRESS_COUNTRY_MISMATCH` | 400 | An HQ address resolves outside the agency's country |
-| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
-| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no bare `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`). `details` carries `{ required, actual }`. ⚠ **There is no bare `FORBIDDEN` code** |
 | `MAGAZIN_CONFLICT` | 409 | Optimistic-locking version mismatch, **or** an HQ entry carries an `id` not on this magazin (`details.unknownIds`) — refresh and retry in both cases |
 | `MAGAZIN_LOCATION_IN_USE` | 409 | A removed HQ entry still holds stored products (`details.locations[] = { id, label, skuCount }`). **Retrying will not help** — re-point or clear those products first. See [Inventory](./inventory.md) |
 
@@ -156,7 +158,7 @@ Update the authenticated agency's magazin.
 > `locationId`, re-point each, then retry this save. Note that a product **you have
 > storage-suspended** still holds its depot open, which is correct: the goods are still in
 > the building. See [Inventory §4–5](./inventory.md#4-move-a-product-to-another-depot).
-| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:1530`) |
+| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:8`) |
 
 ---
 

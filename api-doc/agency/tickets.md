@@ -1,5 +1,7 @@
 # Agency Tickets
 
+**Verified against source on 2026-09-08** — all 14 routes, the `id`-vs-`_id` identifier rule (`core/base.schema.ts` + `TicketEnrichmentService.toObject`), and the agency actor-name resolution `display_name || Magazin.name || ""`, against `jovi-mall/src/modules/tickets/`.
+
 ## Base Path
 
 All endpoints in this document share this base path:
@@ -26,6 +28,17 @@ Authorization: Bearer <access_token>
 > visibility rules) are identical across roles; this document lists the **current, authoritative**
 > enum values from `src/modules/tickets/types/ticket.types.ts`. The full `TicketType` list is also
 > kept as a flat file at [../ticket_types.txt](../ticket_types.txt).
+
+> [!IMPORTANT]
+> **A ticket and a ticket note are identified by `id`, not `_id`** — on every endpoint on this
+> page. `Ticket` is built on `BaseSchemaOptions` (`src/core/base.schema.ts`), whose `toJSON`
+> deletes `_id` and exposes the `id` virtual, so the write endpoints (status, priority, assign,
+> close, reopen, and the `PATCH` on the ticket itself) return the document with **`id` alone**.
+>
+> The three enriched reads — create, list and detail — additionally carry a duplicate **`_id`**,
+> because `TicketEnrichmentService` builds its payload with `toObject({ virtuals: true })`, which
+> applies no transform. **Key on `id`**: it is the only identifier present on all of them. A
+> client that keys on `_id` reads `undefined` the first time it patches a ticket.
 
 ## Endpoints
 
@@ -86,7 +99,7 @@ Body:
 {
   "success": true,
   "data": {
-    "_id": "string",
+    "id": "string",
     "subject": "Shipment stuck in transit for 3 days",
     "description": "Order ORD-2026-001003 has been in_transit since Monday with no movement...",
     "type": "DELIVERY_DELAY",
@@ -129,9 +142,14 @@ Body:
 }
 ```
 
-> **Actor summary for `agency`.** `name` resolves to `agency_name` and `avatar` to the resolved logo
-> **file object** (from the agency's `logo_file_id`) — used for `created_by`, `assigned_to`, and every
-> entry in `followers` when the actor is an agency.
+> **Actor summary for `agency`.** `name` resolves to **`DeliveryAgency.display_name`, falling back
+> to `Magazin.name`** (`ticket-enrichment.service.ts:375`), and `avatar` to the resolved logo
+> **file object** (from the **Magazin's** `logo_file_id`) — used for `created_by`, `assigned_to`,
+> and every entry in `followers` when the actor is an agency.
+> ⚠ **This said `name` resolves to `agency_name`; there is no such field on the agency profile.**
+> The business name lives on the **Magazin**, the profile holds only `display_name` — so the
+> fallback is a lookup into another collection, and an agency with neither resolves to **`''`**,
+> not `null`.
 >
 > **Entity summary for non-`ORDER`/`PRODUCT`/`BOOKING` types** (e.g. `SHIPMENT`, `DELIVERY`,
 > `AGENCY`) degrades to a generic placeholder: `label` is `"<Type> <last 6 chars of id>"` and
@@ -253,7 +271,7 @@ Body:
   "success": true,
   "data": [
     {
-      "_id": "string",
+      "id": "string",
       "subject": "Shipment stuck in transit for 3 days",
       "description": "Order ORD-2026-001003 has been in_transit since Monday...",
       "status": "in_progress",
@@ -476,7 +494,7 @@ Body:
 {
   "success": true,
   "data": {
-    "_id": "string",
+    "id": "string",
     "ticket_id": "string",
     "content": "Picked up 30 minutes ago, en route now.",
     "visibility": "public",
@@ -621,7 +639,7 @@ below:
 ```
 - `name`: admin/customer/agent → `name`; vendor → `display_name` (falls back to `business_name`);
   **agency → `agency_name`**.
-- `avatar`: profile photo/logo where one exists, as a resolved **file object** (`{ id, key, url, mimeType, size, originalName }`) — **agency → resolved from `logo_file_id`** — otherwise `null`.
+- `avatar`: profile photo/logo where one exists, as a resolved **file object** (`{ id, key, url, access, mimeType, size, originalName }`) — **agency → resolved from `logo_file_id`** — otherwise `null`.
 - Unresolvable references fall back to the capitalised role name (e.g. `"Agency"`) with `avatar: null`.
 
 **Administrator snapshot** — used for `assigned_admin` and `created_by_admin`:

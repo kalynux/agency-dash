@@ -1,5 +1,7 @@
 # Agency — Live Tracking
 
+**Verified against source on 2026-09-08** — the board route and its guards, every `TrackingBoard*` field, the trackable-agent rule, the 200-shipment cap, the three `permission_revoked` reasons and the four-step ETA destination chain, against `jovi-mall/src/modules/tracking-integration/` and `geo-tracker/internal/modules/tracking/service/service.go`.
+
 > **Verified against source 2026-08-24 (PLAN-3).** Every field of the response below was
 > read off `src/modules/tracking-integration/services/agency-tracking-board.service.ts:34-142`
 > (the `TrackingBoard*` interfaces and `buildTrackingBoard`), the agent set off
@@ -68,8 +70,8 @@ Two consequences worth knowing:
         "name": "Awa Ngassa",
         "avatar": {
           "id": "665f1f77bcf86cd799439fff",
-          "key": "avatars/awa.png",
-          "url": "https://…/avatars/awa.png",
+          "key": "images/2026/07/awa.png",
+          "url": "https://…/images/2026/07/awa.png",
           "access": "public",
           "mimeType": "image/png",
           "size": 20481,
@@ -128,7 +130,7 @@ right now" is an answer, not a missing resource.
 | Field | Notes |
 |---|---|
 | `agents[].agentId` | Use this verbatim as the `agentId` in geo-tracker's `subscribe` frame. |
-| `agents[].avatar` | The standard file object `{ id, key, url, mimeType, size, originalName }`, or `null`. Never a bare URL string. |
+| `agents[].avatar` | The standard file object `{ id, key, url, access, mimeType, size, originalName }`, or `null`. Never a bare URL string. |
 | `agents[].shipments` | Newest first. An agent running several deliveries has several entries — geo-tracker opens one tracking session per shipment, all fed by the agent's single GPS stream. |
 | `origin` | **The start pin.** Where the parcel is collected: the vendor's business address, this agency's HQ, or — after a reassignment — the handover point. `mode` is `pickup_based` \| `storage_based` \| `mixed` \| `null`; `count > 1` means there are further collection points, which [`GET /api/agency/shipments/:id`](./shipments.md#detail) lists in full. |
 | `destination` | **The end pin.** The customer address geocoded at checkout, snapshotted onto the order. Deliberately *not* the customer's current saved address — reading that live would silently re-route a delivery already on the road. |
@@ -172,6 +174,15 @@ the road, and the replacement agent is tracked from the moment they accept.
    exactly one open session; with several deliveries in flight the server declines rather
    than guessing. Full resolution table:
    [geo-tracker/tracking-websocket.md § How the destination is resolved](../geo-tracker/tracking-websocket.md#how-the-destination-is-resolved).
+
+   The chain is **first hit wins**: **① your `destination` → ② the session for the
+   `shipmentId` you sent → ③ the agent's SOLE open session → ④ no ETA.**
+
+   > ⚠ **② deliberately does NOT fall back to ③.** If you name a `shipmentId` whose tracking
+   > session is not open, you get **no ETA at all** — not the agent's other drop-off. That is
+   > intentional: an ETA to the wrong address is worse than none, because it looks right. So a
+   > missing `etaSeconds` on a `shipmentId` subscription means *"that shipment has no open
+   > session"*, never *"the server is still working it out"* — do not retry it into existence.
 6. **Road line between the two pins** (optional) — geo-tracker's
    `POST /routing/route` with `{ origin, destination }`. Without it, a straight
    line between the two pins is a reasonable fallback. ⚠ On the default
@@ -190,6 +201,12 @@ the road, and the replacement agent is tracked from the moment they accept.
    Treat any unrecognised value as `authorization_expired`. Until 2026-08-19 all three were
    sent as `shipment_completed`, which is how a dashboard came to tell an operator a delivery
    had completed because an access token aged out.
+
+   > **This is also why you should reconnect on a cadence shorter than the 15-minute access
+   > TTL.** geo-tracker validates the token **at the handshake only** — no timer re-validates
+   > it — but when a revocation check fires it re-forwards *that same, now stale* token to
+   > jovi-mall. So a socket held open past the TTL is fine right up until a revocation happens
+   > to fire, at which point every watcher on it is dropped as `authorization_expired`.
 
 ### Refreshing
 

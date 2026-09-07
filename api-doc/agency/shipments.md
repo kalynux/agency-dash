@@ -1,5 +1,7 @@
 # Agency Shipments
 
+**Verified against source on 2026-09-08** — every route, the status enum and transition map, the three status subsets, the COD `delivered` refusal, the reject reason set and note rule, the tracking-number format and the `FileDetail` shape, against `jovi-mall/src/modules/shipments/`, `src/modules/cod/`, `src/modules/delivery/agency.routes.ts` and `src/modules/tracking-integration/`.
+
 ## Base Path
 
 ```
@@ -17,6 +19,18 @@
 - [`PATCH /api/agency/shipments/:id/status`](#status) — advance a shipment (picked up, in transit, delivered by agent, failed/retry)
 - [`POST /api/agency/shipments/:id/reject`](#reject) — decline an assigned shipment
 - [`PATCH /api/agency/shipments/:id/assign-agent`](#assign-agent) — **offer** the shipment to one of this agency's agents (agent-acceptance workflow)
+- `GET /api/agency/shipments/:id/delivery-proof/file` — the proof photograph's **bytes**, scoped exactly like `GET /:id` (not yours, or no proof: **404**, never 403)
+
+> ⚠ **The agency has ONE delivery-proof route, not the agent's four.** The bytes are readable;
+> the *metadata* is not a separate endpoint on this side — it arrives as `deliveryProof` on
+> [`GET /api/agency/shipments/:id`](#detail). Attaching and removing a proof are the agent's
+> (`agent.routes.ts`), and there is no agency equivalent by design: the agency did not take the
+> photograph. See agent/delivery-proof.md
+> (`backend/jovi-mall/api-doc/agent/delivery-proof.md` — not mirrored in this repository) for the
+> full shape.
+>
+> Added here **2026-09-08** (S5): the route was served and appeared on neither this page nor
+> [assignment.md](assignment.md), only in a changelog.
 
 > **The tracking number is generated, not recorded.** `PATCH /api/agency/shipments/:id/tracking-number`
 > **no longer exists** — see [Tracking number](#tracking-number) below. Every shipment is stamped with
@@ -178,6 +192,15 @@ the whole cash chain), three rules change:
    >
    > **Do not hide or disable the `agent_delivered` action for COD shipments.** Filed in
    > `backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`.
+   >
+   > ⚠ **The refusal of `delivered` is real, but its bespoke message never reaches you**
+   > (DOC-PROGRAM F-44, a backend defect left unfixed). `shipment.service.ts:1221` throws
+   > *"COD shipments are delivered by the agent submitting the customer delivery code"*, but two
+   > layers refuse `delivered` first: it is absent from the Zod `z.enum` on both status endpoints
+   > (`shipment.validator.ts:69,86`) and from every `TRIGGERABLE_TRANSITIONS` value
+   > (`shipment.service.ts:80-98`). A client sending `{"status":"delivered"}` therefore gets a
+   > **generic** validation error that does not mention the delivery code — so the instruction
+   > has to come from this page and from your own UI copy.
 
 Both the [list](#list) and the [detail](#detail) carry a `cod` block for these shipments:
 `{ expectedAmount, currency, status: "pending" | "collected" | "cancelled" | null, collectedAt }`
@@ -198,9 +221,13 @@ same arithmetic the collection will snapshot; treat a `null` status as "no agent
 
 **Query Parameters**:
 - `status` (string, optional) — filter by shipment status (see lifecycle table above).
+  ⚠ **`pending` is NOT accepted here** and returns a `400` validation error — the filter enum is
+  the other ten statuses only (`shipment.validator.ts:23`), deliberately, because a `pending`
+  shipment is invisible to the agency. Build the filter control from those ten, not from the
+  eleven-row lifecycle table.
 - `q` (string, optional, **min 2 chars**, max 100) — free-text search over the customer's name and
   phone, the product titles on the shipment, the order number and the tracking number. Identical to
-  the agent list's search — see agent/shipments.md (`backend/jovi-mall/api-doc/agent/shipments.md #status` — not mirrored in this repository) for the full table.
+  the agent list's search — see agent/shipments.md (`backend/jovi-mall/api-doc/agent/shipments.md #list` — not mirrored in this repository) for the full table.
 - `page` (integer, optional, default 1)
 - `limit` (integer, optional, default 20, max 100)
 
@@ -313,7 +340,7 @@ which is a real answer and exactly what the split will do.
 
 **`itemImages`** is a thumbnail preview of what is in the parcel: **one picture per item**,
 deduplicated and capped at **3** — `itemCount` remains the true number of items. Each entry is the
-standard file shape `{ id, key, url, mimeType, size, originalName }`; always an array, `[]` when
+standard file shape `{ id, key, url, access, mimeType, size, originalName }`; always an array, `[]` when
 nothing on the shipment has a picture. The picture is the **variant's** own image where the variant
 has one, otherwise the product's first image, and it is read **live** rather than snapshotted onto
 the order — a vendor who replaces their photo changes what you see. The full per-item gallery is on
@@ -687,4 +714,3 @@ show up in `GET /api/agency/shipments` immediately.
 
 Toggle via the `shipmentAssigned` flag on [notification preferences](./notifications.md) (default:
 on).
-- `404` – `SHIPMENT_NOT_FOUND` – Shipment does not exist or is not handled by this agency.

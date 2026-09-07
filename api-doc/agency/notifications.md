@@ -1,5 +1,7 @@
 # Agency Notifications
 
+**Verified against source on 2026-09-08** — all 6 notification/device routes and the agency notification catalogue, against `jovi-mall/src/modules/delivery/agency.routes.ts` and `src/modules/notifications/catalog/agency-notification-catalog.ts`.
+
 Full multi-channel parity with vendor notifications — in-app, push, and one preference-gated
 secondary channel (email/Telegram/WhatsApp), catalog-driven and localized. Architecture mirrors
 Vendor Notifications (`backend/jovi-mall/api-doc/vendor/notifications.md` — not mirrored in this repository) exactly; this doc follows the same structure —
@@ -325,5 +327,5 @@ Bearer token and `/api/agency/...` paths where the vendor doc says `/api/vendor/
 ### Error envelope
 
 ```json
-{ "success": false, "requestId": "req_9f3c1a", "error": { "code": "ERROR_CODE", "message": "Human-readable description", "statusCode": 400, "category": "validation", "details": { } } }
+{ "success": false, "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd", "error": { "code": "ERROR_CODE", "message": "Human-readable description", "statusCode": 400, "category": "validation", "details": { } } }
 ```

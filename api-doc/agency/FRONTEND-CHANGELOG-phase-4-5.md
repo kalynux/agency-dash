@@ -1,5 +1,7 @@
 # Agency dashboard — what Phase 4 and Phase 5 changed
 
+**Verified against source on 2026-09-08** — every route claim on this page against the mount it is written under — in particular that the agency serves only `GET /shipments/:id/delivery-proof/file` (`agency.routes.ts:128`) and not the metadata read (`agent.routes.ts:139`) — plus the 10 MB / one-image proof limits, against `jovi-mall/src/modules/delivery/` and `src/core/uploads/upload-config.ts`.
+
 Your slice of Phases **4** (Per-service hardening) and **5** (Legacy close-out) of
 `PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` (`backend/PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` — not mirrored in this repository).
 
@@ -59,8 +61,19 @@ The `shipments/` tree left the static mount. Every `FileDetail` for a file in it
 ### Where it shows on your screens
 
 - `deliveryProof` on `GET /api/agency/shipments/:id`
-- `GET /api/agency/shipments/:id/delivery-proof` (the metadata read — **still useful**, it is how
-  you know there *is* one, and it carries `originalName` and `size`)
+> 🔴 **Corrected 2026-09-08** (S5; DOC-PROGRAM F-17 class 6 — the backend copy was fixed on
+> 2026-09-06 and this one was not). A second bullet here read
+> *"`GET /api/agency/shipments/:id/delivery-proof` (the metadata read — **still useful**…)"*.
+> **That route is not served on the agency side and never was.** `agency.routes.ts:128` registers
+> exactly one delivery-proof route, `/shipments/:id/delivery-proof/file`; the metadata read is the
+> **agent's** (`agent.routes.ts:139`). An agency dashboard that followed this bullet got a 404.
+> The way an agency learns there *is* a proof — including `originalName` and `size` — is the
+> `deliveryProof` object on `GET /api/agency/shipments/:id`, which is the bullet above and was
+> always correct.
+>
+> It survived `route-coverage.js` and `phantom-routes.js` because both match a path SHAPE against
+> the whole tree, and `/shipments/:id/delivery-proof` really is served — on the other role's
+> mount. **A route claim is only checkable against the mount it is written under.**
 
 ### The fix
 

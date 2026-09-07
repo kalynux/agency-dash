@@ -1,5 +1,7 @@
 # Agency File Management
 
+**Verified against source on 2026-09-08** — all 7 `/api/files` routes, the 10-file / 3-video / 70 MB upload limits, the `FileDetail` shape and the error envelope, against `jovi-mall/src/api/routes/file-upload.routes.ts` and `src/api/controllers/file-upload.controller.ts`.
+
 The delivery agency's media library. File upload, listing, view, rename and
 delete run through the **shared** `/api/files` surface (the same endpoints every
 role uses), automatically scoped to the authenticated agency.
@@ -43,8 +45,10 @@ Notes specific to the agency:
   They do appear in the agency's storage usage and, when referenced, block a raw
   delete the same way any referenced file does.
 - Every referenced file is returned as a `FileDetail`
-  (`{ id, key, url, mimeType, size, originalName }`), never a bare URL string.
+  (`{ id, key, url, access, mimeType, size, originalName }`), never a bare URL string.
 
 ## Response envelope
-Standard `{ success, data, meta? }` on success; `{ success:false, error:{ code, message, details? } }`
-on failure. See the [API index](../README.md).
+Standard `{ success, data, meta? }` on success. On failure the envelope is the platform-wide one —
+`{ success: false, requestId, error: { code, message, statusCode, category, details? } }` — where
+`category` is always present and `details` is omitted entirely when absent. See the
+[API index](../README.md).

@@ -1,5 +1,7 @@
 # Delivery Agency Profile Management API Documentation
 
+**Verified against source on 2026-09-08** — the 3 routes, `UpdateAgencyProfileSchema` field-for-field (including the absence of `version`), the supported-language enum, the clearable set and the auth/error codes, against `jovi-mall/src/modules/delivery/validators/agency-onboarding.validator.ts` and `src/core/error-codes.ts`.
+
 ## Overview
 
 The Agency Profile Management API allows a delivery agency to view and update its profile — logistics, payout, branding, KYC, and policy data — outside of the first-time onboarding flow. All endpoints require authentication and are restricted to `agency` accounts.
@@ -52,7 +54,7 @@ Authorization: Bearer <jwt_token>
     "phoneVerified": false,
     "avatar": {
       "id": "507f1f77bcf86cd799439030",
-      "key": "agencies/2026/07/jp-avatar.png",
+      "key": "images/2026/07/jp-avatar.png",
       "url": "https://cdn.example.com/jp-avatar.png",
       "access": "public",
       "mimeType": "image/png",
@@ -156,7 +158,7 @@ See [profile-schema.md](./profile-schema.md) for the meaning and validation rule
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
     "statusCode": 404,
@@ -261,7 +263,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
     "phoneVerified": false,
     "avatar": {
       "id": "507f1f77bcf86cd799439030",
-      "key": "agencies/2026/07/jp-avatar-v2.png",
+      "key": "images/2026/07/jp-avatar-v2.png",
       "url": "https://cdn.example.com/jp-avatar-v2.png",
       "access": "public",
       "mimeType": "image/png",
@@ -303,7 +305,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "VALIDATION_ERROR",
     "statusCode": 400,
@@ -327,7 +329,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
     "statusCode": 404,
@@ -392,7 +394,7 @@ Authorization: Bearer <jwt_token>
 ```json
 {
   "success": false,
-  "requestId": "req_9f3c1a",
+  "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
     "statusCode": 404,
@@ -409,10 +411,10 @@ Authorization: Bearer <jwt_token>
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
 | `VALIDATION_ERROR` | 400 | Request body failed validation |
-| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
-| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`) — the message really is *"Insufficient permissions"* and `details` carries `{ required, actual }`. ⚠ **There is no `FORBIDDEN` code** |
+| `AUTH_MISSING_TOKEN` · `AUTH_TOKEN_EXPIRED` · `AUTH_TOKEN_INVALID` · `AUTH_SESSION_EXPIRED` | 401 | No token, an expired one, a malformed one, or a session past its cap. ⚠ **There is no bare `UNAUTHORIZED` code** — it is not in the registry and nothing emits it |
+| `AUTH_ROLE_NOT_FOUND` | 403 | Signed in, but not as an agency (`requireRole`, `auth.middleware.ts:366`) — the message really is *"Insufficient permissions"* and `details` carries `{ required, actual }`. ⚠ **There is no bare `FORBIDDEN` code** |
 | `DELIVERY_AGENCY_NOT_FOUND` | 404 | No agency profile exists for the authenticated user |
-| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:1530`) |
+| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error. ⚠ **Not `INTERNAL_ERROR`** — the global handler assigns `INTERNAL_SERVER_ERROR` (`error-codes.ts:8`) |
 
 ---
 
