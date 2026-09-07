@@ -674,19 +674,26 @@ Returned when the request body fails Zod schema validation. The `details` array 
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Request validation failed",
-    "details": [
-      {
-        "field": "policies.damage.inspector",
-        "message": "Invalid enum value. Expected 'agency' | 'vendor' | 'admin'"
-      },
-      {
-        "field": "policies.pricing.additional_fees.cod_handling_fee.type",
-        "message": "Invalid enum value. Expected 'percentage' | 'fixed'"
-      }
-    ]
+    "statusCode": 400,
+    "category": "validation",
+    "message": "Validation failed",
+    "details": {
+      "fields": [
+        {
+          "path": "policies.damage.inspector",
+          "message": "Invalid enum value. Expected 'agency' | 'vendor' | 'admin'",
+          "code": "invalid_enum_value"
+        },
+        {
+          "path": "policies.pricing.additional_fees.cod_handling_fee.type",
+          "message": "Invalid enum value. Expected 'percentage' | 'fixed'",
+          "code": "invalid_enum_value"
+        }
+      ]
+    }
   }
 }
 ```

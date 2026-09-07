@@ -40,6 +40,7 @@ Retrieve the authenticated agency's magazin.
       "id": "507f1f77bcf86cd799439030",
       "key": "images/2026/07/fasttrack-logo.png",
       "url": "https://cdn.example.com/fasttrack-logo.png",
+      "access": "public",
       "mimeType": "image/png",
       "size": 24576,
       "originalName": "logo.png"

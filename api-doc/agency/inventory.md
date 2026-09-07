@@ -108,6 +108,7 @@ Unknown query parameters are rejected (`400 VALIDATION_ERROR`).
         "id": "6f1a2b3c4d5e6f7a8b9c0d1e",
         "key": "products/abc.jpg",
         "url": "https://cdn.example.com/products/abc.jpg",
+        "access": "public",
         "mimeType": "image/jpeg",
         "size": 245678,
         "originalName": "airmax.jpg"
@@ -448,9 +449,11 @@ anything blocks it you get:
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "INVENTORY_PRODUCT_UNSUSPEND_BLOCKED",
     "statusCode": 422,
+    "category": "business_rule",
     "message": "This product cannot go back on sale yet — the vendor has to resolve the issues below first.",
     "details": {
       "blockers": [

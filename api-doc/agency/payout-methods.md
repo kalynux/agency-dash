@@ -208,8 +208,10 @@ Rejected — the PAN is present:
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "VALIDATION_ERROR",
+    "category": "validation",
     "statusCode": 400,
     "details": {
       "fields": [

@@ -116,8 +116,11 @@ nothing is stored:
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "UPLOAD_POLICY_VIOLATION",
+    "statusCode": 400,
+    "category": "validation",
     "message": "Upload policy violations found",
     "details": { "violations": [
       { "code": "QUOTA_EXCEEDED",

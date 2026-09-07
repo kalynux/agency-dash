@@ -325,5 +325,5 @@ Bearer token and `/api/agency/...` paths where the vendor doc says `/api/vendor/
 ### Error envelope
 
 ```json
-{ "success": false, "error": { "code": "ERROR_CODE", "message": "Human-readable description" } }
+{ "success": false, "requestId": "req_9f3c1a", "error": { "code": "ERROR_CODE", "message": "Human-readable description", "statusCode": 400, "category": "validation", "details": { } } }
 ```

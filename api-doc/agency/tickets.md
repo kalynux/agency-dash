@@ -108,7 +108,7 @@ Body:
       "user_id": "string",
       "role": "agency",
       "name": "FastTrack Logistics",
-      "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
+      "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "access": "public", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
     },
     "assigned_to_role": null,
     "assigned_to": null,
@@ -120,7 +120,7 @@ Body:
         "user_id": "string",
         "role": "agency",
         "name": "FastTrack Logistics",
-        "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
+        "avatar": { "id": "507f1f77bcf86cd799439030", "key": "images/2026/07/fasttrack-logo.png", "url": "https://cdn.example.com/fasttrack-logo.png", "access": "public", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" }
       }
     ],
     "createdAt": "2026-07-05T19:00:00.000Z",
@@ -548,6 +548,7 @@ Body:
     "fileSize": 184320,
     "mimeType": "image/jpeg",
     "url": "http://localhost:8022/api/files/images/2026/02/a1b2c3…_checkout-error.png",
+    "access": "public",
     "uploadedBy": "string",
     "uploadedByRole": "agency",
     "uploadedByActor": {
@@ -616,7 +617,7 @@ into ready-to-render summary objects. The original `*_id` fields are kept alongs
 attachment `uploadedByActor`). **`assigned_admin` is NOT one of these** — it has its own shape,
 below:
 ```json
-{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar": { "id": "…", "key": "…", "url": "https://.../logo.png", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" } }
+{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar": { "id": "…", "key": "…", "url": "https://.../logo.png", "access": "public", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" } }
 ```
 - `name`: admin/customer/agent → `name`; vendor → `display_name` (falls back to `business_name`);
   **agency → `agency_name`**.

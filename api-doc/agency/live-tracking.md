@@ -70,6 +70,7 @@ Two consequences worth knowing:
           "id": "665f1f77bcf86cd799439fff",
           "key": "avatars/awa.png",
           "url": "https://…/avatars/awa.png",
+          "access": "public",
           "mimeType": "image/png",
           "size": 20481,
           "originalName": "awa.png"

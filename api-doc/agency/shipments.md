@@ -237,7 +237,7 @@ agency-scoped data; `agencyEarning.agentCut` is the agency's view of the same nu
       "customer": { "id": "507f1f77bcf86cd799439ccc", "name": "Jane Doe", "phone": "+237670000002" },
       "itemCount": 2,
       "itemImages": [
-        { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" }
+        { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "access": "public", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" }
       ],
       "pickup": {
         "address": {
@@ -378,8 +378,8 @@ who supplied the goods does not depend on where you collect them.
         "sku": "TSHIRT-RED-L",
         "variantTitle": "Size: Large, Color: Red",
         "images": [
-          { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" },
-          { "id": "...", "key": "products/def.jpg", "url": "https://…/products/def.jpg", "mimeType": "image/jpeg", "size": 91002, "originalName": "tshirt-back.jpg" }
+          { "id": "...", "key": "products/abc.jpg", "url": "https://…/products/abc.jpg", "access": "public", "mimeType": "image/jpeg", "size": 84213, "originalName": "tshirt.jpg" },
+          { "id": "...", "key": "products/def.jpg", "url": "https://…/products/def.jpg", "access": "public", "mimeType": "image/jpeg", "size": 91002, "originalName": "tshirt-back.jpg" }
         ],
         "pickupLocation": {
           "mode": "pickup_based",
@@ -405,7 +405,7 @@ who supplied the goods does not depend on where you collect them.
     "agency": {
       "id": "507f1f77bcf86cd799439099",
       "name": "Douala Express Logistics",
-      "logo": { "id": "...", "key": "images/2026/07/logo.png", "url": "https://…/logo.png", "mimeType": "image/png", "size": 8213, "originalName": "logo.png" },
+      "logo": { "id": "...", "key": "images/2026/07/logo.png", "url": "https://…/logo.png", "access": "public", "mimeType": "image/png", "size": 8213, "originalName": "logo.png" },
       "supportPhone": "+237670000009",
       "supportEmail": "support@douala-express.cm",
       "supportWhatsapp": null

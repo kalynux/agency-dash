@@ -54,6 +54,7 @@ Authorization: Bearer <jwt_token>
       "id": "507f1f77bcf86cd799439030",
       "key": "agencies/2026/07/jp-avatar.png",
       "url": "https://cdn.example.com/jp-avatar.png",
+      "access": "public",
       "mimeType": "image/png",
       "size": 24576,
       "originalName": "me.png"
@@ -155,8 +156,11 @@ See [profile-schema.md](./profile-schema.md) for the meaning and validation rule
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "statusCode": 404,
+    "category": "not_found",
     "message": "..."
   }
 }
@@ -259,6 +263,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
       "id": "507f1f77bcf86cd799439030",
       "key": "agencies/2026/07/jp-avatar-v2.png",
       "url": "https://cdn.example.com/jp-avatar-v2.png",
+      "access": "public",
       "mimeType": "image/png",
       "size": 24576,
       "originalName": "me-v2.png"
@@ -298,15 +303,21 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Request validation failed",
-    "details": [
-      {
-        "field": "policies.pricing.storage_based.enabled",
-        "message": "At least one of storage_based or pickup_based must be enabled."
-      }
-    ]
+    "statusCode": 400,
+    "category": "validation",
+    "message": "Validation failed",
+    "details": {
+      "fields": [
+        {
+          "path": "policies.pricing.storage_based.enabled",
+          "message": "At least one of storage_based or pickup_based must be enabled.",
+          "code": "custom"
+        }
+      ]
+    }
   }
 }
 ```
@@ -316,8 +327,11 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "statusCode": 404,
+    "category": "not_found",
     "message": "..."
   }
 }
@@ -378,8 +392,11 @@ Authorization: Bearer <jwt_token>
 ```json
 {
   "success": false,
+  "requestId": "req_9f3c1a",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "statusCode": 404,
+    "category": "not_found",
     "message": "..."
   }
 }
