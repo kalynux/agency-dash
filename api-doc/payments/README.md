@@ -1,5 +1,11 @@
 # Payments — gateway checkout (role-neutral)
 
+**Verified against source on 2026-09-08** — the six-route census re-run against
+`jovi-mall/src/modules/payments/routes/payment.routes.ts` (`POST /initiate`, `POST /verify`,
+`POST /:transactionId/authorize`, `GET /session/:token`, `POST /:transactionId/pay-link`,
+`GET /:transactionId` — the last two behind `requireAuth`, the first four open). Every other
+factual claim on this page is identical to the backend page verified the same day.
+
 One payment surface, shared by every flow that takes money from a **customer**: a single-order
 payment, a whole multi-vendor cart in one charge, or a service booking.
 
