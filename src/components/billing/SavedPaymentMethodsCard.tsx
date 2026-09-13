@@ -246,7 +246,7 @@ export function SavedPaymentMethodsCard() {
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('common:actions.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>

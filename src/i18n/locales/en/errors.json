@@ -499,9 +499,6 @@
     "INTERNAL_SERVER_ERROR": "An unexpected error occurred. Please try again.",
     "NOT_FOUND": "We couldn't find what you were looking for.",
     "VALIDATION_ERROR": "Please check the highlighted fields and try again.",
-    "UNAUTHORIZED": "Your session has expired. Please log in again.",
-    "FORBIDDEN": "You don't have permission to perform this action.",
-    "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "FILE_TOO_LARGE": "That file is too large.",
     "NETWORK_ERROR": "We couldn't reach the server. Check your connection and try again.",
     "PARSE_ERROR": "We couldn't read the server's response. Please try again.",
@@ -633,7 +630,8 @@
     "PRODUCT_SHARE_CHANNEL_NOT_CONNECTED": "Connect that messaging channel before sharing to it.",
     "PRODUCT_SHARE_SEND_FAILED": "That couldn't be sent. Try again shortly.",
     "PRODUCT_SHARE_WINDOW_CLOSED": "That conversation is outside the messaging window, so nothing can be sent to it right now.",
-    "WISHLIST_ITEM_NOT_FOUND": "That item is no longer on the wishlist."
+    "WISHLIST_ITEM_NOT_FOUND": "That item is no longer on the wishlist.",
+    "STORAGE_DOWNLOAD_NOT_SUPPORTED": "This deployment can’t serve that file’s contents. It’s a configuration issue, not a problem with the file — contact support."
   },
   "categories": {
     "authentication": "Your session has ended. Please sign in again.",

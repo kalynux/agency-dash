@@ -196,7 +196,7 @@ export function InventoryDetailSheet({
   ) : detail ? (
     <>
       {/* Header — picture, name, SKU, how the numbers were arrived at */}
-      <div className="flex-shrink-0 px-5 pb-2 pr-12 pt-2">
+      <div className="flex-shrink-0 px-5 pb-2 pe-12 pt-2">
         <div className="flex items-start gap-3">
           {/* `url` is nullable — see FileRef. Product media is public, so this
               falls through to the placeholder only defensively. */}

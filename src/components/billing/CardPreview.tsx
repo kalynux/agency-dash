@@ -46,8 +46,8 @@ export function CardPreview({
       )}
     >
       {/* Decorative sheen */}
-      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-      <div className="pointer-events-none absolute -bottom-12 -left-6 h-40 w-40 rounded-full bg-white/5" />
+      <div className="pointer-events-none absolute -end-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -bottom-12 -start-6 h-40 w-40 rounded-full bg-white/5" />
 
       <div className="flex items-start justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-white/70">
@@ -70,7 +70,7 @@ export function CardPreview({
             {holderName?.trim() || t('card.holderPlaceholder')}
           </span>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <span className="block text-[10px] uppercase tracking-wide text-white/60">
             {t('card.valid')}
           </span>

@@ -23,13 +23,38 @@ export interface LanguageDescriptor {
   dir: Direction;
 }
 
-export const SUPPORTED_LANGUAGES = [
+/**
+ * ⚠ **Offer only a language this app can actually speak.**
+ *
+ * `pt`, `es` and `ar` are product-supported and their `locales/<code>/`
+ * directories exist, but each holds 255 of 3,478 keys (7%) — so choosing one
+ * used to yield a screen that was 93% English with a Portuguese menu bar, and
+ * in Arabic's case a *mirrored* screen that was 93% English. A fallback is the
+ * right behaviour for a key that has not landed yet; it is the wrong behaviour
+ * for a whole language, because the user reads the offer as a promise.
+ *
+ * The three stay in the repository, in `LanguageCode`, and in the audit script
+ * (`npm run i18n:audit` still reports their coverage). Re-enabling one is
+ * exactly this list plus nothing else — {@link normalizeLanguage} widens with
+ * it, `loadLanguageBundles` finds the files by glob, and direction follows
+ * {@link LanguageDescriptor.dir}. Arabic additionally needs the RTL pass: the
+ * app still carries physical `pl-*`/`left-*` pairs in its search inputs and a
+ * handful of icon positions.
+ */
+const TRANSLATED_LANGUAGES = [
   { code: 'en', nativeName: 'English', intlLocale: 'en-GB', dir: 'ltr' },
   { code: 'fr', nativeName: 'Français', intlLocale: 'fr-FR', dir: 'ltr' },
+] as const satisfies readonly LanguageDescriptor[];
+
+/** Not offered yet — see {@link TRANSLATED_LANGUAGES}. Kept so the codes, the
+ *  `Intl` locales and Arabic's direction are recorded in one place. */
+export const PENDING_LANGUAGES = [
   { code: 'pt', nativeName: 'Português', intlLocale: 'pt-PT', dir: 'ltr' },
   { code: 'es', nativeName: 'Español', intlLocale: 'es-ES', dir: 'ltr' },
   { code: 'ar', nativeName: 'العربية', intlLocale: 'ar', dir: 'rtl' },
 ] as const satisfies readonly LanguageDescriptor[];
+
+export const SUPPORTED_LANGUAGES = TRANSLATED_LANGUAGES;
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 

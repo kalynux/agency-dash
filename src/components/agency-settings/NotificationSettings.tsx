@@ -447,7 +447,7 @@ export function NotificationSettings() {
                     disabled={!verified}
                     onClick={() => selectChannel(c.value)}
                     className={cn(
-                      'flex min-w-0 flex-1 items-start gap-4 rounded-md text-left',
+                      'flex min-w-0 flex-1 items-start gap-4 rounded-md text-start',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       verified ? 'cursor-pointer' : 'cursor-not-allowed',
                     )}

@@ -110,7 +110,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
     </>
   ) : detail ? (
     <>
-      <div className="px-5 pt-2 pb-2 pr-12 flex-shrink-0">
+      <div className="px-5 pt-2 pb-2 pe-12 flex-shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <TitleComp className="text-base leading-tight">{detail.orderNumber}</TitleComp>

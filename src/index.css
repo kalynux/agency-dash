@@ -446,3 +446,37 @@ textarea:focus-visible {
 .agent-map.agent-map--dim .leaflet-tile {
   filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }
+
+/* ─── Touch targets on a coarse pointer ──────────────────────────────────────
+ *
+ * `size="sm"` is 32px tall and `size="icon-sm"` is 32px square. That is a fine
+ * size for a mouse and below both platform guidelines for a finger — Android
+ * asks for 48dp, iOS for 44pt — and the app uses `sm` about 150 times, mostly
+ * for the action buttons inside a table row.
+ *
+ * Rather than edit 150 call sites (and lose the density those rows are designed
+ * for), the floor is raised once, here, and only where it matters: `pointer:
+ * coarse` is true on a phone or a tablet and false for a mouse, so a desktop
+ * table is untouched. Most `sm` buttons live inside a `hidden md:block` table
+ * and never render on a phone at all; what this actually catches is the handful
+ * that do — pagination arrows, row overflow triggers — plus every one of them on
+ * a tablet, which is the width where a dense desktop layout meets a finger.
+ *
+ * 40px rather than 44: it clears the 32px problem by the width of a fingertip
+ * while keeping a table row from growing a third taller. Padding is widened with
+ * it so the hit area grows in both axes, not just vertically.
+ *
+ * Targets the data attributes `Button` already emits, so it cannot drift from
+ * the `cva` variants the way a duplicated class list would.
+ */
+@media (pointer: coarse) {
+  [data-slot='button'][data-size='sm'] {
+    height: 2.5rem;
+    padding-inline: 0.875rem;
+  }
+
+  [data-slot='button'][data-size='icon-sm'] {
+    height: 2.5rem;
+    width: 2.5rem;
+  }
+}

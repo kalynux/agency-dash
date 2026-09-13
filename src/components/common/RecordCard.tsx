@@ -27,6 +27,8 @@ export interface RecordCardProps {
   actions?: ReactNode;
   onClick?: () => void;
   className?: string;
+  /** DOM id, so a deep-linked row can be scrolled to. See `useHighlightRow`. */
+  id?: string;
 }
 
 /**
@@ -61,12 +63,14 @@ export function RecordCard({
   actions,
   onClick,
   className,
+  id,
 }: RecordCardProps) {
   const visibleMeta = meta?.filter(Boolean) ?? [];
   const visibleFields = fields?.filter((f) => !f.hideWhenEmpty || Boolean(f.value)) ?? [];
 
   return (
     <div
+      id={id}
       className={cn(
         'p-4 transition-colors',
         onClick && 'cursor-pointer hover:bg-muted/50 active:bg-muted/50',

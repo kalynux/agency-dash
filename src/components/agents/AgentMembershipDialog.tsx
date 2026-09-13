@@ -219,7 +219,7 @@ function Section({
       }}
       className="group/section rounded-xl border bg-card"
     >
-      <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-muted/50">
+      <CollapsibleTrigger className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-start transition-colors hover:bg-muted/50">
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium">{title}</span>
@@ -717,7 +717,7 @@ function MembershipBody({
 
   return (
     <>
-      <DialogHeader className="flex-shrink-0 gap-0 border-b px-4 py-4 pr-14 sm:px-6 sm:py-5 sm:pr-14">
+      <DialogHeader className="flex-shrink-0 gap-0 border-b px-4 py-4 pe-14 sm:px-6 sm:py-5 sm:pe-14">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted">
             {avatar ? (

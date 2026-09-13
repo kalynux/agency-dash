@@ -282,7 +282,7 @@ export function MagazinSettings() {
                 type="button"
                 aria-label={t('store.removeLogo')}
                 onClick={() => set('logo', null)}
-                className="absolute -right-1.5 -top-1.5 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
+                className="absolute -end-1.5 -top-1.5 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -469,8 +469,8 @@ export function MagazinSettings() {
 function IconInput({ icon: Icon, className, ...props }: ComponentProps<typeof Input> & { icon: LucideIcon }) {
   return (
     <div className="relative">
-      <Icon className="pointer-events-none absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-      <Input className={cn('pl-9', className)} {...props} />
+      <Icon className="pointer-events-none absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
+      <Input className={cn('ps-9', className)} {...props} />
     </div>
   );
 }

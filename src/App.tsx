@@ -1,26 +1,45 @@
-import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { createContext, useContext, useCallback, useState, useEffect, lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
+import { LoadingState } from '@/components/common/state-views';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 
-// Dashboard pages
-import { Overview } from '@/pages/Overview';
-import { Shipments } from '@/pages/Shipments';
-import { Inventory } from '@/pages/Inventory';
-import { LiveTracking } from '@/pages/LiveTracking';
-import { Notifications } from '@/pages/Notifications';
-import { Tickets } from '@/pages/Tickets';
-import { Agents } from '@/pages/Agents';
-import { CashManagement } from '@/pages/CashManagement';
-import { Vendors } from '@/pages/Vendors';
-import { Transactions } from '@/pages/Transactions';
-import { MediaLibrary } from '@/pages/MediaLibrary';
-import { Account } from '@/pages/Account';
-import { Settings } from '@/pages/Settings';
+// ─── Route-level code splitting ───────────────────────────────────────────────
+//
+// Every page below is its own chunk. Statically imported, the sixteen of them
+// plus what they pull in — Leaflet for the map, the whole media library, the
+// billing dialogs — were one 2.5 MB entry bundle that every session downloaded
+// and parsed before it could paint the Overview, which is the only screen most
+// sessions ever see.
+//
+// The web build gets the obvious win. The native build gets a less obvious but
+// larger one: its chunks are already on the device, so there is no network
+// cost, but a low-end Android still has to *parse and execute* whatever is in
+// the entry bundle before the first frame — and that is the gap the splash
+// screen is covering (`hideSplashWhenPainted`).
+//
+// ⚠ Named exports, so each is `.then(m => ({ default: m.X }))`. Keep them that
+// way rather than adding default exports: the page name is what a stack trace
+// and the React DevTools tree show.
+
+const Overview = lazy(() => import('@/pages/Overview').then((m) => ({ default: m.Overview })));
+const Shipments = lazy(() => import('@/pages/Shipments').then((m) => ({ default: m.Shipments })));
+const Inventory = lazy(() => import('@/pages/Inventory').then((m) => ({ default: m.Inventory })));
+const LiveTracking = lazy(() => import('@/pages/LiveTracking').then((m) => ({ default: m.LiveTracking })));
+const Notifications = lazy(() => import('@/pages/Notifications').then((m) => ({ default: m.Notifications })));
+const Tickets = lazy(() => import('@/pages/Tickets').then((m) => ({ default: m.Tickets })));
+const Agents = lazy(() => import('@/pages/Agents').then((m) => ({ default: m.Agents })));
+const CashManagement = lazy(() => import('@/pages/CashManagement').then((m) => ({ default: m.CashManagement })));
+const Vendors = lazy(() => import('@/pages/Vendors').then((m) => ({ default: m.Vendors })));
+const Transactions = lazy(() => import('@/pages/Transactions').then((m) => ({ default: m.Transactions })));
+const MediaLibrary = lazy(() => import('@/pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary })));
+const Account = lazy(() => import('@/pages/Account').then((m) => ({ default: m.Account })));
+const Settings = lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })));
 
 // Auth pages — the only screens that render outside the dashboard chrome.
-import { Login } from '@/pages/Login';
-import { Register } from '@/pages/Register';
-import { ForgotPassword } from '@/pages/ForgotPassword';
+const Login = lazy(() => import('@/pages/Login').then((m) => ({ default: m.Login })));
+const Register = lazy(() => import('@/pages/Register').then((m) => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
 
 // Layout
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -32,6 +51,7 @@ import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 import { MOBILE_TAB_PATHS } from '@/config/navigation';
 import { cn } from '@/lib/utils';
+import { resolveDeepLink } from '@/lib/notification-display';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
 
 // Native shell behaviour (CAPACITOR-PLAN.md → Phase 3). Both are inert on the
@@ -45,7 +65,11 @@ import { useKeyboardOpen } from '@/platform/shell/keyboard';
 // Onboarding system
 import { OnboardingProvider } from '@/onboarding/store/onboarding.store';
 import { OnboardingGuard } from '@/onboarding/OnboardingGuard';
-import { OnboardingRouter } from '@/onboarding/OnboardingRouter';
+// Split with the pages: a signed-in, fully-onboarded agency — which is every
+// session after the first — never renders any of it.
+const OnboardingRouter = lazy(() =>
+  import('@/onboarding/OnboardingRouter').then((m) => ({ default: m.OnboardingRouter })),
+);
 import { OnboardingErrorBoundary } from '@/onboarding/OnboardingErrorBoundary';
 
 // Biometric app lock (Phase 5). A no-op on the web and whenever the user has
@@ -113,15 +137,40 @@ const LegacyAuthContext = createContext<LegacyAuthContextType>({
 
 export const useAuth = () => useContext(LegacyAuthContext);
 
-// ─── Stock-request deep link ──────────────────────────────────────────────────
-// The backend deep-links stock-request notifications to `stock-requests/{id}`
-// (see api-doc/agency/notifications.md), but the inbox lives as a tab under
-// Inventory. Without this the `*` catch-all would swallow every one of those
-// notifications to /dashboard with no error at all.
+// ─── Deep-link catch-all ──────────────────────────────────────────────────────
+// The backend sends a short LABEL — `shipments/665f…`, `cod/deposits/665f…` —
+// and this app translates it. `resolveDeepLink` owns that vocabulary; this is
+// the same translation applied one layer up, at the router, so it also covers
+// the two ways a label arrives as a URL rather than as a notification object:
+//
+//   • an emailed / WhatsApp / Telegram button, which is `{AGENCY_APP_URL}/{path}`
+//     with no `/dashboard` in it at all;
+//   • someone pasting or bookmarking `/dashboard/shipments/665f…`.
+//
+// Both used to hit a bare `<Navigate to="/dashboard" replace />` and land on the
+// Overview with no explanation — not a 404, a silent wrong page, which is worse,
+// and `replace` destroyed the URL so nothing downstream could recover it.
+//
+// It cannot loop: `resolveDeepLink` only ever returns one of eight routes that
+// all match a real `<Route>` above, and an unrecognised path falls back to the
+// index rather than to another translation.
 
-function StockRequestDeepLink() {
-  const { requestId } = useParams<{ requestId: string }>();
-  return <Navigate to={`/dashboard/inventory/requests?open=${requestId ?? ''}`} replace />;
+function DeepLinkCatchAll() {
+  const { pathname, search } = useLocation();
+  const resolved = resolveDeepLink(`${pathname}${search}`);
+  return <Navigate to={resolved ?? '/dashboard'} replace />;
+}
+
+// ─── Route chunk fallback ─────────────────────────────────────────────────────
+//
+// What shows while a lazily-imported page is on its way. Deliberately the app's
+// own `LoadingState` and not a bespoke splash: a route chunk arriving late looks
+// to the user exactly like a slow request, and it should read the same way.
+//
+// `fullScreen` is for the outer boundary, where no shell is painted behind it.
+
+function RouteFallback({ fullScreen = false }: { fullScreen?: boolean }) {
+  return <LoadingState className={fullScreen ? 'min-h-screen' : 'py-24'} />;
 }
 
 // ─── Foreground push ──────────────────────────────────────────────────────────
@@ -207,15 +256,26 @@ function DashboardShell() {
                     (keyboardOpen ? 'pb-6' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'),
                 )}
               >
+                {/* The shell — sidebar, header, tab bar — stays painted while
+                    the next page's chunk arrives, so a route change reads as
+                    the content area filling in rather than as the app
+                    disappearing. Off a fast connection or on a device, where
+                    the chunk is already on disk, this frame is never seen.
+
+                    The boundary outside it catches the one thing splitting can
+                    fail at — a chunk that 404s because the site was redeployed
+                    mid-session. See `RouteErrorBoundary`. */}
+                <RouteErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
                   <Route path="inventory" element={<Navigate to="/dashboard/inventory/stock" replace />} />
                   <Route path="inventory/:tab" element={<Inventory />} />
-                  {/* The stock-request inbox is a tab under Inventory; these two
-                      keep the backend's notification deep-link resolving. */}
+                  {/* The stock-request inbox is a tab under Inventory. The
+                      id-bearing form is one of the eight deep-link labels and
+                      is handled by `DeepLinkCatchAll` below, with the rest. */}
                   <Route path="stock-requests" element={<Navigate to="/dashboard/inventory/requests" replace />} />
-                  <Route path="stock-requests/:requestId" element={<StockRequestDeepLink />} />
                   <Route path="tracking" element={<LiveTracking />} />
                   <Route path="media" element={<MediaLibrary />} />
                   {/* Legacy alias — earnings now live under Account → Payout. */}
@@ -241,8 +301,10 @@ function DashboardShell() {
                   <Route path="settings/storage" element={<Navigate to="/dashboard/media" replace />} />
                   <Route path="settings" element={<Navigate to="/dashboard/settings/policies" replace />} />
                   <Route path="settings/:tab" element={<Settings />} />
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="*" element={<DeepLinkCatchAll />} />
                 </Routes>
+                </Suspense>
+                </RouteErrorBoundary>
               </main>
             </div>
             {isMobile && <MobileTabBar />}
@@ -346,6 +408,12 @@ function AppContent() {
                   needs to know whether anyone is signed in; renders nothing on
                   the web and nothing when the feature is off. */}
               <BiometricAppLock />
+              {/* The outer boundary covers the auth screens and onboarding,
+                  which render without the dashboard shell and so have no
+                  chrome of their own to hold the frame. Full-height, because
+                  here there is nothing else on the screen. */}
+              <RouteErrorBoundary fullScreen>
+              <Suspense fallback={<RouteFallback fullScreen />}>
               <Routes>
                 {/* Public auth routes — outside OnboardingGuard, because the
                     guard's answer to "no session" is to send people here. */}
@@ -377,8 +445,10 @@ function AppContent() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                 {/* Catch-all */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<DeepLinkCatchAll />} />
               </Routes>
+              </Suspense>
+              </RouteErrorBoundary>
             </OnboardingProvider>
           </OnboardingErrorBoundary>
           {/* The offsets are sonner's own defaults (24px desktop, 16px mobile)

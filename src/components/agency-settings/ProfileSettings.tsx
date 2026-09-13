@@ -251,7 +251,7 @@ export function ProfileSettings() {
                   type="button"
                   aria-label={t('common:media.removePhoto')}
                   onClick={() => set('avatar', null)}
-                  className="absolute right-0 top-0 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
+                  className="absolute end-0 top-0 rounded-full border border-border bg-background p-1 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -288,7 +288,7 @@ export function ProfileSettings() {
               <div className="relative">
                 <Input id="email" type="email" value={profile.email ?? ''} readOnly disabled />
                 {profile.emailVerified && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
+                  <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{t('profile.identity.emailLocked')}</p>
@@ -306,7 +306,7 @@ export function ProfileSettings() {
                   placeholder={t('profile.identity.phonePlaceholder')}
                 />
                 {profile.phoneVerified && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
+                  <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{t('profile.identity.phoneLocked')}</p>

@@ -9,10 +9,12 @@
 
 import { useState, type ReactNode } from 'react';
 import { ImagePlus } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
+import { txStatic } from '@/i18n/tx';
 import { MediaPicker } from '@/components/features/MediaPicker';
-import { resolveFileUrl } from '@/services/files.service';
+import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
 import type { FileKind } from '@/types/file.types';
 
 /** What a single-file slot holds: the id to submit, the URL to render. */
@@ -73,6 +75,15 @@ export function MediaPickerTrigger({
         onSelect={(picked) => {
           const file = picked[0];
           if (!file) return;
+          // Say why, rather than swallowing the click. A blocked file is the
+          // one no-URL case a user can actually reach and fix, so dropping the
+          // pick in silence reads as a broken button.
+          if (isQuotaBlockedFile(file)) {
+            toast.error(txStatic('media:quotaBlocked.title'), {
+              description: txStatic('media:quotaBlocked.body'),
+            });
+            return;
+          }
           // `null` means the file has no public URL (an authorized storage
           // tree). Nothing in the media library is one, but a slot that stores
           // a URL cannot hold a placeholder for it — so drop the pick rather

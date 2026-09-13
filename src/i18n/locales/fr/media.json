@@ -182,5 +182,11 @@
     "openSettings": "Ouvrir les réglages",
     "noCamera": "Cet appareil n'a pas d'appareil photo.",
     "failed": "Impossible de récupérer ce fichier. Veuillez réessayer."
+  },
+  "quotaBlocked": {
+    "title": "Limite de stockage atteinte",
+    "body": "Ce fichier est intact, mais votre forfait est plein : il ne peut pas être affiché pour le moment.",
+    "action": "Gérer votre forfait",
+    "short": "Masqué — limite de stockage atteinte"
   }
 }

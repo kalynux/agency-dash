@@ -64,6 +64,7 @@ import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
 import { nativeMediaAvailable } from '@/platform/media';
 import { tx, txStatic, type AnyTFunction } from '@/i18n/tx';
 import {
+  isQuotaBlockedFile,
   kindFromMime,
   listFiles,
   resolveFileUrl,
@@ -72,6 +73,7 @@ import {
   MAX_FILES_PER_UPLOAD,
   MAX_VIDEOS_PER_UPLOAD,
 } from '@/services/files.service';
+import { QuotaBlockedBadge } from '@/components/common/QuotaBlockedMedia';
 import type {
   ApiFile,
   FileKind,
@@ -163,6 +165,11 @@ function FileThumb({ file }: { file: ApiFile }) {
   // defensive branch rather than an expected one: fall through to the kind icon
   // instead of rendering an <img> that can only ever be broken.
   const url = resolveFileUrl(file);
+
+  // A blocked file IS expected here — the picker lists this agency's own
+  // uploads, which is exactly the set a full plan holds back. Mark it, so
+  // picking one is an informed choice rather than a click that does nothing.
+  if (isQuotaBlockedFile(file)) return <QuotaBlockedBadge />;
 
   if (kind === 'image' && url) {
     return (
@@ -432,12 +439,12 @@ export function MediaPicker({
   const toolbar = (
     <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:px-6">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t('picker.searchPlaceholder')}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="h-9 pl-10"
+          className="h-9 ps-10"
         />
       </div>
 
@@ -510,10 +517,10 @@ export function MediaPicker({
           >
             <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
               <FileThumb file={file} />
-              <div className="absolute right-2 top-2">
+              <div className="absolute end-2 top-2">
                 <SelectionBox checked={isSelected} />
               </div>
-              <div className="absolute bottom-2 left-2">
+              <div className="absolute bottom-2 start-2">
                 {added ? (
                   <Badge className="bg-primary text-xs text-primary-foreground">
                     {t('picker.added')}
@@ -721,7 +728,7 @@ export function MediaPicker({
   );
 
   const titleNode = (
-    <div className="flex items-center justify-between pr-6">
+    <div className="flex items-center justify-between pe-6">
       <span>{t('picker.title')}</span>
       {multiple && (
         <span className="text-sm font-normal text-muted-foreground">
@@ -741,7 +748,7 @@ export function MediaPicker({
             side="bottom"
             className="flex h-[92vh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
           >
-            <SheetHeader className="border-b px-4 pb-3 pt-4 text-left">
+            <SheetHeader className="border-b px-4 pb-3 pt-4 text-start">
               <SheetTitle>{titleNode}</SheetTitle>
             </SheetHeader>
             {content}
@@ -772,7 +779,7 @@ export function MediaPicker({
             isMobile ? 'h-[80vh] rounded-t-2xl' : 'w-[340px] sm:max-w-[340px]',
           )}
         >
-          <SheetHeader className="border-b px-5 py-4 text-left">
+          <SheetHeader className="border-b px-5 py-4 text-start">
             <SheetTitle>{t('picker.filters')}</SheetTitle>
           </SheetHeader>
           <MediaPickerFilters

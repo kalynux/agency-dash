@@ -15,18 +15,36 @@ vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: { addListen
 import { routeFromPushData, routeFromUrl } from './deepLinks';
 
 describe('routeFromUrl', () => {
-  it('takes an App Link path as the route it already is', () => {
-    // Minted against the web app, whose routes are the app's routes.
+  it('resolves an App Link through the deep-link vocabulary', () => {
+    // `/dashboard/shipments/:id` is NOT a route — the shipment list opens its
+    // detail sheet from `?open=`. Before this went through `resolveDeepLink`
+    // the path was passed along verbatim and the catch-all swallowed it to the
+    // Overview.
     expect(routeFromUrl('https://agency.wi-mall.com/dashboard/shipments/abc123')).toBe(
-      '/dashboard/shipments/abc123',
+      '/dashboard/shipments?open=abc123',
+    );
+  });
+
+  it('resolves an emailed button, which carries no /dashboard at all', () => {
+    // The shape the email, WhatsApp and Telegram buttons actually use:
+    // `{AGENCY_APP_URL}/{path}`. This is the case the whole translation exists
+    // for — it used to land on the Overview with no explanation.
+    expect(routeFromUrl('https://agency.wi-mall.com/shipments/abc123')).toBe(
+      '/dashboard/shipments?open=abc123',
+    );
+    expect(routeFromUrl('https://agency.wi-mall.com/cod/deposits/dep1')).toBe(
+      '/dashboard/cash/deposits?open=dep1',
+    );
+    expect(routeFromUrl('https://agency.wi-mall.com/vendor-connections/c1')).toBe(
+      '/dashboard/vendors/connections?open=c1',
     );
   });
 
   it('puts a custom-scheme path under /dashboard', () => {
     // `wiagency://shipments/abc123` parses with 'shipments' as the HOST — a
     // custom scheme has no authority — so host and pathname have to be
-    // recombined before the dashboard prefix goes on.
-    expect(routeFromUrl('wiagency://shipments/abc123')).toBe('/dashboard/shipments/abc123');
+    // recombined before the label is resolved.
+    expect(routeFromUrl('wiagency://shipments/abc123')).toBe('/dashboard/shipments?open=abc123');
   });
 
   it('handles a custom-scheme link with a single segment', () => {
@@ -40,7 +58,11 @@ describe('routeFromUrl', () => {
     );
   });
 
-  it('keeps the query string', () => {
+  it('keeps the query string, and does not treat such a URL as a label', () => {
+    // A `?` means somebody shared a real in-app URL carrying its own tab or
+    // filter. None of the eight labels has a query string, so this is the
+    // signal that resolution must not run — otherwise `?tab=browse` would be
+    // thrown away and replaced by the connections tab.
     expect(routeFromUrl('https://agency.wi-mall.com/dashboard/agents?tab=connections')).toBe(
       '/dashboard/agents?tab=connections',
     );
@@ -52,7 +74,16 @@ describe('routeFromUrl', () => {
     // minted against agency.wi-mall.com. Comparing hosts would reject every
     // real link; the intent filter is what vouched for this URL already.
     expect(routeFromUrl('https://wi-mall.com/dashboard/shipments/1')).toBe(
-      '/dashboard/shipments/1',
+      '/dashboard/shipments?open=1',
+    );
+  });
+
+  it('passes an unknown path through rather than swallowing it', () => {
+    // Rule 5: an unrecognised label is "no button", not an error. The router's
+    // own fallback decides what to do, which keeps a label the backend adds
+    // before we ship a case for it from breaking anything.
+    expect(routeFromUrl('https://agency.wi-mall.com/dashboard/not-a-label/9')).toBe(
+      '/dashboard/not-a-label/9',
     );
   });
 
@@ -76,22 +107,30 @@ describe('routeFromPushData', () => {
     // Mirrors AgencyNotificationAction.path — the same string the in-app
     // notifications list resolves through notificationHref.
     expect(routeFromPushData({ path: 'stock-requests/66f0a1' })).toBe(
-      '/dashboard/stock-requests/66f0a1',
+      '/dashboard/inventory/requests?open=66f0a1',
     );
   });
 
   it('tolerates a leading slash on the path', () => {
-    expect(routeFromPushData({ path: '/shipments/1' })).toBe('/dashboard/shipments/1');
+    expect(routeFromPushData({ path: '/shipments/1' })).toBe('/dashboard/shipments?open=1');
   });
 
   it('accepts the action_path spelling', () => {
-    expect(routeFromPushData({ action_path: 'tickets/7' })).toBe('/dashboard/tickets/7');
+    expect(routeFromPushData({ action_path: 'tickets/7' })).toBe('/dashboard/tickets?open=7');
   });
 
   it('prefers path over url when both are present', () => {
     expect(routeFromPushData({ path: 'shipments/1', url: 'https://x/dashboard/agents' })).toBe(
-      '/dashboard/shipments/1',
+      '/dashboard/shipments?open=1',
     );
+  });
+
+  it('falls through to url when the path is not a label we know', () => {
+    // Rule 5 again, at the push layer: an unknown label must not navigate
+    // somewhere invented, so `url` gets its turn before we give up.
+    expect(
+      routeFromPushData({ path: 'not-a-label/1', url: 'https://x/dashboard/notifications' }),
+    ).toBe('/dashboard/notifications');
   });
 
   it('falls back to a fully-qualified url', () => {

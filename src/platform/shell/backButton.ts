@@ -247,5 +247,14 @@ export function useHardwareBackButton(): void {
       cancelled = true;
       void handle?.remove();
     };
+    // `depth` is the ref object returned by `useNavigationDepth`, not a value:
+    // it is referentially stable for the life of the component and only ever
+    // read as `depth.current`, inside the listener, at press time. Listing it
+    // would be inert at best — and the rule cannot see that, because it cannot
+    // follow a custom hook's return type. The empty array is the point of this
+    // effect: the listener is registered exactly once, and re-registering it on
+    // any dependency change is the bug this guards against (see the note above
+    // about a window with no listener at all).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

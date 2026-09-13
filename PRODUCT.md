@@ -98,22 +98,26 @@ Account (profile, store, locations, security, billing, payout); Settings
 
 **Stack (existing codebase, do not re-decide):** React 19, TypeScript 5.9,
 Vite 7, React Router v6, Tailwind CSS 3.4, shadcn/ui (Radix UI), React Hook Form
-+ Zod, Recharts, Framer Motion, Leaflet, Firebase (push), Stripe, Sonner,
-next-themes. `@` path alias maps to `./src`. Responsive: desktop sidebar +
-mobile tab bar / more-drawer. Dev server on port 5174. No test runner is
-configured.
++ Zod, Framer Motion, Leaflet, Firebase (push), Stripe, Sonner, i18next,
+Capacitor 8 (Android). `@` path alias maps to `./src`. Responsive: desktop
+sidebar + mobile tab bar / more-drawer, and a native Android shell built from
+the same bundle. Dev server on port 5174. **Vitest** is the test runner
+(`npm test`); the suite is unit-level and covers the auth core, the platform
+layer and the notification/deep-link resolvers.
+
+Every route is code-split (`React.lazy` in `App.tsx`), so the entry chunk stays
+small — do not reintroduce a static page import.
 
 **API contract.** Every endpoint returns a uniform envelope —
 `{ success, data, meta }` on success, `{ success, error: { code, message, … } }`
 on failure. Branch on the stable `error.code`, never the human `message`.
 Validation errors carry `details.fields[]` to map to form fields.
 
-**State.** All app state is React Context stores in `src/store` composed into one
-provider; Zustand is installed but unused. Several domains are on the real API
-(onboarding, auth, shipments, agents, notifications, vendor connections) while
-other dashboard areas still run on mock data (`src/data/mockData.ts`) with
-simulated delays — a real, in-progress migration. Future work must not assume
-every screen is backed by live data.
+**State.** All app state is React Context stores in `src/store`, mounted in
+`App.tsx`. **Every screen is on the real API** — the mock-data migration this
+document once described is finished, and `src/data/mockData.ts` was deleted with
+the stores that read it. There is no mock layer left to fall back on, so a
+feature without an endpoint is a feature that does not render.
 
 **Legacy shims.** `App.tsx` keeps `UIContext`/`LegacyAuthContext`/legacy-router
 context shapes for the Sidebar/Header; do not remove without refactoring those
@@ -140,9 +144,15 @@ a 10,000 XAF minimum and an automatic sweep at 2,000,000 XAF.
   `vendor.wi-mall.com`, and `api.wi-mall.com`, with the main site at
   `wi-mall.com`. Say "Wi-Mall" for the platform and "Wi-Agency" for this app;
   never "Wi-Mall Agency".
-- **Visual identity is not yet established.** No confirmed logo, palette,
-  typography, or brand voice has been provided. Do not fabricate brand guidelines;
-  a visual world is decided later in design work, not here.
+- **Visual identity: Dispatch Cobalt, and it is implemented.** The palette lives
+  as HSL tokens in `src/index.css` (cobalt `--primary`, a navy sidebar surface,
+  green reserved for delivered/paid states); the type is Plus Jakarta Sans with
+  Sora for display and JetBrains Mono for figures, vendored into the bundle
+  rather than fetched from Google Fonts. Onboarding was migrated onto the same
+  tokens on 2026-09-09, so the whole app is one visual system. **Style new
+  surfaces from the tokens — never from raw Tailwind palette classes**
+  (`slate-*`, `zinc-*`, `red-*`); a literal colour is how the two halves drifted
+  apart the first time.
 
 ## Evidence on Hand
 
@@ -150,8 +160,9 @@ a 10,000 XAF minimum and an automatic sweep at 2,000,000 XAF.
   per-feature HTTP documentation plus a shared conventions/error catalog. This is
   the source of truth for backend behavior.
 - **A working, implemented UI** across every feature area listed above, built on
-  the shadcn/ui component set.
-- **Mock data** in `src/data/mockData.ts` for the areas not yet wired to the API.
+  the shadcn/ui component set. Only the components actually used are kept — the
+  unused shadcn primitives were removed on 2026-09-09, and any of them can be
+  restored with `npx shadcn add <name>` (`components.json` is configured).
 - **Absences future work must not invent:** there are no real customer
   testimonials, case studies, press mentions, production usage metrics, or real
   screenshots on hand. Any marketing/persuade surface must source real content or

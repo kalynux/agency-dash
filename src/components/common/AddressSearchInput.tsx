@@ -179,9 +179,9 @@ export function AddressSearchInput({
     <div ref={containerRef} className="relative space-y-2">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           {isSearching ? (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            <Loader2 className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           ) : query ? (
             <button
               type="button"
@@ -191,7 +191,7 @@ export function AddressSearchInput({
                 setResults([]);
                 setOpen(false);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -204,7 +204,7 @@ export function AddressSearchInput({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setOpen(true)}
             placeholder={placeholder ?? t('addressSearch.placeholder')}
-            className={cn('h-10 pl-10 pr-9', hasError && 'border-destructive')}
+            className={cn('h-10 ps-10 pe-9', hasError && 'border-destructive')}
             aria-invalid={hasError}
           />
         </div>
@@ -231,7 +231,7 @@ export function AddressSearchInput({
               <button
                 type="button"
                 onClick={() => pick(candidate)}
-                className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"
+                className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-start text-sm hover:bg-accent"
               >
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0">

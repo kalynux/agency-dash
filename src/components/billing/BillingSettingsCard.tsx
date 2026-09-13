@@ -105,7 +105,7 @@ export function BillingSettingsCard() {
               )}
             </div>
             <Button type="submit" disabled={isSubmitting || !isDirty}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('common:actions.save')}
             </Button>
           </form>

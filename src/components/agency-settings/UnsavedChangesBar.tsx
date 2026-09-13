@@ -45,7 +45,7 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
         'md:bottom-6',
       )}
     >
-      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border bg-background/95 py-1.5 pl-3 pr-1.5 shadow-lg backdrop-blur animate-fade-in sm:gap-3 sm:pl-4">
+      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border bg-background/95 py-1.5 ps-3 pe-1.5 shadow-lg backdrop-blur animate-fade-in sm:gap-3 sm:ps-4">
         <span className="relative flex h-2 w-2 flex-shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />

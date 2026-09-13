@@ -77,7 +77,7 @@ export function MobileTabBar() {
           unmounting them with the bar would close an open sheet the moment its
           own text field was focused. */}
       {!keyboardOpen && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-[0_-4px_16px_rgba(6,36,26,0.06)] pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed bottom-0 start-0 end-0 z-50 bg-background/95 backdrop-blur-sm border-t shadow-[0_-4px_16px_rgba(6,36,26,0.06)] pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center justify-around h-16 px-2">
             <TabButton
               label={t('primary.overview')}

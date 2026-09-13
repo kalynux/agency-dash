@@ -1,5 +1,37 @@
 apply plugin: 'com.android.application'
 
+// ─── Release signing ──────────────────────────────────────────────────────────
+//
+// Two sources, checked in this order, so the same build file works on a laptop
+// and on a CI runner that must never have a keystore file checked out:
+//
+//   1. ORG_GRADLE_PROJECT_WIAGENCY_* environment variables (CI). Gradle maps
+//      ORG_GRADLE_PROJECT_x to the project property `x`, which is why these are
+//      read as properties and not with System.getenv.
+//   2. android/keystore.properties (this machine). Git-ignored, and it points at
+//      a keystore that lives OUTSIDE the repository.
+//
+// When neither is present `signingConfigs.release` is left null and the release
+// build is simply unsigned — `assembleDebug` and every CI job that only compiles
+// keeps working on a checkout with no credentials at all. That is deliberate: a
+// build file that dies without a secret makes the repository unusable for anyone
+// who is not publishing.
+def keystorePropsFile = rootProject.file("keystore.properties")
+def signingProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { signingProps.load(it) }
+}
+
+def signingValue = { String envName, String fileKey ->
+    project.hasProperty(envName) ? project.property(envName) : signingProps.getProperty(fileKey)
+}
+
+def releaseStoreFile     = signingValue("WIAGENCY_STORE_FILE", "storeFile")
+def releaseStorePassword = signingValue("WIAGENCY_STORE_PASSWORD", "storePassword")
+def releaseKeyAlias      = signingValue("WIAGENCY_KEY_ALIAS", "keyAlias")
+def releaseKeyPassword   = signingValue("WIAGENCY_KEY_PASSWORD", "keyPassword")
+def canSignRelease = releaseStoreFile != null && file(releaseStoreFile).exists()
+
 android {
     namespace = "com.wi_mall.agency"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +39,11 @@ android {
         applicationId "com.wi_mall.agency"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // ⚠ versionCode must increase on EVERY upload to Play, forever, and it
+        // can never be reused or lowered. versionName is the string people see.
+        // Bump both here; nothing derives them from package.json.
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +51,40 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (canSignRelease) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                // v2 is what actually signs this APK. v1 (JAR signing) is only
+                // consulted below API 24, and `minSdkVersion` is exactly 24, so
+                // AGP drops v1 whatever this flag says — `apksigner verify` on
+                // the built artifact reports v1 false, v2 true. The flag stays
+                // on so that lowering minSdk one day restores v1 without anyone
+                // having to rediscover why it mattered.
+                enableV1Signing true
+                enableV2Signing true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8, on. The web bundle is untouched by it — everything under
+            // assets/public is data — so what shrinks is the Java side: the
+            // thirteen Capacitor plugins and their transitive AndroidX.
+            //
+            // `shrinkResources` needs `minifyEnabled` and is the half that
+            // actually removes the unused drawables the plugin AARs bring in.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Null when no credentials are configured, which leaves the build
+            // unsigned rather than failing. See the note at the top of this file.
+            signingConfig canSignRelease ? signingConfigs.release : null
         }
     }
 }

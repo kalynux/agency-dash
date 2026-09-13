@@ -26,6 +26,15 @@ import {
   listSurfaceClass,
 } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
+import {
+  useOpenParam,
+  useHighlightRow,
+  rowDomId,
+  HIGHLIGHT_CLASS,
+} from '@/hooks/useOpenParam';
+
+/** DOM-id prefix for a deep-linked hand-over row. */
+const DEPOSIT_ROW = 'deposit';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useCodCashActions } from '@/hooks/useCodCashActions';
 import { codCashService } from '@/services/cod-cash.service';
@@ -58,6 +67,13 @@ export function DepositsTab() {
 
   const [rejectTarget, setRejectTarget] = useState<CodDeposit | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  // `?open=<depositId>` — where `cod.deposit.declared` and
+  // `cod.deposit.direct_to_platform` land (`cod/deposits/{id}`,
+  // api-doc/notifications/deep-links.md). There is no detail sheet here, so the
+  // deep link scrolls to the hand-over and rings it rather than opening one.
+  const { openId } = useOpenParam();
+  const highlighted = useHighlightRow(DEPOSIT_ROW, openId);
 
   const statusOptions = useMemo(
     () => [
@@ -273,6 +289,8 @@ export function DepositsTab() {
                 return (
                   <RecordCard
                     key={d.id}
+                    id={rowDomId(DEPOSIT_ROW, d.id)}
+                    className={cn(highlighted === d.id && HIGHLIGHT_CLASS)}
                     title={agentName(d.agentId)}
                     badge={d.status ? <CodDepositStatusBadge status={d.status} /> : undefined}
                     primary={formatCurrency(d.amount, d.currency)}
@@ -359,7 +377,14 @@ export function DepositsTab() {
                     const isAgencyRecipient = (d.recipient ?? 'agency') === 'agency';
                     const actionable = isDeclared && isAgencyRecipient;
                     return (
-                      <tr key={d.id} className="border-b hover:bg-muted/50 transition-colors align-top">
+                      <tr
+                        key={d.id}
+                        id={rowDomId(DEPOSIT_ROW, d.id)}
+                        className={cn(
+                          'border-b hover:bg-muted/50 transition-colors align-top',
+                          highlighted === d.id && HIGHLIGHT_CLASS,
+                        )}
+                      >
                         <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
                         <td className="p-4">
                           {formatCurrency(d.amount, d.currency)}

@@ -190,11 +190,14 @@ export function Notifications() {
         </AsyncBoundary>
 
         {!isLoading && !error && meta.pages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between gap-3 p-4 border-t">
+            {/* `min-w-0` so the count, which is a translated sentence and not a
+                fixed-width figure, gives way to the buttons instead of pushing
+                them off a 360px screen. */}
+            <p className="min-w-0 text-sm text-muted-foreground">
               {t('pagination', { page: meta.page, pages: meta.pages, total: meta.total })}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => setPage((p) => p - 1)} aria-label={t('common:pagination.previous')}>
                 <ChevronLeft className="w-4 h-4 rtl:-scale-x-100" />
               </Button>

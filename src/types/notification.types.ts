@@ -1,10 +1,31 @@
 // Agency Notifications — see api-doc/agency/notifications.md
 
+/**
+ * The button on a notification. `action: null` is a real state — render no
+ * button, and do not invent a destination (deep-links.md rule 5).
+ */
 export interface AgencyNotificationAction {
+  /**
+   * The button's text, **already translated into the recipient's language**.
+   * Render it; never write your own, or a French agency reads an English
+   * button.
+   */
   label: string;
-  /** App-relative deep link, e.g. "vendor-connections/66f0a1..." or "shipments/{id}". */
+  /**
+   * The deep-link LABEL — `shipments/{id}`, `plans`. Not a route: the backend
+   * does not know this app's routes and never will. Resolve it through
+   * `resolveDeepLink`. See api-doc/notifications/deep-links.md § Agency.
+   */
   path: string;
-  url: string;
+  /**
+   * `path` glued onto `AGENCY_APP_URL`, for the channels that can only carry a
+   * link (email, WhatsApp, Telegram). **Optional** — the in-app inbox row
+   * carries it only sometimes.
+   *
+   * Route on `path` wherever you have it; this is the fallback for the one case
+   * where you do not.
+   */
+  url?: string;
 }
 
 export interface AgencyNotification {

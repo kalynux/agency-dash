@@ -89,7 +89,7 @@ export function StockRequestSheet({
     </>
   ) : request ? (
     <>
-      <div className="flex-shrink-0 px-5 pb-3 pr-12 pt-3">
+      <div className="flex-shrink-0 px-5 pb-3 pe-12 pt-3">
         <SheetTitle className="text-base leading-tight">{t('requests.sheetTitle')}</SheetTitle>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <StockRequestStatusBadge status={request.status} />

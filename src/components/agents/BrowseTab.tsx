@@ -274,7 +274,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         <div className="space-y-3">{agentCards}</div>
       ) : (
         <ScrollArea className="h-[52vh] min-h-[220px]">
-          <div className="space-y-3 pr-3">{agentCards}</div>
+          <div className="space-y-3 pe-3">{agentCards}</div>
         </ScrollArea>
       )}
 

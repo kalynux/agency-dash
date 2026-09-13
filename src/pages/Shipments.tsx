@@ -17,6 +17,7 @@ import { useAgentsRoster } from '@/store/agents.store';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { ShipmentMoneyCell } from '@/components/shipments/ShipmentMoney';
 import { ShipmentDetailSheet } from '@/components/shipments/ShipmentDetailSheet';
+import { useOpenParam } from '@/hooks/useOpenParam';
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -27,6 +28,15 @@ import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types
  * Statuses offered in the filter sheet, in display order. Labels come from
  * `shipments:status.*` — the same table the badge reads, so a filter pill and
  * the badge it matches can never disagree.
+ */
+/**
+ * The ten statuses `GET /api/agency/shipments?status=` accepts, plus `all`.
+ *
+ * ⚠ **`pending` is deliberately absent and must stay absent** — it is not in the
+ * filter enum and sending it is a `400 VALIDATION_ERROR`. A `pending` shipment
+ * has not been handed to the agency yet and is invisible to it, so the filter
+ * is built from these ten rather than from the eleven-row lifecycle table.
+ * See api-doc/agency/shipments.md § List.
  */
 const STATUS_FILTER_VALUES: (ShipmentStatus | 'all')[] = [
   'all',
@@ -39,6 +49,7 @@ const STATUS_FILTER_VALUES: (ShipmentStatus | 'all')[] = [
   'failed',
   'returned',
   'rejected',
+  'pending_agency_reassignment',
 ];
 
 const PAGE_LIMIT = 20;
@@ -77,6 +88,7 @@ export function Shipments() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { openId, close: clearOpenParam } = useOpenParam();
   const [detailOpen, setDetailOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -136,6 +148,18 @@ export function Shipments() {
     setSelectedId(id);
     setDetailOpen(true);
   };
+
+  // `?open=<shipmentId>` — where a notification deep link lands
+  // (`shipments/{id}`, api-doc/notifications/deep-links.md). The id is in the
+  // URL so an emailed button, a pasted link and an in-app click all arrive the
+  // same way.
+  useEffect(() => {
+    if (!openId) return;
+    // Inlined rather than calling `openDetail`, which is re-created every render
+    // and would make this effect re-run on each one.
+    setSelectedId(openId);
+    setDetailOpen(true);
+  }, [openId]);
 
   const agentNameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? t('status.assigned');
 
@@ -466,7 +490,12 @@ export function Shipments() {
       <ShipmentDetailSheet
         shipmentId={selectedId}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          // Drop `?open=` or the effect above reopens the sheet the user just
+          // closed on the next render.
+          if (!open) clearOpenParam();
+        }}
         onChanged={handleChanged}
       />
     </div>

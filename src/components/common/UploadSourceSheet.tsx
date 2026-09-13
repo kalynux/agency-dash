@@ -165,7 +165,7 @@ function SourceRow({ icon: Icon, label, hint, disabled, spinning, onClick }: Sou
       onClick={onClick}
       // Tall enough to be a comfortable thumb target, and left-aligned so the
       // three read as a list of destinations rather than a row of actions.
-      className="h-auto justify-start gap-3 px-3 py-3 text-left"
+      className="h-auto justify-start gap-3 px-3 py-3 text-start"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
         <Icon className={spinning ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />

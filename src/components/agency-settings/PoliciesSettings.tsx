@@ -19,10 +19,10 @@ import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { buildPoliciesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import type { AgencyPolicies } from '@/types/api';
-import { resolveFileUrl } from '@/services/files.service';
+import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { isSameFormValue } from '@/lib/form-diff';
-import { tx } from '@/i18n/tx';
+import { tx, txStatic } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
 /**
@@ -531,7 +531,15 @@ export function PoliciesSettings() {
               multiple
               maxFiles={remainingDocs}
               acceptedTypes={['document']}
-              onSelect={(picked) =>
+              onSelect={(picked) => {
+                // Say why before dropping anything. A blocked document is the
+                // one unresolvable case a user can reach and fix themselves,
+                // and silently discarding their pick reads as a broken picker.
+                if (picked.some(isQuotaBlockedFile)) {
+                  toast.error(txStatic('media:quotaBlocked.title'), {
+                    description: txStatic('media:quotaBlocked.body'),
+                  });
+                }
                 setDocuments((prev) => [
                   ...prev,
                   // `resolveFileUrl` returns null for a file with no public URL.
@@ -542,8 +550,8 @@ export function PoliciesSettings() {
                     .slice(0, 2 - prev.length)
                     .map((f) => resolveFileUrl(f))
                     .filter((url): url is string => url !== null),
-                ])
-              }
+                ]);
+              }}
             />
           </Section>
         </form>

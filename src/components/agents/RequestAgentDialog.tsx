@@ -120,7 +120,7 @@ function RequestBody({
 
   return (
     <>
-      <DialogHeader className="flex-shrink-0 gap-1 border-b px-4 py-4 pr-14 text-start sm:px-6 sm:py-5">
+      <DialogHeader className="flex-shrink-0 gap-1 border-b px-4 py-4 pe-14 text-start sm:px-6 sm:py-5">
         <DialogTitle className="text-base">{t('offerDialog.title', { name: agent.name })}</DialogTitle>
         <DialogDescription>{t('offerDialog.description')}</DialogDescription>
       </DialogHeader>

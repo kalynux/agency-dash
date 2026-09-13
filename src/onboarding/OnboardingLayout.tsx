@@ -25,11 +25,11 @@ const STEPS: { step: Exclude<AgencyOnboardingStep, 0>; labelKey: string }[] = [
 
 export const selectTriggerClass = (hasError?: boolean) =>
     cn(
-        'h-11 w-full rounded-lg border text-sm bg-slate-50 dark:bg-zinc-800',
-        'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white',
+        'h-11 w-full rounded-lg border text-sm bg-muted',
+        'border-border text-foreground',
         'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
-        'placeholder:text-slate-400 transition-colors duration-150',
-        hasError && 'border-red-400 focus:ring-red-200 focus:border-red-400',
+        'placeholder:text-muted-foreground transition-colors duration-150',
+        hasError && 'border-destructive focus:ring-destructive/30 focus:border-destructive',
     );
 
 // ─── Clickable horizontal stepper ─────────────────────────────────────────────
@@ -84,9 +84,9 @@ function StepProgress({
                                     className={cn(
                                         'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all duration-200',
                                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                                        isCompleted && 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600 cursor-pointer',
+                                        isCompleted && 'bg-success border-success text-success-foreground hover:bg-success/90 cursor-pointer',
                                         isActive && 'bg-primary border-primary text-primary-foreground shadow-md shadow-primary/30 cursor-default ring-4 ring-primary/15',
-                                        !isActive && !isCompleted && isUnlocked && 'bg-white dark:bg-zinc-800 border-primary text-primary hover:bg-primary/5 cursor-pointer',
+                                        !isActive && !isCompleted && isUnlocked && 'bg-card border-primary text-primary hover:bg-primary/5 cursor-pointer',
                                         !isUnlocked && 'bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed',
                                     )}
                                     aria-label={
@@ -103,7 +103,11 @@ function StepProgress({
                                 </motion.button>
                                 <span className={cn(
                                     'text-[10px] font-semibold whitespace-nowrap select-none',
-                                    isActive ? 'text-primary' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-slate-500' : 'text-muted-foreground',
+                                    // Unlocked-but-not-visited and locked read
+                                    // the same: the circle above already says
+                                    // which is which, and two greys a shade
+                                    // apart said it less clearly than one.
+                                    isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground',
                                 )}>
                                     {label}
                                 </span>
@@ -114,7 +118,7 @@ function StepProgress({
                                 <div className="flex-1 mx-2 mb-4">
                                     <div className="relative h-0.5 bg-muted-foreground/20 rounded-full overflow-hidden">
                                         <motion.div
-                                            className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full"
+                                            className="absolute inset-y-0 start-0 bg-success rounded-full"
                                             initial={false}
                                             animate={{ width: isCompleted ? '100%' : '0%' }}
                                             transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -147,20 +151,20 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
     const maxReached = currentStep ?? 1;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col">
             {/* ── Header ──
                 The padding and the matching height keep the bar 4rem tall while
-                letting its own white fill the status-bar band on a device
+                letting the card surface fill the status-bar band on a device
                 drawing edge to edge (CAPACITOR-PLAN.md → P3.3). `env()` is 0 in
                 every browser, so this is `h-16` as before on the web. */}
-            <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
+            <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-card border-b border-border flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-sm">
                 <div className="flex items-center gap-2.5">
                     <AppLogo decorative className="shadow-sm" />
                     <div className="flex flex-col leading-tight">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white leading-none">
+                        <span className="font-bold text-sm text-foreground leading-none">
                             {t('layout.platform')}
                         </span>
-                        <span className="text-[10px] text-slate-400 leading-none truncate max-w-[140px] mt-0.5">{agencyName}</span>
+                        <span className="text-[10px] text-muted-foreground leading-none truncate max-w-[140px] mt-0.5">{agencyName}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -169,7 +173,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                         finish four steps of forms before they can reach the
                         Account → Profile picker. */}
                     <LanguagePicker />
-                    <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-slate-700 dark:hover:text-white gap-1.5">
+                    <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground gap-1.5">
                         <LogOut className="w-4 h-4" />
                         <span className="hidden sm:inline text-sm">{t('layout.signOut')}</span>
                     </Button>
@@ -178,7 +182,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
 
             {/* ── Clickable Step progress ── */}
             {displayStep !== null && displayStep !== 0 && (
-                <nav aria-label={t('layout.progressLabel')} className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                <nav aria-label={t('layout.progressLabel')} className="bg-card border-b border-border">
                     <StepProgress current={displayStep as number} maxReached={maxReached as number} />
                 </nav>
             )}
@@ -194,7 +198,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.22, ease: 'easeOut' }}
                         >
-                            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                                 {children}
                             </div>
                         </motion.div>
@@ -213,7 +217,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                 the button rides the keys rather than sitting a bar's width
                 above them. */}
             {ctaSlot && (
-                <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
+                <div className="md:hidden bg-card border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
                     {ctaSlot}
                 </div>
             )}

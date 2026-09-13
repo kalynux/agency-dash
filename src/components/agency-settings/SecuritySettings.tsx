@@ -39,27 +39,54 @@ export function SecuritySettings() {
       <ContactChangeCard />
       <BiometricUnlockCard />
 
-      {/* Not-yet-implemented security features, greyed out (no agency API for these). */}
-      <Card className={cn(sectionSurfaceClass, 'opacity-60')}>
+      {/*
+        Two-factor auth — announced, not shipped. There is no agency API for it.
+
+        ⚠ The dimming is on the CONTROL, never on the card.
+        `opacity-60` used to sit on the whole `<Card>`, which faded the one
+        element that explains the state — a `variant="outline"` badge reading
+        "Coming soon" at 60% on a muted ground was the least legible thing in the
+        section. A disabled control should be quiet; the sentence saying *why*
+        it is disabled has to be the loudest part of the block, or the section
+        reads as broken rather than as planned.
+
+        So: the badge is a filled chip at full strength, the heading and its
+        description read normally, and only the switch row is muted.
+      */}
+      <Card className={sectionSurfaceClass}>
         <SectionHeading
           icon={Shield}
           title={
-            <>
+            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
               {t('security.twoFactor.title')}
-              <Badge variant="outline" className="ms-1">{t('security.twoFactor.comingSoon')}</Badge>
-            </>
+              <Badge
+                variant="secondary"
+                className="border-warning/30 bg-warning/12 font-semibold text-warning"
+              >
+                {t('security.twoFactor.comingSoon')}
+              </Badge>
+            </span>
           }
           description={t('security.twoFactor.description')}
         />
         <CardContent className="max-md:px-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{t('security.twoFactor.enable')}</p>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-3">
+            <div className="min-w-0">
+              <p className="font-medium text-muted-foreground">{t('security.twoFactor.enable')}</p>
               <p className="text-sm text-muted-foreground">
                 {t('security.twoFactor.notAvailable')}
               </p>
             </div>
-            <Switch disabled aria-label={t('security.twoFactor.enableAria')} />
+            {/* `aria-disabled` rather than the bare `disabled` it also carries:
+                a disabled control is skipped by a screen reader's form
+                navigation entirely, so the one thing a non-sighted user would
+                learn here — that 2FA exists and is not ready — disappears. */}
+            <Switch
+              disabled
+              aria-disabled="true"
+              aria-label={t('security.twoFactor.enableAria')}
+              className="shrink-0"
+            />
           </div>
         </CardContent>
       </Card>

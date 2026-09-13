@@ -182,5 +182,11 @@
     "openSettings": "Open settings",
     "noCamera": "This device has no camera.",
     "failed": "Could not get that file. Please try again."
+  },
+  "quotaBlocked": {
+    "title": "Storage limit reached",
+    "body": "This file is safe, but your plan is full so it can’t be shown right now.",
+    "action": "Manage your plan",
+    "short": "Hidden — storage limit reached"
   }
 }

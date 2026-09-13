@@ -82,6 +82,7 @@ import {
   deleteFile,
   getFile,
   getFilesUsage,
+  isQuotaBlockedFile,
   kindFromMime,
   listFiles,
   resolveFileUrl,
@@ -91,6 +92,7 @@ import {
   MAX_FILES_PER_UPLOAD,
   MAX_VIDEOS_PER_UPLOAD,
 } from '@/services/files.service';
+import { QuotaBlockedMedia } from '@/components/common/QuotaBlockedMedia';
 import type {
   ApiFile,
   ApiFileDetail,
@@ -212,6 +214,15 @@ function FileArtwork({
   // back to the kind icon rather than mount a media element that cannot paint.
   const url = resolveFileUrl(file);
 
+  // ...with one exception, which must be tested BEFORE the kind-icon fallback.
+  // A quota-blocked file also has no URL, but a kind icon there says "this is a
+  // JPEG" when what the owner needs to know is "your plan is full and this is
+  // coming back". Same reason the backend gave it a value of its own rather
+  // than reusing `authorized`.
+  if (isQuotaBlockedFile(file)) {
+    return <QuotaBlockedMedia className={className} showAction={controls} />;
+  }
+
   // Local-provider files are served by the API behind the session cookie, so the
   // media elements have to send credentials.
   if (kind === 'image' && !broken && url) {
@@ -273,6 +284,10 @@ function FilePreview({ file }: { file: ApiFile }) {
   const { t } = useTranslation('media');
   const kind = kindFromMime(file.mimeType);
   const url = resolveFileUrl(file);
+
+  // Before the per-kind branches: a blocked file of ANY kind has the same
+  // answer, and it is the one screen with room to give the whole explanation.
+  if (isQuotaBlockedFile(file)) return <QuotaBlockedMedia />;
 
   if (kind === 'image' || kind === 'video') return <FileArtwork file={file} controls />;
 
@@ -796,13 +811,13 @@ export function MediaLibrary() {
                     key={file.id}
                     onClick={() => openInspector(file.id)}
                     className={cn(
-                      'group relative overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-md',
+                      'group relative overflow-hidden rounded-xl border bg-card text-start transition-all hover:shadow-md',
                       inspectId === file.id && 'ring-2 ring-primary',
                     )}
                   >
                     <div className="relative aspect-square bg-muted">
                       <FileArtwork file={file} />
-                      <div className="absolute right-2 top-2">
+                      <div className="absolute end-2 top-2">
                         <StatusChip fileId={file.id} />
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
@@ -872,7 +887,7 @@ export function MediaLibrary() {
                                 openInspector(file.id);
                               }}
                             >
-                              <Link2 className="mr-2 h-4 w-4" />
+                              <Link2 className="me-2 h-4 w-4" />
                               {t('list.inspect')}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -883,7 +898,7 @@ export function MediaLibrary() {
                                 handleDelete(file.id);
                               }}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="me-2 h-4 w-4" />
                               {t('common:actions.delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -963,7 +978,7 @@ export function MediaLibrary() {
               side="bottom"
               className="flex h-[90vh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
             >
-              <SheetTitle className="border-b p-4 pr-12">{t('inspector.sheetTitle')}</SheetTitle>
+              <SheetTitle className="border-b p-4 pe-12">{t('inspector.sheetTitle')}</SheetTitle>
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {inspectId && (
                   <InspectorBody
@@ -1167,7 +1182,7 @@ function InspectorBody({
           <Button
             variant="secondary"
             size="icon"
-            className="absolute right-2 top-2 h-7 w-7"
+            className="absolute end-2 top-2 h-7 w-7"
             onClick={onClose}
             aria-label={t('inspector.close')}
           >

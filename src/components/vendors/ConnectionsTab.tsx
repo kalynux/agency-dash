@@ -14,7 +14,17 @@ import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
+import { cn } from '@/lib/utils';
+import {
+  useOpenParam,
+  useHighlightRow,
+  rowDomId,
+  HIGHLIGHT_CLASS,
+} from '@/hooks/useOpenParam';
 import type { ConnectionDto, ConnectionStatus, VendorBrowseItemDto } from '@/types/vendor-connection.types';
+
+/** DOM-id prefix for a deep-linked connection row. */
+const CONNECTION_ROW = 'connection';
 
 type StatusChip = 'all' | 'pending' | 'active' | 'paused_reapproval' | 'history';
 
@@ -176,6 +186,13 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [chip, setChip] = useState<StatusChip>('all');
+
+  // `?open=<connectionId>` — where the four `connection.*` notifications land
+  // (`vendor-connections/{id}`, api-doc/notifications/deep-links.md). There is
+  // no detail sheet here, so the deep link scrolls to the connection and rings
+  // it rather than opening one.
+  const { openId } = useOpenParam();
+  const highlighted = useHighlightRow(CONNECTION_ROW, openId);
   const [search, setSearch] = useState('');
 
   const statusOptions = useMemo(
@@ -286,7 +303,11 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
             return (
               <div
                 key={connection.id}
-                className="flex items-center justify-between gap-3 p-4 md:rounded-xl md:border md:border-border md:p-3"
+                id={rowDomId(CONNECTION_ROW, connection.id)}
+                className={cn(
+                  'flex items-center justify-between gap-3 p-4 md:rounded-xl md:border md:border-border md:p-3',
+                  highlighted === connection.id && HIGHLIGHT_CLASS,
+                )}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">

@@ -91,14 +91,14 @@ export function NotesThread({
       ) : (
         <ul className="space-y-4">
           {notes.map((note) => (note.is_system_note ? (
-            <li key={note._id} className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <li key={note.id} className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 shrink-0" />
               <span className="text-center">{note.content}</span>
               <span>·</span>
               <span className="shrink-0">{relativeTime(note.created_at)}</span>
             </li>
           ) : (
-            <li key={note._id} className="flex gap-3">
+            <li key={note.id} className="flex gap-3">
               <ActorAvatar actor={note.author} role={note.author_role} />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">

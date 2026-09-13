@@ -4,6 +4,7 @@ import { StockTab } from '@/components/inventory/StockTab';
 import { StockRequestsTab } from '@/components/inventory/requests/StockRequestsTab';
 import { StorageStatementsTab } from '@/components/inventory/statements/StorageStatementsTab';
 import { SubPageHeader, type RenderPageHeader } from '@/components/layout/PageContainer';
+import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['stock', 'requests', 'statements'] as const;
 type InventoryTab = (typeof VALID_TABS)[number];
@@ -54,10 +55,20 @@ export function Inventory() {
   );
 
   return (
-    <div className="animate-fade-in space-y-6">
+    // Swipeable like every other tabbed page (Account, Agents, Cash, Settings,
+    // Vendors). Without it these three were the only tabs on a phone reachable
+    // *solely* through the More drawer — the gesture that works everywhere else
+    // in the app did nothing here, which reads as the app having stopped
+    // responding rather than as a screen that opted out.
+    <TabSwipeArea
+      tabs={VALID_TABS}
+      active={activeTab}
+      toPath={(next) => `/dashboard/inventory/${next}`}
+      className="animate-fade-in space-y-6"
+    >
       {activeTab === 'stock' && <StockTab renderHeader={renderHeader} />}
       {activeTab === 'requests' && <StockRequestsTab renderHeader={renderHeader} />}
       {activeTab === 'statements' && <StorageStatementsTab renderHeader={renderHeader} />}
-    </div>
+    </TabSwipeArea>
   );
 }

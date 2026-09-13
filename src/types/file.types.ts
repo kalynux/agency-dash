@@ -10,17 +10,28 @@
 // `usage` object on GET /files/:id, never from `usageCount` (stale on legacy data).
 
 /**
- * Which of the two storage worlds a file lives in.
+ * Which storage world a file lives in. **Three values, and `url` is `null` for
+ * two of them** — branch on this, never on `url` being truthy.
  *
  * `public` — served by the static mount. `url` is a real, fetchable, sessionless
  * URL and `<img src>` works from any origin.
  * `authorized` — `digital/`, `shipments/` and `ticket-attachments/` left that
  * mount on 2026-08-19. `url` is `null` and the bytes come from the owning
  * entity's own route (for us: `GET /api/agency/shipments/:id/delivery-proof/file`).
+ * `quota_blocked` — added 2026-09-07. The file's **owner is over their plan's
+ * `max_storage_bytes`**, so this file is one of the ones held back. Nothing was
+ * deleted, nothing is private, and no authorized route will serve it either:
+ * it is a *billing* state and the remedy is a plan upgrade, not a permission.
  *
- * See api-doc/files/private-files.md.
+ * ⚠ **`quota_blocked` outranks `authorized`** — the backend checks the quota
+ * first (`read-models/file-detail.resolver.ts`), so a blocked file inside a
+ * private tree reports `quota_blocked`. Test it first here too, or a client
+ * sends the user to a byte route that will describe a permissions problem when
+ * the real answer is billing.
+ *
+ * See api-doc/files/private-files.md § The third value.
  */
-export type FileAccess = 'public' | 'authorized';
+export type FileAccess = 'public' | 'authorized' | 'quota_blocked';
 
 /**
  * A resolved file reference as it appears *embedded* in other resources — an
@@ -39,7 +50,10 @@ export type FileAccess = 'public' | 'authorized';
 export interface FileRef {
   id: string;
   key: string;
-  /** `null` for an `authorized` file. Never put a null-checked fallback path here. */
+  /**
+   * `null` for an `authorized` **or** `quota_blocked` file. Never put a
+   * null-checked fallback path here.
+   */
   url: string | null;
   /**
    * Which world this file is in. Optional only defensively — the backend always
@@ -52,12 +66,31 @@ export interface FileRef {
   originalName: string;
 }
 
+/**
+ * What `POST /files/upload` and `/files/upload/video` hand back — the full file
+ * *record*, plus the two computed fields `url` and `access`.
+ *
+ * ⚠ **Changed 2026-09-08, reversing prior advice.** These responses used to
+ * carry neither, and this repository was told not to expect one. They now pass
+ * through the same `toFileDetail` resolver as every other file on the platform,
+ * so they carry the same privacy and quota rules — which is why `url` is
+ * nullable here rather than a `string`.
+ *
+ * **Attach by `id` regardless.** `url` is for *showing* the file before it is
+ * attached to anything (an upload confirmation, a media grid). It is not a
+ * reference: never store a URL where an id belongs, and never derive an id from
+ * a URL. And never hand-build one from `key` — that is what this change exists
+ * to stop. See api-doc/uploads/README.md.
+ */
 export interface UploadedFile {
   id: string;
   originalName: string;
   mimeType: string;
   size: number;
-  url: string;
+  /** `null` for an `authorized` or `quota_blocked` file — see {@link FileAccess}. */
+  url: string | null;
+  /** Which storage world this is. Absent on payloads predating 2026-08-19. */
+  access?: FileAccess;
   provider: string;
   ownerType: string;
   createdAt: string;
@@ -100,9 +133,9 @@ export interface ApiFile {
   id: string;
   key: string;
   /**
-   * `null`/absent for an `authorized` file — see {@link FileAccess}. A missing
-   * `url` on a `public` file is the legacy case `resolveFileUrl` rebuilds from
-   * `key`; on an authorized one it must never be rebuilt.
+   * `null`/absent for an `authorized` or `quota_blocked` file — see
+   * {@link FileAccess}. A missing `url` on a `public` file is the legacy case
+   * `resolveFileUrl` rebuilds from `key`; on the other two it must never be.
    */
   url?: string | null;
   /** Which storage world this is. Absent on payloads predating 2026-08-19. */
@@ -118,6 +151,23 @@ export interface ApiFile {
   usageCount: number;
   ownerType?: FileOwnerType;
   ownerId?: string;
+  /**
+   * Set once the file was soft-deleted.
+   *
+   * ⚠ **`GET /files` RETURNS SOFT-DELETED ROWS.** Its query is built from
+   * ownership plus your filters and never excludes `deletedAt`, while every
+   * id-scoped read on that router does exclude it. A backend defect, recorded
+   * in api-doc/uploads/README.md rather than papered over — `listFiles` filters
+   * these out client-side, or a file the user just deleted reappears in the
+   * media browser on the next page load.
+   */
+  deletedAt?: string | null;
+  /** When the quota sweep held this file back. Pairs with `access: 'quota_blocked'`. */
+  quotaBlockedAt?: string | null;
+  /** Set when the file has no live references and is a garbage-collection candidate. */
+  orphanedAt?: string | null;
+  /** When the cleanup worker will destroy the bytes of a soft-deleted file. */
+  purgeAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

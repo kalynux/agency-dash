@@ -212,21 +212,21 @@ export function SearchFilterBar({
       <div className="flex items-center gap-2">
         {hasSearch ? (
           <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               value={value ?? ''}
               onChange={(e) => onChange?.(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchLabel ?? searchPlaceholder}
-              className="h-11 rounded-xl pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"
+              className="h-11 rounded-xl ps-10 pe-9 [&::-webkit-search-cancel-button]:hidden"
             />
             {value && (
               <button
                 type="button"
                 onClick={() => onChange?.('')}
                 aria-label={t('filters.clearSearch')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -257,7 +257,7 @@ export function SearchFilterBar({
           >
             <SlidersHorizontal className="h-[1.15rem] w-[1.15rem]" />
             {activeCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground ring-2 ring-background">
+              <span className="absolute -end-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground ring-2 ring-background">
                 {activeCount}
               </span>
             )}

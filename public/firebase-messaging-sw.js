@@ -1,9 +1,15 @@
-/* eslint-disable no-undef */
 // Firebase Cloud Messaging service worker — receives push while the dashboard
 // tab is in the background or closed.
 //
 // Service workers cannot read Vite env vars, so the Firebase config is
-// hardcoded here. KEEP IN SYNC with env/.env.development (VITE_FIREBASE_*).
+// hardcoded here. KEEP IN SYNC with the VITE_FIREBASE_* values in BOTH
+// env/.env.development AND env/.env.production — they hold the same values,
+// because `bingoo-22222` is the messaging project for both environments.
+//
+// Nothing checks the three copies against each other, and drift is silent in the
+// worst way: registration succeeds against one project and delivery is attempted
+// against another, so push simply never arrives and no error is raised anywhere.
+//
 // Only compat builds work inside a service worker (importScripts).
 
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js');

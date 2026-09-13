@@ -49,7 +49,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
         </div>
         <span className="flex-1 text-start text-sm font-medium">{tx(t, item.labelKey)}</span>
         {badge > 0 && (
-          <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center mr-1">
+          <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center me-1">
             {badge > 9 ? '9+' : badge}
           </span>
         )}
@@ -76,7 +76,7 @@ function MenuRow({ item, handlers }: { item: NavItem; handlers: NavHandlers }) {
                   handlers.go(child.path);
                 }}
                 className={cn(
-                  'w-full flex items-center gap-3 pl-8 pr-4 py-2.5 hover:bg-accent transition-colors',
+                  'w-full flex items-center gap-3 ps-8 pe-4 py-2.5 hover:bg-accent transition-colors',
                   child.disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
                 )}
               >

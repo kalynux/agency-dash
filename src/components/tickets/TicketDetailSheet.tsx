@@ -99,7 +99,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (!ticket) return;
     const res = await run(
       'edit',
-      () => ticketsService.update(ticket._id, { subject: draftSubject, description: draftDescription }),
+      () => ticketsService.update(ticket.id, { subject: draftSubject, description: draftDescription }),
       { success: t('detail.toasts.updated') },
     );
     if (res) {
@@ -110,7 +110,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
   async function changeStatus(status: TicketStatus) {
     if (!ticket || status === ticket.status) return;
-    const res = await run('status', () => ticketsService.updateStatus(ticket._id, status), {
+    const res = await run('status', () => ticketsService.updateStatus(ticket.id, status), {
       success: t('detail.toasts.statusUpdated'),
     });
     if (res) applyUpdate(res.data);
@@ -118,7 +118,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
   async function changePriority(priority: TicketPriority) {
     if (!ticket || priority === ticket.priority) return;
-    const res = await run('priority', () => ticketsService.updatePriority(ticket._id, priority), {
+    const res = await run('priority', () => ticketsService.updatePriority(ticket.id, priority), {
       success: t('detail.toasts.priorityUpdated'),
     });
     if (res) applyUpdate(res.data);
@@ -126,7 +126,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
   async function escalate() {
     if (!ticket) return;
-    const res = await run('escalate', () => ticketsService.assign(ticket._id, 'admin'), {
+    const res = await run('escalate', () => ticketsService.assign(ticket.id, 'admin'), {
       success: t('detail.toasts.escalated'),
     });
     if (res) applyUpdate(res.data);
@@ -134,7 +134,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
   async function handleClose() {
     if (!ticket) return;
-    const res = await run('close', () => ticketsService.close(ticket._id), {
+    const res = await run('close', () => ticketsService.close(ticket.id), {
       success: t('detail.toasts.closed'),
     });
     if (res) {
@@ -165,13 +165,13 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     <Sheet open={!!ticketId} onOpenChange={onOpenChange}>
       <SheetContent side={sheet.side} className={cn('flex flex-col p-0', sheet.className)}>
         {/* Header */}
-        <SheetHeader className="gap-3 border-b pr-20">
+        <SheetHeader className="gap-3 border-b pe-20">
           {ticket ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <StatusPill status={ticket.status} />
                 <PriorityPill priority={ticket.priority} locked={ticket.priority_locked} />
-                <span className="font-mono text-xs text-muted-foreground">{shortTicketRef(ticket._id)}</span>
+                <span className="font-mono text-xs text-muted-foreground">{shortTicketRef(ticket.id)}</span>
               </div>
               <SheetTitle className="text-lg leading-snug">{ticket.subject}</SheetTitle>
             </>
@@ -260,9 +260,9 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                   )}
                 </section>
 
-                <AttachmentsPanel ticketId={ticket._id} followers={followers} readOnly={isClosed} />
+                <AttachmentsPanel ticketId={ticket.id} followers={followers} readOnly={isClosed} />
 
-                <NotesThread ticketId={ticket._id} followers={followers} readOnly={isClosed} />
+                <NotesThread ticketId={ticket.id} followers={followers} readOnly={isClosed} />
               </div>
 
               {/* Sidebar */}
@@ -412,7 +412,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                 <dl className="space-y-2 border-t pt-4 text-sm">
                   <MetaLine label={t('detail.created')} value={formatDate(ticket.createdAt)} />
                   <MetaLine label={t('detail.lastUpdated')} value={relativeTime(ticket.updatedAt)} />
-                  <MetaLine label={t('detail.ticketId')} value={shortTicketRef(ticket._id)} mono />
+                  <MetaLine label={t('detail.ticketId')} value={shortTicketRef(ticket.id)} mono />
                 </dl>
               </aside>
             </div>

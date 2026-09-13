@@ -65,8 +65,31 @@ export interface TicketEntityRef {
   reference: string;
 }
 
+/**
+ * ⚠ **A ticket is identified by `id`, not `_id`** — on every endpoint on this
+ * surface.
+ *
+ * `Ticket` is built on the backend's `BaseSchemaOptions`, whose `toJSON` deletes
+ * `_id` and exposes the `id` virtual, so **the write endpoints — status,
+ * priority, assign, close, reopen and the `PATCH` on the ticket itself — return
+ * the document with `id` ALONE**. Only the three enriched reads (create, list,
+ * detail) additionally carry a duplicate `_id`, because their enrichment service
+ * builds its payload with `toObject({ virtuals: true })`, which applies no
+ * transform.
+ *
+ * `id` is the only identifier present on all of them, so it is the one to key
+ * on. A client keying on `_id` reads `undefined` the first time it patches a
+ * ticket — and this screen replaces its state with the write response, so the
+ * *next* action, the notes thread and the attachments panel all break at once.
+ *
+ * `ticketsService` normalises `id` onto every response it returns, so `_id`
+ * below is only what the enriched reads happen to carry. Do not read it.
+ * See api-doc/agency/tickets.md.
+ */
 export interface Ticket {
-  _id: string;
+  id: string;
+  /** Duplicate, present only on create/list/detail. Never key on it. */
+  _id?: string;
   subject: string;
   description: string;
   type: TicketType;
@@ -90,8 +113,11 @@ export interface Ticket {
   updatedAt: string;
 }
 
+/** Same identifier rule as {@link Ticket} — key on `id`. */
 export interface TicketNote {
-  _id: string;
+  id: string;
+  /** Duplicate, present only on the enriched reads. Never key on it. */
+  _id?: string;
   ticket_id: string;
   content: string;
   visibility: 'public' | 'private';

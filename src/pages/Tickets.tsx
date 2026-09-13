@@ -20,6 +20,7 @@ import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { CreateTicketSheet } from '@/components/tickets/CreateTicketSheet';
 import { TicketDetailSheet } from '@/components/tickets/TicketDetailSheet';
+import { useOpenParam } from '@/hooks/useOpenParam';
 import { FaqSheet } from '@/components/tickets/FaqSheet';
 import {
   statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, STATUS_TAB_VALUES,
@@ -96,6 +97,14 @@ export function Tickets() {
   );
   const [faqOpen, setFaqOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // `?open=<ticketId>` — where a notification deep link lands (`tickets/{id}`,
+  // api-doc/notifications/deep-links.md). The id is in the URL so an emailed
+  // button, a pasted link and an in-app click all arrive the same way.
+  const { openId, close: clearOpenParam } = useOpenParam();
+  useEffect(() => {
+    if (openId) setSelectedId(openId);
+  }, [openId]);
 
   // Open the create sheet or a specific ticket when arrived via router state, then clear it.
   useEffect(() => {
@@ -292,8 +301,8 @@ export function Tickets() {
               <tbody>
                 {filtered.map((ticket) => (
                   <tr
-                    key={ticket._id}
-                    onClick={() => setSelectedId(ticket._id)}
+                    key={ticket.id}
+                    onClick={() => setSelectedId(ticket.id)}
                     className="group cursor-pointer border-b last:border-0 hover:bg-muted/40"
                   >
                     <td className="px-4 py-3"><TicketIdentity ticket={ticket} /></td>
@@ -313,8 +322,8 @@ export function Tickets() {
           <div className="-mx-4 divide-y border-y sm:-mx-6 md:hidden">
             {filtered.map((ticket) => (
               <button
-                key={ticket._id}
-                onClick={() => setSelectedId(ticket._id)}
+                key={ticket.id}
+                onClick={() => setSelectedId(ticket.id)}
                 className="flex w-full flex-col gap-3 p-4 text-start active:bg-muted/50"
               >
                 <TicketIdentity ticket={ticket} />
@@ -370,7 +379,13 @@ export function Tickets() {
       <CreateTicketSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
       <TicketDetailSheet
         ticketId={selectedId}
-        onOpenChange={(open) => !open && setSelectedId(null)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setSelectedId(null);
+          // Drop `?open=` too, or the effect above reopens the sheet the user
+          // just closed on the next render.
+          clearOpenParam();
+        }}
         onChanged={load}
       />
       <FaqSheet open={faqOpen} onOpenChange={setFaqOpen} />
@@ -403,7 +418,7 @@ function TicketIdentity({ ticket }: { ticket: Ticket }) {
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{ticket.subject}</p>
         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="font-mono">{shortTicketRef(ticket._id)}</span>
+          <span className="font-mono">{shortTicketRef(ticket.id)}</span>
           <span>·</span>
           <EntityChip ticket={ticket} />
         </div>

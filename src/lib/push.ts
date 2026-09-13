@@ -11,8 +11,20 @@
  * the settings UI keeps showing "Push messaging is not configured for this
  * deployment" (in-app notifications still work). See env/.env.development.
  */
-import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, isSupported, type Messaging } from 'firebase/messaging';
+// ⚠ `firebase/*` is imported DYNAMICALLY, inside the functions that need it —
+// never at the top of this file.
+//
+// This module is imported for its side effect from `main.tsx`, so a static
+// import would put the whole Firebase messaging SDK in the entry chunk of every
+// build. On the web that is ~150 kB parsed before the first paint by every
+// session, including the ones that never enable push. On NATIVE it is worse
+// than dead weight: the guard at the bottom of this file means the web-push
+// provider is never even installed on a device (P2.6) — push there goes through
+// `@capacitor/push-notifications` — so the SDK is shipped, parsed and then
+// unreachable.
+//
+// `import type` is erased at compile time and costs nothing.
+import type { Messaging } from 'firebase/messaging';
 import { isNative } from '@/platform/env';
 
 const firebaseConfig = {
@@ -32,6 +44,10 @@ let messagingPromise: Promise<Messaging | null> | null = null;
 let swPromise: Promise<ServiceWorkerRegistration> | null = null;
 
 async function initMessaging(): Promise<Messaging | null> {
+  const [{ initializeApp }, { getMessaging, isSupported }] = await Promise.all([
+    import('firebase/app'),
+    import('firebase/messaging'),
+  ]);
   // Guards against browsers without the Push/SW APIs (e.g. iOS < 16.4).
   if (!(await isSupported())) return null;
   return getMessaging(initializeApp(firebaseConfig));
@@ -49,6 +65,9 @@ async function getPushToken(): Promise<string | null> {
     // FCM requires its service worker at the origin root (served from public/).
     const serviceWorkerRegistration = await (swPromise ??=
       navigator.serviceWorker.register('/firebase-messaging-sw.js'));
+    // Already resolved and cached by `initMessaging` above — this is a module
+    // lookup, not a second download.
+    const { getToken } = await import('firebase/messaging');
     return await getToken(messaging, { vapidKey, serviceWorkerRegistration });
   } catch (err) {
     console.error('[push] Could not obtain an FCM token:', err);

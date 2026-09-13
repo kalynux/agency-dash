@@ -292,7 +292,7 @@ function AddressRowHeading({
           aria-label={t('locations.removeAddress')}
           onClick={onRemove}
           // 32px hit area, pulled flush with the band's right padding.
-          className="-mr-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="-me-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -635,7 +635,7 @@ export function LocationsSettings() {
                       entry.geo && (entry.city || entry.region) && (
                         <p className="text-xs text-muted-foreground">
                           {t('locations.regionOptional')}: {entry.region || t('locations.regionNotNamed')} | {t('locations.cityOptional')}: {entry.city || t('locations.cityNotNamed')}
-                          <span className="ml-1 opacity-70">{t('locations.fromMapResult')}</span>
+                          <span className="ms-1 opacity-70">{t('locations.fromMapResult')}</span>
                         </p>
                       )
                     )}

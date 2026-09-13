@@ -24,7 +24,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dashboardRoute } from '@/lib/notification-display';
+import { resolveDeepLink } from '@/lib/notification-display';
 import { isNative } from '../env';
 
 /**
@@ -68,6 +68,15 @@ function route(target: string | null): void {
  * against `agency.wi-mall.com`, so comparing hosts would reject every real link
  * — and the scheme and host are what Android's intent filter already matched
  * on, so by the time a URL is here it has been vouched for.
+ *
+ * ⚠ **A web link is NOT always a full app route.** The email, WhatsApp and
+ * Telegram buttons are `{AGENCY_APP_URL}/{path}` — the deep-link *label* with
+ * no `/dashboard` in it, e.g. `https://agency.wi-mall.com/shipments/665f…`.
+ * Passing that pathname through verbatim produced a route nothing matches, and
+ * the catch-all then sent the recipient to the Overview with `replace`, which
+ * destroyed the URL too. So both shapes go through `resolveDeepLink` first, and
+ * only a path it does not recognise is passed through as-is (which is what
+ * keeps a genuine `/dashboard/...` App Link working).
  */
 export function routeFromUrl(rawUrl: string): string | null {
   let url: URL;
@@ -82,7 +91,23 @@ export function routeFromUrl(rawUrl: string): string | null {
   const path = raw.replace(/\/{2,}/g, '/').replace(/^\/+|\/+$/g, '');
   if (!path) return null;
 
-  return `${isWebLink ? `/${path}` : dashboardRoute(path)}${url.search}`;
+  // A QUERY STRING MEANS THIS IS AN APP ROUTE, NOT A LABEL. None of the eight
+  // labels carries one (rule 2 — they are addresses, not state), so a `?` is
+  // the signal that somebody pasted or shared a real in-app URL with its own
+  // tab or filter in it. Resolving those would throw that state away:
+  // `/dashboard/agents?tab=browse` would become the connections tab.
+  if (!url.search) {
+    // `resolveDeepLink` tolerates a leading `dashboard/`, so one call covers the
+    // App Link, the emailed button and our own scheme alike. It returns the
+    // final route including any `?open=` of its own.
+    const resolved = resolveDeepLink(path);
+    if (resolved) return resolved;
+  }
+
+  // Unrecognised. A web link is still a full app route (someone pasted a URL
+  // from the address bar); a custom-scheme one is dashboard-relative by
+  // convention, and unknown either way means the router's own fallback decides.
+  return `${isWebLink ? `/${path}` : `/dashboard/${path}`}${url.search}`;
 }
 
 /**
@@ -101,7 +126,13 @@ export function routeFromPushData(data: unknown): string | null {
   const payload = data as Record<string, unknown>;
 
   const path = payload.path ?? payload.action_path;
-  if (typeof path === 'string' && path.trim()) return dashboardRoute(path.trim());
+  // An unrecognised label is "no button" (rule 5), so fall through to `url`
+  // rather than navigating somewhere invented — and if that is unknown too,
+  // `null` leaves the tap on the inbox where it belongs.
+  if (typeof path === 'string' && path.trim()) {
+    const route = resolveDeepLink(path.trim());
+    if (route) return route;
+  }
 
   const url = payload.url ?? payload.action_url;
   if (typeof url === 'string' && url.trim()) return routeFromUrl(url.trim());

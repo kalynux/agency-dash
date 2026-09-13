@@ -325,7 +325,7 @@ export function Sidebar() {
           )}
         </div>
         {!sidebarCollapsed && (
-          <span className="flex-1 text-left whitespace-nowrap overflow-hidden">{label}</span>
+          <span className="flex-1 text-start whitespace-nowrap overflow-hidden">{label}</span>
         )}
         {!sidebarCollapsed && hasChildren && (
           <ChevronDown
@@ -427,7 +427,7 @@ export function Sidebar() {
             aria-orientation="horizontal"
             onPointerDown={startFooterResize}
             title={t('sidebar.resizeHandle')}
-            className="group absolute -top-1.5 left-0 right-0 z-10 flex h-3 cursor-row-resize items-center justify-center"
+            className="group absolute -top-1.5 start-0 end-0 z-10 flex h-3 cursor-row-resize items-center justify-center"
           >
             <span className="h-2 w-12 rounded-full bg-border transition-colors group-hover:bg-primary/50" />
           </div>
@@ -447,7 +447,7 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <div className="relative w-9 h-9">
                   <AppLogo decorative />
-                  <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-card p-0.5">
+                  <span className="absolute -bottom-0.5 -end-0.5 rounded-full bg-card p-0.5">
                     <PlatformStatus compact />
                   </span>
                 </div>

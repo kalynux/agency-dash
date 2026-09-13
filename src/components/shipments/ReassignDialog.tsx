@@ -189,8 +189,14 @@ export function ReassignDialog({
                 <Input placeholder={t('reassignDialog.overrideCity')} value={override.city ?? ''} onChange={(e) => setField('city', e.target.value)} />
                 <Input placeholder={t('reassignDialog.overrideState')} value={override.state ?? ''} onChange={(e) => setField('state', e.target.value)} />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Input placeholder={t('reassignDialog.overrideCountry')} value={override.country ?? ''} onChange={(e) => setField('country', e.target.value)} />
+              {/* Two rows on a phone, one from `sm:`. Three columns inside a
+                  dialog leave each field ~95px on a 360px screen, which is
+                  narrower than the words "Longitude" and "Country" it has to
+                  show as placeholders — the label disappears and the row reads
+                  as three anonymous boxes. Country takes the full width of the
+                  first row because it is the one that holds a name. */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <Input className="col-span-2 sm:col-span-1" placeholder={t('reassignDialog.overrideCountry')} value={override.country ?? ''} onChange={(e) => setField('country', e.target.value)} />
                 <Input placeholder={t('reassignDialog.overrideLatitude')} type="number" step="any" value={override.latitude ?? ''} onChange={(e) => setCoord('latitude', e.target.value)} />
                 <Input placeholder={t('reassignDialog.overrideLongitude')} type="number" step="any" value={override.longitude ?? ''} onChange={(e) => setCoord('longitude', e.target.value)} />
               </div>

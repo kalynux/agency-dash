@@ -82,7 +82,7 @@ export function PaymentOptionSelect({
     'aria-labelledby': `${labelId} ${id}`,
     // Matches the dashboard's inputs exactly — this field sits beside one.
     className: cn(
-      'flex h-10 w-full items-center gap-2.5 rounded-lg border px-3 text-left text-sm',
+      'flex h-10 w-full items-center gap-2.5 rounded-lg border px-3 text-start text-sm',
       'border-input bg-transparent shadow-xs outline-none dark:bg-input/30',
       'transition-[color,box-shadow,border-color]',
       '[@media(hover:hover)]:enabled:hover:border-input/70',
@@ -128,7 +128,7 @@ export function PaymentOptionSelect({
               setOpen(false);
             }}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-2.5 text-left transition-colors',
+              'flex w-full items-center gap-3 rounded-lg px-2.5 text-start transition-colors',
               // Comfortably above the 44px touch target in the sheet; tighter in
               // the popover, where it is pointer-driven.
               isMobile ? 'min-h-14 py-2.5' : 'min-h-11 py-2',
@@ -185,7 +185,7 @@ export function PaymentOptionSelect({
               <div className="flex shrink-0 justify-center pt-2.5">
                 <span className="h-1.5 w-10 rounded-full bg-muted-foreground/25" />
               </div>
-              <SheetHeader className="shrink-0 border-b p-4 pb-3 pr-14 pt-2">
+              <SheetHeader className="shrink-0 border-b p-4 pb-3 pe-14 pt-2">
                 <SheetTitle className="text-base">{label}</SheetTitle>
               </SheetHeader>
               {/* `min-h-0` or the list refuses to shrink inside the flex column

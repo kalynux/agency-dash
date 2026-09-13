@@ -59,7 +59,7 @@ export interface PaymentOptionGroupProps {
 }
 
 const cardBase = cn(
-  'group relative flex text-left transition-all duration-200 motion-reduce:transition-none',
+  'group relative flex text-start transition-all duration-200 motion-reduce:transition-none',
   'rounded-xl border bg-card',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
   'disabled:cursor-not-allowed disabled:opacity-55',
@@ -243,7 +243,7 @@ export function PaymentOptionGroup({
             {/* The tick rides the corner here — a tile has no room for a column of its own. */}
             <span
               aria-hidden="true"
-              className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary opacity-0 transition-opacity duration-200 motion-reduce:transition-none group-data-[state=checked]:opacity-100 group-data-[state=checked]:animate-pop"
+              className="absolute end-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary opacity-0 transition-opacity duration-200 motion-reduce:transition-none group-data-[state=checked]:opacity-100 group-data-[state=checked]:animate-pop"
             >
               <Check className="h-2.5 w-2.5 text-primary-foreground" />
             </span>

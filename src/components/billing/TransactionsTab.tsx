@@ -135,12 +135,12 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
             {/* Desktop table — switches at `md`, where the card regains its frame */}
             <div className="hidden overflow-hidden rounded-lg border md:block">
               <table className="w-full text-sm">
-                <thead className="border-b bg-muted/40 text-left">
+                <thead className="border-b bg-muted/40 text-start">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">{t('transactions.table.activity')}</th>
                     <th className="px-4 py-2.5 font-medium">{t('transactions.table.date')}</th>
-                    <th className="px-4 py-2.5 text-right font-medium">{t('transactions.table.amount')}</th>
-                    <th className="px-4 py-2.5 text-right font-medium">{t('transactions.table.status')}</th>
+                    <th className="px-4 py-2.5 text-end font-medium">{t('transactions.table.amount')}</th>
+                    <th className="px-4 py-2.5 text-end font-medium">{t('transactions.table.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,10 +165,10 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-muted-foreground">{formatDate(tx.createdAt)}</td>
-                        <td className={cn('px-4 py-2.5 text-right font-medium', amount.className)}>
+                        <td className={cn('px-4 py-2.5 text-end font-medium', amount.className)}>
                           {amount.text}
                         </td>
-                        <td className="px-4 py-2.5 text-right">
+                        <td className="px-4 py-2.5 text-end">
                           <StatusBadge status={tx.status} />
                         </td>
                       </tr>

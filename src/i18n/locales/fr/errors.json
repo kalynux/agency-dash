@@ -499,9 +499,6 @@
     "INTERNAL_SERVER_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer.",
     "NOT_FOUND": "Nous n'avons pas trouvé ce que vous cherchiez.",
     "VALIDATION_ERROR": "Veuillez vérifier les champs signalés et réessayer.",
-    "UNAUTHORIZED": "Votre session a expiré. Veuillez vous reconnecter.",
-    "FORBIDDEN": "Vous n'avez pas la permission d'effectuer cette action.",
-    "INTERNAL_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer.",
     "FILE_TOO_LARGE": "Ce fichier est trop volumineux.",
     "NETWORK_ERROR": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
     "PARSE_ERROR": "Impossible de lire la réponse du serveur. Veuillez réessayer.",
@@ -633,7 +630,8 @@
     "PRODUCT_SHARE_CHANNEL_NOT_CONNECTED": "Connectez ce canal de messagerie avant d’y partager.",
     "PRODUCT_SHARE_SEND_FAILED": "L'envoi a échoué. Réessayez sous peu.",
     "PRODUCT_SHARE_WINDOW_CLOSED": "Cette conversation est hors de la fenêtre de messagerie, rien ne peut y être envoyé pour le moment.",
-    "WISHLIST_ITEM_NOT_FOUND": "Cet article n'est plus dans la liste d'envies."
+    "WISHLIST_ITEM_NOT_FOUND": "Cet article n'est plus dans la liste d'envies.",
+    "STORAGE_DOWNLOAD_NOT_SUPPORTED": "Ce déploiement ne peut pas fournir le contenu de ce fichier. C’est un problème de configuration, pas un problème de fichier — contactez le support."
   },
   "categories": {
     "authentication": "Votre session a pris fin. Veuillez vous reconnecter.",

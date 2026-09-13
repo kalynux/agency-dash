@@ -44,15 +44,15 @@ function FieldRow({
     return (
         <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-                <label className="block text-xs font-semibold text-slate-500 tracking-wide">
+                <label className="block text-xs font-semibold text-muted-foreground tracking-wide">
                     {label}
                 </label>
                 {info && <InfoHint>{info}</InfoHint>}
             </div>
             {children}
-            {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
+            {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
             {error && (
-                <p className="text-xs text-red-500 mt-1" role="alert">
+                <p className="text-xs text-destructive mt-1" role="alert">
                     {error}
                 </p>
             )}
@@ -74,10 +74,10 @@ function FeeInput({
             step="any"
             placeholder={placeholder ?? '0'}
             className={cn(
-                'w-full px-3 h-11 rounded-lg border text-sm bg-slate-50 dark:bg-zinc-800',
-                'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white placeholder:text-slate-400',
+                'w-full px-3 h-11 rounded-lg border text-sm bg-muted',
+                'border-border text-foreground placeholder:text-muted-foreground',
                 'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors',
-                error && 'border-red-400 focus:ring-red-200 focus:border-red-400',
+                error && 'border-destructive focus:ring-destructive/30 focus:border-destructive',
             )}
             {...props}
         />
@@ -96,10 +96,10 @@ function DaysInput({
             step={1}
             placeholder={placeholder ?? '0'}
             className={cn(
-                'w-full px-3 h-11 rounded-lg border text-sm bg-slate-50 dark:bg-zinc-800',
-                'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white placeholder:text-slate-400',
+                'w-full px-3 h-11 rounded-lg border text-sm bg-muted',
+                'border-border text-foreground placeholder:text-muted-foreground',
                 'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors',
-                error && 'border-red-400 focus:ring-red-200 focus:border-red-400',
+                error && 'border-destructive focus:ring-destructive/30 focus:border-destructive',
             )}
             {...props}
         />
@@ -111,11 +111,11 @@ function NotesArea({ error, ...props }: React.TextareaHTMLAttributes<HTMLTextAre
         <textarea
             rows={2}
             className={cn(
-                'w-full rounded-lg border px-3 py-2 text-sm resize-none bg-slate-50 dark:bg-zinc-800',
-                'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white',
+                'w-full rounded-lg border px-3 py-2 text-sm resize-none bg-muted',
+                'border-border text-foreground',
                 'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
-                'placeholder:text-slate-400 transition-colors duration-150',
-                error && 'border-red-400',
+                'placeholder:text-muted-foreground transition-colors duration-150',
+                error && 'border-destructive',
             )}
             {...props}
         />
@@ -134,12 +134,12 @@ function Section({
     children: React.ReactNode;
 }) {
     return (
-        <div className="rounded-xl border-2 border-slate-200 dark:border-zinc-700 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-100/80 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">
-                <Icon className="w-4 h-4 text-slate-500" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">{title}</span>
+        <div className="rounded-xl border-2 border-border overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/80 border-b border-border">
+                <Icon className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</span>
             </div>
-            <div className="p-4 bg-white dark:bg-zinc-900 space-y-4">{children}</div>
+            <div className="p-4 bg-card space-y-4">{children}</div>
         </div>
     );
 }
@@ -262,7 +262,7 @@ export function Step4Policies() {
                             variant="outline"
                             onClick={goBack}
                             disabled={isSubmitting}
-                            className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-slate-300 text-slate-600 dark:border-zinc-600 dark:text-slate-300"
+                            className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground"
                         >
                             <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
                         </Button>
@@ -283,20 +283,20 @@ export function Step4Policies() {
             }
         >
             {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-zinc-800">
+            <div className="px-6 pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                         <ShieldCheck className="w-4 h-4 text-primary" />
                     </div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('policies.title')}</h1>
+                    <h1 className="text-lg font-bold text-foreground">{t('policies.title')}</h1>
                 </div>
-                <p className="text-sm text-slate-500">{t('policies.description')}</p>
+                <p className="text-sm text-muted-foreground">{t('policies.description')}</p>
             </div>
 
             {apiError && (
                 <div
                     role="alert"
-                    className="mx-6 mt-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200"
+                    className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30"
                 >
                     {apiError}
                 </div>
@@ -310,10 +310,10 @@ export function Step4Policies() {
             >
                 {/* ── Pricing ── */}
                 <Section icon={DollarSign} title={t('policies.pricingSection')}>
-                    <p className="text-xs text-slate-400 -mt-1">{t('policies.pricingHint')}</p>
+                    <p className="text-xs text-muted-foreground -mt-1">{t('policies.pricingHint')}</p>
 
                     {bothDisabledError && (
-                        <p className="text-xs text-red-500" role="alert">{bothDisabledError}</p>
+                        <p className="text-xs text-destructive" role="alert">{bothDisabledError}</p>
                     )}
 
                     {/* Storage-based */}
@@ -324,7 +324,7 @@ export function Step4Policies() {
                             render={({ field }) => (
                                 <div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             {t('policies.storageToggle')}
                                         </p>
                                         <Switch
@@ -334,10 +334,10 @@ export function Step4Policies() {
                                             className="data-[state=checked]:bg-primary disabled:opacity-40 disabled:cursor-not-allowed"
                                         />
                                     </div>
-                                    <p className="text-[11px] text-slate-400 mt-1">
+                                    <p className="text-[11px] text-muted-foreground mt-1">
                                         {t('policies.storageHint')}
                                         {!pickupEnabled && (
-                                            <span className="ml-1 text-amber-500">{t('policies.storageLocked')}</span>
+                                            <span className="ms-1 text-warning">{t('policies.storageLocked')}</span>
                                         )}
                                     </p>
                                 </div>
@@ -391,14 +391,14 @@ export function Step4Policies() {
                     </div>
 
                     {/* Pickup-based */}
-                    <div className="space-y-3 border-t border-slate-100 dark:border-zinc-800 pt-4">
+                    <div className="space-y-3 border-t border-border/60 pt-4">
                         <Controller
                             control={control}
                             name="pricing.pickup_based.enabled"
                             render={({ field }) => (
                                 <div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             {t('policies.pickupToggle')}
                                         </p>
                                         <Switch
@@ -408,10 +408,10 @@ export function Step4Policies() {
                                             className="data-[state=checked]:bg-primary disabled:opacity-40 disabled:cursor-not-allowed"
                                         />
                                     </div>
-                                    <p className="text-[11px] text-slate-400 mt-1">
+                                    <p className="text-[11px] text-muted-foreground mt-1">
                                         {t('policies.pickupHint')}
                                         {!storageEnabled && (
-                                            <span className="ml-1 text-amber-500">{t('policies.pickupLocked')}</span>
+                                            <span className="ms-1 text-warning">{t('policies.pickupLocked')}</span>
                                         )}
                                     </p>
                                 </div>
@@ -455,18 +455,18 @@ export function Step4Policies() {
                     </div>
 
                     {/* Additional fees */}
-                    <div className="space-y-3 border-t border-slate-100 dark:border-zinc-800 pt-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <div className="space-y-3 border-t border-border/60 pt-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {t('policies.additionalFees')}
                         </p>
-                        <p className="text-[11px] text-slate-400 -mt-1">
+                        <p className="text-[11px] text-muted-foreground -mt-1">
                             {t('policies.additionalFeesHint')}
                         </p>
 
                         {/* COD handling fee */}
-                        <div className="rounded-lg border border-slate-200 dark:border-zinc-700 p-3 space-y-3">
+                        <div className="rounded-lg border border-border p-3 space-y-3">
                             <div className="flex items-center gap-1.5">
-                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                <p className="text-xs font-semibold text-muted-foreground">
                                     {t('policies.codHandlingFee')}
                                 </p>
                                 <InfoHint>{t('policies.codHandlingFeeInfo')}</InfoHint>
@@ -560,7 +560,7 @@ export function Step4Policies() {
                         render={({ field }) => (
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    <p className="text-sm font-medium text-foreground">
                                         {t('policies.codToggle')}
                                     </p>
                                     <InfoHint>{info('codEnabled')}</InfoHint>
@@ -575,7 +575,7 @@ export function Step4Policies() {
                     />
 
                     {codEnabled && (
-                        <div className="border-t border-slate-100 dark:border-zinc-800 pt-4">
+                        <div className="border-t border-border/60 pt-4">
                             <FieldRow
                                 label={t('policies.codMaxAmount')}
                                 info={info('codMaxAmount')}
@@ -617,7 +617,7 @@ export function Step4Policies() {
                         />
                     </FieldRow>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-slate-100 dark:border-zinc-800 pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-border/60 pt-4">
                         <FieldRow
                             label={t('policies.handlingFee')}
                             info={info('handlingFee')}
@@ -677,24 +677,24 @@ export function Step4Policies() {
                     </div>
 
                     {/* Admin-preset fields — read-only display */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-slate-100 dark:border-zinc-800 pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-border/60 pt-4">
                         <div className="space-y-1.5">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                 {t('policies.inspector')}
                             </p>
-                            <div className="flex items-center h-11 px-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800/60 text-sm text-slate-500 dark:text-slate-400 select-none">
+                            <div className="flex items-center h-11 px-3 rounded-lg border border-border bg-muted text-sm text-muted-foreground select-none">
                                 {t('policies.inspectorValue')}
                             </div>
-                            <p className="text-xs text-slate-400">{t('policies.setByAdmin')}</p>
+                            <p className="text-xs text-muted-foreground">{t('policies.setByAdmin')}</p>
                         </div>
                         <div className="space-y-1.5">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                 {t('policies.investigationFee')}
                             </p>
-                            <div className="flex items-center h-11 px-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800/60 text-sm text-slate-500 dark:text-slate-400 select-none">
+                            <div className="flex items-center h-11 px-3 rounded-lg border border-border bg-muted text-sm text-muted-foreground select-none">
                                 {formatNumber(1000)}
                             </div>
-                            <p className="text-xs text-slate-400">{t('policies.setByAdmin')}</p>
+                            <p className="text-xs text-muted-foreground">{t('policies.setByAdmin')}</p>
                         </div>
                     </div>
 

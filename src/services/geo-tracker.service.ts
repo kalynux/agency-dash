@@ -150,6 +150,29 @@ export const geoTrackerService = {
    *
    * `404` means "not authorized to see this agent", deliberately
    * indistinguishable from "no such agent".
+   *
+   * ⚠ **On the WEB build this can answer `502` intermittently, and there is
+   * nothing this app can do about it.** geo-tracker's HTTP middleware happily
+   * authenticates us from the httpOnly `access_token` cookie — but this route
+   * then forwards a token to jovi-mall to resolve which agents we may see, and
+   * it reads that token **only from the `Authorization` header**
+   * (`session/delivery/http/handler.go` → `bearerToken`, which does not look at
+   * the cookie). Cookie-only, the forwarded token is empty, jovi-mall answers
+   * `401`, and we get a `502` — not a `401`, not a `404`.
+   *
+   * It is intermittent rather than constant because the resolved permission set
+   * is cached in Redis **keyed by user id, not by token** (`PERMISSION_CACHE_TTL`,
+   * default 5 minutes). Our WebSocket handshake warms that entry, and
+   * `useGeoTrackerSocket` re-handshakes every 10 minutes — so the cache is warm
+   * for the first 5 minutes of each cycle and cold for the rest. The same call
+   * works and then stops working with nothing changed.
+   *
+   * A browser cannot read an httpOnly cookie, so we cannot send the header the
+   * doc asks for; the native build already does (`resolveGeoTrackerToken`). The
+   * caller therefore degrades — `LiveTracking` drops the drawn path and keeps
+   * the live markers. Open question with the backend: can `bearerToken` fall
+   * back to the cookie the middleware beside it already reads?
+   * See api-doc/geo-tracker/tracking-sessions.md § Authentication.
    */
   getCheckpoints(agentId: string, query: CheckpointQuery = {}): Promise<TrackingCheckpoint[]> {
     const params = new URLSearchParams();

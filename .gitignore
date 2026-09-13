@@ -4,7 +4,11 @@
 /env/*.local
 /dist
 /node_modules
-/scripts
+# NB /scripts is deliberately NOT ignored. `package.json` runs
+# scripts/i18n-audit.mjs (npm run i18n:audit / i18n:check) and src/styles/fonts.css
+# names scripts/vendor-fonts.mjs as the way to regenerate itself — a clone
+# without them cannot run either. Personal scratch scripts belong in /src/scripts,
+# which is ignored below.
 /src/scripts
 /build_output.txt
 /ticket_types.txt

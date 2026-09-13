@@ -98,19 +98,25 @@ const FILE_PUBLIC_BASE: string =
  *
  * See CAPACITOR-PLAN.md → P5b.4 for the incident this came out of.
  *
- * ⚠ **Returns `null` for an `authorized` file, and callers must handle that.**
- * Three storage trees — `digital/`, `shipments/` and `ticket-attachments/` —
- * left the static mount on 2026-08-19, so they have no public URL at all. The
- * `key` fallback below would manufacture one that looks exactly like a real URL
- * and serves 401/404 to everybody; `null` is what stops that. For this dashboard
- * the tree that matters is `shipments/` — i.e. **every delivery-proof photo**,
- * which is fetched through `shipmentsService.getDeliveryProofFile` instead.
- * See api-doc/files/private-files.md.
+ * ⚠ **Returns `null` for anything that is not `public`, and callers must handle
+ * that.** Two cases reach it, and they are not the same problem:
+ *
+ * - `authorized` — three storage trees (`digital/`, `shipments/`,
+ *   `ticket-attachments/`) left the static mount on 2026-08-19, so they have no
+ *   public URL at all. For this dashboard the tree that matters is `shipments/`
+ *   — i.e. **every delivery-proof photo**, fetched through
+ *   `shipmentsService.getDeliveryProofFile` instead.
+ * - `quota_blocked` — the owner is over their storage plan. Render a
+ *   placeholder and a route to the plan page; see {@link fileAccessState}.
+ *
+ * In both cases the `key` fallback below would manufacture a URL that looks
+ * exactly like a real one and serves 401/404 to everybody. `null` is what stops
+ * that. See api-doc/files/private-files.md.
  */
 export function resolveFileUrl(
   file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
 ): string | null {
-  if (isAuthorizedFile(file)) return null;
+  if (fileAccessState(file) !== 'public') return null;
   if (file.url) return file.url;
   const base = FILE_PUBLIC_BASE.replace(/\/$/, '');
   const key = file.key.replace(/^\//, '');
@@ -121,18 +127,60 @@ export function resolveFileUrl(
 const AUTHORIZED_KEY_PREFIXES = ['digital/', 'shipments/', 'ticket-attachments/'] as const;
 
 /**
- * True when a file must be fetched through its owning entity's route.
+ * The single place this app decides what kind of file it is holding.
+ *
+ * ⚠ **Order matters: `quota_blocked` is tested before `authorized`**, because
+ * the backend resolves it that way (`file-detail.resolver.ts`) — a blocked file
+ * that also sits in a private tree reports `quota_blocked`. Branching the other
+ * way sends the caller to the owning entity's byte route, which answers about
+ * permissions when the real problem is billing.
  *
  * Reads `access` when the payload carries it, and falls back to the key prefix
- * — which is the same thing the backend routes on, so the two cannot disagree.
- * The fallback is what covers a response written before `access` existed.
+ * — the same thing the backend routes on, so the two cannot disagree. The
+ * fallback covers a response written before `access` existed; it cannot detect
+ * `quota_blocked`, which has no key signature and did not exist then either.
+ */
+export function fileAccessState(
+  file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
+): FileAccess {
+  if (file.access) return file.access;
+  const key = file.key.replace(/^\//, '');
+  return AUTHORIZED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
+    ? 'authorized'
+    : 'public';
+}
+
+/**
+ * True when a file must be fetched through its owning entity's route.
+ *
+ * Deliberately false for a `quota_blocked` file: nothing is wrong with the
+ * caller's permissions and no authorized route will serve it either.
  */
 export function isAuthorizedFile(
   file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
 ): boolean {
-  if (file.access) return file.access === 'authorized';
-  const key = file.key.replace(/^\//, '');
-  return AUTHORIZED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
+  return fileAccessState(file) === 'authorized';
+}
+
+/**
+ * True when the file's **owner** is over their plan's storage allowance.
+ *
+ * A billing state, and the right screen is not an error screen: the row, the
+ * bytes and the file's contribution to `usedBytes` all survive — blocking is
+ * what an owner gets *instead* of losing data when a downgrade puts them over
+ * the cap, and it lifts the moment they upgrade or free room. Render a
+ * placeholder and a route to the plan page. Never a broken image, and never
+ * "file missing" or "deleted" — both are wrong, and "deleted" starts a support
+ * conversation about data loss that did not happen.
+ *
+ * **This applies to public trees too.** Logos, avatars and product photos can
+ * all come back blocked; the tree classification and the quota check are
+ * independent.
+ */
+export function isQuotaBlockedFile(
+  file: Pick<ApiFile, 'url' | 'key'> & { access?: FileAccess },
+): boolean {
+  return fileAccessState(file) === 'quota_blocked';
 }
 
 /** Coarse UI category from a MIME type. */
@@ -158,13 +206,27 @@ export function isAttached(detail: ApiFileDetail): boolean {
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
+/**
+ * ⚠ **Soft-deleted rows are filtered here, not by the backend.**
+ *
+ * `GET /files` builds its query from ownership plus your filters and never
+ * excludes `deletedAt`, while every id-scoped read on that router does. So a
+ * file the user deleted a moment ago comes back on the next page load and
+ * reappears in the media browser. That is a backend defect, recorded in
+ * api-doc/uploads/README.md rather than papered over — this filter is the
+ * paper, and it comes off when the backend stops sending them.
+ *
+ * `pagination.total` is the server's count and still includes them, so a page
+ * may render fewer rows than `limit`. Correct rows beat a correct count: the
+ * alternative is showing a file that is gone.
+ */
 export async function listFiles(
   params: FileListParams = {},
 ): Promise<{ files: ApiFile[]; pagination: FilePagination; storage: StorageUsage | null }> {
   const qs = buildQueryString(params as Record<string, unknown>);
   const res = await api.get<FileListResponse>(`/files${qs}`);
   return {
-    files: res.data.files,
+    files: res.data.files.filter((f) => f.deletedAt == null),
     pagination: res.data.pagination,
     // Embedded usage summary (storage.md §2) — saves a second call.
     storage: res.data.storage ?? null,

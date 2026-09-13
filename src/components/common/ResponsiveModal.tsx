@@ -74,8 +74,8 @@ export function ResponsiveModal({
           onInteractOutside={(e) => disableClose && e.preventDefault()}
           onEscapeKeyDown={(e) => disableClose && e.preventDefault()}
         >
-          {/* `pr-12` clears the panel's own close button. */}
-          <SheetHeader className="shrink-0 border-b p-4 pr-12">
+          {/* `pe-12` clears the panel's own close button. */}
+          <SheetHeader className="shrink-0 border-b p-4 pe-12">
             <SheetTitle>{title}</SheetTitle>
             {description && <SheetDescription>{description}</SheetDescription>}
           </SheetHeader>
@@ -106,7 +106,7 @@ export function ResponsiveModal({
         onInteractOutside={(e) => disableClose && e.preventDefault()}
         onEscapeKeyDown={(e) => disableClose && e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 border-b p-4 pr-12 text-left sm:px-5">
+        <DialogHeader className="shrink-0 border-b p-4 pe-12 text-start sm:px-5">
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>

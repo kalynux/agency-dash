@@ -440,7 +440,7 @@ export function PaymentDialog({
         pushed below the fold by a card form on a phone.
       */}
       <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left sm:px-6">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 pe-12 text-start sm:px-6">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {summary} ·{' '}
@@ -610,7 +610,7 @@ export function PaymentDialog({
                 {t('common:actions.cancel')}
               </Button>
               <Button onClick={handleInitiate} disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {isStripe
                   ? t('checkout.continueToCard')
                   : t('checkout.confirmPayment', { amount: formatMoney(amount, currency) })}
@@ -671,10 +671,10 @@ export function PaymentDialog({
 
             <DialogFooter className="shrink-0 gap-2 border-t px-5 py-3 sm:px-6">
               <Button variant="outline" onClick={backToForm} disabled={submitting}>
-                <ArrowLeft className="mr-1 h-4 w-4" /> {t('common:actions.back')}
+                <ArrowLeft className="me-1 h-4 w-4" /> {t('common:actions.back')}
               </Button>
               <Button onClick={handleCardConfirm} disabled={submitting || !cardReady}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {chargedLine ? t('checkout.pay', { amount: chargedLine }) : t('checkout.payNow')}
               </Button>
             </DialogFooter>

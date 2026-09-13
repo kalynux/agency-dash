@@ -40,16 +40,16 @@ function FieldRow({ label, htmlFor, required, optional, error, children }: { lab
     const { t } = useTranslation('common');
     return (
         <div className="space-y-1.5">
-            <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+            <label htmlFor={htmlFor} className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {label}{required && <span className="text-destructive ms-0.5">*</span>}
                 {optional && (
-                    <span className="text-slate-400 normal-case font-normal ml-1">
+                    <span className="text-muted-foreground normal-case font-normal ms-1">
                         ({t('form.optional').toLowerCase()})
                     </span>
                 )}
             </label>
             {children}
-            {error && <p id={htmlFor && `${htmlFor}-error`} className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
+            {error && <p id={htmlFor && `${htmlFor}-error`} className="text-xs text-destructive mt-1" role="alert">{error}</p>}
         </div>
     );
 }
@@ -57,12 +57,12 @@ function FieldRow({ label, htmlFor, required, optional, error, children }: { lab
 function IconInput({ icon: Icon, hasError, className, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ElementType; hasError?: boolean }) {
     return (
         <div className="relative">
-            <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Icon className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input {...props} className={cn(
-                'w-full pl-9 pr-3 h-11 rounded-lg border text-sm bg-slate-50 dark:bg-zinc-800',
-                'border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white placeholder:text-slate-400',
+                'w-full ps-9 pe-3 h-11 rounded-lg border text-sm bg-muted',
+                'border-border text-foreground placeholder:text-muted-foreground',
                 'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors',
-                hasError && 'border-red-400 focus:ring-red-200 focus:border-red-400', className,
+                hasError && 'border-destructive focus:ring-destructive/30 focus:border-destructive', className,
             )} />
         </div>
     );
@@ -161,49 +161,49 @@ export function Step1Logistics() {
                 </div>
             }
         >
-            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-zinc-800">
+            <div className="px-6 pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Globe className="w-4 h-4 text-primary" /></div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('logistics.title')}</h1>
+                    <h1 className="text-lg font-bold text-foreground">{t('logistics.title')}</h1>
                 </div>
-                <p className="text-sm text-slate-500">{t('logistics.description')}</p>
+                <p className="text-sm text-muted-foreground">{t('logistics.description')}</p>
             </div>
 
-            {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">{apiError}</div>}
+            {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
             <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="px-6 pt-5 pb-6 space-y-6" noValidate>
                 {/* Coverage Regions */}
                 <section>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t('logistics.coverageTitle')} <span className="text-red-500">*</span></p>
-                    <p className="text-xs text-slate-400 mb-3">{t('logistics.coverageHint')}</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('logistics.coverageTitle')} <span className="text-destructive">*</span></p>
+                    <p className="text-xs text-muted-foreground mb-3">{t('logistics.coverageHint')}</p>
                     <div role="group" aria-label={t('logistics.coverageGroupLabel')} className="grid grid-cols-2 gap-2">
                         {regions.map(({ key, label }) => {
                             const isChecked = (selectedAreas ?? []).includes(key);
                             return (
                                 <label key={key} htmlFor={`region-${key}`} className={cn(
                                     'flex items-center gap-2.5 rounded-lg border-2 px-3 py-2.5 cursor-pointer transition-all duration-150',
-                                    isChecked ? 'border-primary bg-primary/5' : 'border-slate-200 dark:border-zinc-700 hover:border-slate-300',
+                                    isChecked ? 'border-primary bg-primary/5' : 'border-border hover:border-input',
                                 )}>
                                     <Checkbox id={`region-${key}`} checked={isChecked} onCheckedChange={c => toggleRegion(key, !!c)} />
-                                    <span className={cn('text-sm font-medium', isChecked ? 'text-primary' : 'text-slate-700 dark:text-slate-300')}>{label}</span>
+                                    <span className={cn('text-sm font-medium', isChecked ? 'text-primary' : 'text-foreground')}>{label}</span>
                                 </label>
                             );
                         })}
                     </div>
-                    {errors.coverage_areas && <p className="text-xs text-red-500 mt-2" role="alert">{errors.coverage_areas.message}</p>}
+                    {errors.coverage_areas && <p className="text-xs text-destructive mt-2" role="alert">{errors.coverage_areas.message}</p>}
                 </section>
 
                 {/* HQ Addresses */}
-                <section className="border-t border-slate-100 dark:border-zinc-800 pt-5">
+                <section className="border-t border-border/60 pt-5">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-red-500">*</span></p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-destructive">*</span></p>
                         <Button type="button" variant="ghost" size="sm" onClick={() => append({ ...EMPTY_HQ })} className="h-7 text-xs gap-1 text-primary hover:text-primary/80">
                             <Plus className="w-3 h-3" /> {t('logistics.addAddress')}
                         </Button>
                     </div>
-                    <p className="text-xs text-slate-400 mb-4">{t('logistics.addressesHint')}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{t('logistics.addressesHint')}</p>
                     {errors.headquarters_addresses && !Array.isArray(errors.headquarters_addresses) && (
-                        <p className="text-xs text-red-500 mb-3" role="alert">{errors.headquarters_addresses.message}</p>
+                        <p className="text-xs text-destructive mb-3" role="alert">{errors.headquarters_addresses.message}</p>
                     )}
                     <div className="space-y-4">
                         {fields.map((field, index) => (
@@ -256,24 +256,24 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
     };
 
     return (
-        <div className={cn('rounded-xl border-2 overflow-hidden', isPrimary ? 'border-primary/25' : 'border-slate-200 dark:border-zinc-700')}>
-            <div className={cn('flex items-center justify-between px-4 py-2.5', isPrimary ? 'bg-primary/5 dark:bg-primary/10' : 'bg-slate-100/60 dark:bg-zinc-800')}>
+        <div className={cn('rounded-xl border-2 overflow-hidden', isPrimary ? 'border-primary/25' : 'border-border')}>
+            <div className={cn('flex items-center justify-between px-4 py-2.5', isPrimary ? 'bg-primary/5 dark:bg-primary/10' : 'bg-muted/60')}>
                 <div className="flex items-center gap-2">
-                    <Building className="w-3.5 h-3.5 text-slate-400" />
-                    <span className={cn('text-xs font-semibold', isPrimary ? 'text-primary' : 'text-slate-500')}>
+                    <Building className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className={cn('text-xs font-semibold', isPrimary ? 'text-primary' : 'text-muted-foreground')}>
                         {isPrimary
                             ? t('logistics.primaryHeadquarters')
                             : t('logistics.branchAddress', { number: index + 1 })}
                     </span>
                 </div>
                 {canRemove && (
-                    <button type="button" onClick={onRemove} aria-label={t('common:actions.remove')} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <button type="button" onClick={onRemove} aria-label={t('common:actions.remove')} className="text-muted-foreground hover:text-destructive transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>
                 )}
             </div>
 
-            <div className="p-4 bg-white dark:bg-zinc-900 space-y-4">
+            <div className="p-4 bg-card space-y-4">
                 <FieldRow label={t('logistics.findLocation')} required error={addrErrors?.geo?.message}>
                     <Controller control={control} name={`headquarters_addresses.${index}.geo`} render={({ field }) => (
                         <AddressSearchInput
@@ -285,7 +285,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                             onClear={() => field.onChange(null)}
                         />
                     )} />
-                    <p className="text-[11px] text-slate-400">{t('logistics.pinHint')}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('logistics.pinHint')}</p>
                 </FieldRow>
 
                 <FieldRow label={t('logistics.label')} required error={addrErrors?.label?.message}>
@@ -299,7 +299,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                         hasError={!!addrErrors?.address_description}
                         {...register(`headquarters_addresses.${index}.address_description`)} />
                     {geo && (city || region) && (
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-muted-foreground">
                             {t('logistics.readFromMap', {
                                 place: [city, region].filter(Boolean).join(', '),
                             })}
@@ -314,7 +314,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                         <IconInput icon={MapPin} type="text" placeholder={t('logistics.cityPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.city}
                             {...register(`headquarters_addresses.${index}.city`)} />
-                        <p className="text-[11px] text-slate-400">{t('logistics.cityNotNamed')}</p>
+                        <p className="text-[11px] text-muted-foreground">{t('logistics.cityNotNamed')}</p>
                     </FieldRow>
                 )}
 
@@ -323,12 +323,12 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                         <IconInput icon={MapPin} type="text" placeholder={t('logistics.regionPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.region}
                             {...register(`headquarters_addresses.${index}.region`)} />
-                        <p className="text-[11px] text-slate-400">{t('logistics.regionNotNamed')}</p>
+                        <p className="text-[11px] text-muted-foreground">{t('logistics.regionNotNamed')}</p>
                     </FieldRow>
                 )}
 
-                <div className="border-t border-dashed border-slate-200 dark:border-zinc-700 pt-3 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('logistics.locationContact')}</p>
+                <div className="border-t border-dashed border-border pt-3 space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('logistics.locationContact')}</p>
                     <FieldRow label={t('logistics.phone')} htmlFor={phoneId} required error={addrErrors?.support_contact?.phone?.message}>
                         {/* The country the agency is signing up in is the sensible
                             starting point — the profile has none yet, this step is

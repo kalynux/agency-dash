@@ -184,7 +184,7 @@ export function Header() {
                           {formatDate(notification.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 pl-4">
+                      <p className="text-sm text-muted-foreground line-clamp-2 ps-4">
                         {notification.message}
                       </p>
                     </DropdownMenuItem>
@@ -256,7 +256,7 @@ export function Header() {
           onClick={() => setIsSearchOpen(false)}
         >
           <div
-            className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4"
+            className="absolute top-20 start-1/2 -translate-x-1/2 w-full max-w-2xl px-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-card rounded-xl shadow-2xl border overflow-hidden">

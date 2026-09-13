@@ -99,3 +99,12 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# ─── Release signing (added 2026-09-09) ──────────────────────────────────────
+# Credentials for the upload key. The keystore itself lives outside the
+# repository; this file names its path and its passwords, so neither it nor any
+# keystore may ever be committed. CI supplies the same values as
+# ORG_GRADLE_PROJECT_WIAGENCY_* environment variables instead.
+keystore.properties
+*.jks
+*.keystore

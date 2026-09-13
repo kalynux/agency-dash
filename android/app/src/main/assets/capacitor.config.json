@@ -3,11 +3,11 @@
 	"appName": "Wi-Agency",
 	"webDir": "dist",
 	"server": {
-		"androidScheme": "http",
+		"androidScheme": "https",
 		"hostname": "agency.wi-mall.internal"
 	},
 	"android": {
-		"allowMixedContent": true
+		"allowMixedContent": false
 	},
 	"plugins": {
 		"SplashScreen": {

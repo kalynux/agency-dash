@@ -139,7 +139,7 @@ export function StorageStatementSheet({
     </>
   ) : detail ? (
     <>
-      <div className="flex-shrink-0 px-5 pb-2 pr-12 pt-2">
+      <div className="flex-shrink-0 px-5 pb-2 pe-12 pt-2">
         <SheetTitle className="text-base">
           {t('statements.detailTitle', { period: detail.periodKey })}
         </SheetTitle>
