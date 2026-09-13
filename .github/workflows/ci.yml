@@ -1,0 +1,50 @@
+# Checks every push and pull request. Produces no artefact — release.yml does
+# that, and only from production.
+#
+# This is the gate that keeps a main with no test environment meaningful: nothing
+# is deployed from main, but nothing broken should be merged into it either, and
+# production is branched from it.
+
+name: CI
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+
+jobs:
+  check:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: i18n audit
+        run: npm run i18n:check
+
+      - name: Test
+        run: npm test
+
+      # The production image is built by exactly this command, with WEB_DEPLOY set
+      # the way the Dockerfile sets it. Building it here is the cheapest way to
+      # catch a Vite-only failure — a bad import, a missing asset, a base-path
+      # mistake — on a branch that publishes nothing.
+      #
+      # ⚠ WEB_DEPLOY=1 MATTERS TO THIS STEP. Without it Vite emits a relative base
+      #   and the build still succeeds, so this would pass while the real image
+      #   broke every deep link. Setting it here means CI builds the same artefact
+      #   the Dockerfile does.
+      - name: Production build
+        env:
+          WEB_DEPLOY: '1'
+        run: npm run build

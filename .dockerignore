@@ -1,0 +1,51 @@
+# What does NOT go into the build context.
+#
+# Beyond upload speed, two entries here are correctness rather than tidiness. A
+# stray *.local env file would be copied by COPY . . and would then OVERRIDE
+# env/.env.production, so the image would quietly be built against whatever a developer
+# last pointed their laptop at — a localhost API inside a production image, with
+# nothing failing anywhere. And node_modules from a Windows machine holds native
+# binaries for the wrong platform, which npm ci in the build stage must be free to
+# replace rather than inherit.
+
+# Installed fresh inside the image, for linux/amd64.
+node_modules
+**/node_modules
+
+# Build output — produced by the build stage, never copied in.
+dist
+dist-ssr
+*.tsbuildinfo
+
+# ⚠ THE NATIVE TARGET IS THE BIGGEST WIN HERE. The Android project carries a
+#   Gradle cache, a copy of the last synced web bundle and the merged-assets tree
+#   — hundreds of megabytes that no web build reads, and which would also make
+#   every COPY . . layer churn on each cap sync.
+android
+ios
+.gradle
+
+# ⚠ Developer env overrides only. env/.env.production is deliberately NOT excluded: it is
+#   the configuration this image is built from.
+env/*.local
+.env
+.env.local
+.env.*.local
+
+# History and tooling the build never reads.
+.git
+.github
+.vscode
+.idea
+*.log
+npm-debug.log*
+coverage
+.nyc_output
+
+# Docs.
+*.md
+!README.md
+
+# OS noise.
+.DS_Store
+Thumbs.db
