@@ -107,9 +107,8 @@
     "noPacks": "Aucun pack de crédits disponible pour le moment."
   },
   "web": {
-    "plan": "Gérez votre forfait sur le tableau de bord web, à l’adresse {{host}}.",
-    "topup": "Rechargez votre solde sur le tableau de bord web, à l’adresse {{host}}.",
-    "method": "Ajoutez un moyen de paiement sur le tableau de bord web, à l’adresse {{host}}.",
+    "payCard": "Le paiement par carte se fait sur le tableau de bord web, à l’adresse {{host}}. Le mobile money fonctionne ici même.",
+    "saveCard": "Les cartes s’enregistrent sur le tableau de bord web, à l’adresse {{host}}. Vous pouvez enregistrer un numéro mobile money ici.",
     "open": "Ouvrir le tableau de bord web"
   },
   "storage": {
@@ -235,7 +234,17 @@
     "timeoutDescription": "Nous n'avons pas pu confirmer le paiement à temps. Si vous l'avez finalisé, votre solde sera mis à jour sous peu — consultez votre historique.",
     "startOver": "Recommencer",
     "processedBy": "Traité par",
-    "stripeNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs."
+    "stripeNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs.",
+    "otpTitle": "Saisissez votre code de confirmation",
+    "otpPrompt": "Votre opérateur a envoyé un code par SMS au {{phone}}.",
+    "otpLabel": "Code de confirmation",
+    "otpHelp": "Six chiffres en général, et il arrive en moins d’une minute.",
+    "otpSubmit": "Valider le code",
+    "otpTooShort": "Saisissez le code en entier — au moins {{count}} chiffres.",
+    "otpInvalid_one": "Ce code est incorrect. Il vous reste {{count}} essai.",
+    "otpInvalid_other": "Ce code est incorrect. Il vous reste {{count}} essais.",
+    "otpNoTriesLeft": "Ce code est incorrect, et c’était le dernier essai. Relancez un nouveau paiement.",
+    "otpAttemptsExceeded": "Trop de codes incorrects : ce paiement a été annulé. Rien n’a été débité — vous pouvez en relancer un."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",

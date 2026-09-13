@@ -10,6 +10,7 @@ import type {
   CreateReviewPayload,
   ListReviewsParams,
   ListReviewsResponse,
+  Review,
   ReviewEligibility,
   ReviewEligibilityResponse,
   ReviewResponse,
@@ -60,5 +61,34 @@ export const reviewsService = {
     if (params.status) query.set('status', params.status);
     const qs = query.toString();
     return api.get<ListReviewsResponse>(`/agency/reviews${qs ? `?${qs}` : ''}`);
+  },
+
+  /**
+   * The review we wrote about one shipment, or `null`.
+   *
+   * **There is no read-by-subject and no read-by-id on this surface**, and the
+   * list's query schema is `.strict()` — sending `subjectId` is a `400`. So the
+   * only way to put a written review back in front of its author on the
+   * shipment's own panel is to walk "my reviews" looking for the subject.
+   *
+   * That is bounded rather than exhaustive, deliberately. The list is
+   * newest-first and a delivery is rated when it completes, so the row is at the
+   * front for every case this is actually opened for; an agency with thousands
+   * of reviews must not pay thousands of rows to render one panel. A miss
+   * returns `null` and the caller says "you have already rated this" and links
+   * to the roll-up — which is true, and is better than a spinner that never
+   * ends.
+   */
+  async findForDelivery(
+    shipmentId: string,
+    { maxPages = 3, limit = 100 }: { maxPages?: number; limit?: number } = {},
+  ): Promise<Review | null> {
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data, meta } = await reviewsService.list({ page, limit });
+      const hit = data.find((r) => r.subjectType === 'delivery' && r.subjectId === shipmentId);
+      if (hit) return hit;
+      if (page >= meta.totalPages) break;
+    }
+    return null;
   },
 };

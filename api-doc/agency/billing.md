@@ -7,7 +7,7 @@ and billing settings. **The agency billing engine is the same engine as the
 vendor's** — same endpoints, same request/response shapes, same payment flow —
 only the plan *limits* differ (agencies are capped on **unterminated shipments**,
 not products/storage). Where a flow is identical to the vendor's, this doc links
-to vendor/billing.md (`backend/jovi-mall/api-doc/vendor/billing.md` — not mirrored in this repository) rather than repeating it.
+to [vendor/billing.md](../vendor/billing.md) rather than repeating it.
 
 ## Base Path
 ```
@@ -44,10 +44,12 @@ Every endpoint is automatically scoped to the authenticated agency (`role_entity
 | GET | `/api/agency/plans` | List purchasable plans (catalog, active only) |
 | GET | `/api/agency/plan` | The agency's current plan + entitlements + shipment usage |
 | POST | `/api/agency/plans/:planId/purchase` | Buy a plan (self-serve; auto-activates/queues on payment) |
+| POST | `/api/agency/plan-purchases/:id/authorize` | Relay the Orange Money SMS code for a plan purchase |
 | POST | `/api/agency/plan-purchases/:id/verify` | Verify & apply a plan purchase after payment |
 | GET | `/api/agency/credits` | Current credit balance |
 | GET | `/api/agency/credits/packs` | List buyable credit top-up packs |
 | POST | `/api/agency/credits/topups` | Start a credit top-up purchase |
+| POST | `/api/agency/credits/topups/:id/authorize` | Relay the Orange Money SMS code for a top-up |
 | POST | `/api/agency/credits/topups/:id/verify` | Verify/complete a top-up after payment |
 | GET | `/api/agency/settings` | Read billing settings (expiry-notice window) |
 | PATCH | `/api/agency/settings` | Update billing settings |
@@ -148,17 +150,25 @@ The `max_unterminated_shipments` limit **never blocks a delivery or a customer c
 - When the agency crosses the cap, a daily sweep raises a **`shipment.cap.exceeded`** notification (once per crossing; re-armed when it drops back under) — render it as an upgrade nudge, not an error.
 - In the plan UI, when `remaining === 0` show an "at capacity — upgrade for more headroom" banner, but **do not** disable any shipment/assignment action.
 
-Contrast with the agent cap, which **is** hard (an agent cannot accept an offer past their plan cap — see agent/billing.md (`backend/jovi-mall/api-doc/agent/billing.md` — not mirrored in this repository)).
+Contrast with the agent cap, which **is** hard (an agent cannot accept an offer past their plan cap — see [agent/billing.md](../agent/billing.md)).
 
 ---
 
 ### POST /api/agency/plans/:planId/purchase · POST /api/agency/plan-purchases/:id/verify
 
-Self-serve plan purchase and verification. **Flow, request body, gateway `instructions`, Stripe/mobile-money handling, polling, and the two-plan rule (activate-now vs queue-as-pending) are identical to the vendor flow** — see vendor/billing.md → purchase (`backend/jovi-mall/api-doc/vendor/billing.md #post-apivendorplansplanidpurchase` — not mirrored in this repository) and → verify (`backend/jovi-mall/api-doc/vendor/billing.md #post-apivendorplan-purchasesidverify` — not mirrored in this repository). Differences for agency:
+Self-serve plan purchase and verification. **Flow, request body, gateway `instructions`, Stripe/mobile-money handling, polling, and the two-plan rule (activate-now vs queue-as-pending) are identical to the vendor flow** — see [vendor/billing.md → purchase](../vendor/billing.md#post-apivendorplansplanidpurchase) and [→ verify](../vendor/billing.md#post-apivendorplan-purchasesidverify). Differences for agency:
 
 - Paths are `/api/agency/plans/:planId/purchase` and `/api/agency/plan-purchases/:id/verify`.
 - The verify response's applied-plan key is **`subscriberPlan`** (not `vendorPlan`), and the purchase row carries `owner_type: "agency"`, `owner_id`, and `subscriber_plan_id` (not `vendor_id`/`vendor_plan_id`).
 - `planId` must be an **active** agency plan. Today the paid tiers are inactive, so these endpoints return `409 BILLING_PLAN_INACTIVE` until they launch.
+> **Orange Money needs one extra call, and it is easy to miss.** When `purchase`/`topups`
+> answers `instructions.requiresOtp: true` (My-CoolPay + Orange Money), **nothing has been
+> charged yet**: relay the SMS code to `POST /api/agency/plan-purchases/:id/authorize` or
+> `POST /api/agency/credits/topups/:id/authorize` before you start polling. Shape, response and
+> error codes are the vendor ones —
+> [plan purchase](../vendor/billing.md#post-apivendorplan-purchasesidauthorize) ·
+> [top-up](../vendor/billing.md#post-apivendorcreditstopupsidauthorize).
+
 
 Error codes: `400 VALIDATION_ERROR`, `404 BILLING_PLAN_NOT_FOUND`, `409 BILLING_PLAN_INACTIVE`, `409 BILLING_PLAN_ROLE_MISMATCH` (not an agency plan), `409 BILLING_PLAN_NOT_PURCHASABLE` (free tier), `409 BILLING_PENDING_PLAN_EXISTS`, `400 PAYMENT_GATEWAY_NOT_SUPPORTED`, `502 PAYMENT_INITIATION_FAILED`, `404 BILLING_PLAN_PURCHASE_NOT_FOUND`, `409 BILLING_PURCHASE_INVALID_STATE`, `401`, `403`.
 
@@ -166,7 +176,7 @@ Error codes: `400 VALIDATION_ERROR`, `404 BILLING_PLAN_NOT_FOUND`, `409 BILLING_
 
 ### Credit wallet — GET /credits · GET /credits/packs · POST /credits/topups · POST /credits/topups/:id/verify
 
-Identical in shape and behaviour to the vendor credit endpoints (same shared `CREDIT_TOPUP_PACKS`, same gateways, same idempotent verify/poll, same negative-balance-after-chargeback rule) — see vendor/billing.md → credits (`backend/jovi-mall/api-doc/vendor/billing.md #get-apivendorcredits` — not mirrored in this repository). Just use the `/api/agency/...` paths. The top-up row carries `owner_type: "agency"` + `owner_id` instead of `vendor_id`.
+Identical in shape and behaviour to the vendor credit endpoints (same shared `CREDIT_TOPUP_PACKS`, same gateways, same idempotent verify/poll, same negative-balance-after-chargeback rule) — see [vendor/billing.md → credits](../vendor/billing.md#get-apivendorcredits). Just use the `/api/agency/...` paths. The top-up row carries `owner_type: "agency"` + `owner_id` instead of `vendor_id`.
 
 > **What does an agency spend credits on?** Nothing is metered against the agency wallet **yet** — the wallet, allowance and top-ups exist so credit-metered agency features can be added without a billing change. Show the balance and let agencies top up; there is no "spend" endpoint.
 
@@ -187,7 +197,7 @@ Read/update the plan-expiry notification window. Same shape as the vendor settin
 
 ## Transactions
 
-`GET /api/agency/transactions` returns the agency's unified history — plan purchases, credit top-ups, credit-ledger movements and delivery-fee **earnings** — merged into one normalized, paginated feed. **Same response shape and query params as the vendor feed** — see vendor/transactions.md (`backend/jovi-mall/api-doc/vendor/transactions.md` — not mirrored in this repository). Query: `?page=&limit=&category=plan|credit|earning|payout`.
+`GET /api/agency/transactions` returns the agency's unified history — plan purchases, credit top-ups, credit-ledger movements and delivery-fee **earnings** — merged into one normalized, paginated feed. **Same response shape and query params as the vendor feed** — see [vendor/transactions.md](../vendor/transactions.md). Query: `?page=&limit=&category=plan|credit|earning|payout`.
 
 ---
 
@@ -210,6 +220,6 @@ No agency action/endpoint — these are webhook-driven. Just handle `reversed` i
 ## Reference
 
 - Plan `role` = `"agency"`; free-tier code = `agency_free`.
-- Shared concepts (statuses, two-plan rule, gateways, Stripe): vendor/billing.md (`backend/jovi-mall/api-doc/vendor/billing.md` — not mirrored in this repository) and stripe-payments.md (`backend/jovi-mall/api-doc/vendor/stripe-payments.md` — not mirrored in this repository).
+- Shared concepts (statuses, two-plan rule, gateways, Stripe): [vendor/billing.md](../vendor/billing.md) and [stripe-payments.md](../vendor/stripe-payments.md).
 - Cross-role model: [billing-plans-across-roles.md](../billing-plans-across-roles.md).
 - Error envelope: `{ "success": false, "error": { "code": "...", "message": "..." } }`.

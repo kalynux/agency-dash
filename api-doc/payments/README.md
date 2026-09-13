@@ -1,16 +1,18 @@
 # Payments — gateway checkout (role-neutral)
 
-**Verified against source on 2026-09-08** — the six-route census re-run against
-`jovi-mall/src/modules/payments/routes/payment.routes.ts` (`POST /initiate`, `POST /verify`,
-`POST /:transactionId/authorize`, `GET /session/:token`, `POST /:transactionId/pay-link`,
-`GET /:transactionId` — the last two behind `requireAuth`, the first four open). Every other
-factual claim on this page is identical to the backend page verified the same day.
+**Verified against source on 2026-09-08** — the six-route census and their auth, the `initiate` /
+`verify` / `authorize` request shapes, the pay-link mint and session projection, the OTP attempt
+ceiling and the per-gateway refund verdict, against
+`jovi-mall/src/modules/payments/routes/payment.routes.ts`,
+`src/modules/payments/validators/payment.validators.ts`,
+`src/modules/payments/domain/pay-link.ts`, `src/modules/payments/services/pay-link.service.ts`,
+`src/modules/payments/gateways/registry.ts` and `src/modules/payments/config/payments.config.ts`.
 
 One payment surface, shared by every flow that takes money from a **customer**: a single-order
 payment, a whole multi-vendor cart in one charge, or a service booking.
 
 - **Base URL**: `http://localhost:8022/api`
-- **Response envelope**: standard `{ success, ... }` — see [../README.md](../README.md).
+- **Response envelope**: standard `{ success, ... }` — see [../README.md](../README.md#the-response-envelope-read-this-first).
 - **Gateways**: `NOTCHPAY` and `MYCOOLPAY` (mobile money), `STRIPE` (cards).
 
 > ### All three gateways are live
@@ -50,10 +52,10 @@ Related surfaces that do **not** live here:
 
 | Flow | Where |
 |---|---|
-| Booking payment + its own status poll | `POST /api/bookings/:id/pay`, `GET /api/bookings/:id/payment-status` — ../customer/bookings.md (`backend/jovi-mall/api-doc/customer/bookings.md` — not mirrored in this repository) |
+| Booking payment + its own status poll | `POST /api/bookings/:id/pay`, `GET /api/bookings/:id/payment-status` — [../customer/bookings.md](../customer/bookings.md) |
 | Gateway webhooks (server-to-server) | `POST /api/webhooks/*` — not client-callable |
 | **Plan purchases & credit top-ups** | `/{vendor,agency,agent}/plans/...`, `.../credits/topups` — a **separate** path that creates **no** `PaymentTransaction`. See [../billing-plans-across-roles.md](../billing-plans-across-roles.md) |
-| Saved cards / mobile-money instruments | `/api/me/payment-methods` — ../customer/payment-methods.md (`backend/jovi-mall/api-doc/customer/payment-methods.md` — not mirrored in this repository) |
+| Saved cards / mobile-money instruments | `/api/me/payment-methods` — [../customer/payment-methods.md](../customer/payment-methods.md) |
 
 ## Who can read a payment
 
@@ -89,7 +91,7 @@ transaction rather than charging twice.
 `channel.customerEmail` must be a valid email — both are forwarded to the gateway, so a malformed
 value would otherwise surface as an opaque gateway failure or a receipt nobody receives. Both stay
 **optional**; the rule applies only when the field is sent. See
-[Contact formats](../README.md).
+[Contact formats](../README.md#contact-formats-phone--email).
 
 **At least one** of `cartId` / `orderId` is required — sending neither is a `400` naming
 `cartId`. Sending *both* is not rejected: `cartId` wins and `orderId` is ignored, so send the
@@ -324,6 +326,16 @@ confirms it on the handset, and the webhook settles it.
 Unauthenticated, like `initiate` and `verify`. What bounds it is the IP rate limit plus the
 per-transaction attempt counter, not a session.
 
+> ⚠ **This is for order, cart and booking payments only.** A credit top-up or a plan purchase
+> creates **no `PaymentTransaction`** (that is why `merchantRef` carries a `jm_ct_` / `jm_pp_`
+> routing prefix), so passing a top-up or purchase id here answers
+> `404 PAYMENT_TRANSACTION_NOT_FOUND`. Billing has its own owner-scoped OTP routes beside the
+> `/verify` it already polls —
+> [`/plan-purchases/:id/authorize`](../vendor/billing.md#post-apivendorplan-purchasesidauthorize)
+> and [`/credits/topups/:id/authorize`](../vendor/billing.md#post-apivendorcreditstopupsidauthorize),
+> under `/api/vendor`, `/api/agency` and `/api/agent`. They are authenticated, because the
+> shareable-link reasoning above does not reach a purchase the owner started while signed in.
+
 ---
 
 ## The hosted card page (GAP-008)
@@ -486,8 +498,8 @@ the page open for the payment to settle.
   gateway rather than returning stored records, so they leak far less than the read did — but treat
   `initiate` as capable of starting a payment for any order id supplied to it.
 - **COD orders never touch this surface.** Cash on delivery is settled by the agent submitting the
-  customer's delivery code; there is no gateway call. See ../agent/cod-cash.md (`backend/jovi-mall/api-doc/agent/cod-cash.md` — not mirrored in this repository)
-  and ../customer/orders.md (`backend/jovi-mall/api-doc/customer/orders.md` — not mirrored in this repository).
+  customer's delivery code; there is no gateway call. See [../agent/cod-cash.md](../agent/cod-cash.md)
+  and [../customer/orders.md](../customer/orders.md).
 - **Polling cadence**: after `initiate` returns `PENDING`, poll `GET /payments/:transactionId` (or
   `POST /payments/verify` to force a gateway re-check). Webhooks settle it regardless, and a
   background sweep re-verifies anything whose callback never arrived — so a customer who closes
@@ -498,8 +510,8 @@ the page open for the payment to settle.
 
 ## Related
 
-- ../customer/orders.md (`backend/jovi-mall/api-doc/customer/orders.md` — not mirrored in this repository) — checkout, cart groups, and where `initiate` fits
-- ../customer/bookings.md (`backend/jovi-mall/api-doc/customer/bookings.md` — not mirrored in this repository) — booking payment and its own status endpoint
-- ../customer/payment-methods.md (`backend/jovi-mall/api-doc/customer/payment-methods.md` — not mirrored in this repository) — saved instruments
+- [../customer/orders.md](../customer/orders.md) — checkout, cart groups, and where `initiate` fits
+- [../customer/bookings.md](../customer/bookings.md) — booking payment and its own status endpoint
+- [../customer/payment-methods.md](../customer/payment-methods.md) — saved instruments
 - [../billing-plans-across-roles.md](../billing-plans-across-roles.md) — plans/credit, a separate payment path
 - [../errors/README.md](../errors/README.md) — error catalog

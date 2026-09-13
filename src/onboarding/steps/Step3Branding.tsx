@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLayout';
 import { brandingSchema, type BrandingFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
-import { MediaPickerTrigger, type MediaRef } from '@/components/common/MediaPickerTrigger';
+import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
@@ -36,7 +36,13 @@ export function Step3Branding() {
 
     // The logo lives outside RHF: it's picked, not typed. The draft keeps both the
     // id (what we submit) and the preview URL (what we render on back-navigation).
-    const [logo, setLogo] = useState<MediaRef | null>(
+    //
+    // Only those two fields, deliberately — this is not a `StoredFileRef`. A
+    // draft is not an API file, so it has no `key`/`access` to restore, and it
+    // needs none: the only file this state can hold is one just picked, and the
+    // picker refuses anything that is quota-blocked or otherwise unrenderable.
+    // A `MediaRef` (which carries all four) assigns into this shape unchanged.
+    const [logo, setLogo] = useState<{ id: string; url: string } | null>(
         draft?.logo_file_id && draft.logo_preview_url
             ? { id: draft.logo_file_id, url: draft.logo_preview_url }
             : null,

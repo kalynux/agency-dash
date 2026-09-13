@@ -27,6 +27,8 @@ import {
   Image,
   ClipboardList,
   FileText,
+  Star,
+  History,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -125,6 +127,16 @@ export const PRIMARY_NAV: NavItem[] = [
     children: [
       { labelKey: 'nav:primary.agentsConnections', path: '/dashboard/agents/connections', icon: Handshake },
       { labelKey: 'nav:primary.agentsBrowse', path: '/dashboard/agents/browse', icon: Search },
+      // No badge: the membership log is a record, not an inbox — nothing chases
+      // an unread entry, and a count here would imply an obligation the platform
+      // does not track. Same reasoning as the Inventory statements tab.
+      { labelKey: 'nav:primary.agentsHistory', path: '/dashboard/agents/history', icon: History },
+      // The delivery reviews this agency has WRITTEN, about its own agents' runs
+      // — an employer's supervision record, which is why it sits under Agents
+      // rather than under Shipments. No badge for the same reason as History: a
+      // held review is waiting on a moderator, never on the agency, so a count
+      // would imply an action that does not exist.
+      { labelKey: 'nav:primary.agentsReviews', path: '/dashboard/agents/reviews', icon: Star },
     ],
   },
   {

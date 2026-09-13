@@ -167,6 +167,20 @@ export interface PaymentChannel {
 export interface GatewayInstructions {
   // Mobile money (NotchPay / MyCoolPay)
   ussdCode?: string;
+  /**
+   * My-CoolPay's Orange Money flow, and **only** that one: the operator texts a
+   * one-time code and nothing happens until it is relayed back. There is no
+   * `ussdCode` on this branch — showing "dial the code" here prompts for
+   * something that never arrives, and polling alone just times out. Branch on it
+   * before rendering.
+   *
+   * For **billing** the code goes to the owner-scoped route beside `/verify`
+   * (`POST /agency/{credits/topups,plan-purchases}/:id/authorize`), *not* to
+   * `POST /payments/:transactionId/authorize` — that one serves order/cart/
+   * booking payments and knows only `PaymentTransaction` rows, which a billing
+   * purchase never creates. See api-doc/agency/billing.md.
+   */
+  requiresOtp?: boolean;
   expiresAt?: string;
   // Stripe (card) — charge is in USD while the catalog price stays XAF.
   /** PaymentIntent client secret — bind Stripe Elements + confirm the card with it. */
@@ -240,11 +254,45 @@ export interface BillingSettingsResponse {
   message?: string;
 }
 
+/**
+ * `POST /agency/credits/topups/:id/authorize` — relay the Orange Money SMS code.
+ *
+ * Owner-scoped and authenticated, beside the `/verify` this dashboard already
+ * polls. Deliberately **not** `POST /payments/:transactionId/authorize`: that one
+ * is for order/cart/booking payments, is unauthenticated because a payment link
+ * is shareable, and only knows `PaymentTransaction` rows — which a billing
+ * purchase never creates. See api-doc/agency/billing.md.
+ */
+export interface TopupAuthorizeResponse {
+  success: boolean;
+  data: { topup: CreditTopup; instructions: GatewayInstructions | null };
+  message?: string;
+}
+
+/** `POST /agency/plan-purchases/:id/authorize`. Identical, on the purchase row. */
+export interface PlanPurchaseAuthorizeResponse {
+  success: boolean;
+  data: { purchase: PlanPurchase; instructions: GatewayInstructions | null };
+  message?: string;
+}
+
 // ─── Shared payment-flow shape (gateway-agnostic, used by PaymentDialog) ─────────
 
 /** Normalised result of initiating any gateway payment (top-up or plan purchase). */
 export interface PaymentInitResult {
   id: string;
+  status: PaymentStatus;
+  instructions: GatewayInstructions | null;
+}
+
+/**
+ * Normalised result of relaying a one-time code.
+ *
+ * No `id` — the caller authorised a payment it already holds the id for. The
+ * `instructions` are re-read because this is where the USSD code for the second
+ * step arrives; `initiate` had none on the OTP branch.
+ */
+export interface PaymentAuthorizeResult {
   status: PaymentStatus;
   instructions: GatewayInstructions | null;
 }

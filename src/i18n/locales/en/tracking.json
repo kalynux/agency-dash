@@ -69,7 +69,18 @@
     "trackingEnded": "Tracking ended — this delivery is no longer yours to watch.",
     "awaitingPosition": "Awaiting a position from this agent.",
     "trackingReauthorizing": "Reconnecting — the delivery is unaffected and is almost certainly still in progress.",
-    "trackingUnavailable": "Live position unavailable right now. Nothing is known about the delivery — retrying."
+    "trackingUnavailable": "Live position unavailable right now. Nothing is known about the delivery — retrying.",
+    "causeChecking": "Finding out why no position is arriving…",
+    "causeUnknown": "No position is arriving, and the tracking service can't say why.",
+    "causeLocationDisabled": "Location is switched off on this agent's phone — call them and ask them to turn it back on.",
+    "causeLocationPermissionDenied": "This agent hasn't allowed the app to use their location — they need to grant it in their phone's settings.",
+    "causeTrackingDisabled": "This agent has switched location sharing off in the app — ask them to turn it back on.",
+    "causeTrackingNotAllowed": "This agent hasn't turned location sharing on, so no position can be read for them.",
+    "causeDisconnected": "This agent's app isn't connected right now — they've most likely lost signal or closed it.",
+    "causeNothingReported": "This agent's phone hasn't reported anything yet — nothing is known to be wrong, there's simply nothing to show.",
+    "causeReporting": "This agent is connected and reporting — their next position should arrive shortly.",
+    "droppedTimes_one": "Their connection has dropped once during this delivery.",
+    "droppedTimes_other": "Their connection has dropped {{count}} times during this delivery."
   },
   "relative": {
     "justNow": "just now",

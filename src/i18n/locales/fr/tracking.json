@@ -69,7 +69,18 @@
     "trackingEnded": "Suivi terminé — cette livraison n'est plus sous votre surveillance.",
     "awaitingPosition": "En attente d'une position de cet agent.",
     "trackingReauthorizing": "Reconnexion en cours — la livraison est intacte et se poursuit très probablement.",
-    "trackingUnavailable": "Position en direct momentanément indisponible. Rien n'est connu sur la livraison — nouvelle tentative en cours."
+    "trackingUnavailable": "Position en direct momentanément indisponible. Rien n'est connu sur la livraison — nouvelle tentative en cours.",
+    "causeChecking": "Recherche de la raison de l'absence de position…",
+    "causeUnknown": "Aucune position n'arrive, et le service de suivi ne peut pas en expliquer la raison.",
+    "causeLocationDisabled": "La localisation est désactivée sur le téléphone de cet agent — appelez-le pour qu'il la réactive.",
+    "causeLocationPermissionDenied": "Cet agent n'a pas autorisé l'application à utiliser sa position — il doit l'autoriser dans les réglages de son téléphone.",
+    "causeTrackingDisabled": "Cet agent a désactivé le partage de position dans l'application — demandez-lui de le réactiver.",
+    "causeTrackingNotAllowed": "Cet agent n'a pas activé le partage de position : aucune position ne peut être lue pour lui.",
+    "causeDisconnected": "L'application de cet agent n'est pas connectée pour le moment — il a très probablement perdu le réseau ou fermé l'application.",
+    "causeNothingReported": "Le téléphone de cet agent n'a encore rien signalé — rien n'indique un problème, il n'y a simplement rien à afficher.",
+    "causeReporting": "Cet agent est connecté et transmet sa position — la prochaine devrait arriver sous peu.",
+    "droppedTimes_one": "Sa connexion a été interrompue une fois pendant cette livraison.",
+    "droppedTimes_other": "Sa connexion a été interrompue {{count}} fois pendant cette livraison."
   },
   "relative": {
     "justNow": "à l'instant",

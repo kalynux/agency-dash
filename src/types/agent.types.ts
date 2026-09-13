@@ -499,12 +499,60 @@ export interface AgentEligibility {
   maxConcurrentShipments: number;
 }
 
+/**
+ * One row of the append-only membership log.
+ *
+ * The same shape serves both history endpoints —
+ * `GET /agency/agents/:agentId/history` (one agent) and
+ * `GET /agency/agents/history` (the whole roster) — which is why the roster view
+ * can reuse the per-agent renderer verbatim.
+ *
+ * `type` is an open union on purpose: the log is append-only, so a row written
+ * by an older build carries a token this one has no copy for. Render it through
+ * `tokenLabel`, never with a lookup that can come back undefined.
+ *
+ * Note what is NOT here: the agent's *name*. The event carries `agentId` only,
+ * so an agency-wide view has to resolve identity against the roster it already
+ * holds — the per-agent view never needed to, because the page around it is the
+ * agent.
+ */
 export interface AgentHistoryEvent {
+  id?: string;
+  /** null when the event predates the contract it belongs to (e.g. `invited`). */
+  membershipId?: string | null;
+  agentId?: string;
+  agencyId?: string;
   type: string;
+  /** Both null when the event did not move the state machine (`cod_limit_changed`). */
+  fromStatus?: MembershipStatus | null;
+  toStatus?: MembershipStatus | null;
+  /** 'agent' | 'agency' | 'admin' | 'system' — open, like every other actor field. */
+  actorRole?: string | null;
+  reason?: string | null;
+  metadata?: Record<string, unknown> | null;
+  /** When the thing happened. The log is sorted on this, not on row-write time. */
+  occurredAt?: string;
+  /** Legacy timestamp spellings. Neither is sent today; read as fallbacks only. */
   createdAt?: string;
   at?: string;
   note?: string | null;
   [key: string]: unknown;
+}
+
+/**
+ * When a membership event happened.
+ *
+ * The wire field is `occurredAt` — the log is explicitly ordered by the moment
+ * the thing happened, not by when the row was written. `createdAt`/`at` are read
+ * as fallbacks only because `AgentHistoryEvent` carried them as optional before
+ * the DTO was pinned down; neither is sent today. Reading only those two is what
+ * left every event in the membership sheet stamped with an em dash.
+ */
+export function membershipEventAt(event: AgentHistoryEvent): string | null {
+  for (const value of [event.occurredAt, event.createdAt, event.at]) {
+    if (typeof value === 'string' && value) return value;
+  }
+  return null;
 }
 
 // ─── Contract status requests (two-party transitions) ───────────────────────────

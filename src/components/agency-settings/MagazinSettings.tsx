@@ -23,6 +23,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useMagazin } from '@/store/magazin.store';
 import { magazinService } from '@/services/magazin.service';
+import {
+  isQuotaBlockedFile,
+  resolveFileUrl,
+  toStoredFileRef,
+  type StoredFileRef,
+} from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { AnyTFunction } from '@/i18n/tx';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
@@ -35,6 +41,7 @@ import { PhoneInput } from '@/components/common/PhoneInput';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
+import { QuotaBlockedBadge } from '@/components/common/QuotaBlockedMedia';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,18 +67,17 @@ type EditableKey =
   | 'supportWhatsapp';
 
 /**
- * Lightweight logo preview ref — `.id` is what the PATCH sends as `logoFileId`.
+ * Logo preview ref — `.id` is what the PATCH sends as `logoFileId`.
  *
- * `url` is nullable because `FileRef.url` is: a file in one of the authorized
- * storage trees has no public URL at all (api-doc/files/private-files.md). A
- * logo is never one of those, but the preview has to survive being handed one
- * rather than render a broken image — and only `.id` is ever sent, so a missing
- * preview costs nothing on save.
+ * `url` is nullable because `FileRef.url` is, and it is nullable for two
+ * unrelated reasons: an authorized storage tree has no public URL at all (a
+ * logo is never one of those), and a `quota_blocked` file is being held back
+ * because THIS agency is over its plan. So the ref carries `access` and `key`
+ * as well — without them both cases collapse into "no logo" and the empty
+ * "Add logo" box claims the agency never uploaded one.
+ * See api-doc/files/private-files.md § The third value.
  */
-interface LogoRef {
-  id: string;
-  url: string | null;
-}
+type LogoRef = StoredFileRef;
 
 interface FormState {
   name: string;
@@ -88,7 +94,7 @@ function toForm(m: AgencyMagazin): FormState {
   return {
     name: m.name ?? '',
     description: m.description ?? '',
-    logo: m.logo ? { id: m.logo.id, url: m.logo.url } : null,
+    logo: m.logo ? toStoredFileRef(m.logo) : null,
     supportEmail: m.supportEmail ?? '',
     supportPhone: m.supportPhone ?? '',
     supportWhatsapp: m.supportWhatsapp ?? '',
@@ -245,6 +251,11 @@ export function MagazinSettings() {
   if (!magazin || !form) return null;
 
   const previewName = form.name.trim() || magazin.name;
+  // Two different empty previews, and `url === null` cannot tell them apart:
+  // ask the helpers, which test `quota_blocked` before `authorized` the way the
+  // backend resolves it.
+  const logoBlocked = form.logo ? isQuotaBlockedFile(form.logo) : false;
+  const logoUrl = form.logo ? resolveFileUrl(form.logo) : null;
 
   return (
     <div className="space-y-6">
@@ -265,9 +276,14 @@ export function MagazinSettings() {
               onSelect={(media) => set('logo', media)}
               className="h-16 w-16 rounded-xl border bg-muted shadow-sm"
             >
-              {form.logo?.url ? (
+              {logoBlocked ? (
+                // Deliberately not the empty "add a logo" box: that reads as
+                // "this store has no logo", which is a different and wrong
+                // statement. The file is intact — the plan is full.
+                <QuotaBlockedBadge />
+              ) : logoUrl ? (
                 <img
-                  src={form.logo.url}
+                  src={logoUrl}
                   alt={t('store.logoAlt')}
                   className="h-full w-full object-cover"
                 />

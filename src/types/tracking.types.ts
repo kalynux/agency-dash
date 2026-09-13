@@ -236,3 +236,149 @@ export interface RouteResult {
   /** Decoded route line; may be empty if the provider returned none. */
   geometry: GeoPosition[];
 }
+
+// ─── Why a marker is frozen: GET /tracking/sessions/:agentId ───────────────────
+//
+// The board says who to draw and the socket says where they are. Neither can say
+// why a position stopped arriving — a subscription that is simply quiet looks
+// identical to one whose agent left their phone in a drawer. `GET
+// /tracking/sessions/{agentID}` is, in ROUTE-MAP.md's words, "the only way to
+// tell a frozen marker's cause". See api-doc/geo-tracker/tracking-sessions.md.
+
+/**
+ * What the agent's phone last told geo-tracker about its own configuration.
+ *
+ * ⚠ **Every flag here is a tri-state and the third state is the interesting
+ * one.** `true` and `false` are what the device reported; **absent** means it has
+ * never reported that signal at all, which is a different answer to "why is this
+ * marker frozen" than either of them. The backend sends these as `*bool` with
+ * `omitempty`, so an explicit `false` does arrive as `false` — absence is never
+ * a disguised negative, and must never be read as one (`undefined` is not
+ * "off"; it is "nobody has said").
+ */
+export interface TrackingDeviceState {
+  /** OS-level location/GPS services on the handset. */
+  locationEnabled?: boolean;
+  /**
+   * Whether the agent's app holds the OS location permission. Genuinely distinct
+   * from {@link locationEnabled} — the system toggle can be on while this one
+   * app is denied, and the two are fixed in different places on the phone.
+   */
+  locationPermissionGranted?: boolean;
+  /** The agent's in-app sharing switch — the opt-in half of Tracking Allow. */
+  trackingEnabled?: boolean;
+  /**
+   * When the device last reported **any** of the above. Absent means it never
+   * has, which — paired with an empty `reasons` — is the whole of
+   * "nothing has been reported yet". Zero times are omitted, never sent as an
+   * epoch string.
+   */
+  lastSeenAt?: string;
+}
+
+/**
+ * The health of one shipment's tracking. Not the shipment's own progress, which
+ * is jovi-mall's: a session sits in `disconnected` for an hour mid-delivery and
+ * is still the same session when the phone finds signal again.
+ *
+ * Nothing in this dashboard branches on the value, so a tenth state added
+ * upstream costs nothing here.
+ */
+export type TrackingSessionState =
+  | 'offline'
+  | 'disconnected'
+  | 'online'
+  | 'degraded'
+  | 'network_lost'
+  | 'location_disabled'
+  | 'tracking_disabled'
+  | 'app_background'
+  | 'app_foreground';
+
+/** One in-flight delivery's tracking session, as the context read model presents it. */
+export interface TrackingSessionSnapshot {
+  sessionId: string;
+  shipmentId: string;
+  state: TrackingSessionState;
+  /** GPS is actually flowing for this delivery right now. */
+  tracking: boolean;
+  connectionId?: string;
+  /**
+   * How many connections have served this session — a **reconnect counter**.
+   *
+   * `3` is one delivery whose agent's phone dropped twice, **not** three
+   * deliveries and not three agents. It only ever increments (each bind), so
+   * drops = `connectionCount - 1`.
+   */
+  connectionCount: number;
+  startedAt: string;
+  lastHeartbeatAt?: string;
+  lastUpdatedAt?: string;
+}
+
+/**
+ * GET /tracking/sessions/:agentId — everything geo-tracker knows about one
+ * agent: their device, their connection, and one entry per delivery in flight.
+ *
+ * The shape mirrors the service's two independent gates: the agent-level fields
+ * are true with or without a delivery, `sessions` is the per-shipment list. An
+ * idle opted-in agent is `trackingAllow: true` with a live position and
+ * `sessions: []` — locatable but not tracked, which is a healthy state and not
+ * an error.
+ */
+export interface TrackingContext {
+  agentId: string;
+  /** A connection is bound to this agent right now. */
+  connected: boolean;
+  connectionId?: string;
+  device: TrackingDeviceState;
+  /**
+   * The **agent's** opt-in for the platform to read their location at all — not
+   * this agency's entitlement to watch them, which is jovi-mall's and is
+   * enforced at subscribe time. It gates `position`; it does **not** gate
+   * `sessions`.
+   *
+   * ⚠ Read it with {@link TrackingDeviceState} beside it. The server computes it
+   * as `trackingEnabled === true && no explicit location negative`, so a device
+   * that has reported nothing at all yields `false` — the *absence* of an opt-in,
+   * which is not the same statement as a refusal and must not be rendered as one.
+   */
+  trackingAllow: boolean;
+  /** Last known position, gated by `trackingAllow`. */
+  position?: GeoPosition;
+  positionAt?: string;
+  /** The last fix this agent reported on **any** connection. Absent if never. */
+  lastHeartbeatAt?: string;
+  /** Mirrors `sessions.length > 0`. */
+  activeShipment: boolean;
+  sessions: TrackingSessionSnapshot[];
+}
+
+/**
+ * Why a device cannot be tracked. Each maps to a fix in a different place: the
+ * phone's system settings, its per-app permissions, and the agent app itself.
+ */
+export type TrackingEligibilityReason =
+  /** The client reported OS location/GPS services off. */
+  | 'location_disabled'
+  /** The client reported the app's OS location permission denied. */
+  | 'location_permission_denied'
+  /** The client reported in-app tracking/sharing off. */
+  | 'tracking_disabled';
+
+/**
+ * GET /tracking/sessions/:agentId/eligibility — whether the agent's device
+ * configuration currently permits tracking.
+ *
+ * ⚠ **`eligible: true` is not "everything is fine".** Only an *explicit*
+ * negative makes an agent ineligible, so a device that has never reported
+ * anything comes back eligible with no reasons — and for a frozen marker that
+ * silence *is* the answer, not a clean bill of health. Pair it with
+ * `device.lastSeenAt` before reading it as one.
+ */
+export interface TrackingEligibility {
+  agentId: string;
+  eligible: boolean;
+  /** **Every** failing rule, never just the first. Render all of them. */
+  reasons: TrackingEligibilityReason[];
+}

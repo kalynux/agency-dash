@@ -4,8 +4,9 @@
 // the kinds the slot accepts; uploading happens inside the picker, so every file
 // in the app goes through the one upload endpoint and comes back as an id.
 //
-// The caller stores `{ id, url }`: the id is what the PATCH/PUT sends, the url is
-// only for the preview.
+// The caller stores a `StoredFileRef`: the id is what the PATCH/PUT sends, the
+// url is for the preview, and `key`/`access` are what let the slot tell an empty
+// state apart from a quota-blocked one after a reload.
 
 import { useState, type ReactNode } from 'react';
 import { ImagePlus } from 'lucide-react';
@@ -14,12 +15,21 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { txStatic } from '@/i18n/tx';
 import { MediaPicker } from '@/components/features/MediaPicker';
-import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
+import {
+  isQuotaBlockedFile,
+  resolveFileUrl,
+  toStoredFileRef,
+  type StoredFileRef,
+} from '@/services/files.service';
 import type { FileKind } from '@/types/file.types';
 
-/** What a single-file slot holds: the id to submit, the URL to render. */
-export interface MediaRef {
-  id: string;
+/**
+ * What a single-file slot holds. The same shape the form keeps for a file it
+ * loaded from the API, so a pick and a reload are interchangeable — narrowed
+ * only in that `url` is never `null` here: the picker refuses anything with no
+ * public bytes below, so a *freshly picked* file always has one.
+ */
+export interface MediaRef extends StoredFileRef {
   url: string;
 }
 
@@ -89,7 +99,7 @@ export function MediaPickerTrigger({
           // a URL cannot hold a placeholder for it — so drop the pick rather
           // than write a value that renders as a broken image later.
           const url = resolveFileUrl(file);
-          if (url) onSelect({ id: file.id, url });
+          if (url) onSelect({ ...toStoredFileRef(file), url });
         }}
       />
     </>

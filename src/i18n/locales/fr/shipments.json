@@ -216,6 +216,62 @@
     "submit": "Envoyer la note",
     "submittedLive": "Note enregistrée.",
     "submittedHeld": "Envoyé — un modérateur vérifiera vos commentaires avant leur prise en compte.",
-    "notEligible": "Cette livraison ne peut pas être évaluée."
+    "notEligible": "Cette livraison ne peut pas être évaluée.",
+    "status": {
+      "published": {
+        "badge": "En ligne",
+        "title": "En ligne",
+        "body": "Elle compte dans la note du livreur. Elle ne modifie jamais votre propre note d'agence — celle-ci provient des évaluations de vos clients."
+      },
+      "pending": {
+        "badge": "En attente",
+        "title": "En attente de modération",
+        "body": "Vous avez ajouté un commentaire : un modérateur le vérifie avant que l'évaluation ne compte. Rien n'est attendu de vous — inutile de renvoyer quoi que ce soit, il n'y a rien à relancer."
+      },
+      "rejected": {
+        "badge": "Refusée",
+        "title": "Refusée par la modération",
+        "body": "Un modérateur a refusé cette évaluation : elle ne compte pour rien, la note comprise. Elle ne peut pas être contestée, et cette livraison ne peut plus être évaluée."
+      }
+    },
+    "mine": {
+      "title": "Votre évaluation",
+      "written": "Rédigée le {{date}}",
+      "ratingOnly": "Vous avez noté cette livraison sans rien écrire.",
+      "noChange": "Une évaluation ne peut être ni modifiée ni retirée une fois envoyée.",
+      "lookingUp": "Recherche de votre évaluation…",
+      "notFound": "Vous avez déjà noté cette livraison, et une note ne peut plus être modifiée une fois envoyée.",
+      "seeAll": "Voir toutes vos évaluations"
+    },
+    "rollup": {
+      "heldBanner_one": "{{count}} évaluation est en attente de modération",
+      "heldBanner_many": "{{count}} évaluations sont en attente de modération",
+      "heldBanner_other": "{{count}} évaluations sont en attente de modération",
+      "heldBannerBody": "Vous y avez ajouté des commentaires : un modérateur les vérifie avant qu'elles ne comptent. Rien n'est attendu de vous.",
+      "heldBannerAction": "Voir",
+      "filterStatus": "Statut",
+      "filterDescription": "Filtrer selon ce qu'est devenue chaque évaluation.",
+      "statuses": {
+        "all": "Toutes",
+        "pending": "En attente",
+        "published": "En ligne",
+        "rejected": "Refusées"
+      },
+      "table": {
+        "rating": "Note",
+        "comments": "Ce que vous avez écrit",
+        "status": "Statut",
+        "submitted": "Envoyée le",
+        "delivery": "Livraison"
+      },
+      "ratingOnly": "Note seule",
+      "openDelivery": "Ouvrir la livraison",
+      "liveSince": "En ligne depuis le {{date}}",
+      "empty": "Vous n'avez encore évalué aucune livraison",
+      "emptyBody": "Ouvrez une expédition livrée et évaluez la course. Votre note alimente le score de confiance du livreur — elle ne modifie jamais votre propre note d'agence.",
+      "emptyFiltered": "Aucune évaluation avec ce statut",
+      "emptyFilteredBody": "Effacez le filtre pour voir toutes les évaluations que vous avez écrites.",
+      "clearFilter": "Effacer le filtre"
+    }
   }
 }

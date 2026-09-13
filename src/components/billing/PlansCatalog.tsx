@@ -17,14 +17,11 @@ interface PlansCatalogProps {
   plans: PricingPlan[];
   current: CurrentPlanData | null;
   /**
-   * Start a purchase. Omitted where purchases are gated (native — D4 / Phase 5),
-   * which drops the per-plan buttons; the notice saying where a plan change is
-   * made instead is rendered by the parent, under the catalog.
-   *
-   * The catalog itself always renders. What each tier costs is information, and
-   * withholding it would make the app worse for no policy benefit.
+   * Start a purchase. No longer optional: a plan is paid with mobile money on
+   * every platform, so there is no build where the per-plan buttons have to come
+   * out.
    */
-  onBuy?: (plan: PricingPlan) => void;
+  onBuy: (plan: PricingPlan) => void;
 }
 
 export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
@@ -37,10 +34,6 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
       {plans.map((plan) => {
         const isCurrent = plan.code === activeCode;
         const isFree = plan.price === 0;
-        // A gated build renders no call-to-action slot at all rather than a
-        // disabled "Choose plan": a greyed-out button reads as something broken,
-        // not as something that lives elsewhere. The two status pills stay —
-        // "Your plan" and "Default tier" are labels, not actions.
         const cta = isCurrent ? (
           <Button variant="outline" className="w-full" disabled>
             {t('plans.yourPlan')}
@@ -49,7 +42,7 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
           <Button variant="outline" className="w-full" disabled>
             {t('plans.defaultTier')}
           </Button>
-        ) : onBuy ? (
+        ) : (
           <Button
             className="w-full"
             onClick={() => onBuy(plan)}
@@ -58,7 +51,7 @@ export function PlansCatalog({ plans, current, onBuy }: PlansCatalogProps) {
           >
             {hasPending ? t('plans.queued') : t('plans.choose')}
           </Button>
-        ) : null;
+        );
         return (
           <Card
             key={plan._id}

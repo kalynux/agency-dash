@@ -10,6 +10,7 @@ import {
   Plus,
   Info,
   ArrowLeft,
+  MessageSquareLock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -42,6 +43,7 @@ import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
 import { phoneErrorMessage } from '@/lib/validation-schemas';
 import type {
+  PaymentAuthorizeResult,
   PaymentChannel,
   PaymentGateway,
   PaymentInitResult,
@@ -50,14 +52,19 @@ import type {
 } from '@/types/billing.types';
 import type { SavedPaymentMethod } from '@/types/payment-method.types';
 import { isStripeConfigured } from '@/lib/stripe';
+import { ApiError } from '@/types/api';
+import { getErrorCode } from '@/lib/errors';
+import { cardPurchasesEnabled } from '@/platform/purchases';
 import { fetchPaymentMethods } from '@/services/payment-methods.service';
 import { StripePaymentElement, type StripePaymentElementHandle } from './StripePaymentElement';
 import { CardPreview } from './CardPreview';
 import { ProviderNote } from './ProviderNote';
+import { ManageOnWebNotice } from './ManageOnWebNotice';
 import {
   GATEWAYS,
   CARD_GATEWAY,
   MOBILE_MONEY_GATEWAY,
+  MOBILE_MONEY_GATEWAYS,
   PAYMENT_POLL_INTERVAL_MS,
   PAYMENT_POLL_TIMEOUT_MS,
   billingErrorMessage,
@@ -69,7 +76,7 @@ import {
   type StripeResumeKind,
 } from './billing.constants';
 
-type Phase = 'form' | 'card' | 'processing' | 'success' | 'failed' | 'timeout';
+type Phase = 'form' | 'card' | 'otp' | 'processing' | 'success' | 'failed' | 'timeout';
 
 /** The top-level choice: a card Stripe collects, or a phone wallet. */
 type Channel = 'card' | 'mobile_money';
@@ -96,6 +103,12 @@ export interface PaymentDialogProps {
   initiate: (gateway: PaymentGateway, channel: PaymentChannel) => Promise<PaymentInitResult>;
   /** Poll a pending payment; resolves with its current status. */
   verify: (id: string) => Promise<{ status: PaymentStatus }>;
+  /**
+   * Relay the one-time SMS code, for the gateway that asks for one. Injected
+   * like `initiate`/`verify` because the route differs per flow — a top-up and a
+   * plan purchase authorise on their own owner-scoped endpoint.
+   */
+  authorize: (id: string, code: string) => Promise<PaymentAuthorizeResult>;
   /** Called once the payment is confirmed paid (refresh balances/plan). */
   onPaid: () => void;
   successLabel?: string;
@@ -104,11 +117,22 @@ export interface PaymentDialogProps {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * The processors that collect a mobile-money charge. Which one runs it is a
- * back-office detail — it is offered, quietly, below the operator the agency
- * actually cares about, and only when there is more than one to pick from.
+ * The one-time code's accepted length.
+ *
+ * The field is *sized* for six digits, which is what Orange Money texts, but the
+ * API documents the range as 4–8 (api-doc/agency/billing.md § `authorize`).
+ * Hard-requiring six would reject a valid shorter code and strand a payment the
+ * operator is holding open, so six is the expectation, not the rule.
  */
-const MOBILE_MONEY_GATEWAYS = GATEWAYS.filter((g) => g.methodType === 'mobile_money');
+const OTP_MIN_LENGTH = 4;
+const OTP_MAX_LENGTH = 8;
+
+/** `details.attemptsRemaining` off a `PAYMENT_OTP_INVALID`, when the API sent one. */
+function attemptsRemaining(err: unknown): number | undefined {
+  if (!(err instanceof ApiError)) return undefined;
+  const details = err.details as { attemptsRemaining?: unknown } | undefined;
+  return typeof details?.attemptsRemaining === 'number' ? details.attemptsRemaining : undefined;
+}
 
 /** Map a saved method's provider to the gateway used to charge it. */
 function providerToGateway(provider: string): PaymentGateway | null {
@@ -134,6 +158,7 @@ export function PaymentDialog({
   paymentKind,
   initiate,
   verify,
+  authorize,
   onPaid,
   successLabel,
 }: PaymentDialogProps) {
@@ -159,6 +184,14 @@ export function PaymentDialog({
   const [ussd, setUssd] = useState<string | null>(null);
   const [stripeInit, setStripeInit] = useState<StripeInit | null>(null);
   const [cardReady, setCardReady] = useState(false);
+  // The one-time-code step (My-CoolPay Orange Money). `otpPaymentId` is the id
+  // the code is authorised against; it is held separately from the poll so a
+  // failed authorise can be retried without re-initiating the payment.
+  const [otpPaymentId, setOtpPaymentId] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  /** Overrides the generic failure copy when we know exactly what went wrong. */
+  const [failedReason, setFailedReason] = useState<string | null>(null);
 
   // Saved methods power the quick-select chip row + autofill.
   const [savedMethods, setSavedMethods] = useState<SavedPaymentMethod[]>([]);
@@ -183,8 +216,10 @@ export function PaymentDialog({
         meta: mobileMeta?.chargeCurrency,
       },
     ];
-    // No publishable key means no card form to mount, so don't offer the choice.
-    if (isStripeConfigured) {
+    // Two independent reasons not to offer a card here. No publishable key means
+    // there is no form to mount; `!cardPurchasesEnabled` means this is the native
+    // shell, where 3-D Secure has no return_url to land on (see platform/purchases).
+    if (isStripeConfigured && cardPurchasesEnabled) {
       options.push({
         value: 'card',
         label: t('channels.card.name'),
@@ -195,6 +230,13 @@ export function PaymentDialog({
     }
     return options;
   }, [t]);
+
+  /**
+   * Whether to say where cards went. Only when the platform is the reason — an
+   * unconfigured Stripe key is our problem to fix, not somewhere to send the
+   * agency, and the web dashboard would not have a card form either.
+   */
+  const cardsLiveOnWeb = !cardPurchasesEnabled && isStripeConfigured;
 
   // Airtel and Wave are real operators, but the gateway has no enum member for
   // them yet — shown so the roster is honest, disabled so a charge can't be
@@ -227,6 +269,10 @@ export function PaymentDialog({
       setStripeInit(null);
       setCardReady(false);
       setSelectedSavedId(null);
+      setOtpPaymentId(null);
+      setOtpCode('');
+      setOtpError(null);
+      setFailedReason(null);
     }
     return stopPolling;
   }, [open]);
@@ -288,7 +334,9 @@ export function PaymentDialog({
     setFormError(null);
     const gw = providerToGateway(method.provider);
     if (gw === 'STRIPE') {
-      if (isStripeConfigured) setChannel('card');
+      // Same two conditions as the channel picker — a saved card must not be
+      // able to select a channel the picker does not offer.
+      if (isStripeConfigured && cardPurchasesEnabled) setChannel('card');
     } else {
       setChannel('mobile_money');
       if (gw && MOBILE_MONEY_GATEWAYS.some((g) => g.value === gw)) setMobileGateway(gw);
@@ -366,6 +414,21 @@ export function PaymentDialog({
         return;
       }
 
+      // The operator texted a one-time code instead of raising a prompt. Nothing
+      // moves until that code is relayed, so polling here would just run out the
+      // clock while the payer waits for a prompt that is never coming.
+      if (result.instructions?.requiresOtp) {
+        setOtpPaymentId(result.id);
+        setOtpCode('');
+        setOtpError(null);
+        // `instructions.message` is deliberately not shown on this step. On this
+        // one branch the adapter hardcodes an English sentence that says exactly
+        // what our own copy says, minus the number it was sent to — so it would
+        // read as a duplicate, in the wrong language, on a French UI.
+        setPhase('otp');
+        return;
+      }
+
       // Mobile money (or a gateway that already confirmed): show instructions + poll.
       setUssd(result.instructions?.ussdCode ?? null);
       // The gateway's own instruction text arrives already localised for the
@@ -375,6 +438,89 @@ export function PaymentDialog({
       startPolling(result.id);
     } catch (err) {
       setFormError(billingErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  /**
+   * Step 2 (mobile money, OTP branch): relay the code, then poll as usual.
+   *
+   * A successful authorise leaves the payment `pending`, and that is correct —
+   * the code only releases the operator's prompt, the payer still confirms it on
+   * the handset, and the webhook or the verify poll settles it. A 200 here is
+   * explicitly not "paid". The instructions are re-read because the USSD code for
+   * that second step arrives in *this* response; `initiate` had none.
+   */
+  async function handleAuthorize() {
+    if (!otpPaymentId) return;
+    const code = otpCode.trim();
+    if (code.length < OTP_MIN_LENGTH) {
+      setOtpError(t('checkout.otpTooShort', { count: OTP_MIN_LENGTH }));
+      return;
+    }
+
+    setOtpError(null);
+    setSubmitting(true);
+    try {
+      const { status, instructions } = await authorize(otpPaymentId, code);
+
+      // Not expected — the row is `pending` on this path — but a settled row must
+      // never be shown as still waiting, so the status is read rather than assumed.
+      if (status === 'paid') {
+        setPhase('success');
+        onPaid();
+        toast.success(successText);
+        return;
+      }
+      if (status === 'failed' || status === 'reversed') {
+        setPhase('failed');
+        return;
+      }
+
+      setUssd(instructions?.ussdCode ?? null);
+      setInstructionMsg(instructions?.message ?? t('checkout.phonePrompt'));
+      setPhase('processing');
+      startPolling(otpPaymentId);
+    } catch (err) {
+      switch (getErrorCode(err)) {
+        case 'PAYMENT_OTP_ATTEMPTS_EXCEEDED':
+          // Terminal: the backend has already written the payment FAILED. Retrying
+          // the code is impossible, so the only honest offer is a fresh payment.
+          setFailedReason(t('checkout.otpAttemptsExceeded'));
+          setPhase('failed');
+          break;
+        case 'PAYMENT_OTP_NOT_REQUIRED':
+        case 'BILLING_TOPUP_INVALID_STATE':
+        case 'BILLING_PURCHASE_INVALID_STATE': {
+          // Either this payment never wanted a code, or it has already settled —
+          // a paid row refuses a second code, because accepting one would be a
+          // second charge. Both make the field useless, and only the poll can say
+          // which, so stop asking and go find out.
+          setInstructionMsg(billingErrorMessage(err));
+          setUssd(null);
+          setPhase('processing');
+          startPolling(otpPaymentId);
+          break;
+        }
+        case 'PAYMENT_OTP_INVALID': {
+          const left = attemptsRemaining(err);
+          // `left === 0` is reachable and is not the same as "try again": the
+          // counter is spent, so the next submit fails the payment outright
+          // rather than checking the code. Say so instead of inviting a retry.
+          setOtpError(
+            left === undefined
+              ? billingErrorMessage(err)
+              : left <= 0
+                ? t('checkout.otpNoTriesLeft')
+                : t('checkout.otpInvalid', { count: left }),
+          );
+          setOtpCode('');
+          break;
+        }
+        default:
+          setOtpError(billingErrorMessage(err));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -420,6 +566,12 @@ export function PaymentDialog({
     setCardError(null);
     setCardReady(false);
     setSubmitting(false);
+    setOtpPaymentId(null);
+    setOtpCode('');
+    setOtpError(null);
+    setFailedReason(null);
+    setUssd(null);
+    setInstructionMsg(null);
     setPhase('form');
   }
 
@@ -593,6 +745,11 @@ export function PaymentDialog({
                 </div>
               )}
 
+              {/* Where the card option went, on a build that cannot land a 3-D
+                  Secure redirect. Below the form, not above it: mobile money
+                  works here, so this is a footnote and not the headline. */}
+              {cardsLiveOnWeb && <ManageOnWebNotice kind="payCard" />}
+
               {formError && (
                 <p role="alert" className="text-sm text-destructive">
                   {formError}
@@ -681,6 +838,75 @@ export function PaymentDialog({
           </>
         )}
 
+        {phase === 'otp' && (
+          <>
+            {/*
+              Same scroll shape as the form and card phases: the body scrolls and
+              the footer is pinned inside the dialog. The dialog itself is capped
+              in `dvh`, and on Android the IME inset shrinks the WebView viewport,
+              so "Confirm code" stays above the keyboard without any of the
+              `useKeyboardOpen()` handling the app's `fixed bottom-0` bars need —
+              a DialogFooter is not a fixed bar.
+            */}
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+              <div className="space-y-2 text-center">
+                <MessageSquareLock className="mx-auto h-9 w-9 text-primary" aria-hidden="true" />
+                <p className="font-medium">{t('checkout.otpTitle')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('checkout.otpPrompt', { phone })}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-otp">{t('checkout.otpLabel')}</Label>
+                <Input
+                  id="pay-otp"
+                  // `one-time-code` is what lets Android offer the SMS straight
+                  // from the keyboard bar; `numeric` keeps it off the QWERTY layout.
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  autoFocus
+                  maxLength={OTP_MAX_LENGTH}
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH));
+                    setOtpError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !submitting) void handleAuthorize();
+                  }}
+                  aria-invalid={!!otpError}
+                  aria-describedby="pay-otp-help"
+                  className="text-center font-mono text-2xl tracking-[0.4em]"
+                  placeholder="——————"
+                />
+                <p id="pay-otp-help" className="text-xs text-muted-foreground">
+                  {t('checkout.otpHelp')}
+                </p>
+              </div>
+
+              {otpError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {otpError}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="shrink-0 gap-2 border-t px-5 py-3 sm:px-6">
+              <Button variant="outline" onClick={backToForm} disabled={submitting}>
+                <ArrowLeft className="me-1 h-4 w-4" /> {t('common:actions.back')}
+              </Button>
+              <Button
+                onClick={handleAuthorize}
+                disabled={submitting || otpCode.length < OTP_MIN_LENGTH}
+              >
+                {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                {t('checkout.otpSubmit')}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
         {phase === 'processing' && (
           <div className="space-y-4 px-5 py-6 text-center sm:px-6">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
@@ -718,7 +944,7 @@ export function PaymentDialog({
           <ResultState
             icon={<XCircle className="mx-auto h-10 w-10 text-destructive" />}
             title={t('checkout.failedTitle')}
-            description={t('checkout.failedDescription')}
+            description={failedReason ?? t('checkout.failedDescription')}
             action={
               <>
                 <Button variant="outline" onClick={() => handleClose(false)}>

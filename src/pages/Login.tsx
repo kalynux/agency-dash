@@ -130,7 +130,21 @@ export function Login() {
     // A guard that bounced someone here stashed where they were going. Honour
     // it only once onboarding is finished — an unfinished agency has exactly
     // one legal destination and it is not their bookmark.
-    const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+    //
+    // ⚠ **The query string is part of the destination, not decoration.** Every
+    // deep link that names a record resolves to a list screen plus `?open=<id>`
+    // (see `resolveDeepLink`), so dropping `search` here turns "the shipment the
+    // notification was about" into "the shipment list" — which is most of the
+    // way back to the silent-wrong-page this whole contract exists to prevent.
+    // `OnboardingGuard` stashes the whole `location`, so the search is there to
+    // be used; this is the common path on mobile, where a notification tap
+    // cold-starts an app whose session has lapsed.
+    const stashed = (
+      location.state as { from?: { pathname?: string; search?: string } } | null
+    )?.from;
+    const from = stashed?.pathname
+      ? `${stashed.pathname}${stashed.search ?? ''}`
+      : undefined;
     const target =
       step === 0 ? (from && !from.startsWith('/login') ? from : '/dashboard') : '/onboarding';
     navigate(target, { replace: true });

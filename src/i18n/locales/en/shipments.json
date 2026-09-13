@@ -215,6 +215,62 @@
     "submit": "Submit rating",
     "submittedLive": "Rating recorded.",
     "submittedHeld": "Submitted — a moderator will review your comments before it counts.",
-    "notEligible": "This delivery cannot be rated."
+    "notEligible": "This delivery cannot be rated.",
+    "_statusComment": "The three outcomes of a review, shared by the shipment panel and the roll-up under Agents → Reviews. `badge` is the one-word form beside an icon; `title` and `body` are the full statement. `pending` must never read as a failure — it is what attaching comments buys you, and nothing is required of the author.",
+    "status": {
+      "published": {
+        "badge": "Live",
+        "title": "Live",
+        "body": "It counts towards the agent's rating. It never moves your own agency rating — that comes from your customers' reviews."
+      },
+      "pending": {
+        "badge": "Held",
+        "title": "Held for moderation",
+        "body": "You attached comments, so a moderator checks them before this counts. Nothing is needed from you: you do not have to resubmit, and there is nothing to chase."
+      },
+      "rejected": {
+        "badge": "Declined",
+        "title": "Declined by moderation",
+        "body": "A moderator declined this review, so it counts for nothing — the rating included. It cannot be appealed, and this delivery cannot be rated again."
+      }
+    },
+    "mine": {
+      "title": "Your review",
+      "written": "Written {{date}}",
+      "ratingOnly": "You rated this delivery without writing anything.",
+      "noChange": "A review cannot be edited or withdrawn once it is in.",
+      "lookingUp": "Finding your review…",
+      "notFound": "You have already rated this delivery, and a rating cannot be changed once it is in.",
+      "seeAll": "See all your reviews"
+    },
+    "rollup": {
+      "heldBanner_one": "{{count}} review is held for moderation",
+      "heldBanner_other": "{{count}} reviews are held for moderation",
+      "heldBannerBody": "You attached comments to them, so a moderator checks them before they count. Nothing is needed from you.",
+      "heldBannerAction": "Show held",
+      "filterStatus": "Status",
+      "filterDescription": "Narrow to what became of each review.",
+      "statuses": {
+        "all": "All",
+        "pending": "Held",
+        "published": "Live",
+        "rejected": "Declined"
+      },
+      "table": {
+        "rating": "Rating",
+        "comments": "What you wrote",
+        "status": "Status",
+        "submitted": "Submitted",
+        "delivery": "Delivery"
+      },
+      "ratingOnly": "Rating only",
+      "openDelivery": "Open delivery",
+      "liveSince": "Live since {{date}}",
+      "empty": "You have not rated a delivery yet",
+      "emptyBody": "Open a delivered shipment and rate the run. Your rating feeds the agent's trust score — it never moves your own agency rating.",
+      "emptyFiltered": "No reviews with this status",
+      "emptyFilteredBody": "Clear the filter to see every review you have written.",
+      "clearFilter": "Clear the filter"
+    }
   }
 }

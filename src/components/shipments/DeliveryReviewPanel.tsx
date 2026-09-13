@@ -29,17 +29,29 @@
  * is the same error code the write would have raised, which is why one copy
  * table serves both.
  *
+ * ─── After the write, the panel becomes the review's only home ────────────────
+ *
+ * ⚠ There is **no public read of a delivery review, no edit verb and no delete
+ * verb**, and `REVIEW_ALREADY_EXISTS` is terminal. So once a review exists this
+ * panel stops being a form and starts being the record: it shows what was
+ * written and what became of it — a `pending` row above all, which the author
+ * can see nowhere else. The fresh case renders straight from the `POST`
+ * response; a review written in an earlier session is looked up (see
+ * `reviewsService.findForDelivery`, and why that lookup is bounded).
+ *
  * See api-doc/reviews.md.
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Star } from 'lucide-react';
+import { ArrowUpRight, Loader2, Star } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { SubmittedReview } from '@/components/reviews/SubmittedReview';
 import { reviewsService } from '@/services/reviews.service';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -49,11 +61,15 @@ import {
   REVIEW_BODY_MAX,
   REVIEW_RATINGS,
   REVIEW_TITLE_MAX,
+  type Review,
   type ReviewEligibility,
 } from '@/types/review.types';
 import type { ShipmentStatus } from '@/types/shipment.types';
 
-type Phase = 'checking' | 'form' | 'ineligible' | 'submitted';
+/** Where the roll-up of every review this agency has written lives. */
+const REVIEWS_ROLLUP_PATH = '/dashboard/agents/reviews';
+
+type Phase = 'checking' | 'form' | 'ineligible' | 'mine';
 
 export interface DeliveryReviewPanelProps {
   shipmentId: string;
@@ -68,9 +84,29 @@ export function DeliveryReviewPanel({ shipmentId, status }: DeliveryReviewPanelP
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [held, setHeld] = useState(false);
+  const [mine, setMine] = useState<Review | null>(null);
+  const [isFindingMine, setIsFindingMine] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * "You have already reviewed this" is the one refusal with something to show
+   * instead of a sentence, so it is the one that triggers the lookup. Every
+   * other reason stays a sentence — there is nothing written to display.
+   */
+  const loadMine = useCallback(async () => {
+    setPhase('mine');
+    setIsFindingMine(true);
+    try {
+      setMine(await reviewsService.findForDelivery(shipmentId));
+    } catch {
+      // A failed lookup is not a failed review: fall through to the wording
+      // that says it exists and points at the list, which is still true.
+      setMine(null);
+    } finally {
+      setIsFindingMine(false);
+    }
+  }, [shipmentId]);
 
   const check = useCallback(async () => {
     setPhase('checking');
@@ -78,12 +114,18 @@ export function DeliveryReviewPanel({ shipmentId, status }: DeliveryReviewPanelP
     try {
       const result = await reviewsService.eligibility(shipmentId);
       setEligibility(result);
-      setPhase(result.eligible ? 'form' : 'ineligible');
+      if (result.eligible) {
+        setPhase('form');
+      } else if (result.reason === 'REVIEW_ALREADY_EXISTS') {
+        await loadMine();
+      } else {
+        setPhase('ineligible');
+      }
     } catch (err) {
       setError(getApiErrorMessage(err));
       setPhase('ineligible');
     }
-  }, [shipmentId]);
+  }, [shipmentId, loadMine]);
 
   useEffect(() => {
     if (!canReviewDelivery(status)) return;
@@ -108,16 +150,19 @@ export function DeliveryReviewPanel({ shipmentId, status }: DeliveryReviewPanelP
         ...(title.trim() ? { title: title.trim() } : {}),
         ...(body.trim() ? { body: body.trim() } : {}),
       });
-      setHeld(data.status === 'pending');
-      setPhase('submitted');
+      // Straight from the response, so the row on screen is the row the server
+      // stored — no re-read, and `status` says which of the two happened.
+      setMine(data);
+      setPhase('mine');
       toast.success(
         data.status === 'pending' ? t('review.submittedHeld') : t('review.submittedLive'),
       );
     } catch (err) {
       // Terminal — there is no edit verb, so a second attempt cannot succeed.
+      // Show them the review they already wrote rather than only refusing.
       if (err instanceof ApiError && err.code === 'REVIEW_ALREADY_EXISTS') {
         setEligibility({ eligible: false, reason: 'REVIEW_ALREADY_EXISTS' });
-        setPhase('ineligible');
+        void loadMine();
         return;
       }
       setError(getApiErrorMessage(err));
@@ -131,7 +176,7 @@ export function DeliveryReviewPanel({ shipmentId, status }: DeliveryReviewPanelP
   return (
     <section>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {t('review.title')}
+        {phase === 'mine' ? t('review.mine.title') : t('review.title')}
       </h3>
 
       {phase === 'checking' && (
@@ -152,11 +197,29 @@ export function DeliveryReviewPanel({ shipmentId, status }: DeliveryReviewPanelP
         </p>
       )}
 
-      {phase === 'submitted' && (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-          {held ? t('review.submittedHeld') : t('review.submittedLive')}
-        </p>
-      )}
+      {phase === 'mine' &&
+        (isFindingMine ? (
+          <div className="flex items-center justify-center gap-2 rounded-lg border p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('review.mine.lookingUp')}
+          </div>
+        ) : mine ? (
+          <SubmittedReview review={mine} />
+        ) : (
+          // The lookup is bounded, so an agency deep in its history can land
+          // here. Say the true thing — it exists, it cannot be changed — and
+          // point at the one place that lists every one of them.
+          <div className="space-y-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            <p>{t('review.mine.notFound')}</p>
+            <Link
+              to={REVIEWS_ROLLUP_PATH}
+              className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline"
+            >
+              {t('review.mine.seeAll')}
+              <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden />
+            </Link>
+          </div>
+        ))}
 
       {phase === 'form' && (
         <div className="space-y-3 rounded-lg border p-3">

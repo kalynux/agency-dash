@@ -7,6 +7,14 @@
     "browse": {
       "description": "Every agent on the platform who could take your shipments",
       "short": "Find agents to contract"
+    },
+    "history": {
+      "description": "Every contract change across your whole roster, newest first",
+      "short": "What changed recently"
+    },
+    "reviews": {
+      "description": "Every delivery you have rated — including the ones still held for a moderator, which you can see nowhere else",
+      "short": "Ratings you have written"
     }
   },
   "agentStatus": {
@@ -402,6 +410,34 @@
     "employment_updated": "Employment updated",
     "terms_updated": "Terms updated",
     "cod_limit_changed": "COD limit changed"
+  },
+  "_historyActorsComment": "Who made a membership-log entry happen. Open on the wire like every other actor field, so an unrecognised role falls back to its humanized form.",
+  "historyActors": {
+    "agent": "the agent",
+    "agency": "your agency",
+    "admin": "an administrator",
+    "system": "the system"
+  },
+  "rosterHistory": {
+    "loading": "Loading history…",
+    "searchLabel": "Search history",
+    "searchPlaceholder": "Search by agent or event",
+    "filterDescription": "Narrow the log to one kind of change.",
+    "outcomeFilter": "Kind of change",
+    "outcomes": {
+      "all": "All changes",
+      "started": "Contracts started",
+      "ended": "Contracts ended",
+      "paused": "Paused & resumed",
+      "terms": "Terms changed"
+    },
+    "byActor": "by {{actor}}",
+    "unknownAgent": "Former agent",
+    "undated": "Undated",
+    "empty": "No contract changes yet",
+    "emptyHint": "Every offer, acceptance, pause and departure across your roster is recorded here as it happens.",
+    "emptyFiltered": "No changes match these filters",
+    "capped": "Showing the {{count}} most recent changes."
   },
   "terms": {
     "employmentTypes": {

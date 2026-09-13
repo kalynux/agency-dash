@@ -12,6 +12,12 @@ import { toast } from 'sonner';
 
 import { useResource } from '@/hooks/useResource';
 import { agencyProfileService } from '@/services/agency-profile.service';
+import {
+  isQuotaBlockedFile,
+  resolveFileUrl,
+  toStoredFileRef,
+  type StoredFileRef,
+} from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { useLanguage } from '@/i18n/useLanguage';
 import { formatPhoneDisplay, toPhoneCountry } from '@/lib/phone';
@@ -25,6 +31,7 @@ import { TIMEZONES } from '@/lib/timezones';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
+import { QuotaBlockedBadge } from '@/components/common/QuotaBlockedMedia';
 import { SectionHeading } from '@/components/common/InfoHint';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,18 +57,17 @@ import {
 type Language = LanguageCode;
 
 /**
- * Lightweight avatar preview ref — `.id` is what the PATCH sends as `avatarFileId`.
+ * Avatar preview ref — `.id` is what the PATCH sends as `avatarFileId`.
  *
- * `url` is nullable because `FileRef.url` is: a file in one of the authorized
- * storage trees has no public URL at all (api-doc/files/private-files.md). An
- * avatar is never one of those, but the preview has to survive being handed one
- * rather than render a broken image — and only `.id` is ever sent, so a missing
- * preview costs nothing on save.
+ * `url` is nullable because `FileRef.url` is, and it is nullable for two
+ * unrelated reasons: an authorized storage tree has no public URL at all
+ * (an avatar is never one of those), and a `quota_blocked` file is being held
+ * back because THIS agency is over its plan. So the ref carries `access` and
+ * `key` as well — without them both cases collapse into "no avatar" and the
+ * initials circle claims the agency never uploaded one.
+ * See api-doc/files/private-files.md § The third value.
  */
-interface AvatarRef {
-  id: string;
-  url: string | null;
-}
+type AvatarRef = StoredFileRef;
 
 interface FormState {
   displayName: string;
@@ -77,7 +83,7 @@ function toForm(p: DeliveryAgencyProfile): FormState {
     displayName: p.displayName ?? '',
     timezone: p.timezone ?? '',
     language: normalizeLanguage(p.preferredLanguage),
-    avatar: p.avatar ? { id: p.avatar.id, url: p.avatar.url } : null,
+    avatar: p.avatar ? toStoredFileRef(p.avatar) : null,
     registrationNumber: p.kycDetails?.registration_number ?? '',
     transportLicenseId: p.kycDetails?.transport_license_id ?? '',
   };
@@ -206,7 +212,11 @@ export function ProfileSettings() {
   if (error && !profile) return <ErrorState error={error} onRetry={refetch} />;
   if (!profile || !form) return null;
 
-  const avatarUrl = form.avatar?.url;
+  // Two different empty previews, and `url === null` cannot tell them apart:
+  // ask the helpers, which test `quota_blocked` before `authorized` the way the
+  // backend resolves it.
+  const avatarBlocked = form.avatar ? isQuotaBlockedFile(form.avatar) : false;
+  const avatarUrl = form.avatar ? resolveFileUrl(form.avatar) : null;
   const displayName = form.displayName || t('profile.fallbackName');
   const languageDirty = form.language !== normalizeLanguage(profile.preferredLanguage);
 
@@ -236,14 +246,23 @@ export function ProfileSettings() {
                 className="rounded-full ring-2 ring-border"
               >
                 <Avatar className="w-24 h-24">
-                  {avatarUrl && (
-                    <AvatarImage
-                      src={avatarUrl}
-                      alt={displayName}
-                      className="object-cover"
-                    />
+                  {avatarBlocked ? (
+                    // Deliberately not the initials circle: that reads as "this
+                    // agency has no avatar", which is a different and wrong
+                    // statement. The file is intact — the plan is full.
+                    <QuotaBlockedBadge />
+                  ) : (
+                    <>
+                      {avatarUrl && (
+                        <AvatarImage
+                          src={avatarUrl}
+                          alt={displayName}
+                          className="object-cover"
+                        />
+                      )}
+                      <AvatarFallback className="text-2xl font-medium">{initialsFrom(displayName)}</AvatarFallback>
+                    </>
                   )}
-                  <AvatarFallback className="text-2xl font-medium">{initialsFrom(displayName)}</AvatarFallback>
                 </Avatar>
               </MediaPickerTrigger>
               {form.avatar && (

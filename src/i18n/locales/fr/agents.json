@@ -7,6 +7,14 @@
     "browse": {
       "description": "Tous les livreurs de la plateforme susceptibles de prendre vos expéditions",
       "short": "Trouver des livreurs"
+    },
+    "history": {
+      "description": "Tous les changements de contrat sur l'ensemble de vos livreurs, du plus récent au plus ancien",
+      "short": "Changements récents"
+    },
+    "reviews": {
+      "description": "Toutes les livraisons que vous avez évaluées — y compris celles encore en attente d'un modérateur, visibles nulle part ailleurs",
+      "short": "Vos évaluations"
     }
   },
   "agentStatus": {
@@ -399,6 +407,34 @@
     "employment_updated": "Emploi mis à jour",
     "terms_updated": "Conditions mises à jour",
     "cod_limit_changed": "Plafond d'espèces modifié"
+  },
+  "_historyActorsComment": "Who made a membership-log entry happen. Open on the wire like every other actor field, so an unrecognised role falls back to its humanized form.",
+  "historyActors": {
+    "agent": "le livreur",
+    "agency": "votre agence",
+    "admin": "un administrateur",
+    "system": "le système"
+  },
+  "rosterHistory": {
+    "loading": "Chargement de l'historique…",
+    "searchLabel": "Rechercher dans l'historique",
+    "searchPlaceholder": "Rechercher par livreur ou événement",
+    "filterDescription": "Restreindre le journal à un seul type de changement.",
+    "outcomeFilter": "Type de changement",
+    "outcomes": {
+      "all": "Tous les changements",
+      "started": "Contrats démarrés",
+      "ended": "Contrats terminés",
+      "paused": "Suspensions et reprises",
+      "terms": "Conditions modifiées"
+    },
+    "byActor": "par {{actor}}",
+    "unknownAgent": "Ancien livreur",
+    "undated": "Sans date",
+    "empty": "Aucun changement de contrat pour l'instant",
+    "emptyHint": "Chaque offre, acceptation, pause et départ sur l'ensemble de vos livreurs est enregistré ici au fil de l'eau.",
+    "emptyFiltered": "Aucun changement ne correspond à ces filtres",
+    "capped": "Affichage des {{count}} changements les plus récents."
   },
   "terms": {
     "employmentTypes": {

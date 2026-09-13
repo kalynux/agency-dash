@@ -159,3 +159,68 @@ describe('routeFromPushData', () => {
     expect(routeFromPushData({ path: 42 })).toBeNull();
   });
 });
+
+// ─── The vocabulary, at the transport layer ───────────────────────────────────
+//
+// `resolveDeepLink` is pinned label-by-label in lib/notification-display.test.ts.
+// What THIS table pins is the layer above it: every one of the eight labels in
+// api-doc/notifications/deep-links.md § Agency, arriving in each of the four
+// shapes it can actually arrive in, reaching the same route.
+//
+// The shapes are not interchangeable and the differences are where this breaks:
+//
+//   - the emailed / WhatsApp / Telegram button is `{AGENCY_APP_URL}/{path}`,
+//     with NO `/dashboard` in it;
+//   - an App Link pasted from the web dashboard has one;
+//   - `wiagency://` has no authority, so `URL` parses the label's FIRST segment
+//     as the host — which is why `cod/deposits/{id}` and `settings/storage`,
+//     the two multi-segment labels, are the ones worth having here.
+//
+// A label that falls through any of these lands the user on the Overview with no
+// explanation, which reads as the app ignoring the notification.
+
+const LABEL_ID = '665f0c9e1a2b3c4d5e6f7a8b';
+
+const VOCABULARY: ReadonlyArray<{ label: string; route: string }> = [
+  { label: `shipments/${LABEL_ID}`, route: `/dashboard/shipments?open=${LABEL_ID}` },
+  // ⚠ a CONTRACT id, not an agent id — it lands in the `agents/:tab` slot.
+  { label: `agents/${LABEL_ID}`, route: `/dashboard/agents/${LABEL_ID}` },
+  {
+    label: `vendor-connections/${LABEL_ID}`,
+    route: `/dashboard/vendors/connections?open=${LABEL_ID}`,
+  },
+  { label: `cod/deposits/${LABEL_ID}`, route: `/dashboard/cash/deposits?open=${LABEL_ID}` },
+  {
+    label: `stock-requests/${LABEL_ID}`,
+    route: `/dashboard/inventory/requests?open=${LABEL_ID}`,
+  },
+  { label: `tickets/${LABEL_ID}`, route: `/dashboard/tickets?open=${LABEL_ID}` },
+  { label: 'plans', route: '/dashboard/account/billing' },
+  { label: 'settings/storage', route: '/dashboard/media' },
+];
+
+describe.each(VOCABULARY)('deep-link label "$label"', ({ label, route }) => {
+  it('resolves from a push payload', () => {
+    expect(routeFromPushData({ path: label })).toBe(route);
+  });
+
+  it('resolves from an emailed button, which carries no /dashboard', () => {
+    expect(routeFromUrl(`https://agency.wi-mall.com/${label}`)).toBe(route);
+  });
+
+  it('resolves from an App Link carrying /dashboard', () => {
+    expect(routeFromUrl(`https://agency.wi-mall.com/dashboard/${label}`)).toBe(route);
+  });
+
+  it('resolves from the wiagency:// scheme', () => {
+    expect(routeFromUrl(`wiagency://${label}`)).toBe(route);
+  });
+});
+
+describe('the vocabulary is closed', () => {
+  it('covers every label in api-doc/notifications/deep-links.md § Agency', () => {
+    // Guards the table above against drifting out of sync with the contract:
+    // eight labels, and adding one is a backend PR that lands with a doc row.
+    expect(VOCABULARY).toHaveLength(8);
+  });
+});

@@ -10,8 +10,10 @@ import {
   fetchCreditPacks,
   initiatePlanPurchase,
   verifyPlanPurchase,
+  authorizePlanPurchase,
   initiateTopup,
   verifyTopup,
+  authorizeTopup,
 } from '@/services/billing.service';
 import { fetchStorageUsage } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -24,6 +26,7 @@ import type {
   PaymentGateway,
   PaymentInitResult,
   PaymentStatus,
+  PaymentAuthorizeResult,
 } from '@/types/billing.types';
 import { CurrentPlanCard } from './CurrentPlanCard';
 import { CreditWalletCard } from './CreditWalletCard';
@@ -33,10 +36,9 @@ import { BillingSettingsCard } from './BillingSettingsCard';
 import { SavedPaymentMethodsCard } from './SavedPaymentMethodsCard';
 import { PaymentDialog } from './PaymentDialog';
 import { CardSkeleton, PlansSkeleton } from './BillingSkeletons';
-import { ManageOnWebNotice } from './ManageOnWebNotice';
 import { InfoHint } from '@/components/common/InfoHint';
 import { sectionRuleClass } from '@/components/layout/PageContainer';
-import { purchasesEnabled } from '@/platform/purchases';
+import { cardPurchasesEnabled } from '@/platform/purchases';
 import { cn } from '@/lib/utils';
 import {
   formatCredits,
@@ -54,6 +56,7 @@ interface PaymentRequest {
   paymentKind: StripeResumeKind;
   initiate: (gateway: PaymentGateway, channel: PaymentChannel) => Promise<PaymentInitResult>;
   verify: (id: string) => Promise<{ status: PaymentStatus }>;
+  authorize: (id: string, code: string) => Promise<PaymentAuthorizeResult>;
 }
 
 /**
@@ -62,13 +65,12 @@ interface PaymentRequest {
  * mirroring the vendor dashboard. A single PaymentDialog drives both plan purchase
  * and credit top-up. (Transaction history lives on its own top-level page.)
  *
- * Inside the native shell the whole page still renders, but nothing can be
- * bought: `purchasesEnabled` is false, so the two `open*Purchase` callbacks are
- * never handed down, no card offers a button, and PaymentDialog is never
- * mounted (CAPACITOR-PLAN.md → Phase 5, decision D4). The purchase code below is
- * left exactly as it is — unreachable, not deleted — because it is still the web
- * path, and because the Stripe 3-D Secure return trip that a native build cannot
- * complete is a topology problem, not a bug to patch out.
+ * Nothing on this page is gated by platform any more. A phone can buy a plan and
+ * top up a wallet, because mobile money completes on the handset and never needs
+ * a redirect to come back to — so the buttons, the callbacks and PaymentDialog
+ * are all unconditional. The one thing a native build still cannot do is take a
+ * *card*, and that is handled one level down, inside the dialog's channel
+ * picker (see `platform/purchases`, and `cardPurchasesEnabled` below).
  */
 export function BillingTab() {
   const { t } = useTranslation(['billing', 'common']);
@@ -129,9 +131,10 @@ export function BillingTab() {
   // re-verify the purchase for immediate feedback; the Stripe webhook is the
   // authoritative finalizer, so the plan/credits apply server-side regardless.
   useEffect(() => {
-    // Native never leaves for 3-D Secure because it never starts a payment, so
-    // there is no marker to resume and nothing here to poll for.
-    if (!purchasesEnabled) return;
+    // 3-D Secure is the only thing that leaves the SPA, and only a card can
+    // trigger it — so on a build that takes no cards there is no marker to
+    // resume. Mobile money never leaves the app at all.
+    if (!cardPurchasesEnabled) return;
     const marker = readStripeResume();
     if (!marker) return;
     clearStripeResume();
@@ -181,6 +184,7 @@ export function BillingTab() {
       paymentKind: 'plan',
       initiate: (gateway, channel) => initiatePlanPurchase(plan._id, { gateway, channel }),
       verify: verifyPlanPurchase,
+      authorize: authorizePlanPurchase,
     });
     setPaymentOpen(true);
   }
@@ -195,6 +199,7 @@ export function BillingTab() {
       paymentKind: 'topup',
       initiate: (gateway, channel) => initiateTopup({ packCode: pack.code, gateway, channel }),
       verify: verifyTopup,
+      authorize: authorizeTopup,
     });
     setPaymentOpen(true);
   }
@@ -235,7 +240,7 @@ export function BillingTab() {
           <CreditWalletCard
             balance={balance}
             packs={packs}
-            onBuyPack={purchasesEnabled ? openPackPurchase : undefined}
+            onBuyPack={openPackPurchase}
           />
         )}
       </div>
@@ -260,16 +265,15 @@ export function BillingTab() {
         <PlansCatalog
           plans={plans}
           current={current}
-          onBuy={purchasesEnabled ? openPlanPurchase : undefined}
+          onBuy={openPlanPurchase}
         />
-        {!purchasesEnabled && <ManageOnWebNotice kind="plan" />}
       </section>
 
       <SavedPaymentMethodsCard />
 
       <BillingSettingsCard />
 
-      {purchasesEnabled && payment && (
+      {payment && (
         <PaymentDialog
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
@@ -281,6 +285,7 @@ export function BillingTab() {
           paymentKind={payment.paymentKind}
           initiate={payment.initiate}
           verify={payment.verify}
+          authorize={payment.authorize}
           onPaid={refreshAfterPayment}
         />
       )}

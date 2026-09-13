@@ -28,8 +28,6 @@ import {
 import { CardSkeleton } from './BillingSkeletons';
 import { billingErrorMessage, methodTypeLabel } from './billing.constants';
 import { AddPaymentMethodDialog } from './AddPaymentMethodDialog';
-import { ManageOnWebNotice } from './ManageOnWebNotice';
-import { purchasesEnabled } from '@/platform/purchases';
 
 const MAX_METHODS = 10;
 
@@ -120,17 +118,17 @@ export function SavedPaymentMethodsCard() {
           <CardDescription className="max-md:hidden">{t('methods.description')}</CardDescription>
           <CardDescription className="md:hidden">{t('methods.descriptionShort')}</CardDescription>
         </div>
-        {purchasesEnabled && (
-          <Button
-            size="sm"
-            className="gap-1"
-            onClick={() => setAddOpen(true)}
-            disabled={atLimit}
-            title={atLimit ? t('methods.atLimit', { count: MAX_METHODS }) : undefined}
-          >
-            <Plus className="h-4 w-4" /> {t('common:actions.add')}
-          </Button>
-        )}
+        {/* Unconditional: a mobile-money number can be saved on any platform, and
+            the dialog drops the card branch itself where cards are not offered. */}
+        <Button
+          size="sm"
+          className="gap-1"
+          onClick={() => setAddOpen(true)}
+          disabled={atLimit}
+          title={atLimit ? t('methods.atLimit', { count: MAX_METHODS }) : undefined}
+        >
+          <Plus className="h-4 w-4" /> {t('common:actions.add')}
+        </Button>
       </CardHeader>
       <CardContent className="max-md:px-0">
         {loading ? (
@@ -143,10 +141,6 @@ export function SavedPaymentMethodsCard() {
               {t('common:actions.retry')}
             </Button>
           </div>
-        ) : methods.length === 0 && !purchasesEnabled ? (
-          // The gated empty state would otherwise be a dead end: nothing saved,
-          // and no button to say what to do about it.
-          <ManageOnWebNotice kind="method" />
         ) : methods.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{t('methods.empty')}</p>
         ) : (
@@ -205,28 +199,21 @@ export function SavedPaymentMethodsCard() {
             ))}
           </ul>
         )}
-        {/* Where the Add button went. Only under a non-empty list — the empty
-            state above already carries the same notice instead of its copy. */}
-        {!purchasesEnabled && !loading && !error && methods.length > 0 && (
-          <ManageOnWebNotice kind="method" className="mt-4" />
-        )}
       </CardContent>
 
-      {purchasesEnabled && (
-        <AddPaymentMethodDialog
-          open={addOpen}
-          onOpenChange={setAddOpen}
-          forceDefault={methods.length === 0}
-          onAdded={(created) => {
-            // A new default clears the previous one locally; first method is always default.
-            setMethods((prev) =>
-              created.is_default
-                ? [created, ...prev.map((m) => ({ ...m, is_default: false }))]
-                : [...prev, created],
-            );
-          }}
-        />
-      )}
+      <AddPaymentMethodDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        forceDefault={methods.length === 0}
+        onAdded={(created) => {
+          // A new default clears the previous one locally; first method is always default.
+          setMethods((prev) =>
+            created.is_default
+              ? [created, ...prev.map((m) => ({ ...m, is_default: false }))]
+              : [...prev, created],
+          );
+        }}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -5,6 +5,11 @@ import { VehicleIcon } from '@/components/agents/VehicleIcon';
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { PinMark } from '@/components/tracking/PinMark';
 import { formatDistance, formatFixAge } from '@/components/tracking/format';
+import {
+  isActionableCause,
+  STALL_CAUSE_NOTE_KEY,
+} from '@/components/tracking/stall-cause';
+import { useStallDiagnosis } from '@/hooks/useStallDiagnosis';
 import { cn } from '@/lib/utils';
 import { isConclusiveRevoke } from '@/types/tracking.types';
 import type {
@@ -175,6 +180,10 @@ export function TrackedAgentCard({
   const signalLabel = fix ? t('agent.live') : isEnded ? t('agent.ended') : t('agent.noSignal');
   // The sentence under the telemetry row. Each reason gets its own, because the
   // three call for three different reactions from whoever is reading it.
+  //
+  // `null` is the fifth case and the only one the server has volunteered
+  // nothing about: no fix, and no revocation to explain its absence. That one is
+  // asked about rather than guessed at — see `diagnosis` below.
   const stateNote = fix
     ? t('agent.updated', { when: formatFixAge(fix.receivedAt) })
     : revokeReason === 'shipment_completed'
@@ -183,7 +192,44 @@ export function TrackedAgentCard({
         ? t('agent.trackingReauthorizing')
         : revokeReason === 'authorization_unavailable'
           ? t('agent.trackingUnavailable')
-          : t('agent.awaitingPosition');
+          : null;
+
+  // The unexplained silence, and the one thing on this card that costs a
+  // request. It buys nothing for an agent who is reporting or whose
+  // subscription was revoked with a reason, so it is not asked for then — a
+  // board where everyone is moving issues no requests at all.
+  const diagnosis = useStallDiagnosis(agent.agentId, {
+    stalled: stateNote === null,
+    expanded: isSelected,
+  });
+
+  /**
+   * What to say about that silence, in priority order: the causes if we have
+   * any; "still asking" while the two reads are in flight; and — when both
+   * failed, or answered nothing that explains the freeze — an admission that we
+   * could not find out, which is at least a fact about us rather than a
+   * non-statement about the agent.
+   *
+   * The old bare "awaiting a position" survives only as the `idle` fallback,
+   * which this card cannot actually reach: these notes render only while it is
+   * expanded, and an expanded stalled card is `loading` from its first frame.
+   */
+  const stallNotes: { id: string; text: string; actionable: boolean }[] =
+    diagnosis.causes.length > 0
+      ? diagnosis.causes.map((cause) => ({
+          id: cause,
+          text: t(STALL_CAUSE_NOTE_KEY[cause]),
+          actionable: isActionableCause(cause),
+        }))
+      : diagnosis.state === 'loading'
+        ? [{ id: 'checking', text: t('agent.causeChecking'), actionable: false }]
+        : diagnosis.state === 'idle'
+          ? [{ id: 'awaiting', text: t('agent.awaitingPosition'), actionable: false }]
+          : [{ id: 'unknown', text: t('agent.causeUnknown'), actionable: false }];
+
+  const notes = stateNote !== null
+    ? [{ id: 'state', text: stateNote, actionable: false }]
+    : stallNotes;
 
   return (
     <div
@@ -284,7 +330,10 @@ export function TrackedAgentCard({
 
       {isSelected && (
         <div className="border-t px-2 py-1.5">
-          {/* Telemetry only for the agent being watched — one line, no grid. */}
+          {/* Telemetry only for the agent being watched — one line, no grid.
+              The state sentences below it take a line each: a phone can have
+              two things wrong with it, and two causes run together read as one
+              confused one. */}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 px-0.5 pb-1.5 text-[11px] leading-4 text-muted-foreground">
             {typeof fix?.speedMps === 'number' && (
               <span className="flex items-center gap-1">
@@ -292,7 +341,25 @@ export function TrackedAgentCard({
                 {t('agent.speed', { value: (fix.speedMps * 3.6).toFixed(0) })}
               </span>
             )}
-            <span>{stateNote}</span>
+            {notes.map((note) => (
+              <span
+                key={note.id}
+                // Amber is reserved for the causes a person has to go and fix,
+                // so "call this agent" and "nothing is wrong" cannot be mistaken
+                // for each other at a glance.
+                className={cn(
+                  notes.length > 1 && 'w-full',
+                  note.actionable && 'text-amber-600 dark:text-amber-500',
+                )}
+              >
+                {note.text}
+              </span>
+            ))}
+            {/* A one-off blip and a phone that keeps losing signal produce the
+                same frozen marker; only this separates them. */}
+            {diagnosis.drops > 0 && (
+              <span className="w-full">{t('agent.droppedTimes', { count: diagnosis.drops })}</span>
+            )}
           </div>
 
           {count > 0 ? (

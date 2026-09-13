@@ -3,10 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useAgentsRoster } from '@/store/agents.store';
 import { ConnectionsTab } from '@/components/agents/ConnectionsTab';
 import { BrowseTab } from '@/components/agents/BrowseTab';
+import { RosterHistoryTab } from '@/components/agents/RosterHistoryTab';
+import { ReviewsTab } from '@/components/reviews/ReviewsTab';
 import { SubPageHeader } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
-const VALID_TABS = ['connections', 'browse'] as const;
+// Keep in step with the `agents` children in `config/navigation.ts`: the tabs
+// here decide what the page renders, that file decides what the sidebar, the
+// mobile More drawer and the crumb know about. A tab in one and not the other
+// is either a route with no way in or a menu entry that falls back to
+// Connections.
+const VALID_TABS = ['connections', 'browse', 'history', 'reviews'] as const;
 type AgentsTab = typeof VALID_TABS[number];
 
 /** A 24-char hex ObjectId, which is what a contract deep-link carries. */
@@ -41,6 +48,8 @@ export function Agents() {
         <ConnectionsTab onContractChange={refetch} openContractId={openContractId} />
       )}
       {activeTab === 'browse' && <BrowseTab onContractChange={refetch} />}
+      {activeTab === 'history' && <RosterHistoryTab />}
+      {activeTab === 'reviews' && <ReviewsTab />}
     </TabSwipeArea>
   );
 }

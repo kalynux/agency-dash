@@ -18,10 +18,12 @@ import { MOBILE_MONEY_BRANDS } from '@/lib/payment-brands';
 import type { PhoneOperator } from '@/types/billing.types';
 import type { AddPaymentMethodPayload, SavedPaymentMethod } from '@/types/payment-method.types';
 import { isStripeConfigured } from '@/lib/stripe';
+import { cardPurchasesEnabled } from '@/platform/purchases';
 import { addPaymentMethod } from '@/services/payment-methods.service';
 import { StripeCardField, type StripeCardFieldHandle } from './StripeCardField';
 import { CardPreview } from './CardPreview';
 import { GatewayBadge } from './ProviderNote';
+import { ManageOnWebNotice } from './ManageOnWebNotice';
 import { CARD_GATEWAY, MOBILE_MONEY_GATEWAY, billingErrorMessage } from './billing.constants';
 
 /** The top-level choice: a card Stripe tokenises, or a phone wallet. */
@@ -69,8 +71,10 @@ export function AddPaymentMethodDialog({
         footer: <GatewayBadge gateway={MOBILE_MONEY_GATEWAY} />,
       },
     ];
-    // No publishable key means no card form to mount, so don't offer the choice.
-    if (isStripeConfigured) {
+    // No publishable key means no card form to mount; `!cardPurchasesEnabled`
+    // means a card saved here could never be charged from this build anyway
+    // (3-D Secure has nowhere to return to — see platform/purchases).
+    if (isStripeConfigured && cardPurchasesEnabled) {
       options.push({
         value: 'card',
         label: t('channels.card.name'),
@@ -80,6 +84,9 @@ export function AddPaymentMethodDialog({
     }
     return options;
   }, [t]);
+
+  /** Say where cards are saved instead — only when the platform is the reason. */
+  const cardsLiveOnWeb = !cardPurchasesEnabled && isStripeConfigured;
 
   // Airtel and Wave are real operators we can pay *out* to, but the payments
   // gateway has no enum member for them yet — show them, don't let them be
@@ -277,6 +284,10 @@ export function AddPaymentMethodDialog({
             <Switch checked={makeDefault} onCheckedChange={setMakeDefault} />
           </label>
         )}
+
+        {/* Where the card option went. Last, and quiet: saving a mobile-money
+            number is the thing this sheet is for on a phone. */}
+        {cardsLiveOnWeb && <ManageOnWebNotice kind="saveCard" />}
 
         {error && (
           <p role="alert" className="text-sm text-destructive">

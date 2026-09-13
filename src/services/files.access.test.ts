@@ -10,7 +10,14 @@
  * over their plan.
  */
 import { describe, it, expect } from 'vitest';
-import { fileAccessState, isAuthorizedFile, isQuotaBlockedFile, resolveFileUrl } from './files.service';
+import {
+  fileAccessState,
+  isAuthorizedFile,
+  isQuotaBlockedFile,
+  resolveFileUrl,
+  toStoredFileRef,
+  type StoredFileRef,
+} from './files.service';
 
 const publicFile = { key: 'images/2026/09/logo.png', url: 'https://cdn.example.com/logo.png' };
 const blocked = { ...publicFile, access: 'quota_blocked' as const, url: null };
@@ -72,5 +79,61 @@ describe('isQuotaBlockedFile', () => {
     expect(isQuotaBlockedFile(blocked)).toBe(true);
     expect(isQuotaBlockedFile(authorized)).toBe(false);
     expect(isQuotaBlockedFile(publicFile)).toBe(false);
+  });
+});
+
+/**
+ * Narrowing an API file into form state is where the flag got lost.
+ *
+ * The agency avatar and the magazin logo each kept a hand-written `{ id, url }`
+ * ref, so a blocked file reached the component as `url: null` and nothing else
+ * — indistinguishable from an empty slot, which is what both then rendered: an
+ * initials circle and an "Add logo" box, each asserting the agency never
+ * uploaded anything. These tests are the reason the narrowing lives in one
+ * tested function instead of an object literal in every form.
+ */
+describe('toStoredFileRef', () => {
+  const blockedAvatar = {
+    id: 'file_1',
+    key: 'images/2026/09/avatar.png',
+    url: null,
+    access: 'quota_blocked' as const,
+  };
+
+  it('carries `access` and `key` through the narrowing', () => {
+    expect(toStoredFileRef(blockedAvatar)).toEqual({
+      id: 'file_1',
+      key: 'images/2026/09/avatar.png',
+      url: null,
+      access: 'quota_blocked',
+    });
+  });
+
+  it('leaves a narrowed ref answerable by the access helpers', () => {
+    // What the avatar and logo previews branch on. Drop either field above and
+    // both of these flip, silently, to the empty-slot answer.
+    expect(isQuotaBlockedFile(toStoredFileRef(blockedAvatar))).toBe(true);
+    expect(resolveFileUrl(toStoredFileRef(blockedAvatar))).toBeNull();
+  });
+
+  it('keeps the key-prefix fallback alive for a payload predating `access`', () => {
+    // The half of the pair that has no `access` to read: without `key` this
+    // would answer `public` and the caller would manufacture a dead URL.
+    const legacy = { id: 'file_2', key: 'shipments/2026/09/proof.jpg', url: null };
+    expect(fileAccessState(toStoredFileRef(legacy))).toBe('authorized');
+    expect(isAuthorizedFile(toStoredFileRef(legacy))).toBe(true);
+  });
+
+  it('normalizes an absent `url` to null', () => {
+    // `ApiFile.url` is optional; `FileRef.url` is required-but-nullable. One shape downstream.
+    expect(toStoredFileRef({ id: 'file_3', key: 'images/a.png' }).url).toBeNull();
+  });
+
+  it('rejects a ref that dropped `key`', () => {
+    // A compile-time assertion, and the real guard: `{ id, url }` is exactly the
+    // shape this change removed, and `tsc` fails here if it ever type-checks again.
+    // @ts-expect-error — a stored ref without `key` cannot be classified.
+    const dropped: StoredFileRef = { id: 'file_4', url: null };
+    expect(dropped.id).toBe('file_4');
   });
 });

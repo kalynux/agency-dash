@@ -36,6 +36,17 @@ import { isNative } from '../env';
  * and a router exists to receive it. Without somewhere to put it the app opens
  * on the dashboard and the tap is silently lost, which is exactly the failure
  * this module is for.
+ *
+ * ⚠ **A COLD-STARTED App Link lands here too, and does NOT need
+ * `App.getLaunchUrl()`.** `AppPlugin.handleOnNewIntent` is the only thing that
+ * fires `appUrlOpen`, so reading the plugin alone suggests a link that starts
+ * the process is lost — it is not. `BridgeActivity.load()` replays the launch
+ * intent through `onNewIntent` itself, and the plugin notifies with
+ * `retainUntilConsumed = true`, so the event survives until the listener below
+ * attaches and then lands in `pendingRoute` like any other early arrival.
+ * Verified on-device 2026-09-13 (Android 14): force-stop, then
+ * `am start -d https://agency.wi-mall.com/dashboard/media` opens on Media.
+ * Adding a `getLaunchUrl()` call on top of this would navigate twice.
  */
 let pendingRoute: string | null = null;
 

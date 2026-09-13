@@ -9,7 +9,6 @@ import {
   History,
   Loader2,
   Mail,
-  MapPin,
   MoreHorizontal,
   Package,
   PauseCircle,
@@ -73,7 +72,8 @@ import { useMagazin } from '@/store/magazin.store';
 import { useAgencyCountry } from '@/hooks/useAgencyCountry';
 import { agentsService } from '@/services/agents.service';
 import { cn } from '@/lib/utils';
-import { txStatic } from '@/i18n/tx';
+import { tokenLabel } from '@/components/agents/tokenLabel';
+import { MembershipEventItem } from '@/components/agents/MembershipEventItem';
 import {
   agentAvatarUrl,
   contractOffer,
@@ -136,24 +136,6 @@ function contractEnding(
     default:
       return null;
   }
-}
-
-/**
- * Copy for a backend token, falling back to its humanized form.
- *
- * Contract origins, history event types, eligibility rules and deposit statuses
- * are all open unions on the wire (`(string & {})`) and the membership log is
- * append-only, so a value we have no copy for still has to read as something.
- */
-function tokenLabel(group: string, token: string): string {
-  const key = `${group}.${token}`;
-  const translated = txStatic(key);
-  // i18next answers a missing key with the key MINUS its namespace, so both
-  // forms have to count as "no copy for this". Comparing only against the
-  // prefixed one painted `availability.<token>` onto the screen instead of
-  // falling back.
-  const bare = key.slice(key.indexOf(':') + 1);
-  return translated === key || translated === bare ? token.replace(/_/g, ' ') : translated;
 }
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
@@ -1266,16 +1248,11 @@ function MembershipBody({
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common:states.loading')}
               </p>
             ) : history && history.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
+                {/* No `who`: this panel is already one agent. Index keys — the
+                    log is append-only and never reordered. */}
                 {history.map((event, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs">
-                    <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <span className="font-medium">{tokenLabel('agents:historyEvents', event.type)}</span>
-                      <span className="ms-1 text-muted-foreground">{formatDate(event.createdAt ?? event.at)}</span>
-                      {event.note && <p className="break-words text-muted-foreground">{String(event.note)}</p>}
-                    </div>
-                  </div>
+                  <MembershipEventItem key={event.id ?? i} event={event} />
                 ))}
               </div>
             ) : (

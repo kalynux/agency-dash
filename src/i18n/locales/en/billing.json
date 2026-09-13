@@ -107,9 +107,8 @@
     "noPacks": "No credit packs available right now."
   },
   "web": {
-    "plan": "Manage your plan on the web dashboard at {{host}}.",
-    "topup": "Top up your balance on the web dashboard at {{host}}.",
-    "method": "Add a payment method on the web dashboard at {{host}}.",
+    "payCard": "Paying by card is done on the web dashboard at {{host}}. Mobile money works right here.",
+    "saveCard": "Cards are saved on the web dashboard at {{host}}. You can save a mobile money number here.",
     "open": "Open web dashboard"
   },
   "storage": {
@@ -235,7 +234,17 @@
     "timeoutDescription": "We couldn't confirm the payment in time. If you completed it, your balance will update shortly — check your history.",
     "startOver": "Start over",
     "processedBy": "Processed by",
-    "stripeNote": "Card details go straight to Stripe — they never touch our servers."
+    "stripeNote": "Card details go straight to Stripe — they never touch our servers.",
+    "otpTitle": "Enter your confirmation code",
+    "otpPrompt": "Your provider sent a code by text message to {{phone}}.",
+    "otpLabel": "Confirmation code",
+    "otpHelp": "Usually six digits, and it arrives within a minute.",
+    "otpSubmit": "Confirm code",
+    "otpTooShort": "Enter the whole code — at least {{count}} digits.",
+    "otpInvalid_one": "That code is incorrect. You have {{count}} try left.",
+    "otpInvalid_other": "That code is incorrect. You have {{count}} tries left.",
+    "otpNoTriesLeft": "That code is incorrect, and it was the last try. Start a new payment.",
+    "otpAttemptsExceeded": "Too many incorrect codes, so this payment was cancelled. Nothing was charged — you can start a new one."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",

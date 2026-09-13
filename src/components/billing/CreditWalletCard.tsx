@@ -7,17 +7,15 @@ import { sectionRuleClass, sectionSurfaceClass } from '@/components/layout/PageC
 import { cn } from '@/lib/utils';
 import type { CreditPack } from '@/types/billing.types';
 import { formatMoney, formatCredits } from './billing.constants';
-import { ManageOnWebNotice } from './ManageOnWebNotice';
 
 interface CreditWalletCardProps {
   balance: number;
   packs: CreditPack[];
   /**
-   * Start a top-up. Omitted where purchases are gated (native — D4 / Phase 5):
-   * the packs stay listed with their prices, and the notice below them replaces
-   * the Buy buttons in place, since they live inside this card's body.
+   * Start a top-up. No longer optional: a top-up is paid with mobile money on
+   * every platform, so there is no build where the Buy buttons have to come out.
    */
-  onBuyPack?: (pack: CreditPack) => void;
+  onBuyPack: (pack: CreditPack) => void;
 }
 
 export function CreditWalletCard({ balance, packs, onBuyPack }: CreditWalletCardProps) {
@@ -63,18 +61,15 @@ export function CreditWalletCard({ balance, packs, onBuyPack }: CreditWalletCard
                   </p>
                   <p className="text-sm text-muted-foreground">{formatMoney(pack.price, pack.currency)}</p>
                 </div>
-                {onBuyPack && (
-                  <Button size="sm" onClick={() => onBuyPack(pack)} className="gap-1">
-                    <Plus className="h-4 w-4" /> {t('wallet.buy')}
-                  </Button>
-                )}
+                <Button size="sm" onClick={() => onBuyPack(pack)} className="gap-1">
+                  <Plus className="h-4 w-4" /> {t('wallet.buy')}
+                </Button>
               </div>
             ))}
             {packs.length === 0 && (
               <p className="text-sm text-muted-foreground">{t('wallet.noPacks')}</p>
             )}
           </div>
-          {!onBuyPack && <ManageOnWebNotice kind="topup" className="mt-3" />}
         </div>
       </CardContent>
     </Card>

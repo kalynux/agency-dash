@@ -2,10 +2,11 @@
  * Purchase policy (CAPACITOR-PLAN.md → Phase 5, decision D4).
  *
  * Everything here is decided once, at import time, from `isNative` and one env
- * var — so every test re-imports the module under a different world. The two
- * things worth pinning down are the gate itself (a purchase button appearing on
- * a phone is a store rejection, one silently missing on the web is lost revenue)
- * and the URL the notices point at, which is the only way out of the gate.
+ * var — so every test re-imports the module under a different world. What is
+ * worth pinning down is that the gate stayed *per method* when it was narrowed:
+ * a card offered on a phone strands a 3-D Secure redirect, while mobile money
+ * silently missing there is the whole feature gone. Plus the URL the card
+ * notices point at, which is the only way out of the remaining gate.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
@@ -27,18 +28,19 @@ afterEach(() => {
   vi.resetModules();
 });
 
-describe('purchasesEnabled', () => {
+describe('cardPurchasesEnabled', () => {
   it('is off inside the native shell', async () => {
-    expect((await load(true)).purchasesEnabled).toBe(false);
+    expect((await load(true)).cardPurchasesEnabled).toBe(false);
   });
 
   it('is on in the browser', async () => {
-    expect((await load(false)).purchasesEnabled).toBe(true);
+    expect((await load(false)).cardPurchasesEnabled).toBe(true);
   });
 
   it('ignores the forced-mobile-auth dev override', async () => {
-    // VITE_FORCE_MOBILE_AUTH moves the auth transport, not the store policy:
-    // the purchase flow has to stay reachable in the browser it is built in.
+    // VITE_FORCE_MOBILE_AUTH moves the auth transport, not the redirect
+    // topology: the card flow has to stay reachable in the browser it is built
+    // in, which is still a browser Stripe can redirect back into.
     vi.resetModules();
     vi.doMock('./env', () => ({
       isNative: false,
@@ -46,8 +48,21 @@ describe('purchasesEnabled', () => {
       forceMobileAuth: true,
       useBearerAuth: true,
     }));
-    const { purchasesEnabled } = await import('./purchases');
-    expect(purchasesEnabled).toBe(true);
+    const { cardPurchasesEnabled } = await import('./purchases');
+    expect(cardPurchasesEnabled).toBe(true);
+  });
+});
+
+describe('mobileMoneyPurchasesEnabled', () => {
+  // The point of narrowing the gate. Mobile money completes on the handset with
+  // no redirect to land, so there is no platform on which it should be hidden —
+  // and a regression here is the entire feature silently gone from the app.
+  it('is on inside the native shell', async () => {
+    expect((await load(true)).mobileMoneyPurchasesEnabled).toBe(true);
+  });
+
+  it('is on in the browser', async () => {
+    expect((await load(false)).mobileMoneyPurchasesEnabled).toBe(true);
   });
 });
 

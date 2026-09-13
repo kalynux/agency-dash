@@ -8,6 +8,9 @@ import type {
   PlanPurchasePayload,
   PaymentInitResult,
   PaymentStatus,
+  PaymentAuthorizeResult,
+  TopupAuthorizeResponse,
+  PlanPurchaseAuthorizeResponse,
   PlansResponse,
   CurrentPlanResponse,
   CreditBalanceResponse,
@@ -100,4 +103,40 @@ export async function initiatePlanPurchase(
 export async function verifyPlanPurchase(id: string): Promise<{ status: PaymentStatus }> {
   const res = await api.post<PlanPurchaseVerifyResponse>(`${BASE}/plan-purchases/${id}/verify`);
   return { status: res.data.purchase.status };
+}
+
+// ─── One-time code (My-CoolPay Orange Money) ────────────────────────────────────
+//
+// Relay the SMS code for a payment that answered `instructions.requiresOtp`.
+// Owner-scoped and authenticated, sitting beside the `/verify` above — NOT
+// `POST /payments/:transactionId/authorize`, which serves order/cart/booking
+// payments, is unauthenticated because a payment link is shareable, and knows
+// only `PaymentTransaction` rows that a billing purchase never creates.
+//
+// ⚠ A `200` here does **not** mean paid, and `status` stays `pending` on purpose:
+// the code only releases the operator's prompt. The buyer still confirms on the
+// handset, and the gateway callback or the `/verify` poll settles it — so a
+// caller carries straight on into the polling loop.
+// See api-doc/agency/billing.md.
+
+export async function authorizeTopup(
+  id: string,
+  code: string,
+): Promise<PaymentAuthorizeResult> {
+  const res = await api.post<TopupAuthorizeResponse>(
+    `${BASE}/credits/topups/${id}/authorize`,
+    { code },
+  );
+  return { status: res.data.topup.status, instructions: res.data.instructions };
+}
+
+export async function authorizePlanPurchase(
+  id: string,
+  code: string,
+): Promise<PaymentAuthorizeResult> {
+  const res = await api.post<PlanPurchaseAuthorizeResponse>(
+    `${BASE}/plan-purchases/${id}/authorize`,
+    { code },
+  );
+  return { status: res.data.purchase.status, instructions: res.data.instructions };
 }

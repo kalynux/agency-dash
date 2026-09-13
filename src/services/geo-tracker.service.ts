@@ -12,7 +12,13 @@
 
 import { useBearerAuth } from '@/platform/env';
 import { ApiError, ERROR_CATEGORIES, type ErrorCategory } from '@/types/api';
-import type { GeoPosition, RouteResult, TrackingCheckpoint } from '@/types/tracking.types';
+import type {
+  GeoPosition,
+  RouteResult,
+  TrackingCheckpoint,
+  TrackingContext,
+  TrackingEligibility,
+} from '@/types/tracking.types';
 
 declare global {
   interface Window {
@@ -182,6 +188,50 @@ export const geoTrackerService = {
     const qs = params.toString();
     return request<TrackingCheckpoint[]>(
       `/tracking/sessions/${encodeURIComponent(agentId)}/checkpoints${qs ? `?${qs}` : ''}`,
+    );
+  },
+
+  /**
+   * GET /tracking/sessions/:agentId — the agent's tracking context: their
+   * device, their connection, and one entry per delivery in flight.
+   *
+   * ROUTE-MAP.md calls this "the only way to tell a frozen marker's cause", and
+   * that is the only thing this dashboard uses it for. The board says who to
+   * draw and the socket says where they are; when the socket says nothing, this
+   * is what turns "awaiting a position" into a sentence an operator can act on.
+   *
+   * ⚠ It carries a `position`, and this app deliberately ignores it. The board
+   * omits positions for a reason — a last-known fix drawn on a live map is a
+   * plausible-looking marker that stopped moving. Nothing here changes that:
+   * positions come only from the socket.
+   *
+   * **Degrades exactly like {@link getCheckpoints}, and for the identical
+   * reason** — see its note on the cookie-only `502`. This route runs the same
+   * `bearerToken` path, so on the web build it is unreliable in the same
+   * intermittent way, and a failure must cost the *explanation* and nothing
+   * else. {@link useStallDiagnosis} catches, calls
+   * {@link warnGeoTrackerDegraded}, and the card says it could not find out
+   * rather than blanking.
+   */
+  getSession(agentId: string): Promise<TrackingContext> {
+    return request<TrackingContext>(`/tracking/sessions/${encodeURIComponent(agentId)}`);
+  },
+
+  /**
+   * GET /tracking/sessions/:agentId/eligibility — whether the agent's device
+   * configuration currently permits tracking, with **every** failing rule
+   * listed rather than just the first.
+   *
+   * Deliberately fetched alongside {@link getSession} rather than instead of it:
+   * this answers "is the device configured to allow tracking", and its `eligible:
+   * true` includes the device that has never said anything at all. Only the
+   * context's `device.lastSeenAt` separates that silence from a healthy phone.
+   *
+   * Same `502` caveat and the same degradation as {@link getSession}.
+   */
+  getEligibility(agentId: string): Promise<TrackingEligibility> {
+    return request<TrackingEligibility>(
+      `/tracking/sessions/${encodeURIComponent(agentId)}/eligibility`,
     );
   },
 

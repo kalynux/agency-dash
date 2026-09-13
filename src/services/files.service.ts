@@ -183,6 +183,43 @@ export function isQuotaBlockedFile(
   return fileAccessState(file) === 'quota_blocked';
 }
 
+/**
+ * What a form keeps for a single-file slot — the agency avatar, the magazin
+ * logo, an onboarding brand logo. The id is what the PATCH/PUT submits; the
+ * other three are everything {@link fileAccessState} needs to decide *which*
+ * preview to render.
+ *
+ * ⚠ **`key` and `access` are load-bearing, not decoration.** A form that keeps
+ * only `{ id, url }` has thrown away the difference between "this agency has no
+ * avatar" and "this avatar is being held back because the plan is full" — both
+ * arrive as `url: null` and both then render the empty state, which is the
+ * wrong answer to a billing problem. `access` is what says which; `key` is what
+ * {@link fileAccessState} falls back to on a payload written before `access`
+ * existed. Narrow with {@link toStoredFileRef} rather than by hand.
+ */
+export interface StoredFileRef {
+  id: string;
+  key: string;
+  /** `null` for an `authorized` **or** `quota_blocked` file — see {@link FileAccess}. */
+  url: string | null;
+  /** Absent on payloads predating 2026-08-19; `key` covers those. */
+  access?: FileAccess;
+}
+
+/**
+ * The one way to narrow an API file (a `FileRef` embedded in a resource, or an
+ * `ApiFile` out of the media library) into form state.
+ *
+ * Exists so the narrowing is written once and tested once: the two fields that
+ * decide what an empty-looking slot actually means are the two an inline
+ * `{ id: f.id, url: f.url }` literal drops without a word from the compiler.
+ */
+export function toStoredFileRef(
+  file: Pick<ApiFile, 'id' | 'key' | 'url' | 'access'>,
+): StoredFileRef {
+  return { id: file.id, key: file.key, url: file.url ?? null, access: file.access };
+}
+
 /** Coarse UI category from a MIME type. */
 export function kindFromMime(mimeType: string): FileKind {
   if (mimeType.startsWith('image/')) return 'image';

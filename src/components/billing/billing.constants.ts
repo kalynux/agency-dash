@@ -52,6 +52,41 @@ export const GATEWAYS: GatewayMeta[] = [
   { value: 'STRIPE', labelKey: 'billing:gateways.STRIPE', methodType: 'card', descriptionKey: 'billing:gateways.cardDescription', chargeCurrency: 'USD' },
 ];
 
+/**
+ * Whether My-CoolPay's Orange Money one-time-code step can actually complete.
+ *
+ * `true` since 2026-09-13. It was `false` for exactly one reason: that flow
+ * answers `instructions.requiresOtp` with no USSD code, and the only documented
+ * place to relay the code was `POST /payments/:transactionId/authorize` — which
+ * resolves its argument against `PaymentTransaction` rows that a billing purchase
+ * deliberately never creates, so it answered `404`. The payment was reachable and
+ * could not be finished, for vendors and agents as well as agencies.
+ *
+ * The backend fixed it by adding the step to the **owner-scoped billing** routes
+ * instead of widening the payments one — `POST /agency/credits/topups/:id/authorize`
+ * and `POST /agency/plan-purchases/:id/authorize`, beside the `/verify` already
+ * polled here. Widening the payments route would have opened an anonymous money
+ * endpoint: it is unauthenticated because an order's payment link is shareable,
+ * and a billing top-up has no such story. api-doc/agency/billing.md carries the
+ * correction, dated.
+ *
+ * Kept as a named flag rather than deleted: it is the one switch that takes the
+ * gateway back out if its OTP flow misbehaves in production.
+ */
+export const MYCOOLPAY_BILLING_OTP_ROUTABLE = true;
+
+/**
+ * The processors that can actually collect a mobile-money charge for billing.
+ *
+ * Filtered rather than removed from {@link GATEWAYS}: `gatewayLabel` still has
+ * to name My-CoolPay on a historical transaction that was paid through it.
+ */
+export const MOBILE_MONEY_GATEWAYS: GatewayMeta[] = GATEWAYS.filter(
+  (g) =>
+    g.methodType === 'mobile_money' &&
+    (g.value !== 'MYCOOLPAY' || MYCOOLPAY_BILLING_OTP_ROUTABLE),
+);
+
 export function gatewayLabel(gateway: PaymentGateway): string {
   const meta = GATEWAYS.find((g) => g.value === gateway);
   return meta ? txStatic(meta.labelKey) : gateway;
