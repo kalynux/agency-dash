@@ -3,9 +3,14 @@
 //
 // Role-agnostic and mounted under `/api/me`, like `PATCH /api/me/password`.
 // Read `contact.types.ts` first: the identifier does not move until the change is
-// proved, and the phone flow deliberately has no OTP.
+// proved.
 //
-// See api-doc/me/contact-change.md.
+// ⚠ The phone half of this file is the CONNECTION proof, which an agency cannot
+// satisfy — it never registers through the bot. The code-based proof it can
+// satisfy is `phone-verification.service.ts`, and that is what this dashboard
+// leads with.
+//
+// See api-doc/me/contact-change.md and api-doc/me/phone-verification.md.
 
 import { api } from './api';
 import type {
@@ -45,22 +50,25 @@ export const contactService = {
   /**
    * PATCH /me/phone — open a change. **Strict E.164.**
    *
-   * The proof is a WhatsApp connection on the number being claimed, so the next
-   * step for the user is usually the connections screen, not this app's inbox.
+   * Nothing moves yet. The next step is proving the new number — for an agency
+   * that means `phoneVerificationService.request()`, not this app's inbox and
+   * not, in practice, the connections screen.
    */
   changePhone(payload: ChangePhonePayload): Promise<ChangePhoneResponse> {
     return api.patch<ChangePhoneResponse>('/me/phone', payload);
   },
 
   /**
-   * POST /me/phone/confirm — complete it, once the number is proved.
+   * POST /me/phone/confirm — complete it via the CONNECTION proof.
    *
    * **Takes no body.** There is no token to present: the proof is a property of
    * the account (a WhatsApp connection matching the pending number), so the
    * session is what makes it lookupable at all.
    *
    * `422 CONTACT_CHANGE_PHONE_UNPROVEN` is the answer to build a screen for — it
-   * is the next step rather than a failure.
+   * is the next step rather than a failure — and for an agency it is the answer
+   * to expect, which is why the card offers this as the shortcut for an account
+   * that happens to hold a connection rather than as the way through.
    */
   confirmPhone(): Promise<ConfirmPhoneResponse> {
     return api.post<ConfirmPhoneResponse>('/me/phone/confirm');

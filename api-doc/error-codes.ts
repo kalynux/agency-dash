@@ -1372,6 +1372,62 @@ export const ERROR_CODES = Object.freeze({
      */
     CONTACT_CHANGE_PHONE_UNPROVEN: 'CONTACT_CHANGE_PHONE_UNPROVEN',
 
+    // ── PHONE VERIFICATION (WhatsApp OTP, `/api/me/phone/verify/*`) ───────────
+    //
+    // The SECOND proof of a phone number, and not an alternative to the one above.
+    // The dashboard roles — vendor, agency, agent — and administrators never register
+    // through the bot, so they hold no WhatsApp CONNECTION, `CONTACT_CHANGE_PHONE_UNPROVEN`
+    // is the only answer the connection proof can give them, and `phone_verified` could
+    // never become true. These are the OTP path's refusals. Each is raised at exactly ONE
+    // status. See `me/phone-verification.md`.
+
+    /** No usable number on the account to send a code to. Set one with `PATCH /api/me/phone`. */
+    PHONE_VERIFICATION_NO_TARGET: 'PHONE_VERIFICATION_NO_TARGET',
+
+    /**
+     * Wrong code. Carries `details.attemptsLeft` — deliberately: it tells the holder of
+     * the real code that they mistyped and how much room is left, and tells an attacker
+     * only what they could already count themselves. The secret is the code, not the
+     * counter.
+     */
+    PHONE_VERIFICATION_CODE_INVALID: 'PHONE_VERIFICATION_CODE_INVALID',
+
+    /**
+     * Past its TTL, or no verification in progress at all.
+     *
+     * Distinct from `CODE_INVALID` because the remedy differs — request a new code rather
+     * than retype this one — which is the same argument `CONNECTION_CODE_EXPIRED` makes.
+     * Collapsing the two sends people hunting for a typo that is not there.
+     */
+    PHONE_VERIFICATION_CODE_EXPIRED: 'PHONE_VERIFICATION_CODE_EXPIRED',
+
+    /**
+     * The attempt limit is spent, and the code is destroyed with it.
+     *
+     * THIS is the security of a six-digit code, not its length, so the refusal is explicit
+     * rather than folded into `CODE_INVALID`.
+     */
+    PHONE_VERIFICATION_TOO_MANY_ATTEMPTS: 'PHONE_VERIFICATION_TOO_MANY_ATTEMPTS',
+
+    /**
+     * Resend cooldown; `details.retryAfterSeconds` says how long. Account-scoped, because
+     * a number-scoped gate bounds nothing when the caller chooses the number.
+     */
+    PHONE_VERIFICATION_RESEND_TOO_SOON: 'PHONE_VERIFICATION_RESEND_TOO_SOON',
+
+    /**
+     * WhatsApp refused the send.
+     *
+     * ⛔ Outside Meta's 24-hour service window this is the CURRENT state of the deployment
+     * (measured 2026-09-14): only an approved AUTHENTICATION template may be sent there and
+     * this WABA holds zero. A user who has not messaged the platform in the last 24 hours
+     * therefore gets this every time, and the way out is for them to message the bot once —
+     * which opens the window. Said out loud rather than swallowed, because a verification
+     * code that silently never arrives is indistinguishable, to the person waiting, from a
+     * platform ignoring them.
+     */
+    PHONE_VERIFICATION_DELIVERY_FAILED: 'PHONE_VERIFICATION_DELIVERY_FAILED',
+
     // ── IDENTITY VERIFICATION (`/api/{vendor,agency,agent}/kyc`) ─────────────
     //
     // ⚠ Five codes, and NONE of them is "your submission is incomplete". That is not an

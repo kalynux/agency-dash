@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
   Clock,
@@ -310,7 +311,12 @@ export function ProfileSettings() {
                   <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">{t('profile.identity.emailLocked')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('profile.identity.emailLocked')}{' '}
+                <Link to="/dashboard/account/security" className="underline">
+                  {t('profile.identity.securityLink')}
+                </Link>
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">{t('profile.identity.phone')}</Label>
@@ -328,7 +334,25 @@ export function ProfileSettings() {
                   <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">{t('profile.identity.phoneLocked')}</p>
+              {/* Until the WhatsApp OTP shipped, an agency could never reach
+                  `phoneVerified` — it holds no messaging connection, which was
+                  the only proof there was. So an unverified number is now worth
+                  saying out loud, with the one screen that can fix it. */}
+              {profile.phone && !profile.phoneVerified ? (
+                <p className="text-xs text-warning">
+                  {t('profile.identity.phoneUnverified')}{' '}
+                  <Link to="/dashboard/account/security" className="underline">
+                    {t('profile.identity.verifyLink')}
+                  </Link>
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {t('profile.identity.phoneLocked')}{' '}
+                  <Link to="/dashboard/account/security" className="underline">
+                    {t('profile.identity.securityLink')}
+                  </Link>
+                </p>
+              )}
             </div>
           </div>
         </CardContent>

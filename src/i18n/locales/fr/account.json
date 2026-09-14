@@ -44,10 +44,13 @@
       "displayNamePlaceholder": "ex. Jean-Paul (FastTrack)",
       "displayNameTooShort": "Le nom affiché doit contenir au moins 2 caractères.",
       "email": "E-mail",
-      "emailLocked": "L'e-mail ne se modifie pas ici — contactez le support.",
+      "emailLocked": "C'est l'adresse avec laquelle vous vous connectez.",
       "phone": "Téléphone",
       "phonePlaceholder": "+237 6XX XXX XXX",
-      "phoneLocked": "Le téléphone ne se modifie pas ici — contactez le support."
+      "phoneLocked": "C'est le numéro avec lequel vous vous connectez.",
+      "phoneUnverified": "Ce numéro n'est pas encore vérifié.",
+      "verifyLink": "Le vérifier",
+      "securityLink": "Le modifier dans Sécurité"
     },
     "localization": {
       "title": "Localisation",
@@ -364,14 +367,36 @@
     "phone": {
       "label": "Téléphone de connexion",
       "newLabel": "Nouveau numéro de téléphone",
-      "hint": "Pour prouver que le nouveau numéro est le vôtre, connectez-le sur WhatsApp : envoyez /connect à notre bot depuis ce numéro, puis confirmez ici. Il n'y a pas de code SMS.",
+      "hint": "Nous enverrons un code à six chiffres au nouveau numéro sur WhatsApp. Vous continuez à vous connecter avec votre numéro actuel tant que vous ne l'avez pas saisi.",
       "submit": "Démarrer la modification",
-      "requested": "Connectez maintenant ce numéro sur WhatsApp, puis revenez confirmer.",
-      "pendingHint": "En attente de la connexion de ce numéro sur WhatsApp.",
-      "confirm": "C'est connecté — confirmer",
+      "requested": "Envoyez maintenant un code à ce numéro, puis saisissez-le ci-dessous.",
+      "pendingHint": "En attente de la vérification de ce numéro.",
+      "confirm": "Confirmer sans code",
       "confirmed": "Votre téléphone de connexion a été modifié.",
-      "unproven": "Ce numéro n'est pas encore connecté sur WhatsApp. Envoyez /connect à notre bot depuis le nouveau numéro, validez le code, puis confirmez à nouveau.",
-      "connectLink": "Aller aux canaux de messagerie"
+      "unproven": "Ce numéro n'est pas connecté sur WhatsApp : il n'y a donc rien à confirmer. Saisissez plutôt un code, ou envoyez /connect à notre bot depuis ce numéro et validez le code qu'il vous répond.",
+      "connectLink": "Aller aux canaux de messagerie",
+      "verify": {
+        "verified": "Vérifié",
+        "titleCurrent": "Vérifier ce numéro",
+        "titleChange": "Vérifier le nouveau numéro",
+        "hintCurrent": "Nous enverrons un code à six chiffres à ce numéro sur WhatsApp.",
+        "hintChange": "Nous enverrons un code à six chiffres au nouveau numéro sur WhatsApp. Le saisir finalise la modification et déplace votre numéro de connexion.",
+        "send": "Envoyer un code sur WhatsApp",
+        "resend": "Envoyer un nouveau code",
+        "resendIn": "Nouveau code dans {{seconds}} s",
+        "codeLabel": "Code à six chiffres",
+        "codePlaceholder": "123456",
+        "submit": "Vérifier",
+        "sentTo": "Code envoyé au {{phone}}.",
+        "sentToast": "Code envoyé au {{phone}} sur WhatsApp.",
+        "deliveryTemplate": "Envoyé sous forme de message modèle WhatsApp.",
+        "attemptsLeft_one": "Encore {{count}} tentative avant l'annulation de ce code.",
+        "attemptsLeft_other": "Encore {{count}} tentatives avant l'annulation de ce code.",
+        "verifiedToast": "Votre numéro de téléphone est vérifié.",
+        "changedToast": "Votre téléphone de connexion a été modifié et vérifié.",
+        "deliveryFailed": "WhatsApp a refusé l'envoi du code. Envoyez d'abord un message quelconque à notre bot depuis ce numéro — cela ouvre la fenêtre de 24 heures pendant laquelle nous pouvons répondre — puis demandez un nouveau code.",
+        "connectedAlready": "Ce numéro est déjà connecté sur WhatsApp ?"
+      }
     }
   }
 }

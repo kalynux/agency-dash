@@ -18,7 +18,7 @@
 // confirming swaps them in a single write. There is no window in which both work,
 // and none in which neither does.
 //
-// ─── Why the phone flow has no OTP, and never will ────────────────────────────
+// ─── Why THIS confirm has no OTP — and where the OTP actually lives ───────────
 //
 // This platform integrates **no SMS provider**, and a WhatsApp message to a number
 // that has not messaged the bot is outside Meta's 24-hour service window — so it
@@ -27,15 +27,23 @@
 // What the platform already has is the *inbound* direction. A messaging connection
 // exists only because a message arrived FROM that number and the account holder
 // redeemed the resulting code while signed in. That is a stronger proof of control
-// than an OTP and it is already built, so the phone confirm requires it.
+// than an OTP and it is already built, so `POST /api/me/phone/confirm` requires it.
 //
 // Consequences a client must handle, not wait out:
-//   * an account with **no WhatsApp connection cannot change its phone** — send
+//   * an account with **no WhatsApp connection cannot use this confirm** — send
 //     the user to the connections screen first;
 //   * a **Telegram** connection does not count (a chat id bears no relation to a
 //     phone number);
 //   * the connected number must be **the number being claimed**, not merely any
 //     connected number.
+//
+// ⚠ **There IS a code-based proof, and for an agency it is the only one that can
+// succeed.** `/api/me/phone/verify/*` (phone-verification.types.ts) sends a
+// six-digit WhatsApp code, and it exists precisely because dashboard roles never
+// register through the bot, hold no connection, and could therefore never reach
+// `phone_verified` at all. The two are not alternatives to pick between — each
+// serves accounts the other cannot. The confirm below stays because it is the
+// stronger proof and it is the customer path; it is not this app's default.
 //
 // ⚠ A contact change is NOT a credential change: it does not sign other devices
 // out. Only `PATCH /api/me/password` does that.
@@ -124,6 +132,10 @@ export interface CancelPendingResponse {
  * **Not an error state so much as the next step**, and the one code here that
  * deserves a route rather than a message: the fix is to send `/connect` to the
  * bot *from the new number* and redeem the code.
+ *
+ * For an agency this is the EXPECTED answer, not an edge case — it holds no
+ * connection by construction. The route it deserves is the OTP flow, which the
+ * contact card offers first; only then the connections screen.
  */
 export const CONTACT_CHANGE_PHONE_UNPROVEN = 'CONTACT_CHANGE_PHONE_UNPROVEN';
 

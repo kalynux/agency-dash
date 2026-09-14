@@ -19,28 +19,51 @@
  * main Wi-Mall site, not here — the same boundary `/forgot-password` lives on —
  * so this card's job ends at "we sent it".
  *
- * **Phone** is proved by a **WhatsApp connection on the number being claimed**.
- * There is no OTP and there will not be one: the platform integrates no SMS
- * provider, and a WhatsApp message to a number that has not messaged the bot
- * would need a paid template. What exists instead is the inbound direction — a
- * connection exists only because a message arrived FROM that number and the
- * account holder redeemed the code while signed in, which is a stronger proof
- * than an OTP.
+ * **Phone** has two proofs, and the difference decides this whole half of the
+ * card:
  *
- * So `CONTACT_CHANGE_PHONE_UNPROVEN` is not really an error: it is the next
- * step, and this card routes to it rather than just printing it.
+ *   * a **WhatsApp connection on the number being claimed** — stronger, because
+ *     a message actually arrived FROM that number, and it is the customer path;
+ *   * a **six-digit code we send** (`/api/me/phone/verify/*`) — weaker, and the
+ *     only one an agency can complete.
+ *
+ * An agency never registers through the bot, so it holds no connection,
+ * `CONTACT_CHANGE_PHONE_UNPROVEN` is the only answer the connection confirm can
+ * give it, and `phone_verified` could never become true at all. So the code is
+ * what this card leads with, and the connection confirm survives as a one-line
+ * shortcut for the account that happens to hold one.
+ *
+ * ⚠ **The number being verified is chosen server-side** — the pending one if a
+ * change is in flight, otherwise the current one. `completesPendingChange` says
+ * which, and it is the field the copy branches on: entering the code either
+ * *moves* the sign-in identifier or merely proves the one already there.
+ *
+ * ⛔ Outside Meta's 24-hour service window the send currently fails on this
+ * deployment (`PHONE_VERIFICATION_DELIVERY_FAILED`, measured 2026-09-14): only
+ * an approved template may be sent there and the WABA holds none. The way out is
+ * for the user to message the bot once, which opens the window — and which also
+ * creates the connection the stronger proof wants, so one instruction serves
+ * both paths.
  *
  * ⚠ A contact change does **not** sign other devices out. Only a password change
  * does. The copy says so, because a security screen implies otherwise.
  *
- * See api-doc/me/contact-change.md.
+ * See api-doc/me/contact-change.md and api-doc/me/phone-verification.md.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AtSign, Loader2, MessageCircle, Phone, X } from 'lucide-react';
+import {
+  AtSign,
+  CheckCircle2,
+  Loader2,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 
 import { SectionHeading } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
@@ -49,7 +72,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { agencyProfileService } from '@/services/agency-profile.service';
 import { contactService } from '@/services/contact.service';
+import { phoneVerificationService } from '@/services/phone-verification.service';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
@@ -58,30 +83,85 @@ import {
   CONTACT_CHANGE_PHONE_UNPROVEN,
   type ContactState,
 } from '@/types/contact.types';
+import {
+  CODE_DESTROYING_ERRORS,
+  PHONE_VERIFICATION_CODE_INVALID,
+  PHONE_VERIFICATION_DELIVERY_FAILED,
+  PHONE_VERIFICATION_RESEND_TOO_SOON,
+  readAttemptsLeft,
+  type PhoneVerificationRequestResult,
+  type PhoneVerificationState,
+} from '@/types/phone-verification.types';
 
 type Channel = 'email' | 'phone';
+
+/** The code is always six digits. */
+const CODE_LENGTH = 6;
+
+/**
+ * `PHONE_VERIFY_RESEND_COOLDOWN_SECONDS`, as documented.
+ *
+ * The server owns this number and is the only authority on it — a refusal
+ * carries the real remaining time in `retryAfterSeconds`, and that always wins.
+ * This default exists only so the button is not offered for a round-trip that
+ * can only be refused.
+ */
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export function ContactChangeCard() {
   const { t } = useTranslation(['account', 'common']);
   const defaultCountry = useDefaultPhoneCountry();
 
   const [state, setState] = useState<ContactState | null>(null);
+  /** `GET /me/phone/verify` — what is verifiable, and whether a code is live. */
+  const [verify, setVerify] = useState<PhoneVerificationState | null>(null);
+  /** `phone_verified` off the profile. `null` when that read failed — see `load`. */
+  const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   /** Which field is being edited, if any. Only one at a time. */
   const [editing, setEditing] = useState<Channel | null>(null);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState<Channel | 'confirm' | null>(null);
+  const [busy, setBusy] = useState<Channel | 'confirm' | 'send' | 'code' | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** True once the phone confirm has answered `PHONE_UNPROVEN` — routes to Connect. */
   const [needsConnection, setNeedsConnection] = useState(false);
+
+  // ─── OTP state ──────────────────────────────────────────────────────────────
+  /** The last code we sent, if this session sent one. */
+  const [sent, setSent] = useState<PhoneVerificationRequestResult | null>(null);
+  const [code, setCode] = useState('');
+  /** `details.attemptsLeft` off the last wrong code. */
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  /** WhatsApp refused the send — the one refusal with a real remedy behind it. */
+  const [deliveryFailed, setDeliveryFailed] = useState(false);
+  const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      setState(await contactService.get());
+      const [contact, verifyState, verified] = await Promise.all([
+        contactService.get(),
+        // Free and side-effect-free: it mints no code and spends no cooldown,
+        // so it is safe on mount. `pending` can be a code sent from another
+        // device, which is exactly the case a client would otherwise lose.
+        phoneVerificationService.getState(),
+        // Non-fatal on purpose. This only decides whether to OFFER verification;
+        // offering it for a number that turns out to be verified costs a code,
+        // whereas hiding it on a failed read hides the only way an agency has to
+        // ever reach `phone_verified`.
+        agencyProfileService
+          .getProfile()
+          .then((r) => r.data.phoneVerified)
+          .catch(() => null),
+      ]);
+      setState(contact);
+      setVerify(verifyState);
+      setPhoneVerified(verified);
     } catch (err) {
       setLoadError(getApiErrorMessage(err));
     } finally {
@@ -92,6 +172,27 @@ export function ContactChangeCard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Ticks only while a cooldown is actually running, and stops itself at zero.
+  useEffect(() => {
+    if (cooldownEndsAt <= Date.now()) return;
+    const id = setInterval(() => {
+      setNow(Date.now());
+      if (Date.now() >= cooldownEndsAt) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownEndsAt]);
+
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownEndsAt - now) / 1000));
+
+  /** Forget anything about a code in flight. Used whenever the target changes. */
+  const resetCode = () => {
+    setSent(null);
+    setCode('');
+    setAttemptsLeft(null);
+    setCodeError(null);
+    setDeliveryFailed(false);
+  };
 
   const startEdit = (channel: Channel) => {
     setEditing(channel);
@@ -108,6 +209,8 @@ export function ContactChangeCard() {
       else await contactService.changePhone({ phone: draft.trim() });
       setEditing(null);
       setDraft('');
+      // The target just moved, so any code on screen was minted for the old one.
+      if (channel === 'phone') resetCode();
       await load();
       toast.success(
         channel === 'email' ? t('contact.email.requested') : t('contact.phone.requested'),
@@ -126,6 +229,7 @@ export function ContactChangeCard() {
       if (channel === 'email') await contactService.cancelEmailChange();
       else await contactService.cancelPhoneChange();
       setNeedsConnection(false);
+      if (channel === 'phone') resetCode();
       await load();
       toast.success(t('contact.cancelled'));
     } catch (err) {
@@ -141,12 +245,13 @@ export function ContactChangeCard() {
     setNeedsConnection(false);
     try {
       await contactService.confirmPhone();
+      resetCode();
       await load();
       toast.success(t('contact.phone.confirmed'));
     } catch (err) {
-      // Not a failure — the next step. The number is not connected on WhatsApp
-      // yet, so send them to the screen that connects it rather than printing a
-      // sentence they cannot act on from here.
+      // Not a failure — the next step, and for an agency it is the expected
+      // answer rather than an edge case. Say what would make it work instead of
+      // printing a sentence the user cannot act on from here.
       if (err instanceof ApiError && err.code === CONTACT_CHANGE_PHONE_UNPROVEN) {
         setNeedsConnection(true);
         return;
@@ -156,6 +261,113 @@ export function ContactChangeCard() {
       setBusy(null);
     }
   };
+
+  /**
+   * Send a code. The target is the server's to choose — the pending number if a
+   * change is in flight, otherwise the current one — so nothing is passed.
+   */
+  const sendCode = async () => {
+    setBusy('send');
+    setCodeError(null);
+    setDeliveryFailed(false);
+    setAttemptsLeft(null);
+    setNeedsConnection(false);
+    try {
+      const result = await phoneVerificationService.request();
+      setSent(result);
+      setCode('');
+      setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
+      setNow(Date.now());
+      toast.success(t('contact.phone.verify.sentToast', { phone: result.phoneMasked }));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        // The 502 with a remedy behind it: outside Meta's 24-hour window this
+        // deployment has no approved template to send, and the fix is the user
+        // messaging the bot once — which the notice below says.
+        if (err.code === PHONE_VERIFICATION_DELIVERY_FAILED) setDeliveryFailed(true);
+        // Honour the server's own countdown over our default.
+        if (
+          err.code === PHONE_VERIFICATION_RESEND_TOO_SOON &&
+          err.retryAfterSeconds !== undefined
+        ) {
+          setCooldownEndsAt(Date.now() + err.retryAfterSeconds * 1000);
+          setNow(Date.now());
+        }
+      }
+      setCodeError(getApiErrorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /**
+   * Spend the code. **Only `code` is sent** — the number was fixed when the code
+   * was minted, and naming it here is a 400 rather than a stripped field.
+   */
+  const confirmCode = async () => {
+    setBusy('code');
+    setCodeError(null);
+    setError(null);
+    try {
+      const result = await phoneVerificationService.confirm(code.trim());
+      resetCode();
+      setCooldownEndsAt(0);
+      await load();
+      // Two different things to say, and the server says which: the identifier
+      // moved, or the number already on the account was proved in place.
+      toast.success(
+        result.changed
+          ? t('contact.phone.verify.changedToast')
+          : t('contact.phone.verify.verifiedToast'),
+      );
+    } catch (err) {
+      setCodeError(getApiErrorMessage(err));
+      if (err instanceof ApiError) {
+        // Disclosed deliberately — it tells the holder of the real code that
+        // they mistyped and how much room is left.
+        setAttemptsLeft(
+          err.code === PHONE_VERIFICATION_CODE_INVALID
+            ? (readAttemptsLeft(err.details) ?? null)
+            : null,
+        );
+        // Expired or out of attempts: the code is gone. Retyping it cannot work
+        // and leaving it in the box invites exactly that, so clear it and put
+        // the user back on "send a new one".
+        if (CODE_DESTROYING_ERRORS.has(err.code)) {
+          setSent(null);
+          setCode('');
+          setVerify((prev) => (prev ? { ...prev, pending: false, expiresAt: null } : prev));
+        }
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // ─── What the phone half is currently asking for ────────────────────────────
+
+  /** A code is live: one we sent, or one requested on another device. */
+  const codeLive = !!sent || verify?.pending === true;
+  /**
+   * Whether entering the code MOVES the sign-in number or merely proves the one
+   * already on the account. The server decides it, and the copy follows — this
+   * is the field the doc singles out for exactly that.
+   */
+  const completesChange = verify?.completesPendingChange ?? !!state?.pendingPhone;
+  const verifyTarget = sent?.phoneMasked ?? verify?.phoneMasked ?? null;
+  const codeExpiresAt = sent?.expiresAt ?? verify?.expiresAt ?? null;
+  const canConfirmCode = code.trim().length === CODE_LENGTH && busy !== 'code';
+  /**
+   * Offered whenever there is something left to prove. A `phoneVerified` of
+   * `null` is a failed profile read and counts as unverified — see `load`.
+   *
+   * Hidden while the number is being retyped: whatever it currently asks to
+   * prove is about to stop being the target.
+   */
+  const showVerify =
+    !!state &&
+    editing !== 'phone' &&
+    (!!state.pendingPhone || (!!state.phone && phoneVerified !== true) || codeLive);
 
   return (
     <Card className={sectionSurfaceClass}>
@@ -243,10 +455,20 @@ export function ContactChangeCard() {
             <div className="space-y-2 border-t pt-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    {state.phone ?? (
-                      <span className="italic text-muted-foreground">{t('contact.none')}</span>
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                      {state.phone ?? (
+                        <span className="italic text-muted-foreground">{t('contact.none')}</span>
+                      )}
+                    </span>
+                    {/* Only worth saying once it can actually be true. Until the
+                        OTP path existed an agency could never reach it. */}
+                    {phoneVerified === true && !state.pendingPhone && (
+                      <span className="inline-flex items-center gap-1 text-xs font-normal text-emerald-600 dark:text-emerald-500">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {t('contact.phone.verify.verified')}
+                      </span>
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground">{t('contact.phone.label')}</p>
@@ -259,33 +481,123 @@ export function ContactChangeCard() {
               </div>
 
               {state.pendingPhone && (
-                <div className="space-y-2">
-                  <PendingRow
-                    target={state.pendingPhone.target}
-                    expiresAt={state.pendingPhone.expiresAt}
-                    hint={t('contact.phone.pendingHint')}
-                    busy={busy === 'phone'}
-                    onCancel={() => void cancel('phone')}
-                    cancelLabel={t('contact.cancelChange')}
-                  />
+                <PendingRow
+                  target={state.pendingPhone.target}
+                  expiresAt={state.pendingPhone.expiresAt}
+                  hint={t('contact.phone.pendingHint')}
+                  busy={busy === 'phone'}
+                  onCancel={() => void cancel('phone')}
+                  cancelLabel={t('contact.cancelChange')}
+                />
+              )}
 
-                  {/* The proof lives on the account, not in a code box — so the
-                      only control here is "check whether it is proved yet". */}
-                  <Button
-                    size="sm"
-                    onClick={() => void confirmPhone()}
-                    disabled={busy === 'confirm'}
-                    className="gap-1.5"
-                  >
-                    {busy === 'confirm' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    {t('contact.phone.confirm')}
-                  </Button>
+              {/* ── Proving the number ─────────────────────────────────────
+                  The code, not the connection, because an agency holds no
+                  connection by construction. Which number this proves is the
+                  server's choice, and `completesChange` is what it chose. */}
+              {showVerify && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-medium">
+                      <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                      {completesChange
+                        ? t('contact.phone.verify.titleChange')
+                        : t('contact.phone.verify.titleCurrent')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {completesChange
+                        ? t('contact.phone.verify.hintChange')
+                        : t('contact.phone.verify.hintCurrent')}
+                    </p>
+                  </div>
 
-                  {needsConnection && (
+                  {codeLive ? (
+                    <div className="space-y-2">
+                      <form
+                        className="flex items-center gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (canConfirmCode) void confirmCode();
+                        }}
+                      >
+                        {/* Digits only — the code is six of them, generated one
+                            `randomInt(0, 10)` at a time — so stripping the rest
+                            makes a pasted "123 456" work instead of failing. */}
+                        <Input
+                          value={code}
+                          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={CODE_LENGTH}
+                          placeholder={t('contact.phone.verify.codePlaceholder')}
+                          aria-label={t('contact.phone.verify.codeLabel')}
+                          // No autofocus: a code left live from another device
+                          // would yank the page to this card on every load of
+                          // the Security tab.
+                          className="font-mono tracking-widest"
+                        />
+                        <Button type="submit" size="sm" disabled={!canConfirmCode} className="gap-1.5">
+                          {busy === 'code' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {t('contact.phone.verify.submit')}
+                        </Button>
+                      </form>
+
+                      <p className="text-xs text-muted-foreground">
+                        {verifyTarget && t('contact.phone.verify.sentTo', { phone: verifyTarget })}
+                        {codeExpiresAt &&
+                          ` ${t('contact.expires', { when: formatDateTime(codeExpiresAt) })}`}
+                        {/* Reported because it is the first thing support asks
+                            when a code did not arrive. */}
+                        {sent?.delivery === 'template' &&
+                          ` ${t('contact.phone.verify.deliveryTemplate')}`}
+                      </p>
+
+                      {attemptsLeft !== null && (
+                        <p className="text-xs text-warning">
+                          {t('contact.phone.verify.attemptsLeft', { count: attemptsLeft })}
+                        </p>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void sendCode()}
+                        disabled={busy === 'send' || cooldownLeft > 0}
+                        className="gap-1.5"
+                      >
+                        {busy === 'send' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        {cooldownLeft > 0
+                          ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
+                          : t('contact.phone.verify.resend')}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => void sendCode()}
+                      disabled={busy === 'send' || cooldownLeft > 0}
+                      className="gap-1.5"
+                    >
+                      {busy === 'send' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {cooldownLeft > 0
+                        ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
+                        : t('contact.phone.verify.send')}
+                    </Button>
+                  )}
+
+                  {codeError && <p className="text-xs text-destructive">{codeError}</p>}
+
+                  {/* The 502 that is the current state of this deployment for
+                      anyone outside the 24-hour window. Messaging the bot opens
+                      that window — and creates the connection the shortcut below
+                      wants — so one instruction serves both ways out. */}
+                  {(deliveryFailed || needsConnection) && (
                     <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                       <p className="flex items-start gap-1.5">
                         <MessageCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                        {t('contact.phone.unproven')}
+                        {deliveryFailed
+                          ? t('contact.phone.verify.deliveryFailed')
+                          : t('contact.phone.unproven')}
                       </p>
                       <Link
                         to="/dashboard/settings/notifications"
@@ -293,6 +605,29 @@ export function ContactChangeCard() {
                       >
                         {t('contact.phone.connectLink')}
                       </Link>
+                    </div>
+                  )}
+
+                  {/* The stronger proof, kept as a shortcut rather than the way
+                      through: it needs a WhatsApp connection on the number, which
+                      an agency only has if it is also a customer. `NOT_PENDING`
+                      is all it could answer with no change in flight, so it is
+                      offered only when there is one. */}
+                  {state.pendingPhone && (
+                    <div className="border-t pt-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t('contact.phone.verify.connectedAlready')}
+                      </p>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => void confirmPhone()}
+                        disabled={busy === 'confirm'}
+                        className="h-auto gap-1.5 p-0 text-xs"
+                      >
+                        {busy === 'confirm' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        {t('contact.phone.confirm')}
+                      </Button>
                     </div>
                   )}
                 </div>

@@ -44,10 +44,13 @@
       "displayNamePlaceholder": "e.g. Jean-Paul (FastTrack)",
       "displayNameTooShort": "Display name must be at least 2 characters.",
       "email": "Email",
-      "emailLocked": "Email can't be changed here — contact support.",
+      "emailLocked": "This is the address you sign in with.",
       "phone": "Phone",
       "phonePlaceholder": "+237 6XX XXX XXX",
-      "phoneLocked": "Phone can't be changed here — contact support."
+      "phoneLocked": "This is the number you sign in with.",
+      "phoneUnverified": "This number isn't verified yet.",
+      "verifyLink": "Verify it",
+      "securityLink": "Change it under Security"
     },
     "localization": {
       "title": "Localization",
@@ -364,14 +367,36 @@
     "phone": {
       "label": "Sign-in phone",
       "newLabel": "New phone number",
-      "hint": "To prove the new number is yours, connect it on WhatsApp: send /connect to our bot from that number, then confirm here. There is no SMS code.",
+      "hint": "We'll send a six-digit code to the new number on WhatsApp. You keep signing in with your current number until you enter it.",
       "submit": "Start the change",
-      "requested": "Now connect that number on WhatsApp, then come back and confirm.",
-      "pendingHint": "Waiting for this number to be connected on WhatsApp.",
-      "confirm": "I've connected it — confirm",
+      "requested": "Now send a code to that number and enter it below.",
+      "pendingHint": "Waiting for this number to be verified.",
+      "confirm": "Confirm without a code",
       "confirmed": "Your sign-in phone has been changed.",
-      "unproven": "That number is not connected on WhatsApp yet. Send /connect to our bot from the new number, redeem the code, then confirm again.",
-      "connectLink": "Go to messaging channels"
+      "unproven": "That number is not connected on WhatsApp, so there is nothing to confirm against. Enter a code instead, or send /connect to our bot from that number and redeem the code it replies with.",
+      "connectLink": "Go to messaging channels",
+      "verify": {
+        "verified": "Verified",
+        "titleCurrent": "Verify this number",
+        "titleChange": "Verify the new number",
+        "hintCurrent": "We'll send a six-digit code to this number on WhatsApp.",
+        "hintChange": "We'll send a six-digit code to the new number on WhatsApp. Entering it completes the change and moves your sign-in number.",
+        "send": "Send a code on WhatsApp",
+        "resend": "Send a new code",
+        "resendIn": "Send a new code in {{seconds}}s",
+        "codeLabel": "Six-digit code",
+        "codePlaceholder": "123456",
+        "submit": "Verify",
+        "sentTo": "Code sent to {{phone}}.",
+        "sentToast": "Code sent to {{phone}} on WhatsApp.",
+        "deliveryTemplate": "Sent as a WhatsApp template message.",
+        "attemptsLeft_one": "{{count}} attempt left before this code is cancelled.",
+        "attemptsLeft_other": "{{count}} attempts left before this code is cancelled.",
+        "verifiedToast": "Your phone number is verified.",
+        "changedToast": "Your sign-in phone has been changed and verified.",
+        "deliveryFailed": "WhatsApp wouldn't take the code. Send any message to our bot from that number first — that opens the 24-hour window we're allowed to reply in — then ask for a new code.",
+        "connectedAlready": "Already connected this number on WhatsApp?"
+      }
     }
   }
 }
