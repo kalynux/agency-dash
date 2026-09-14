@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ProfileSettings } from '@/components/agency-settings/ProfileSettings';
 import { MagazinSettings } from '@/components/agency-settings/MagazinSettings';
 import { LocationsSettings } from '@/components/agency-settings/LocationsSettings';
+import { VerificationSettings } from '@/components/agency-settings/verification/VerificationSettings';
 import { SecuritySettings } from '@/components/agency-settings/SecuritySettings';
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
@@ -14,7 +15,15 @@ import { BillingTab } from '@/components/billing/BillingTab';
 import { SubPageHeader, sectionGroupClass } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
-const VALID_TABS = ['profile', 'store', 'locations', 'security', 'billing', 'payout'] as const;
+const VALID_TABS = [
+  'profile',
+  'store',
+  'locations',
+  'verification',
+  'security',
+  'billing',
+  'payout',
+] as const;
 type AccountTab = typeof VALID_TABS[number];
 
 export function Account() {
@@ -71,6 +80,7 @@ export function Account() {
       {activeTab === 'profile' && <ProfileSettings />}
       {activeTab === 'store' && <MagazinSettings />}
       {activeTab === 'locations' && <LocationsSettings />}
+      {activeTab === 'verification' && <VerificationSettings />}
       {activeTab === 'security' && <SecuritySettings />}
       {activeTab === 'billing' && <BillingTab />}
       {activeTab === 'payout' && (

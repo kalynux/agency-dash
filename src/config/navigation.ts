@@ -10,6 +10,7 @@ import {
   User,
   MapPin,
   Shield,
+  ShieldCheck,
   Wallet,
   Settings,
   ScrollText,
@@ -162,6 +163,9 @@ export const FOOTER_NAV: NavItem[] = [
       { labelKey: 'nav:footer.accountProfile', path: '/dashboard/account/profile', icon: User },
       { labelKey: 'nav:footer.accountStore', path: '/dashboard/account/store', icon: Store },
       { labelKey: 'nav:footer.accountLocations', path: '/dashboard/account/locations', icon: MapPin },
+      // Identity verification (KYC). Sits after Locations because the reviewers'
+      // rules key off whether the agency has a depot address on file at all.
+      { labelKey: 'nav:footer.accountVerification', path: '/dashboard/account/verification', icon: ShieldCheck },
       { labelKey: 'nav:footer.accountSecurity', path: '/dashboard/account/security', icon: Shield },
       { labelKey: 'nav:footer.accountBilling', path: '/dashboard/account/billing', icon: CreditCard },
       { labelKey: 'nav:footer.accountPayout', path: '/dashboard/account/payout', icon: Wallet },

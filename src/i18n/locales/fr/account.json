@@ -12,6 +12,10 @@
       "description": "Les régions que vous desservez et vos adresses de siège — l'empreinte opérationnelle que les vendeurs consultent pour choisir une agence",
       "short": "Où vous opérez"
     },
+    "verification": {
+      "description": "Les pièces d'identité qu'un administrateur examine avant de vérifier votre agence",
+      "short": "Pièces d'identité et verdict"
+    },
     "security": {
       "description": "Votre mot de passe et les vérifications supplémentaires qui protègent ce compte",
       "short": "Mot de passe et 2FA"
@@ -69,6 +73,137 @@
       "registrationNumberPlaceholder": "ex. RC/DLA/2020/B/1234",
       "transportLicense": "Numéro de licence de transport",
       "transportLicensePlaceholder": "ex. TL-00998877"
+    }
+  },
+  "verification": {
+    "loading": "Chargement de votre dossier de vérification…",
+    "saved": "Informations de vérification enregistrées",
+    "phase": {
+      "draft": "Brouillon",
+      "under_review": "En cours d'examen",
+      "verified": "Vérifié",
+      "rejected": "Refusé"
+    },
+    "status": {
+      "title": "Statut de vérification",
+      "description": "Où en est votre vérification d'identité, et ce qu'un administrateur en a dit.",
+      "short": "Où en est le dossier",
+      "draft": "Rien n'a encore été envoyé. Remplissez ce que vous pouvez ci-dessous, puis envoyez le dossier pour examen — vous pouvez le modifier jusque-là.",
+      "under_review": "Un administrateur examine vos documents. Le dossier est gelé jusqu'à sa décision.",
+      "verified": "Votre identité a été vérifiée. Le dossier est gelé définitivement — modifier une pièce approuvée passe par le support.",
+      "rejected": "Votre dossier a été refusé. Corrigez ce que le motif ci-dessous indique, puis renvoyez-le.",
+      "rejectedResubmitted": "Vous l'avez renvoyé et aucun vérificateur n'a encore rendu de nouvelle décision. Le dernier verdict reste valable jusque-là, et vous pouvez continuer à modifier le dossier.",
+      "rejectionReason": "Motif indiqué",
+      "submittedAt": "Envoyé le",
+      "verifiedAt": "Vérifié le",
+      "lockedUnderReview": "Rien ne peut être modifié sur cette page pendant l'examen de votre dossier. Vous pouvez toujours ouvrir chaque document envoyé.",
+      "lockedVerified": "Un dossier d'identité approuvé ne peut plus être modifié. Contactez le support si quelque chose doit changer."
+    },
+    "checklist": {
+      "title": "Ce que le vérificateur contrôle",
+      "description": "Nos vérificateurs appliquent ces règles. Rien n'est imposé par le système — vous pouvez envoyer un dossier incomplet, et on vous dira ce qui manque.",
+      "short": "Les règles des vérificateurs",
+      "required": "Requis",
+      "optional": "Facultatif",
+      "elsewhere": "Géré dans l'onglet Sites, pas ici.",
+      "depotNotPinned": "Une de vos adresses de dépôt n'a pas de point sur la carte : un vérificateur n'a donc rien pour la contrôler.",
+      "depotNotPinnedAction": "Ajouter un point dans Sites",
+      "items": {
+        "depotAddress": "Vos adresses de dépôt sont placées sur la carte",
+        "idCard": "Un scan de votre carte d'identité, recto et verso",
+        "idNumber": "Votre numéro de carte nationale d'identité",
+        "selfie": "Une photo de vous tenant votre carte d'identité",
+        "homeAddress": "Votre adresse personnelle, choisie sur la carte",
+        "homeSketch": "Un croquis ou une capture de carte de votre domicile",
+        "storeSketch": "Un croquis ou une capture de carte de votre dépôt"
+      }
+    },
+    "conditions": {
+      "requiredNoDepot": "Demandé parce que votre compte n'a aucune adresse de dépôt enregistrée.",
+      "notNeededHasDepot": "Non demandé — vos adresses de dépôt suffisent.",
+      "requiredHasDepot": "Demandé parce que votre compte a des adresses de dépôt enregistrées.",
+      "notNeededNoDepot": "Non demandé — vous n'avez aucune adresse de dépôt à dessiner."
+    },
+    "identity": {
+      "title": "Votre identité",
+      "description": "Le numéro figurant sur votre carte, et votre domicile. Il s'agit de vous personnellement, pas de l'entreprise.",
+      "short": "Votre numéro et votre domicile",
+      "idNumber": "Numéro de carte nationale d'identité",
+      "idNumberPlaceholder": "Le numéro imprimé sur votre carte",
+      "idNumberHint": "Votre propre numéro de CNI — pas le numéro d'immatriculation de l'entreprise, qui reste dans l'onglet Profil. Aucun format n'est imposé : une personne le compare à vos scans.",
+      "homeAddress": "Adresse personnelle",
+      "homeAddressPlaceholder": "Recherchez votre adresse personnelle",
+      "homeAddressRequiredHint": "Choisissez l'adresse dans les résultats de recherche. Votre compte n'a aucun dépôt enregistré : c'est ainsi qu'un vérificateur sait d'où l'activité est dirigée.",
+      "homeAddressOptionalHint": "Facultatif — vos adresses de dépôt montrent déjà où vous opérez. Si vous en ajoutez une, choisissez-la dans les résultats."
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Les photos ou scans qu'un vérificateur examine. Prenez-les au téléphone si c'est plus simple — mieux vaut lisible que soigné.",
+      "short": "Scans et photos",
+      "fileRules": "JPEG, PNG, WebP ou PDF, jusqu'à {{mb}} Mo par fichier. Chaque fichier est analysé contre les virus et compte dans le stockage de votre forfait."
+    },
+    "slots": {
+      "add": "Téléverser",
+      "replace": "Remplacer",
+      "empty": "Rien n'a encore été téléversé.",
+      "full": "Cet emplacement est plein ({{max}} fichiers).",
+      "remaining_one": "Encore {{count}} fichier possible (sur {{max}}).",
+      "remaining_other": "Encore {{count}} fichiers possibles (sur {{max}}).",
+      "id_card_front": {
+        "title": "Carte d'identité — recto",
+        "description": "Un scan ou une photo du recto de votre carte d'identité."
+      },
+      "id_card_back": {
+        "title": "Carte d'identité — verso",
+        "description": "Le verso de la même carte."
+      },
+      "selfie_with_id": {
+        "title": "Selfie avec votre carte",
+        "description": "Vous tenant la carte, le visage bien visible."
+      },
+      "home_address_sketch": {
+        "title": "Croquis du domicile",
+        "description": "Une carte dessinée à la main ou une capture d'écran montrant où vous habitez."
+      },
+      "store_address_sketch": {
+        "title": "Croquis du dépôt",
+        "description": "Une carte dessinée à la main ou une capture d'écran par dépôt. Les vérificateurs associent eux-mêmes chaque croquis à une adresse : envoyez-en un par dépôt."
+      }
+    },
+    "upload": {
+      "tooManyFiles": "Choisissez au maximum {{max}} fichiers à la fois.",
+      "slotFull_one": "Il reste de la place pour {{count}} fichier dans cet emplacement.",
+      "slotFull_other": "Il reste de la place pour {{count}} fichiers dans cet emplacement.",
+      "unsupportedType": "« {{name}} » n'est pas d'un type accepté. Utilisez un JPEG, PNG, WebP ou PDF.",
+      "overSizeLimit": "« {{name}} » dépasse {{limit}} Mo.",
+      "succeeded_one": "Document téléversé",
+      "succeeded_other": "{{count}} documents téléversés",
+      "removed": "Document supprimé"
+    },
+    "document": {
+      "untitled": "Document",
+      "view": "Voir",
+      "hide": "Masquer",
+      "remove": "Supprimer {{name}}",
+      "noPreview": "Aperçu indisponible",
+      "quotaBlocked": "Stockage saturé",
+      "quotaBlockedHint": "Ce fichier est intact, mais le stockage de votre forfait est plein : il ne peut pas être servi.",
+      "quotaBlockedAction": "Voir votre forfait"
+    },
+    "submit": {
+      "title": "Envoyer pour examen",
+      "description": "Confiez le dossier à nos vérificateurs. Il est gelé pendant leur examen, et vous serez informé du résultat.",
+      "short": "Confier aux vérificateurs",
+      "action": "Envoyer pour vérification",
+      "resubmit": "Renvoyer",
+      "saveFirst": "Enregistrez vos modifications avant d'envoyer.",
+      "outstanding_one": "{{count}} élément demandé par les vérificateurs manque encore. Vous pouvez tout de même envoyer.",
+      "outstanding_other": "{{count}} éléments demandés par les vérificateurs manquent encore. Vous pouvez tout de même envoyer.",
+      "succeeded": "Envoyé pour examen",
+      "confirmTitle": "Envoyer ce dossier pour examen ?",
+      "confirmBody": "Votre dossier est gelé pendant l'examen. Vous pourrez toujours consulter tout ce que vous avez envoyé.",
+      "confirmIncomplete": "Une partie de ce que demandent les vérificateurs manque encore — ils vous diront quoi, et vous pourrez corriger puis renvoyer.",
+      "confirmAction": "Envoyer pour examen"
     }
   },
   "security": {

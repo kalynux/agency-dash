@@ -12,6 +12,10 @@
       "description": "The regions you serve and your headquarters addresses — the operational footprint vendors see when choosing an agency",
       "short": "Where you operate"
     },
+    "verification": {
+      "description": "The identity documents an administrator reviews before verifying your agency",
+      "short": "ID documents and verdict"
+    },
     "security": {
       "description": "Your password and the extra checks that keep this account yours",
       "short": "Password and 2FA"
@@ -69,6 +73,137 @@
       "registrationNumberPlaceholder": "e.g. RC/DLA/2020/B/1234",
       "transportLicense": "Transport license ID",
       "transportLicensePlaceholder": "e.g. TL-00998877"
+    }
+  },
+  "verification": {
+    "loading": "Loading your verification record…",
+    "saved": "Verification details saved",
+    "phase": {
+      "draft": "Draft",
+      "under_review": "Under review",
+      "verified": "Verified",
+      "rejected": "Rejected"
+    },
+    "status": {
+      "title": "Verification status",
+      "description": "Where your identity verification stands, and what an administrator has said about it.",
+      "short": "Where it stands",
+      "draft": "Nothing has been submitted yet. Fill in what you can below, then send it for review — you can keep editing until you do.",
+      "under_review": "An administrator is reviewing your documents. The record is frozen until they decide.",
+      "verified": "Your identity has been verified. The record is frozen for good — changing an approved ID card is a support request.",
+      "rejected": "Your submission was refused. Fix what the reason below names and submit again.",
+      "rejectedResubmitted": "You've sent this again and a reviewer hasn't given a new decision yet. The last verdict stands until they do, and you can keep editing in the meantime.",
+      "rejectionReason": "Reason given",
+      "submittedAt": "Submitted",
+      "verifiedAt": "Verified",
+      "lockedUnderReview": "Nothing on this page can be changed while your submission is being reviewed. You can still open every document you sent.",
+      "lockedVerified": "An approved identity record can't be edited. Contact support if something on it has to change."
+    },
+    "checklist": {
+      "title": "What the reviewer checks",
+      "description": "Our reviewers apply these rules. Nothing here is enforced by the system — you can submit an incomplete record, and you will be told what is missing.",
+      "short": "The reviewers' rules",
+      "required": "Required",
+      "optional": "Optional",
+      "elsewhere": "Managed on the Locations tab, not here.",
+      "depotNotPinned": "One of your depot addresses has no map pin, so a reviewer has nothing to check it against.",
+      "depotNotPinnedAction": "Add a pin on Locations",
+      "items": {
+        "depotAddress": "Your depot addresses are pinned on the map",
+        "idCard": "A scan of your ID card, front and back",
+        "idNumber": "Your national ID number",
+        "selfie": "A photo of you holding your ID card",
+        "homeAddress": "Your home address, picked from the map",
+        "homeSketch": "A sketch or map screenshot of where you live",
+        "storeSketch": "A sketch or map screenshot of your depot"
+      }
+    },
+    "conditions": {
+      "requiredNoDepot": "Asked for because your account has no depot address on file.",
+      "notNeededHasDepot": "Not asked for — your depot addresses cover this.",
+      "requiredHasDepot": "Asked for because your account has depot addresses on file.",
+      "notNeededNoDepot": "Not asked for — you have no depot address to sketch."
+    },
+    "identity": {
+      "title": "Your identity",
+      "description": "The identity number on your card, and where you live. This is about you personally, not about the company.",
+      "short": "Your ID number and home",
+      "idNumber": "National ID number",
+      "idNumberPlaceholder": "The number printed on your ID card",
+      "idNumberHint": "Your own national ID number — not your business registration number, which stays on the Profile tab. There is no format check: a person compares it with your scans.",
+      "homeAddress": "Home address",
+      "homeAddressPlaceholder": "Search for your home address",
+      "homeAddressRequiredHint": "Pick the address from the search results. Your account has no depot on file, so this is how a reviewer knows where the business is run from.",
+      "homeAddressOptionalHint": "Optional — your depot addresses already show a reviewer where you operate. Pick from the search results if you add one."
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Photos or scans a reviewer looks at. Take them with your phone if that is easiest — a legible photo beats a tidy one.",
+      "short": "Scans and photos",
+      "fileRules": "JPEG, PNG, WebP or PDF, up to {{mb}} MB each. Every file is virus-scanned and counts towards your plan's storage."
+    },
+    "slots": {
+      "add": "Upload",
+      "replace": "Replace",
+      "empty": "Nothing uploaded yet.",
+      "full": "This slot is full ({{max}} files).",
+      "remaining_one": "Room for {{count}} more file (of {{max}}).",
+      "remaining_other": "Room for {{count}} more files (of {{max}}).",
+      "id_card_front": {
+        "title": "ID card — front",
+        "description": "A scan or photo of the front of your identity card."
+      },
+      "id_card_back": {
+        "title": "ID card — back",
+        "description": "The back of the same card."
+      },
+      "selfie_with_id": {
+        "title": "Selfie with your ID",
+        "description": "You holding the card, with your face clearly visible."
+      },
+      "home_address_sketch": {
+        "title": "Home location sketch",
+        "description": "A hand-drawn map or a screenshot showing where you live."
+      },
+      "store_address_sketch": {
+        "title": "Depot location sketch",
+        "description": "A hand-drawn map or a screenshot per depot. Reviewers pair each sketch with an address themselves, so upload one for each."
+      }
+    },
+    "upload": {
+      "tooManyFiles": "Pick at most {{max}} files at a time.",
+      "slotFull_one": "There is room for {{count}} more file in this slot.",
+      "slotFull_other": "There is room for {{count}} more files in this slot.",
+      "unsupportedType": "“{{name}}” isn't a supported type. Use a JPEG, PNG, WebP or PDF.",
+      "overSizeLimit": "“{{name}}” is larger than {{limit}} MB.",
+      "succeeded_one": "Document uploaded",
+      "succeeded_other": "{{count}} documents uploaded",
+      "removed": "Document removed"
+    },
+    "document": {
+      "untitled": "Document",
+      "view": "View",
+      "hide": "Hide",
+      "remove": "Remove {{name}}",
+      "noPreview": "No preview",
+      "quotaBlocked": "Over storage limit",
+      "quotaBlockedHint": "This file is intact, but your plan's storage is full so it can't be served.",
+      "quotaBlockedAction": "See your plan"
+    },
+    "submit": {
+      "title": "Send for review",
+      "description": "Hand the record to our reviewers. It is frozen while they look at it, and you'll be told the outcome.",
+      "short": "Hand it to the reviewers",
+      "action": "Submit for verification",
+      "resubmit": "Submit again",
+      "saveFirst": "Save your changes before submitting.",
+      "outstanding_one": "{{count}} thing the reviewers ask for is still missing. You can submit anyway.",
+      "outstanding_other": "{{count}} things the reviewers ask for are still missing. You can submit anyway.",
+      "succeeded": "Sent for review",
+      "confirmTitle": "Send this for review?",
+      "confirmBody": "Your record is frozen while a reviewer looks at it. You'll still be able to see everything you sent.",
+      "confirmIncomplete": "Some of what the reviewers ask for is still missing — they will tell you what, and you can fix it and submit again.",
+      "confirmAction": "Send for review"
     }
   },
   "security": {
