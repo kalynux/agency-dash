@@ -23,10 +23,14 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { cn } from '@/lib/utils';
 import {
   hasPayoutAllowance,
+  openPayoutStatus,
   projectPayoutCapRefusal,
-  type EarningsPayoutStatus,
+  readPayoutStatus,
+  type EarningsPayoutRequest,
+  type OpenPayoutStatus,
   type PayoutAllowance,
   type PayoutCapRefusal,
+  type PayoutStatusView,
 } from '@/types/earnings.types';
 
 // Mirrors the backend EARNINGS_CONFIG — see api-doc/agency/earnings.md.
@@ -36,18 +40,69 @@ const AUTO_PAYOUT_THRESHOLD = 2_000_000;
 /** Account → Verification, the one remedy that lifts the allowance for good. */
 const VERIFICATION_PATH = '/dashboard/account/verification';
 
-/** Colour per payout status; the label is keyed off the same enum in `account`. */
-const STATUS_CLASS: Record<EarningsPayoutStatus, string> = {
-  pending: 'border-yellow-500 text-yellow-600 bg-yellow-50',
-  paid: 'border-green-500 text-green-600 bg-green-50',
-  rejected: 'border-red-500 text-red-600 bg-red-50',
-};
+/**
+ * How each payout status is rendered — colour, badge label, and the line under
+ * it that says where the money actually is.
+ *
+ * ⛔ **Every value has its OWN entry, `unknown` included.** This map used to be
+ * exhaustive over three statuses; when `processing` and `failed` arrived, a map
+ * of that shape sends both into whichever branch is reached last — telling an
+ * agency their payout was *declined* while their money is in flight.
+ *
+ * ⚠ The colours carry the same distinction the copy does. `failed` is amber —
+ * still open, money still held, an administrator is on it — and deliberately
+ * NOT the red of `rejected`, which is closed with the balance handed back.
+ * `processing` is blue rather than green, because green reads as "arrived".
+ */
+const STATUS_VIEW = {
+  pending: {
+    className: 'border-yellow-500 text-yellow-600 bg-yellow-50',
+    labelKey: 'earnings.status.pending',
+    noteKey: 'earnings.statusNote.pending',
+  },
+  processing: {
+    className: 'border-blue-500 text-blue-600 bg-blue-50',
+    labelKey: 'earnings.status.processing',
+    noteKey: 'earnings.statusNote.processing',
+  },
+  paid: {
+    className: 'border-green-500 text-green-600 bg-green-50',
+    labelKey: 'earnings.status.paid',
+    // The only status that needs no qualifier: the money arrived.
+    noteKey: null,
+  },
+  rejected: {
+    className: 'border-red-500 text-red-600 bg-red-50',
+    labelKey: 'earnings.status.rejected',
+    noteKey: 'earnings.statusNote.rejected',
+  },
+  failed: {
+    className: 'border-orange-500 text-orange-600 bg-orange-50',
+    labelKey: 'earnings.status.failed',
+    noteKey: 'earnings.statusNote.failed',
+  },
+  unknown: {
+    className: 'border-muted-foreground/40 text-muted-foreground bg-muted',
+    labelKey: 'earnings.status.unknown',
+    noteKey: 'earnings.statusNote.unknown',
+  },
+} as const satisfies Record<
+  PayoutStatusView,
+  { className: string; labelKey: string; noteKey: string | null }
+>;
 
-const STATUS_LABEL_KEY = {
-  pending: 'earnings.status.pending',
-  paid: 'earnings.status.paid',
-  rejected: 'earnings.status.rejected',
-} as const satisfies Record<EarningsPayoutStatus, string>;
+/**
+ * Why the withdraw button is disabled while a payout is still open — one
+ * sentence per open status, because "you already have a pending request" is
+ * simply untrue of a payout that is in flight or that an administrator is
+ * retrying, and the three wait on different things.
+ */
+const OPEN_REQUEST_KEY = {
+  pending: 'earnings.blocked.openRequest.pending',
+  processing: 'earnings.blocked.openRequest.processing',
+  failed: 'earnings.blocked.openRequest.failed',
+  unknown: 'earnings.blocked.openRequest.unknown',
+} as const satisfies Record<OpenPayoutStatus, string>;
 
 /**
  * One balance tile. Sized as a flex item so the row below can pair them up:
@@ -119,11 +174,20 @@ export function EarningsPayoutCard() {
   const { t } = useTranslation(['account', 'common']);
   const { balance, latestPayout, isLoading, loadError, isRequesting, capRefusal, requestPayout, refetch } = useEarnings();
   const { session } = useOnboarding();
-  const navigate = useNavigate();
 
   const currency = balance?.currency ?? 'XAF';
   const hasPayoutMethod = (session?.role_entity?.payout_details?.length ?? 0) > 0;
-  const hasPendingRequest = latestPayout?.status === 'pending';
+  /**
+   * The open payout standing in the way of a new request — `pending`,
+   * `processing` **or** `failed`, and an unrecognised status too.
+   *
+   * ⛔ Not `status === 'pending'`. All three hold the balance in `requested`, so
+   * offering the button on the other two sends the agency straight into a
+   * `409 EARNINGS_PAYOUT_ALREADY_PENDING`. ⚠ `failed` is the one that looks
+   * finished and is not: the transfer was refused, but the money has not come
+   * back, so there is nothing to request again.
+   */
+  const openStatus = openPayoutStatus(latestPayout);
   const available = balance?.available ?? 0;
 
   /**
@@ -159,8 +223,8 @@ export function EarningsPayoutCard() {
   /** The one-liner beside the button. Everything the allowance has to say is too long for it. */
   const disabledReason = !hasPayoutMethod
     ? t('earnings.blocked.noMethod')
-    : hasPendingRequest
-      ? t('earnings.blocked.pendingRequest')
+    : openStatus
+      ? t(OPEN_REQUEST_KEY[openStatus])
       : available <= 0
         ? t('earnings.blocked.noBalance')
         : available < MIN_PAYOUT
@@ -283,34 +347,7 @@ export function EarningsPayoutCard() {
               />
             )}
 
-            {latestPayout && (
-              <div className="rounded-lg border p-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className={cn(STATUS_CLASS[latestPayout.status])}>
-                    {t(STATUS_LABEL_KEY[latestPayout.status])}
-                  </Badge>
-                  {latestPayout.origin === 'auto_threshold' && (
-                    <Badge variant="secondary" className="text-xs">
-                      {t('earnings.status.automatic')}
-                    </Badge>
-                  )}
-                  <div className="text-sm">
-                    <span className="font-medium">
-                      {formatCurrency(latestPayout.amount, latestPayout.currency)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {' '}· {t('earnings.requestedOn', { date: formatDate(latestPayout.createdAt) })}
-                    </span>
-                    {latestPayout.status === 'rejected' && latestPayout.rejectionReason && (
-                      <span className="text-destructive"> — {latestPayout.rejectionReason}</span>
-                    )}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/tickets')}>
-                  {t('earnings.viewInTickets')}
-                </Button>
-              </div>
-            )}
+            {latestPayout && <LatestPayoutRow payout={latestPayout} />}
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -354,6 +391,63 @@ export function EarningsPayoutCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The most recent payout request: where it stands, and — for every status but
+ * `paid` — where the money is while it stands there.
+ *
+ * ⚠ **Status and money are two different facts, and only one of them is in the
+ * badge.** `processing` and `failed` both still hold the balance; `rejected`
+ * hands it back. An agency reading "Payment failed" with no second line assumes
+ * the money is theirs again and goes looking for a button to request it — so the
+ * note is not decoration, it is the half of the answer the badge cannot carry.
+ */
+function LatestPayoutRow({ payout }: { payout: EarningsPayoutRequest }) {
+  const { t } = useTranslation(['account', 'common']);
+  const navigate = useNavigate();
+
+  // ⛔ Through `readPayoutStatus`, never `STATUS_VIEW[payout.status]` directly:
+  // a status added to the backend after this build would index the map to
+  // `undefined` and paint a blank badge on a live payout.
+  const view = STATUS_VIEW[readPayoutStatus(payout.status)];
+
+  return (
+    <div className="rounded-lg border p-4 flex items-start justify-between gap-3 flex-wrap">
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Badge variant="outline" className={cn(view.className)}>
+            {t(view.labelKey)}
+          </Badge>
+          {payout.origin === 'auto_threshold' && (
+            <Badge variant="secondary" className="text-xs">
+              {t('earnings.status.automatic')}
+            </Badge>
+          )}
+          <div className="text-sm">
+            <span className="font-medium">
+              {formatCurrency(payout.amount, payout.currency)}
+            </span>
+            <span className="text-muted-foreground">
+              {' '}· {t('earnings.requestedOn', { date: formatDate(payout.createdAt) })}
+            </span>
+          </div>
+        </div>
+
+        {/* ⚠ `rejectionReason` is the ONLY place the *why* lives — the WhatsApp
+            notification carries just the amount and points back here. */}
+        {payout.status === 'rejected' && payout.rejectionReason && (
+          <p className="text-sm text-destructive">{payout.rejectionReason}</p>
+        )}
+
+        {view.noteKey && <p className="text-xs text-muted-foreground">{t(view.noteKey)}</p>}
+      </div>
+
+      <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/tickets')}>
+        {t('earnings.viewInTickets')}
+      </Button>
+    </div>
   );
 }
 

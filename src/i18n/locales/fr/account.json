@@ -329,13 +329,23 @@
       "reserve": "Réserve",
       "reserveHint": "Marge de sécurité COD — immobilisée 30 jours",
       "requested": "Demandé",
-      "requestedHint": "Réservé pour votre demande de versement en cours"
+      "requestedHint": "Réservé pour votre demande de versement en cours — y compris un versement en cours d'envoi"
     },
     "status": {
-      "pending": "En attente",
+      "pending": "En cours d'examen",
+      "processing": "En route",
       "paid": "Payé",
       "rejected": "Refusé",
+      "failed": "Échec du versement",
+      "unknown": "En cours",
       "automatic": "Automatique"
+    },
+    "statusNote": {
+      "pending": "Un administrateur examine cette demande. Le montant reste réservé jusqu'à son envoi.",
+      "processing": "Envoyé à votre prestataire de paiement — pas encore confirmé. Cette page se met à jour dès que l'argent arrive.",
+      "rejected": "Cette demande est clôturée et la totalité du montant est revenue dans votre solde disponible.",
+      "failed": "Le transfert a été refusé : l'argent reste réservé pour vous, il n'est pas revenu dans votre solde disponible. Nous nous en occupons, il n'y a rien à redemander.",
+      "unknown": "Ce versement est toujours en cours. Ouvrez le ticket associé pour les dernières informations."
     },
     "requestedOn": "demandé le {{date}}",
     "viewInTickets": "Voir dans les tickets",
@@ -347,7 +357,12 @@
     "autoPayout": "Si votre solde disponible atteint {{threshold}}, nous demandons automatiquement un versement en votre nom pour que les fonds ne restent pas immobilisés. Assurez-vous qu'un moyen de versement est enregistré — sans cela, la demande automatique ne peut pas être créée.",
     "blocked": {
       "noMethod": "Ajoutez un moyen de versement ci-dessous avant de demander un retrait.",
-      "pendingRequest": "Vous avez déjà une demande de versement en cours.",
+      "openRequest": {
+        "pending": "Vous avez déjà une demande de versement en attente d'examen.",
+        "processing": "Votre dernier versement est en route — vous pourrez en demander un autre une fois qu'il sera arrivé.",
+        "failed": "Votre dernier versement n'a pas abouti et l'argent est toujours réservé : il n'y a donc rien à redemander pour l'instant. Nous réglons la situation.",
+        "unknown": "Vous avez déjà une demande de versement en cours."
+      },
       "noBalance": "Aucun solde disponible à retirer pour l'instant.",
       "belowMinimum": "Le versement minimum est de {{amount}}."
     },

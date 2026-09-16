@@ -284,8 +284,35 @@ you requested yourself.
 
 | Field | Type | Description |
 |---|---|---|
-| `status` | `string` | `pending` \| `paid` \| `rejected`. |
+| `status` | `string` | `pending` \| `processing` \| `paid` \| `rejected` \| `failed`. See below. |
 | `origin` | `string` | `manual` (you requested it) or `auto_threshold` (the platform opened it automatically because `available` reached the threshold). |
 | `ticketId` | `string` | The linked `PAYOUT_REQUEST` ticket — open it under Tickets for the full conversation/history. |
 | `rejectionReason` | `string \| null` | Set when `status` is `rejected`. |
+
+#### ⚠ `status` gained two values, and neither is terminal
+
+`processing` and `failed` arrived when payouts became automatable. **An app whose status map
+was exhaustive over the old three will mis-render both** — most likely showing a live payout as
+"Rejected", which tells a user their money is not coming when it is on its way.
+
+| `status` | What it means | What to tell the user |
+|---|---|---|
+| `pending` | Waiting for an administrator | "Being reviewed" |
+| `processing` | **Sent to the payment provider, not yet confirmed** | "On its way" — never "Paid" |
+| `paid` | Settled. The only status that means the money arrived | "Paid" |
+| `rejected` | Closed. `rejectionReason` says why, and the balance is back in `available` | "Declined — <reason>" |
+| `failed` | **The transfer was refused. The money is still held, NOT back in `available`** | "Payment failed — we are looking into it" |
+
+⛔ **`failed` does NOT mean the request is over, and it does NOT return the balance.** The funds
+stay reserved while an administrator retries or closes it. An app that treats `failed` as
+terminal will tell the user to request again — and the request will be refused, because one is
+already open. Only `rejected` returns money to `available`.
+
+⛔ **Treat any unrecognised status as in-progress, not as failure.** The safe default for a money
+record you do not understand is "still happening".
+
+⚠ **While `status` is `pending`, `processing` or `failed`, a new payout request is refused**
+with `409 EARNINGS_PAYOUT_ALREADY_PENDING` — the message names the actual status. Gate the
+"Request payout" control on all three, not on `pending` alone.
+
 | `resolvedAt` | `string \| null` | When an admin marked it paid/rejected; `null` while `pending`. |

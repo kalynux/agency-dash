@@ -329,13 +329,23 @@
       "reserve": "Reserve",
       "reserveHint": "COD security margin — parked 30 days",
       "requested": "Requested",
-      "requestedHint": "Earmarked for your pending payout request"
+      "requestedHint": "Earmarked for your open payout request — including one still being sent"
     },
     "status": {
-      "pending": "Pending",
+      "pending": "Being reviewed",
+      "processing": "On its way",
       "paid": "Paid",
-      "rejected": "Rejected",
+      "rejected": "Declined",
+      "failed": "Payment failed",
+      "unknown": "In progress",
       "automatic": "Automatic"
+    },
+    "statusNote": {
+      "pending": "An administrator is reviewing this request. The amount stays reserved until it is sent.",
+      "processing": "Sent to your payout provider — not confirmed yet. This updates on its own once the money lands.",
+      "rejected": "This request is closed and the full amount is back in your available balance.",
+      "failed": "The transfer was refused, so the money is still reserved for you — it has not returned to your available balance. We are looking into it; there is nothing to request again.",
+      "unknown": "This payout is still in progress. Open the linked ticket for the latest."
     },
     "requestedOn": "requested {{date}}",
     "viewInTickets": "View in Tickets",
@@ -347,7 +357,12 @@
     "autoPayout": "If your available balance reaches {{threshold}}, we automatically request a payout on your behalf so funds don't sit unclaimed. Make sure a payout method is saved — otherwise the automatic request can't be created.",
     "blocked": {
       "noMethod": "Add a payout method below before requesting a withdrawal.",
-      "pendingRequest": "You already have a pending payout request.",
+      "openRequest": {
+        "pending": "You already have a payout request waiting to be reviewed.",
+        "processing": "Your last payout is on its way — you can request another once it lands.",
+        "failed": "Your last payout did not go through and the money is still reserved, so there is nothing to request yet. We are sorting it out.",
+        "unknown": "You already have a payout request in progress."
+      },
       "noBalance": "No available balance to withdraw yet.",
       "belowMinimum": "Minimum payout is {{amount}}."
     },
