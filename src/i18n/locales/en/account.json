@@ -207,6 +207,12 @@
       "confirmBody": "Your record is frozen while a reviewer looks at it. You'll still be able to see everything you sent.",
       "confirmIncomplete": "Some of what the reviewers ask for is still missing — they will tell you what, and you can fix it and submit again.",
       "confirmAction": "Send for review"
+    },
+    "unlocks": {
+      "title": "What verification unlocks",
+      "cod": "Cash-on-delivery orders. Until an administrator verifies you, customers are not offered COD on your deliveries — whatever your COD policy says.",
+      "payouts": "Uncapped withdrawals. An unverified agency can be limited to a fixed amount per rolling window; verification removes the limit.",
+      "otherwiseOpen": "Nothing else is held back. You can take shipments, sign agents and work with vendors exactly as normal while this is pending."
     }
   },
   "security": {
@@ -344,6 +350,19 @@
       "pendingRequest": "You already have a pending payout request.",
       "noBalance": "No available balance to withdraw yet.",
       "belowMinimum": "Minimum payout is {{amount}}."
+    },
+    "allowance": {
+      "title": "Withdrawal limit",
+      "explainer": "Until an administrator verifies your agency, you can withdraw up to {{cap}} every {{windowDays}} days. Getting verified removes the limit.",
+      "used": "{{used}} of {{cap}} used",
+      "remaining": "{{remaining}} left",
+      "remainingInline": "{{remaining}} of this is within your withdrawal limit",
+      "resetsAt": "Some of your limit frees up again on {{date}} — the window rolls, so it returns a little at a time rather than all at once.",
+      "refusal": {
+        "allowanceSpent": "You've used your whole withdrawal limit for this window. Verify your agency to lift it, or wait for it to free up — trying again won't help.",
+        "remainderBelowMinimum": "Only {{remaining}} of your limit is left this window, which is under the {{minAmount}} minimum payout. The money is there; the limit is what is out of reach. Verify your agency to lift it, or wait for the limit to free up — trying again won't help."
+      },
+      "verifyCta": "Verify your agency"
     }
   },
   "contact": {
@@ -395,8 +414,15 @@
         "verifiedToast": "Your phone number is verified.",
         "changedToast": "Your sign-in phone has been changed and verified.",
         "deliveryFailed": "WhatsApp wouldn't take the code. Send any message to our bot from that number first — that opens the 24-hour window we're allowed to reply in — then ask for a new code.",
-        "connectedAlready": "Already connected this number on WhatsApp?"
+        "connectedAlready": "Already connected this number on WhatsApp?",
+        "activatesAccount": "Entering this code also activates your account — it is the only thing still pending."
       }
     }
+  },
+  "activation": {
+    "title": "Your account isn't active yet",
+    "body": "Verify your phone number to finish activating it — we send a six-digit code on WhatsApp and it takes a minute. You can keep using the dashboard in the meantime.",
+    "bodyPhoneVerified": "Your phone is verified but the account has not been activated. Contact support if this does not clear shortly.",
+    "cta": "Verify my phone"
   }
 }

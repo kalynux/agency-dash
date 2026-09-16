@@ -183,7 +183,9 @@
       "short": "Whether you accept COD",
       "toggle": "Accept cash-on-delivery orders",
       "maxAmount": "Max COD order amount (XAF)",
-      "maxAmountPlaceholder": "No cap"
+      "maxAmountPlaceholder": "No cap",
+      "unverified": "Cash-on-delivery orders only reach you once an administrator has verified your agency — until then this setting is saved but has no effect, and customers are not offered COD on your deliveries.",
+      "unverifiedCta": "Get verified"
     },
     "returns": {
       "title": "Returns Policy",

@@ -397,6 +397,7 @@
     "EARNINGS_PAYOUT_METHOD_MISSING": "Add a payout method before requesting a payout.",
     "EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE": "There is no available balance to pay out.",
     "EARNINGS_PAYOUT_BELOW_MINIMUM": "Your available balance is below the 10,000 XAF minimum.",
+    "EARNINGS_PAYOUT_UNVERIFIED_CAP_REACHED": "You've reached the withdrawal limit for unverified accounts. Verify your agency to lift it, or wait for the limit to free up — trying again won't help.",
     "EARNINGS_PAYOUT_REQUEST_NOT_FOUND": "That payout request could not be found.",
     "EARNINGS_PAYOUT_REQUEST_NOT_PENDING": "That payout request has already been resolved.",
     "COD_NOT_AVAILABLE_FOR_DIGITAL": "Cash on delivery isn't available for digital items.",

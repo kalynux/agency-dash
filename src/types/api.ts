@@ -150,11 +150,59 @@ export interface HeadquartersAddressInput {
 
 // ─── KYC Details ─────────────────────────────────────────────────────────────
 
+/**
+ * The administrator's verdict on this agency.
+ *
+ * ⚠ **`pending` is the schema default, so it also means "nobody has ever looked
+ * at this"** — which, on a young platform, is most accounts. Never read
+ * verified-ness as `status !== 'rejected'`: only `verified` is verified.
+ *
+ * ⚠ **The roles do not share this vocabulary.** An agent defaults to
+ * `unverified` and reaches `pending` only once documents are submitted; an
+ * agency, like a vendor, starts at `pending`. Render the word this role actually
+ * uses and branch on the boolean — a flattened three-role enum would lose the
+ * distinction that tells an agent whether they still have something to send.
+ */
+export type AgencyKycVerdict = 'pending' | 'verified' | 'rejected';
+
+/**
+ * The VERDICT half of the agency's KYC block, as `/auth/me` echoes it.
+ *
+ * The two company numbers are writable through `PATCH /agency/profile`;
+ * everything else here is a reviewer's decision and is **response-only** —
+ * sending any of it is ignored or refused.
+ *
+ * The EVIDENCE half (ID scans, selfie, sketches, the person's national ID) lives
+ * behind `/api/agency/kyc` and is typed in `kyc.types.ts`. What is here is only
+ * what a session already holds, which is what makes it the cheap read for the
+ * screens that merely need to know whether this agency is verified.
+ */
 export interface AgencyKycDetails {
   registration_number: string | null;
   transport_license_id: string | null;
-  /** Received from backend, not sent by frontend */
+  /**
+   * The boolean projection of `status === 'verified'` — the two are written
+   * together and never apart. Received from backend, not sent by frontend.
+   */
   legit_verified?: boolean;
+  /**
+   * The verdict itself. Response only.
+   *
+   * Optional because a session minted before 2026-09-15 carries no such field,
+   * and an absent verdict must read as *not verified* — resolve it through
+   * `readAccountStanding()` in `lib/account-standing.ts` rather than here.
+   */
+  status?: AgencyKycVerdict;
+  /** Set on `rejected`, cleared on `verified`. Response only. */
+  rejection_reason?: string | null;
+  /** ISO-8601. Response only. */
+  verified_at?: string | null;
+  /**
+   * The PERSON's national identity number, beside the two company numbers.
+   * Response only here — it is written through `PATCH /agency/kyc` as
+   * `idNumber` (see `kyc.types.ts`).
+   */
+  national_id_number?: string | null;
 }
 
 // ─── Agency Policies ──────────────────────────────────────────────────────────
@@ -231,6 +279,13 @@ export interface AgencyPolicies {
 
 // ─── Agency Role Entity ───────────────────────────────────────────────────────
 
+/**
+ * Operating status. Typed as a union rather than `string` so the two questions
+ * this file now answers separately cannot be confused at a call site — see
+ * {@link AgencyRoleEntity.status} and {@link AgencyKycVerdict}.
+ */
+export type AgencyAccountStatus = 'active' | 'pending_verification' | 'inactive' | 'suspended';
+
 export interface AgencyRoleEntity {
   _id: string;
   user_id: string;
@@ -270,7 +325,22 @@ export interface AgencyRoleEntity {
    * 4 = Policy Setup required
    */
   onboarding_step: 0 | 1 | 2 | 3 | 4;
-  status: string;
+  /**
+   * May this account operate? `pending_verification` → `active`, and since
+   * 2026-09-15 the agency earns that itself: a verified phone plus a name, on
+   * the call that proves the phone. Nobody else is involved.
+   *
+   * ⛔ **`active` does NOT mean an administrator approved this business.** It
+   * used to — administrative approval was the only thing that set it — and every
+   * trust badge, banner or gate derived from that reading is now wrong. The
+   * approval question is `kyc_details.status`; these are two different questions
+   * with two different answers. See `lib/account-standing.ts`.
+   *
+   * ⚠ Only `pending_verification` is ever promoted. An `inactive` or
+   * `suspended` account that proves a phone stays where the administrator put
+   * it — a phone number cannot lift a suspension.
+   */
+  status: AgencyAccountStatus;
   /** Integer version counter — used for optimistic concurrency checks */
   version?: number;
 }

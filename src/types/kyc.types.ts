@@ -10,8 +10,19 @@
 // are; `idNumber` here is the PERSON's national identity number, and it is the
 // field the ID scans corroborate.
 //
-// Verification is NOT an onboarding step. It can be submitted at any time and it
-// gates nothing in this dashboard.
+// Verification is NOT an onboarding step — it can be submitted at any time, and
+// nothing here blocks an agency that never does.
+//
+// ⚠ **It does, since 2026-09-15, gate CASH.** An unverified agency cannot carry
+// cash-on-delivery orders (`CodEligibilityService` reads
+// `kyc_details.legit_verified` at checkout), and its payouts can be capped per
+// rolling window (`payoutAllowance`, see earnings.types.ts). Nothing else is
+// refused — working with an unverified counterparty is the other party's
+// judgement to make. `lib/account-standing.ts` is where that distinction lives.
+//
+// ⚠ This record's `status` is NOT the agency account's `status`. The account
+// activates itself on a proved phone and `active` no longer implies anyone
+// approved the business; this is the approval. Two questions, two fields.
 
 import type { GeoAddress } from '@/types/geo.types';
 import type { FileAccess } from '@/types/file.types';

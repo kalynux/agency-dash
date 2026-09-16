@@ -1,10 +1,10 @@
 # Auth API
 
 **Verified against source on 2026-09-08** — the 24-row route table, both refresh error tables,
-the two `/auth` rate-limit buckets, the token TTLs, the 90-day cap and the `AUTH_ROLE_NOT_FOUND`
-`details` claim, against `jovi-mall/src/modules/auth/`,
-`src/api/middlewares/auth.middleware.ts`, `src/core/auth/`, `src/core/error-detail-policy.ts`
-and `src/api/rate-limit/`. Corrections are marked inline with ⚠ and a source citation.
+the two `/auth` rate-limit buckets, the token TTLs and the 90-day cap were re-checked against
+`jovi-mall/src/modules/auth/`, `src/api/middlewares/auth.middleware.ts`, `src/core/auth/` and
+`src/api/rate-limit/`. First verified 2026-09-06 (DOC-PROGRAM § 24–27). Corrections are marked
+inline with ⚠ and a source citation.
 
 ## Base URL
 
@@ -24,7 +24,7 @@ The auth system handles user registration, login, token management, and account 
 >
 > A customer registers **in the WhatsApp / Telegram bot** and signs in **without a password**.
 > Their whole flow — what the storefront must build, and the three things it must *not* — is
-> **customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)**. Everything on this page describes `vendor`,
+> **[customer-auth.md](./customer-auth.md)**. Everything on this page describes `vendor`,
 > `agency` and `agent` unless it says otherwise.
 
 ### Session Strategy: two delivery modes, one session model
@@ -110,7 +110,7 @@ so the same four are accepted by register, login, `auth-me` and `add-role`.
 
 | Role | Has Onboarding? | Signs in with | Notes |
 |------|----------------|---------------|-------|
-| `customer` | ❌ No | **a bot-issued link or code** — see customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository) | `onboarding_step` is always `0` |
+| `customer` | ❌ No | **a bot-issued link or code** — see [customer-auth.md](./customer-auth.md) | `onboarding_step` is always `0` |
 | `vendor` | ✅ Yes — 4 steps (`PUT` per step) | a password | Must complete before accessing dashboard |
 | `agency` | ✅ Yes — init + 4 steps (`PUT` per step) | a password | Must complete before accessing dashboard |
 | `agent` | ✅ Yes — 2 steps (one `PATCH …/step`) | a password | Must complete before accessing dashboard |
@@ -125,7 +125,7 @@ A user can hold **multiple roles** and log in under any of them independently.
 > through a session. A legacy `roles: ["admin"]` row may still exist; it cannot be
 > authenticated as, and auto-role-resolution filters it out rather than picking it.
 >
-> The platform-wide permission matrix in [../README.md](../README.md) still
+> The platform-wide permission matrix in [../README.md](../README.md#permission-matrix) still
 > lists an Admin column — that is the wi-admin operator, reaching these routes over the
 > internal service surface. It is not a session you can mint here.
 
@@ -166,14 +166,20 @@ There is **no** `POST /auth/refresh` or `/auth/verify-code` on this service, and
 `routes/mobile-auth.routes.ts` + `modules/messaging-login/messaging-login.routes.ts`
 + `modules/messaging-login/mobile-messaging-login.routes.ts`.
 
-> ⚠ **Corrected 2026-09-06, re-measured 2026-09-08** (DOC-PROGRAM F-17 class 6). This table
-> listed **21** rows and claimed to be complete, from a list of **four** source files. The fifth,
-> `mobile-messaging-login.routes.ts`, is mounted at `/auth/mobile/magic` in `src/api/index.ts`
-> and holds the two bearer magic routes — so the provenance list being short by one file is
-> exactly why the table was short by two rows. `email-change/confirm` was the third omission,
-> and it lives in `auth.routes.ts`, which the list *did* name.
-> **A completeness claim is only as good as the file list under it, and a reader cannot check a
-> list they are not given.**
+```bash
+# the table above, re-measured — run from jovi-mall/
+npm run dev  # then read the printed route table, or:
+grep -cE '^(GET|POST|PUT|PATCH|DELETE) /api/auth/' ../DOC-PROGRAM/evidence/jovi-routes.txt   # → 24
+```
+
+> ⚠ **Corrected 2026-09-06** (DOC-PROGRAM F-17 class 6). This table listed **21** rows and
+> claimed to be complete, from a list of **four** source files. The fifth,
+> `mobile-messaging-login.routes.ts`, is mounted at `/auth/mobile/magic` in
+> `src/api/index.ts` and holds the two bearer magic routes — so the provenance list being
+> short by one file is exactly why the table was short by two rows. `email-change/confirm`
+> was the third omission, and it lives in `auth.routes.ts`, which the list *did* name.
+> **A completeness claim is only as good as the file list under it, and a reader cannot
+> check a list they are not given.**
 
 > ### ⚠ Customers register in the bot and sign in without a password
 >
@@ -191,7 +197,7 @@ There is **no** `POST /auth/refresh` or `/auth/verify-code` on this service, and
 > other role is unchanged.
 >
 > **The whole customer flow, and what the storefront must not build:**
-> **customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)**. The endpoint-level contract for the two magic
+> **[customer-auth.md](./customer-auth.md)**. The endpoint-level contract for the two magic
 > routes — errors, the Telegram contact-share step, rate limits:
 > **[magic-login.md](./magic-login.md)**.
 
@@ -310,7 +316,8 @@ and applied before authentication:
 > ⚠ **Two corrections here, 2026-09-06.** This said "all **three** routers" — there are **five**
 > mounted under `/auth` (`api/index.ts:96, 97, 98, 107, 122`), the two extra being the magic-login
 > pair. ✅ **The source comment that said the same thing has since been fixed** — `api/index.ts:73`
-> now reads "ALL FIVE" and names all five routers (corrected 2026-09-07).
+> now reads "ALL FIVE" and names all five routers (corrected 2026-09-07). An earlier revision of
+> this note called it "the stale half"; that is no longer true.
 >
 > And the credential list omitted `email-change/confirm` and all four magic routes. The
 > **direction** of the split is what makes that safe rather than dangerous: the session list is
@@ -357,22 +364,22 @@ Creates a new user and a role profile in one step. Sets both auth cookies on suc
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `phone` | string | ✅ | **E.164, with the `+` and country code** (`+2348012345678`). Used as login identifier. Must be unique. Stored canonicalised — formatting you send (spaces, dashes, parentheses) is stripped. See [Contact formats](../README.md). |
+| `phone` | string | ✅ | **E.164, with the `+` and country code** (`+2348012345678`). Used as login identifier. Must be unique. Stored canonicalised — formatting you send (spaces, dashes, parentheses) is stripped. See [Contact formats](../README.md#contact-formats-phone--email). |
 | `password` | string | **conditionally** | Min 6 characters. **Required for every role EXCEPT `customer`** — see the note below. |
 | `name` | string | ✅ | Min 2 characters. Used for all roles. |
 | `role` | string | ❌ | One of: `customer`, `vendor`, `agency`, `agent`. **Defaults to `vendor`** — a body that omits it registers a vendor, so send it explicitly. `admin` is refused. |
-| `email` | string | ❌ | Optional for **every** role, including vendor. Must be unique. Validated and **lowercased** — see [Contact formats](../README.md). |
+| `email` | string | ❌ | Optional for **every** role, including vendor. Must be unique. Validated and **lowercased** — see [Contact formats](../README.md#contact-formats-phone--email). |
 | `business_name` | string | ❌ | For `vendor`. Falls back to `name`. Stored on the vendor's **Store**, not on the vendor profile — see [`role_entity` Shapes](#role_entity-shapes). |
 | `agency_name` | string | ❌ | For `agency`. Falls back to `name`. Stored on the agency's **Magazin**, not on the agency profile. |
 
 > **Customer registration**: only `phone`, `name`, and `role: "customer"` are needed — but a
 > storefront should not call this. Customers register in the bot; see
-> customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository).
+> [customer-auth.md](./customer-auth.md).
 
 > ### ⚠ A customer's `password` is not required, and is IGNORED if sent
 >
 > Customers are passwordless in practice — they sign in through **`/login`** on WhatsApp or
-> Telegram (customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)). The account is created with a
+> Telegram ([customer-auth.md](./customer-auth.md)). The account is created with a
 > system-generated password that is hashed and disclosed to nobody, so `User.password_hash`
 > stays satisfied and the reset flow has something to replace.
 >
@@ -456,7 +463,7 @@ Authenticates and sets role-scoped JWT cookies.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `identifier` | string | ✅ | Phone number **in E.164** (`+2348012345678`) or email address. Whichever it is, it must be valid — see [Contact formats](../README.md). |
+| `identifier` | string | ✅ | Phone number **in E.164** (`+2348012345678`) or email address. Whichever it is, it must be valid — see [Contact formats](../README.md#contact-formats-phone--email). |
 | `password` | string | ✅ | Account password |
 | `role` | string | ❌ | Required if the user has multiple roles. |
 
@@ -504,6 +511,10 @@ Sets cookies `access_token` and `refresh_token`.
 | `AUTH_VENDOR_SUSPENDED` | `403` | The vendor **profile** is `inactive` — a different axis from the account above, and its own code because the remedy differs |
 | `VALIDATION_ERROR` | `400` | `identifier` is not a well-formed E.164 phone or email address, or `password` is empty |
 
+> **A customer who has never run a password reset always gets `AUTH_INVALID_CREDENTIALS`
+> here**, correctly — they hold a system-generated password nobody knows. Send them to
+> [the bot flow](./customer-auth.md) instead of showing them a password field.
+
 > ### ⚠ `AUTH_ROLE_NOT_FOUND` carries no `details` — corrected 2026-09-08
 >
 > Both this table and [`GET /auth/auth-me/:role`](#get-authauth-merole) said *"`details.role`
@@ -520,10 +531,6 @@ Sets cookies `access_token` and `refresh_token`.
 >
 > The `409 AUTH_ROLE_ALREADY_EXISTS` and `404 AUTH_PROFILE_NOT_FOUND` rows further down **are**
 > unaffected and do carry `details.role` — `conflict` and `not_found` are not allowlisted.
-
-> **A customer who has never run a password reset always gets `AUTH_INVALID_CREDENTIALS`
-> here**, correctly — they hold a system-generated password nobody knows. Send them to
-> the bot flow (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository) instead of showing them a password field.
 
 ---
 
@@ -943,6 +950,9 @@ None. The `userId` and `role` are read from the JWT.
 
 ## POST `/auth/verify-email`
 
+> Frontend hand-off for this change:
+> [FRONTEND-CHANGELOG-email-verification.md](../FRONTEND-CHANGELOG-email-verification.md).
+
 Confirms the email address. **This is what the emailed page calls.**
 
 **Auth**: Public — the token arrives in a mail client, routinely a different browser and often a
@@ -967,6 +977,13 @@ real thing, so a near-miss should be told the token is *invalid*, not that it is
 
 The token is valid for **24 hours** and is single-use. It marks `email_verified` on the role
 entity the verification was requested for, and **signs nobody in**.
+
+⚠ **It no longer ACTIVATES a vendor, and that changed on 2026-09-15.** Verifying an email used to
+promote a vendor from `pending_verification` to `active` — for the vendor role only, which is how
+the three business roles ended up with three different answers to "when is an account active?".
+Activation is now one rule for all three; see [Account activation](#account-activation) below.
+Clicking the link still verifies the address and nothing else. **No vendor was demoted** — those
+already `active` from an email verification stay active.
 
 ### Errors
 
@@ -1014,6 +1031,51 @@ does not bind to a single role. See [../connections/README.md](../connections/RE
 
 ---
 
+## Account activation
+
+**Owner decision, 2026-09-15.** Two questions used to be answered by one field, and they are now
+answered by two:
+
+| | Question | Who answers it | Where it lives |
+|---|---|---|---|
+| **`status`** | May this account operate? | the account holder | `role_entity.status` |
+| **KYC** | Has a human vetted this business? | an administrator | `kyc_details.status` / `kyc.status` |
+
+**An account activates itself.** A vendor, agency or agent moves from `pending_verification` to
+`active` as soon as it has **a verified phone number and a name** — nothing else, and nobody else.
+Registration creates every role entity at `pending_verification`; the promotion happens on the call
+that proves the phone (`POST /api/me/phone/verify/confirm`, or a confirmed contact change).
+
+⚠ **`status: "active"` therefore no longer means "an administrator approved this business".**
+Anything you were deriving from that — a trust badge, a warning banner, a gate — must read the KYC
+verdict instead. Vendor and agency expose `kyc_details.status`; an agent exposes `kyc.status`.
+
+⚠ **This is a real behaviour change for each role, in a different direction:**
+
+- **Vendor** — *lost* a path. Email verification used to activate; it no longer does. A vendor who
+  verifies their email and stops stays `pending_verification`.
+- **Agency** — *gained* one. Administrative approval used to be the only way to become `active`;
+  now the agency activates itself, and approval writes only the verdict.
+- **Agent** — *gained* one. Nothing promoted an agent at all: every agent sat at
+  `pending_verification` until an administrator moved them by hand.
+
+⚠ **Only `pending_verification` is ever promoted.** An `inactive` or `suspended` account that
+proves a phone stays exactly where an administrator put it — proving a number cannot lift a
+suspension.
+
+⚠ **Activating an agent does not make them dispatchable.** `status` is only the third of five
+ordered eligibility rules: a platform ban and unverified KYC refuse them before it is consulted,
+and an active contract plus Tracking Allow are required after it. Holding COD cash is likewise
+gated on KYC, never on `status`.
+
+**What being unverified actually costs**, as of this change: **cash**. An agency that no
+administrator has verified cannot carry cash-on-delivery orders, and an unverified owner's payout
+can be capped (see [admin/payout-requests.md](../admin/payout-requests.md)). Everything else is
+open by design — the platform's position is that working with an unverified counterparty is a
+business judgement for the vendor or agency to make, not a refusal for the platform to issue.
+
+---
+
 ## Post-Login / Registration Routing
 
 After a successful login, registration, or `auth-me`, read `role_entity.onboarding_step` from the response:
@@ -1036,12 +1098,12 @@ Onboarding is **field-presence driven**: every profile write recalculates `onboa
 > the agent has a single `PATCH …/onboarding/step` endpoint. The old
 > `PATCH /api/vendor/onboarding/step` and `PATCH /api/agency/onboarding/step` were removed and
 > no longer exist. This page is a summary — the field-by-field contracts are in
-> vendor/onboarding.md (`backend/jovi-mall/api-doc/vendor/onboarding.md` — not mirrored in this repository), [agency/onboarding.md](../agency/onboarding.md)
-> and agent/onboarding.md (`backend/jovi-mall/api-doc/agent/onboarding.md` — not mirrored in this repository).
+> [vendor/onboarding.md](../vendor/onboarding.md), [agency/onboarding.md](../agency/onboarding.md)
+> and [agent/onboarding.md](../agent/onboarding.md).
 
 ### Vendor Onboarding — four `PUT` steps
 
-**Auth**: Required (`vendor` role). Full contract: vendor/onboarding.md (`backend/jovi-mall/api-doc/vendor/onboarding.md` — not mirrored in this repository).
+**Auth**: Required (`vendor` role). Full contract: [vendor/onboarding.md](../vendor/onboarding.md).
 
 | Step | Value | Label | Endpoint | Required? |
 |------|-------|-------|----------|-----------|
@@ -1056,7 +1118,7 @@ Reads: `GET /api/vendor/onboarding/status` (rich: `steps[]`, `progressPercent`, 
 
 > **Step 2 no longer selects an agency.** It is a plain step-advance. A default delivery agency
 > requires the agency's consent and is set automatically when the first connection request is
-> approved — see vendor/agency-connections.md (`backend/jovi-mall/api-doc/vendor/agency-connections.md` — not mirrored in this repository). To browse
+> approved — see [vendor/agency-connections.md](../vendor/agency-connections.md). To browse
 > agencies, use `GET /api/vendor/delivery-agencies` or
 > `GET /api/vendor/agency-connections/browse`; there is no `GET /api/agency` listing endpoint.
 
@@ -1103,7 +1165,7 @@ Read: `GET /api/agency/onboarding/status`. Same `version` concurrency field, rai
 ### Agent Onboarding — one `PATCH`, two steps
 
 **Base**: `PATCH /api/agent/onboarding/step` — the one role that still uses the single-endpoint
-shape. **Auth**: Required (`agent` role). Full contract: agent/onboarding.md (`backend/jovi-mall/api-doc/agent/onboarding.md` — not mirrored in this repository).
+shape. **Auth**: Required (`agent` role). Full contract: [agent/onboarding.md](../agent/onboarding.md).
 
 | Step | Value | Label | Body |
 |------|-------|-------|------|
@@ -1311,7 +1373,7 @@ STOREFRONT_URL=https://shop.example.com  # Builds the password-reset link, the m
                                          #   back to the code alone
 
 WA_BOT_NUMBER=237600000000               # Bot deep links. Unset ⇒ the deep link is null;
-TELEGRAM_BOT_NAME=JoviMallBot            #   the flow still works for anyone who knows the bot
+TELEGRAM_BOT_NAME=WiMallBot              #   the flow still works for anyone who knows the bot
 ```
 
 ---
@@ -1343,7 +1405,7 @@ TELEGRAM_BOT_NAME=JoviMallBot            #   the flow still works for anyone who
 ### Flow B — Customer registration + sign-in (no password, no form)
 
 The storefront calls **nothing** to register a customer. Full contract:
-customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository).
+[customer-auth.md](./customer-auth.md).
 
 ```
 1. Storefront "Create account"
@@ -1499,7 +1561,7 @@ Once `now − auth_time` exceeds **90 days**, every credential path refuses:
 
 ```
 401  { "success": false,
-       "requestId": "req_9f3c1a",
+"requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
        "error": { "code": "AUTH_SESSION_CAP_REACHED",
                   "statusCode": 401,
                   "category": "authentication",
@@ -1540,7 +1602,7 @@ refresh — a `token_version` compared there would cost no extra query.
 
 ## Related
 
-- **customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)** — the customer's whole flow: registration in the
+- **[customer-auth.md](./customer-auth.md)** — the customer's whole flow: registration in the
   bot, passwordless sign-in, and the three things a storefront must **not** build
 - [magic-login.md](./magic-login.md) — the `/login` and `/reset-password` bot commands, the
   two `/auth/magic/*` endpoints, the Telegram contact step, and the n8n mapping

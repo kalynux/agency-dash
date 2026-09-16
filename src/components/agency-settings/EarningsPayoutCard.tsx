@@ -1,20 +1,40 @@
 import { formatCurrency, formatDate } from '@/lib/format';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
-import { Clock, Info, Loader2, Lock, RefreshCw, Send, Wallet } from 'lucide-react';
+import {
+  Clock,
+  Gauge,
+  Info,
+  Loader2,
+  Lock,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Wallet,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { InfoHint } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useEarnings } from '@/hooks/useEarnings';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { cn } from '@/lib/utils';
-import type { EarningsPayoutStatus } from '@/types/earnings.types';
+import {
+  hasPayoutAllowance,
+  projectPayoutCapRefusal,
+  type EarningsPayoutStatus,
+  type PayoutAllowance,
+  type PayoutCapRefusal,
+} from '@/types/earnings.types';
 
 // Mirrors the backend EARNINGS_CONFIG — see api-doc/agency/earnings.md.
 const MIN_PAYOUT = 10_000;
 const AUTO_PAYOUT_THRESHOLD = 2_000_000;
+
+/** Account → Verification, the one remedy that lifts the allowance for good. */
+const VERIFICATION_PATH = '/dashboard/account/verification';
 
 /** Colour per payout status; the label is keyed off the same enum in `account`. */
 const STATUS_CLASS: Record<EarningsPayoutStatus, string> = {
@@ -45,12 +65,20 @@ function BalanceStat({
   value,
   currency,
   hint,
+  footnote,
 }: {
   icon: React.ElementType;
   label: string;
   value: number;
   currency: string;
   hint: string;
+  /**
+   * A qualifier on the figure above, shown on EVERY breakpoint — unlike `hint`,
+   * which folds into the ⓘ on a phone. Used for the payout allowance, where the
+   * figure alone is misleading: `available` is not what a withdrawal will pay
+   * out while a cap applies, and a phone is where that surprise lands hardest.
+   */
+  footnote?: React.ReactNode;
 }) {
   const { t } = useTranslation(['account', 'common']);
   return (
@@ -72,6 +100,7 @@ function BalanceStat({
         </div>
       </div>
       <p className="mt-2 whitespace-nowrap text-lg font-bold sm:text-2xl">{formatCurrency(value, currency)}</p>
+      {footnote}
       <p className="text-xs text-muted-foreground mt-1.5 max-md:hidden">{hint}</p>
     </div>
   );
@@ -88,7 +117,7 @@ const BALANCE_ROW = 'flex flex-wrap gap-3 sm:gap-4';
 
 export function EarningsPayoutCard() {
   const { t } = useTranslation(['account', 'common']);
-  const { balance, latestPayout, isLoading, loadError, isRequesting, requestPayout, refetch } = useEarnings();
+  const { balance, latestPayout, isLoading, loadError, isRequesting, capRefusal, requestPayout, refetch } = useEarnings();
   const { session } = useOnboarding();
   const navigate = useNavigate();
 
@@ -97,6 +126,37 @@ export function EarningsPayoutCard() {
   const hasPendingRequest = latestPayout?.status === 'pending';
   const available = balance?.available ?? 0;
 
+  /**
+   * ⛔ **`null` here means NO LIMIT, never a limit of zero.** It is `null` for a
+   * verified agency and on any deployment with the feature off — the default
+   * today — so this branch is not taken at all for most accounts. Everything
+   * below reads the object, never `remaining ?? 0`.
+   */
+  const allowance = hasPayoutAllowance(balance) ? balance.payoutAllowance : null;
+
+  /**
+   * What pressing Withdraw would actually pay out. The request takes
+   * `min(available, remaining)` and leaves the rest behind, so naming
+   * `available` on the button would promise a figure the server will not honour.
+   */
+  const payoutAmount = allowance ? Math.min(available, allowance.remaining) : available;
+
+  /**
+   * The allowance refusing a payout — either as the server just did (pinned by
+   * the hook, because retrying cannot help) or as it *would*, worked out from
+   * the allowance on screen. Same shape either way, so one panel renders both
+   * and the copy can't drift between before and after the press.
+   *
+   * ⚠ **The projection decides WHETHER there is a block; the server's refusal
+   * only supplies the detail.** Written the other way round, a pinned 409 would
+   * outlive the thing it described — the window rolls, or the agency is
+   * verified, `payoutAllowance` comes back clear, and the card would still be
+   * refusing a payout the server would now accept.
+   */
+  const projectedCap = projectPayoutCapRefusal(balance, MIN_PAYOUT);
+  const capBlock: PayoutCapRefusal | null = projectedCap && (capRefusal ?? projectedCap);
+
+  /** The one-liner beside the button. Everything the allowance has to say is too long for it. */
   const disabledReason = !hasPayoutMethod
     ? t('earnings.blocked.noMethod')
     : hasPendingRequest
@@ -106,6 +166,22 @@ export function EarningsPayoutCard() {
         : available < MIN_PAYOUT
           ? t('earnings.blocked.belowMinimum', { amount: formatCurrency(MIN_PAYOUT, currency) })
           : null;
+
+  /**
+   * The allowance is the thing standing in the way — but only once nothing
+   * earlier is.
+   *
+   * ⚠ Checked LAST deliberately. When `available` is zero or under the platform
+   * minimum, *that* is the true and actionable thing to say; the cap is not what
+   * is stopping them, and blaming it would send an agency off to get verified
+   * over a balance that is simply too small.
+   *
+   * Kept out of `disabledReason` because this refusal does not fit on one line:
+   * it has to name the cap, the window, the reset and both remedies, which is
+   * the panel's job. So it disables the button and the panel explains it —
+   * rather than a terse line here and the same thing again below.
+   */
+  const blockedByAllowance = !disabledReason && !!capBlock;
 
   return (
     <Card className={sectionSurfaceClass}>
@@ -153,6 +229,18 @@ export function EarningsPayoutCard() {
                 value={balance.available}
                 currency={balance.currency}
                 hint={t('earnings.balance.availableHint')}
+                // `remaining` belongs HERE, beside `available` — without it the
+                // agency requests a payout, receives a fraction of their
+                // balance, and nothing on the screen explains why.
+                footnote={
+                  allowance && (
+                    <p className="mt-1 text-xs font-medium text-gold-700 dark:text-gold-400">
+                      {t('earnings.allowance.remainingInline', {
+                        remaining: formatCurrency(allowance.remaining, balance.currency),
+                      })}
+                    </p>
+                  )
+                }
               />
               <BalanceStat
                 icon={Clock}
@@ -187,6 +275,14 @@ export function EarningsPayoutCard() {
               </p>
             </div>
 
+            {allowance && (
+              <AllowancePanel
+                allowance={allowance}
+                currency={balance.currency}
+                refusal={blockedByAllowance ? capBlock : null}
+              />
+            )}
+
             {latestPayout && (
               <div className="rounded-lg border p-4 flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -218,6 +314,9 @@ export function EarningsPayoutCard() {
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {/* Empty when the allowance is the blocker — the panel above has
+                    already said it at length, and a terse restatement here would
+                    read as a second, separate problem. */}
                 {disabledReason}
                 <InfoHint className="md:hidden" label={t('earnings.autoPayoutLabel')}>
                   {t('earnings.autoPayout', {
@@ -227,15 +326,18 @@ export function EarningsPayoutCard() {
               </p>
               <Button
                 onClick={() => requestPayout()}
-                disabled={!!disabledReason || isRequesting}
+                disabled={!!disabledReason || blockedByAllowance || isRequesting}
                 className="gap-2"
               >
                 {isRequesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {isRequesting
                   ? t('earnings.requesting')
-                  : disabledReason
+                  : disabledReason || blockedByAllowance
                     ? t('earnings.requestWithdrawal')
-                    : t('earnings.withdraw', { amount: formatCurrency(available, currency) })}
+                    // `payoutAmount`, not `available`: a capped request takes
+                    // `min(available, remaining)`, so naming the balance here
+                    // would promise a figure the server will not honour.
+                    : t('earnings.withdraw', { amount: formatCurrency(payoutAmount, currency) })}
               </Button>
             </div>
 
@@ -252,6 +354,104 @@ export function EarningsPayoutCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The payout allowance: what is left of it, and — when it is refusing a payout —
+ * which of the two refusals this is and what the agency can actually do.
+ *
+ * Rendered only when an allowance exists at all, which is *not* the common case:
+ * it is absent for a verified agency and on any deployment with the feature off.
+ *
+ * ⛔ **There is no retry control here, on purpose.** Neither refusal is
+ * transient — pressing Withdraw again refuses identically. The two remedies are
+ * getting verified (permanent) and waiting for the window to roll, so those are
+ * the only two things this panel offers.
+ */
+function AllowancePanel({
+  allowance,
+  currency,
+  refusal,
+}: {
+  allowance: PayoutAllowance;
+  currency: string;
+  /** Set when the allowance is actually blocking a payout right now. */
+  refusal: PayoutCapRefusal | null;
+}) {
+  const { t } = useTranslation(['account', 'common']);
+
+  // Guarded against a zero cap so a misconfigured deployment can't divide by it.
+  const usedPercent = allowance.cap > 0
+    ? Math.min(100, Math.round((allowance.used / allowance.cap) * 100))
+    : 0;
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg border p-4 space-y-3',
+        refusal
+          ? 'border-gold-500/50 bg-gold-500/5'
+          : 'bg-muted/50',
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <Gauge className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-600 dark:text-gold-400" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-medium">{t('earnings.allowance.title')}</p>
+          <p className="text-xs text-muted-foreground">
+            {t('earnings.allowance.explainer', {
+              cap: formatCurrency(allowance.cap, currency),
+              windowDays: allowance.windowDays,
+            })}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Progress value={usedPercent} className="h-1.5" />
+        <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs">
+          <span className="text-muted-foreground">
+            {t('earnings.allowance.used', {
+              used: formatCurrency(allowance.used, currency),
+              cap: formatCurrency(allowance.cap, currency),
+            })}
+          </span>
+          <span className="font-medium">
+            {t('earnings.allowance.remaining', {
+              remaining: formatCurrency(allowance.remaining, currency),
+            })}
+          </span>
+        </div>
+      </div>
+
+      {/* ⚠ `resetsAt` is when the FIRST tranche frees up, never when the whole
+          cap returns — and the window is rolling, so there is no month boundary
+          to count down to. The copy says "some of it", deliberately. */}
+      {allowance.resetsAt && (
+        <p className="text-xs text-muted-foreground">
+          {t('earnings.allowance.resetsAt', { date: formatDate(allowance.resetsAt) })}
+        </p>
+      )}
+
+      {refusal && (
+        <p className="text-sm">
+          {refusal.reason === 'remainder_below_minimum'
+            ? t('earnings.allowance.refusal.remainderBelowMinimum', {
+                remaining: formatCurrency(refusal.remaining, currency),
+                minAmount: formatCurrency(refusal.minAmount ?? MIN_PAYOUT, currency),
+              })
+            : t('earnings.allowance.refusal.allowanceSpent')}
+        </p>
+      )}
+
+      <Button asChild variant={refusal ? 'default' : 'outline'} size="sm" className="gap-2">
+        <Link to={VERIFICATION_PATH}>
+          <ShieldCheck className="h-4 w-4" />
+          {t('earnings.allowance.verifyCta')}
+        </Link>
+      </Button>
+    </div>
   );
 }
 

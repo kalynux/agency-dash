@@ -397,6 +397,7 @@
     "EARNINGS_PAYOUT_METHOD_MISSING": "Ajoutez un moyen de versement avant de demander un retrait.",
     "EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE": "Aucun solde disponible à verser.",
     "EARNINGS_PAYOUT_BELOW_MINIMUM": "Votre solde disponible est inférieur au minimum de 10 000 XAF.",
+    "EARNINGS_PAYOUT_UNVERIFIED_CAP_REACHED": "Vous avez atteint le plafond de retrait des comptes non vérifiés. Faites vérifier votre agence pour le supprimer, ou attendez qu'il se libère — réessayer n'y changera rien.",
     "EARNINGS_PAYOUT_REQUEST_NOT_FOUND": "Cette demande de versement est introuvable.",
     "EARNINGS_PAYOUT_REQUEST_NOT_PENDING": "Cette demande de versement a déjà été traitée.",
     "COD_NOT_AVAILABLE_FOR_DIGITAL": "Le paiement à la livraison n'est pas disponible pour les articles numériques.",

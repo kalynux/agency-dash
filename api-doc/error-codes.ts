@@ -1,85 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// COPIED FROM BACKEND SOURCE — do not edit here.
-//
-//   Source : jovi-mall/src/core/error-codes.ts
-//   Copied : 2026-08-24  (PLAN-3)
-//   Re-synced : 2026-09-14 — 640 -> 657 (6 KYC_*, 8 MAIL_* + 1 CONFIG_*, 3 BOT_*)
-//   Codes  : 657
-//
-// This file is a verbatim copy of the backend registry, not an api-doc page.
-// `tools/doc-drift.js` reports it as an "orphan"; that is expected.
-//
-// HOW THE NEXT AUDIT DETECTS DRIFT IN ONE LINE:
-//
-//   grep -cE "^\s+[A-Z0-9_]+:\s*'" api-doc/error-codes.ts        # must equal the count above
-//   grep -cE "^\s+[A-Z0-9_]+:\s*'" <backend>/src/core/error-codes.ts
-//
-// If the two numbers differ, re-copy the file and update the header.
-//
-// ── What changed in this copy (2026-09-14) ───────────────────────────────────
-// 17 codes ADDED, none removed. Three groups:
-//
-//   KYC_SUBJECT_NOT_FOUND · KYC_SLOT_UNKNOWN · KYC_LOCKED · KYC_SLOT_FULL
-//   KYC_DOCUMENT_NOT_FOUND · KYC_FILE_REQUIRED
-//       — agency identity verification, `/api/agency/kyc`, new to this repo.
-//         See agency/identity-verification.md. All six are reachable from the
-//         Account -> Verification tab and are mapped in en/fr `errors.json`.
-//         ⚠ KYC_LOCKED is the one that matters: it is a NORMAL outcome, not a
-//         fault — a reviewer froze the record while the tab was open, and the
-//         answer is to re-read, not to retry.
-//
-//   MAIL_PROVIDER_NOT_CONFIGURED · MAIL_PROVIDER_QUOTA_EXCEEDED
-//   MAIL_PROVIDER_RATE_LIMITED · MAIL_PROVIDER_UNAVAILABLE
-//   MAIL_PROVIDER_AUTH_FAILED · MAIL_SEND_REJECTED · MAIL_ALL_PROVIDERS_FAILED
-//   CONFIG_INVALID_MAIL_PROVIDER
-//       — the mail layer gained per-provider failure codes with a fallback
-//         chain. An agency meets these wherever a write SENDS an email rather
-//         than just storing something: the email half of `/api/me/email`
-//         (me/contact-change.md) and a verification resend. Every one of them
-//         means "your change was not delivered", never "your change was lost",
-//         so the copy has to say retry — not re-enter.
-//
-//   BOT_PRODUCT_LIST_EXPIRED · BOT_ACTION_TOKEN_UNKNOWN · BOT_PRODUCT_NOT_IN_LIST
-//       — WhatsApp/Telegram bot internals. Out of scope for this dashboard and
-//         skipped by `scripts/i18n-audit.mjs`'s `BOT_` prefix filter.
-//
-// ── Previous copy (2026-09-08): 623 -> 640 ───────────────────────────────────
-// 15 NEGOTIATION_* (customer/vendor price bargaining, out of scope) and 2 BOT_*.
-//
-// ── The 2026-08-24 copy: 547 -> 623 ──────────────────────────────────────────
-// 65 added, 9 removed — the same delta vendor-dash had, from the same stale
-// snapshot.
-//
-// The 9 REMOVALS were the per-channel messaging-link codes:
-//   AUTH_PHONE_REQUIRED_FOR_WA · AUTH_WA_ALREADY_VERIFIED · AUTH_WA_PHONE_ID_REQUIRED
-//   TELEGRAM_LINK_FAILED · TELEGRAM_LINK_NOT_FOUND · TELEGRAM_NOT_LINKED
-//   WHATSAPP_LINK_FAILED · WHATSAPP_NOT_LINKED · WHATSAPP_ROLE_NOT_SUPPORTED
-// Same cutover that killed the SEVEN dead calls in src/services/channels.service.ts.
-// Their replacements are the CONNECTION_* codes below. See MIGRATION-2026-08.md § 1.
-//
-// The additions this dashboard is most likely to meet:
-//   CONNECTION_CODE_INVALID · _EXPIRED · _ATTEMPTS_EXCEEDED · _GENERATION_FAILED
-//       — the unified messaging-connection flow (connections/README.md)
-//   STORAGE_INVOICE_NOT_FOUND · STORAGE_INVOICE_NOT_OPEN
-//       — the four storage-statement routes (agency/storage-invoices.md)
-//   INVENTORY_INSUFFICIENT_STOCK · INVENTORY_TRANSFER_SAME_LOCATION
-//   INVENTORY_DEPOT_CHANGE_HOLDS_STOCK
-//       — the physical-shelf surface (agency/inventory.md § 6)
-//   REVIEW_ALREADY_EXISTS · REVIEW_NOT_ELIGIBLE · REVIEW_NOT_FOUND · REVIEW_NOT_PENDING
-//   REVIEW_ROLE_NOT_ALLOWED · REVIEW_SUBJECT_NOT_FOUND · REVIEW_SUBJECT_NOT_REVIEWABLE
-//       — the cross-role review model (reviews.md)
-//   AGENT_TRUST_OVERRIDE_OUT_OF_BOUNDS
-//       — an administrator's pinned trust score, which outranks the computed one
-//
-// ⚠ SHIPMENT_STATUS_CONFLICT was already here and is easy to miss: BOTH shipment
-// write paths are now a from-status compare-and-set, so a 409 is an ordinary
-// outcome rather than an error. See agency/shipments.md.
-//
-// ⚠ This registry is jovi-mall's ONLY. geo-tracker has its own, smaller set —
-// see geo-tracker/errors/README.md. The nine-value `category` taxonomy is the
-// one thing the two share.
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
  * Central Error Code Registry
  *
@@ -848,6 +766,34 @@ export const ERROR_CODES = Object.freeze({
     // chosen during onboarding and immutable afterwards (tax/shipping policy).
     PROFILE_COUNTRY_IMMUTABLE: 'PROFILE_COUNTRY_IMMUTABLE',
 
+    // ── PHONE VERIFICATION (WhatsApp OTP) ─────────────────────────────────────
+    // The dashboard roles — vendor, agency, agent — and administrators never
+    // register through the bot, so they hold no WhatsApp CONNECTION and the
+    // stronger connection-proof in ContactChangeService cannot reach them. These
+    // are the OTP path's refusals. Each is raised at exactly ONE status, so the
+    // test:errors census cannot see two categories for one code.
+    //
+    // No usable number on the account to send a code to.
+    PHONE_VERIFICATION_NO_TARGET: 'PHONE_VERIFICATION_NO_TARGET',
+    // Wrong code. Carries `attemptsLeft` — deliberately: it tells the holder of
+    // the real code they mistyped, and tells an attacker only what they could
+    // already count themselves.
+    PHONE_VERIFICATION_CODE_INVALID: 'PHONE_VERIFICATION_CODE_INVALID',
+    // Past its TTL, or no verification in progress at all. Distinct from INVALID
+    // because the remedy differs — request a new code rather than retype this one
+    // — which is the same argument CONNECTION_CODE_EXPIRED makes.
+    PHONE_VERIFICATION_CODE_EXPIRED: 'PHONE_VERIFICATION_CODE_EXPIRED',
+    // The attempt limit is spent. THIS is the security of a six-digit code, not
+    // its length, so the refusal is explicit rather than folded into INVALID.
+    PHONE_VERIFICATION_TOO_MANY_ATTEMPTS: 'PHONE_VERIFICATION_TOO_MANY_ATTEMPTS',
+    // Resend cooldown. Account-scoped, because a number-scoped one bounds nothing
+    // when the attacker chooses the number.
+    PHONE_VERIFICATION_RESEND_TOO_SOON: 'PHONE_VERIFICATION_RESEND_TOO_SOON',
+    // WhatsApp refused the send. Outside the 24-hour window that usually means the
+    // AUTHENTICATION template is not approved on the WABA — which is the current
+    // state of this deployment, measured 2026-09-14.
+    PHONE_VERIFICATION_DELIVERY_FAILED: 'PHONE_VERIFICATION_DELIVERY_FAILED',
+
     // ── MAIL ──────────────────────────────────────────────────────────────────
     MAIL_TEMPLATE_NOT_FOUND: 'MAIL_TEMPLATE_NOT_FOUND',
     // The five below are the CLASSIFICATION `ChainedMailProvider` fails over on,
@@ -1372,62 +1318,6 @@ export const ERROR_CODES = Object.freeze({
      */
     CONTACT_CHANGE_PHONE_UNPROVEN: 'CONTACT_CHANGE_PHONE_UNPROVEN',
 
-    // ── PHONE VERIFICATION (WhatsApp OTP, `/api/me/phone/verify/*`) ───────────
-    //
-    // The SECOND proof of a phone number, and not an alternative to the one above.
-    // The dashboard roles — vendor, agency, agent — and administrators never register
-    // through the bot, so they hold no WhatsApp CONNECTION, `CONTACT_CHANGE_PHONE_UNPROVEN`
-    // is the only answer the connection proof can give them, and `phone_verified` could
-    // never become true. These are the OTP path's refusals. Each is raised at exactly ONE
-    // status. See `me/phone-verification.md`.
-
-    /** No usable number on the account to send a code to. Set one with `PATCH /api/me/phone`. */
-    PHONE_VERIFICATION_NO_TARGET: 'PHONE_VERIFICATION_NO_TARGET',
-
-    /**
-     * Wrong code. Carries `details.attemptsLeft` — deliberately: it tells the holder of
-     * the real code that they mistyped and how much room is left, and tells an attacker
-     * only what they could already count themselves. The secret is the code, not the
-     * counter.
-     */
-    PHONE_VERIFICATION_CODE_INVALID: 'PHONE_VERIFICATION_CODE_INVALID',
-
-    /**
-     * Past its TTL, or no verification in progress at all.
-     *
-     * Distinct from `CODE_INVALID` because the remedy differs — request a new code rather
-     * than retype this one — which is the same argument `CONNECTION_CODE_EXPIRED` makes.
-     * Collapsing the two sends people hunting for a typo that is not there.
-     */
-    PHONE_VERIFICATION_CODE_EXPIRED: 'PHONE_VERIFICATION_CODE_EXPIRED',
-
-    /**
-     * The attempt limit is spent, and the code is destroyed with it.
-     *
-     * THIS is the security of a six-digit code, not its length, so the refusal is explicit
-     * rather than folded into `CODE_INVALID`.
-     */
-    PHONE_VERIFICATION_TOO_MANY_ATTEMPTS: 'PHONE_VERIFICATION_TOO_MANY_ATTEMPTS',
-
-    /**
-     * Resend cooldown; `details.retryAfterSeconds` says how long. Account-scoped, because
-     * a number-scoped gate bounds nothing when the caller chooses the number.
-     */
-    PHONE_VERIFICATION_RESEND_TOO_SOON: 'PHONE_VERIFICATION_RESEND_TOO_SOON',
-
-    /**
-     * WhatsApp refused the send.
-     *
-     * ⛔ Outside Meta's 24-hour service window this is the CURRENT state of the deployment
-     * (measured 2026-09-14): only an approved AUTHENTICATION template may be sent there and
-     * this WABA holds zero. A user who has not messaged the platform in the last 24 hours
-     * therefore gets this every time, and the way out is for them to message the bot once —
-     * which opens the window. Said out loud rather than swallowed, because a verification
-     * code that silently never arrives is indistinguishable, to the person waiting, from a
-     * platform ignoring them.
-     */
-    PHONE_VERIFICATION_DELIVERY_FAILED: 'PHONE_VERIFICATION_DELIVERY_FAILED',
-
     // ── IDENTITY VERIFICATION (`/api/{vendor,agency,agent}/kyc`) ─────────────
     //
     // ⚠ Five codes, and NONE of them is "your submission is incomplete". That is not an
@@ -1747,6 +1637,7 @@ export const ERROR_CODES = Object.freeze({
     EARNINGS_PAYOUT_METHOD_MISSING: 'EARNINGS_PAYOUT_METHOD_MISSING',
     EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE: 'EARNINGS_PAYOUT_NO_AVAILABLE_BALANCE',
     EARNINGS_PAYOUT_BELOW_MINIMUM: 'EARNINGS_PAYOUT_BELOW_MINIMUM',
+    EARNINGS_PAYOUT_UNVERIFIED_CAP_REACHED: 'EARNINGS_PAYOUT_UNVERIFIED_CAP_REACHED',
     EARNINGS_PAYOUT_REQUEST_NOT_FOUND: 'EARNINGS_PAYOUT_REQUEST_NOT_FOUND',
     EARNINGS_PAYOUT_REQUEST_NOT_PENDING: 'EARNINGS_PAYOUT_REQUEST_NOT_PENDING',
 

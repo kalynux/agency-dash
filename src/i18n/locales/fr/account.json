@@ -207,6 +207,12 @@
       "confirmBody": "Votre dossier est gelé pendant l'examen. Vous pourrez toujours consulter tout ce que vous avez envoyé.",
       "confirmIncomplete": "Une partie de ce que demandent les vérificateurs manque encore — ils vous diront quoi, et vous pourrez corriger puis renvoyer.",
       "confirmAction": "Envoyer pour examen"
+    },
+    "unlocks": {
+      "title": "Ce que débloque la vérification",
+      "cod": "Les commandes en paiement à la livraison. Tant qu'un administrateur ne vous a pas vérifié, le paiement à la livraison n'est pas proposé aux clients sur vos livraisons — quelle que soit votre politique.",
+      "payouts": "Les retraits sans plafond. Une agence non vérifiée peut être limitée à un montant fixe par période glissante ; la vérification supprime ce plafond.",
+      "otherwiseOpen": "Rien d'autre n'est bloqué. Vous pouvez prendre des expéditions, recruter des agents et travailler avec des vendeurs tout à fait normalement pendant l'examen."
     }
   },
   "security": {
@@ -344,6 +350,19 @@
       "pendingRequest": "Vous avez déjà une demande de versement en cours.",
       "noBalance": "Aucun solde disponible à retirer pour l'instant.",
       "belowMinimum": "Le versement minimum est de {{amount}}."
+    },
+    "allowance": {
+      "title": "Plafond de retrait",
+      "explainer": "Tant qu'un administrateur n'a pas vérifié votre agence, vous pouvez retirer jusqu'à {{cap}} tous les {{windowDays}} jours. La vérification supprime ce plafond.",
+      "used": "{{used}} sur {{cap}} utilisés",
+      "remaining": "{{remaining}} restants",
+      "remainingInline": "dont {{remaining}} dans votre plafond de retrait",
+      "resetsAt": "Une partie de votre plafond se libère le {{date}} — la fenêtre est glissante, il revient donc progressivement et non en une seule fois.",
+      "refusal": {
+        "allowanceSpent": "Vous avez utilisé tout votre plafond de retrait pour cette période. Faites vérifier votre agence pour le supprimer, ou attendez qu'il se libère — réessayer n'y changera rien.",
+        "remainderBelowMinimum": "Il ne reste que {{remaining}} de votre plafond pour cette période, soit moins que le versement minimum de {{minAmount}}. L'argent est bien là ; c'est le plafond qui le rend inaccessible. Faites vérifier votre agence pour le supprimer, ou attendez qu'il se libère — réessayer n'y changera rien."
+      },
+      "verifyCta": "Faire vérifier mon agence"
     }
   },
   "contact": {
@@ -395,8 +414,15 @@
         "verifiedToast": "Votre numéro de téléphone est vérifié.",
         "changedToast": "Votre téléphone de connexion a été modifié et vérifié.",
         "deliveryFailed": "WhatsApp a refusé l'envoi du code. Envoyez d'abord un message quelconque à notre bot depuis ce numéro — cela ouvre la fenêtre de 24 heures pendant laquelle nous pouvons répondre — puis demandez un nouveau code.",
-        "connectedAlready": "Ce numéro est déjà connecté sur WhatsApp ?"
+        "connectedAlready": "Ce numéro est déjà connecté sur WhatsApp ?",
+        "activatesAccount": "La saisie de ce code active également votre compte — c'est la seule chose qui reste en attente."
       }
     }
+  },
+  "activation": {
+    "title": "Votre compte n'est pas encore actif",
+    "body": "Vérifiez votre numéro de téléphone pour terminer son activation — nous envoyons un code à six chiffres sur WhatsApp, cela prend une minute. Vous pouvez continuer à utiliser le tableau de bord entre-temps.",
+    "bodyPhoneVerified": "Votre téléphone est vérifié mais le compte n'a pas été activé. Contactez le support si cela ne se règle pas rapidement.",
+    "cta": "Vérifier mon téléphone"
   }
 }

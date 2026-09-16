@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useForm, Controller, type DefaultValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, ShieldAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { MediaPicker } from '@/components/features/MediaPicker';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { InfoHint } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
+import { useAccountStanding } from '@/hooks/useAccountStanding';
 import { buildPoliciesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import type { AgencyPolicies } from '@/types/api';
 import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
@@ -203,6 +205,11 @@ export function PoliciesSettings() {
   const { t } = useTranslation(['settings', 'common']);
   const { session, updateAgencyProfile, isSubmitting } = useOnboarding();
   const roleEntity = session?.role_entity;
+  // ⛔ Not `status === 'active'`: an agency activates itself now, so that answers
+  // "may it operate", not "has anyone vetted it". See lib/account-standing.ts —
+  // the COD toggle below is the one place in this dashboard where the difference
+  // is the difference between a setting that works and one that silently doesn't.
+  const { kycVerified } = useAccountStanding();
   const [apiError, setApiError] = useState<string | null>(null);
   // Rebuilt on a language switch so validation messages follow the UI.
   const schema = useMemo(() => buildPoliciesSchema(t), [t]);
@@ -428,6 +435,31 @@ export function PoliciesSettings() {
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               )} />
             </div>
+            {/* ⚠ Cash is the one thing an unverified agency genuinely cannot do.
+                `CodEligibilityService` requires `kyc_details.legit_verified` at
+                checkout, so this toggle has no effect until an administrator
+                verifies the agency — COD orders simply never arrive, with
+                nothing on this screen to explain the silence. That is worth
+                saying; it is also the ONLY refusal that follows from being
+                unverified, so it is said here and nowhere else.
+
+                Left switchable on purpose: the setting is real and takes effect
+                the moment the verdict lands. Disabling the control would make
+                the agency come back and set it a second time. */}
+            {codEnabled && !kycVerified && (
+              <div className="flex items-start gap-2 rounded-lg border border-gold-400/50 bg-gold-50/70 p-3 dark:border-gold-500/25 dark:bg-gold-500/10">
+                <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-700 dark:text-gold-400" />
+                <p className="text-xs text-muted-foreground">
+                  {t('policies.cod.unverified')}{' '}
+                  <Link
+                    to="/dashboard/account/verification"
+                    className="font-medium text-foreground underline underline-offset-2"
+                  >
+                    {t('policies.cod.unverifiedCta')}
+                  </Link>
+                </p>
+              </div>
+            )}
             {codEnabled && (
               <div className="space-y-1.5">
                 <FieldLabel name="cod.max_order_amount">{t('policies.cod.maxAmount')}</FieldLabel>

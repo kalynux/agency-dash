@@ -15,18 +15,31 @@
 //    registration. `registration_number` / `transport_license_id` are a
 //    different pair of fields on a different endpoint (`PATCH /agency/profile`).
 //
-// Verification is NOT an onboarding step: it can be submitted at any time and it
-// gates nothing in this dashboard.
+// Verification is NOT an onboarding step: it can be submitted at any time, and
+// an agency that never does is not locked out of the dashboard.
+//
+// ⚠ **What it does gate is CASH, and only cash** (since 2026-09-15): COD orders
+// are refused at checkout for an unverified agency, and payouts can be capped
+// per rolling window. That is what `unlocks` below says, and it is the reason
+// this tab is worth finding — before this change the screen could not name a
+// single consequence. Everything else stays open on purpose, so nothing here
+// may read as "your account is blocked".
+//
+// ⚠ The verdict here is NOT the agency account's `status`. An agency activates
+// itself by proving a phone number, so `active` no longer means anyone approved
+// the business — see lib/account-standing.ts.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
+  Banknote,
   CheckCircle2,
   Circle,
   Clock,
   FileCheck2,
+  Gauge,
   Loader2,
   Lock,
   ShieldCheck,
@@ -346,6 +359,39 @@ export function VerificationSettings() {
                   : 'verification.status.lockedUnderReview',
               )}
             </p>
+          )}
+
+          {/*
+            What being unverified actually costs — shown while the verdict is
+            anything but `verified`, including `under_review`, because someone
+            waiting is exactly who wants to know what they are waiting for.
+
+            ⚠ **Two items, and there are only two.** Cash-on-delivery and the
+            payout allowance are the whole list; everything else an agency does
+            is open whether or not anybody has vetted it, and the platform's
+            position is that trading with an unverified counterparty is the
+            other party's judgement, not a platform refusal. So this reads as
+            "here is what verification unlocks", never as "your account is
+            blocked" — which would be false, and would also be the version that
+            makes an agency stop working while they wait.
+          */}
+          {phase !== 'verified' && (
+            <div className="rounded-lg border bg-muted/40 p-3">
+              <p className="text-xs font-medium">{t('verification.unlocks.title')}</p>
+              <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                <li className="flex gap-2">
+                  <Banknote className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {t('verification.unlocks.cod')}
+                </li>
+                <li className="flex gap-2">
+                  <Gauge className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {t('verification.unlocks.payouts')}
+                </li>
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('verification.unlocks.otherwiseOpen')}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

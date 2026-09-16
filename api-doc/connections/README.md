@@ -70,8 +70,8 @@ Every channel, connected or not, in one call — enough to render the whole scre
         "connectedAt": null,
         "howToConnect": {
           "command": "/connect",
-          "botHandle": "@JoviMallBot",
-          "deepLink": "https://t.me/JoviMallBot"
+          "botHandle": "@WiMallBot",
+          "deepLink": "https://t.me/WiMallBot"
         }
       }
     ]
@@ -184,6 +184,19 @@ for a different number, the new one wins. There is no "disconnect first" step.
 | 404 | `MESSAGING_CONNECTION_NOT_FOUND` | Nothing connected on that channel |
 | 400 | `VALIDATION_ERROR` | `:channel` is not a known channel |
 
+> [!NOTE]
+> **The bot surface serves this verb too, with ONE extra refusal.** Since MCP parity step 7,
+> `DELETE /api/internal/bot/connections/:channel` answers
+> **`409 BOT_CONNECTION_ACTIVE_CHANNEL`** when the channel named is the one the chat request
+> arrived on. A `channel_connections` row is step 1 of the identity ladder, so cutting the
+> current one leaves that surface unable to resolve the sender it is mid-conversation with —
+> and reconnecting needs a session the customer reaches from the storefront, not from the chat
+> that has just lost its binding. **This endpoint has no such rule and needs none**: a browser
+> caller already holds the session it would be protecting.
+>
+> The read is served there too, dropping `howToConnect` and adding `isCurrentChannel`.
+> Contract: `api-doc/n8n/bot-surface.md` § 16.
+
 ---
 
 ## Connecting is not the same as enabling
@@ -233,8 +246,8 @@ Four other things changed with them:
 
 ## Related
 
-- Per-role notification preferences: `../vendor/notifications.md` (`backend/jovi-mall/api-doc/vendor/notifications.md` — not mirrored in this repository),
+- Per-role notification preferences: [`../vendor/notifications.md`](../vendor/notifications.md),
   `../agency/notifications.md`, `../agent/notifications.md`, `../customer/notifications.md`
-- Channel setup walkthrough: `../vendor/notification-channels.md` (`backend/jovi-mall/api-doc/vendor/notification-channels.md` — not mirrored in this repository)
+- Channel setup walkthrough: [`../vendor/notification-channels.md`](../vendor/notification-channels.md)
 - The bot webhooks themselves (not frontend endpoints):
   [`../whatsapp/README.md`](../whatsapp/README.md), [`../telegram/README.md`](../telegram/README.md)

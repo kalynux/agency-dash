@@ -48,7 +48,25 @@
  * ⚠ A contact change does **not** sign other devices out. Only a password change
  * does. The copy says so, because a security screen implies otherwise.
  *
- * See api-doc/me/contact-change.md and api-doc/me/phone-verification.md.
+ * ─── This card ACTIVATES the account (2026-09-15) ─────────────────────────────
+ *
+ * `POST /api/me/phone/verify/confirm` is not only a contact-detail formality any
+ * more: it is the call that promotes an agency from `pending_verification` to
+ * `active`, and it is the ONLY thing that does. Administrative approval used to
+ * be the only route; it no longer touches `status` at all.
+ *
+ * Two consequences live in `confirmCode` below: the copy says what the code is
+ * worth while the account is still pending, and the session is refreshed after a
+ * successful confirm so the Overview activation banner stops asking for
+ * something that has already happened.
+ *
+ * ⛔ **Do not conflate this with verification.** An administrator's KYC verdict
+ * is a different question with a different answer (`kyc_details.status`), it
+ * gates cash rather than operation, and it lives on Account → Verification. See
+ * lib/account-standing.ts.
+ *
+ * See api-doc/me/contact-change.md, api-doc/me/phone-verification.md and
+ * api-doc/auth/README.md § Account activation.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -76,6 +94,8 @@ import { agencyProfileService } from '@/services/agency-profile.service';
 import { contactService } from '@/services/contact.service';
 import { phoneVerificationService } from '@/services/phone-verification.service';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
+import { useAccountStanding } from '@/hooks/useAccountStanding';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -111,6 +131,9 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export function ContactChangeCard() {
   const { t } = useTranslation(['account', 'common']);
   const defaultCountry = useDefaultPhoneCountry();
+  // What proving the phone is worth right now — see the note beside the hint below.
+  const { awaitingActivation } = useAccountStanding();
+  const { refreshSession } = useOnboarding();
 
   const [state, setState] = useState<ContactState | null>(null);
   /** `GET /me/phone/verify` — what is verifiable, and whether a code is live. */
@@ -313,6 +336,13 @@ export function ContactChangeCard() {
       resetCode();
       setCooldownEndsAt(0);
       await load();
+      // ⚠ This is also the call that ACTIVATES the account — the server promotes
+      // `pending_verification` to `active` on a proved phone. `load()` re-reads
+      // the contact endpoints, which know nothing about `role_entity.status`, so
+      // without this the activation banner on Overview would keep telling
+      // someone to do the thing they just did. Best-effort by design: the
+      // promotion has happened server-side either way.
+      void refreshSession();
       // Two different things to say, and the server says which: the identifier
       // moved, or the number already on the account was proved in place.
       toast.success(
@@ -509,6 +539,22 @@ export function ContactChangeCard() {
                         ? t('contact.phone.verify.hintChange')
                         : t('contact.phone.verify.hintCurrent')}
                     </p>
+                    {/* Since 2026-09-15 this code is not merely a contact-detail
+                        formality: proving the phone is what promotes an agency
+                        from `pending_verification` to `active`, and it is the
+                        only thing that does. Worth saying on the one screen that
+                        can do it — someone sent here by the activation banner
+                        arrives wanting to know they are in the right place.
+
+                        ⚠ Only for `pending_verification`. An `inactive` or
+                        `suspended` account is not promoted by a proved phone,
+                        so promising activation there would be a lie — which is
+                        exactly the distinction `awaitingActivation` carries. */}
+                    {awaitingActivation && (
+                      <p className="mt-1 text-xs font-medium text-gold-700 dark:text-gold-400">
+                        {t('contact.phone.verify.activatesAccount')}
+                      </p>
+                    )}
                   </div>
 
                   {codeLive ? (

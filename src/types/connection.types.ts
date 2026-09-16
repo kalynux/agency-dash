@@ -35,7 +35,14 @@ export type MessagingChannel = 'whatsapp' | 'telegram';
 export interface ConnectionInstructions {
   /** What to send the bot. `/connect` on both channels today. */
   command: string;
-  /** e.g. `@JoviMallBot`. */
+  /**
+   * e.g. `@WiMallBot`.
+   *
+   * ⚠ Server-supplied, and the only handle to render — it comes from the
+   * backend's `TELEGRAM_BOT_NAME` / `WA_BOT_NUMBER`, which have both been
+   * renamed at least once. A handle hardcoded client-side would keep sending
+   * people to a bot that no longer answers.
+   */
   botHandle: string;
   /**
    * Opens the chat. **May be `null`** when the bot is not configured

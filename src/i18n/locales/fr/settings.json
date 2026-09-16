@@ -184,7 +184,9 @@
       "short": "Acceptez-vous le COD",
       "toggle": "Accepter les commandes payées à la livraison",
       "maxAmount": "Montant COD maximum par commande (XAF)",
-      "maxAmountPlaceholder": "Sans plafond"
+      "maxAmountPlaceholder": "Sans plafond",
+      "unverified": "Les commandes en paiement à la livraison ne vous parviendront qu'une fois votre agence vérifiée par un administrateur — d'ici là ce réglage est enregistré mais sans effet, et le paiement à la livraison n'est pas proposé aux clients sur vos livraisons.",
+      "unverifiedCta": "Faire vérifier mon agence"
     },
     "returns": {
       "title": "Politique de retour",
