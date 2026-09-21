@@ -255,7 +255,7 @@ export function Step4Policies() {
             stepKey={4}
             viewingStepOverride={4}
             ctaSlot={
-                <div className="px-6 pb-6 pt-2">
+                <div className="md:px-6 md:pb-6 md:pt-2">
                     <div className="flex gap-3">
                         <Button
                             type="button"
@@ -283,7 +283,7 @@ export function Step4Policies() {
             }
         >
             {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                         <ShieldCheck className="w-4 h-4 text-primary" />
@@ -296,7 +296,7 @@ export function Step4Policies() {
             {apiError && (
                 <div
                     role="alert"
-                    className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30"
+                    className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30"
                 >
                     {apiError}
                 </div>
@@ -305,7 +305,7 @@ export function Step4Policies() {
             <form
                 id="step4-policies-form"
                 onSubmit={handleSubmit(handleSave)}
-                className="px-6 pt-5 pb-6 space-y-8"
+                className="md:px-6 pt-5 pb-6 space-y-8"
                 noValidate
             >
                 {/* ── Pricing ── */}

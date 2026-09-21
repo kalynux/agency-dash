@@ -28,6 +28,7 @@ import { ArrowRight, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAccountStanding } from '@/hooks/useAccountStanding';
+import { cn } from '@/lib/utils';
 
 /** Account → Security, where `ContactChangeCard` runs the WhatsApp code flow. */
 const PHONE_VERIFICATION_PATH = '/dashboard/account/security';
@@ -46,7 +47,16 @@ export function ActivationNotice() {
           <p className="text-sm font-medium text-gold-800 dark:text-gold-300">
             {t('activation.title')}
           </p>
-          <p className="text-sm text-muted-foreground">
+          {/* On a phone the explanation is hidden: squeezed beside the button it
+              ran to a dozen lines, and the title plus "Verify my phone" already
+              say what to do. The phone-already-verified case keeps it — there
+              is no button there, so the sentence is all the card has to say. */}
+          <p
+            className={cn(
+              'text-sm text-muted-foreground',
+              !phoneVerified && 'max-md:hidden',
+            )}
+          >
             {/* A phone that is already verified but an account still pending is
                 not a state the backend produces — it activates on that very
                 call. Saying "verify your phone" to someone who just did would

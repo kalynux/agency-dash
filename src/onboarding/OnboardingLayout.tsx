@@ -198,7 +198,13 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.22, ease: 'easeOut' }}
                         >
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                            {/* The card is desktop-only. On a phone it was one more
+                                border and 24px of padding a side around sections
+                                that already have their own, and the fields were
+                                what paid for it — so there the step sits straight
+                                on the page, and the steps drop their `px-6` below
+                                `md` to match. */}
+                            <div className="md:bg-card md:rounded-2xl md:border md:border-border md:shadow-sm md:overflow-hidden">
                                 {children}
                             </div>
                         </motion.div>

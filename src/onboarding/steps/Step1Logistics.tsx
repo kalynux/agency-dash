@@ -152,7 +152,7 @@ export function Step1Logistics() {
     return (
         <OnboardingLayout stepKey={1} viewingStepOverride={1}
             ctaSlot={
-                <div className="px-6 pb-6 pt-2">
+                <div className="md:px-6 md:pb-6 md:pt-2">
                     <Button type="submit" form="step1-logistics-form" disabled={isSubmitting} className="w-full h-12 rounded-xl font-semibold gap-2">
                         {isSubmitting
                             ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('actions.saving')}</>
@@ -161,7 +161,7 @@ export function Step1Logistics() {
                 </div>
             }
         >
-            <div className="px-6 pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Globe className="w-4 h-4 text-primary" /></div>
                     <h1 className="text-lg font-bold text-foreground">{t('logistics.title')}</h1>
@@ -169,9 +169,9 @@ export function Step1Logistics() {
                 <p className="text-sm text-muted-foreground">{t('logistics.description')}</p>
             </div>
 
-            {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
+            {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
-            <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="px-6 pt-5 pb-6 space-y-6" noValidate>
+            <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="md:px-6 pt-5 pb-6 space-y-6" noValidate>
                 {/* Coverage Regions */}
                 <section>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('logistics.coverageTitle')} <span className="text-destructive">*</span></p>

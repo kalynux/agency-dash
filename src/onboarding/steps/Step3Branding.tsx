@@ -96,7 +96,7 @@ export function Step3Branding() {
     return (
         <OnboardingLayout stepKey={3} viewingStepOverride={3}
             ctaSlot={
-                <div className="px-6 pb-6 pt-2 space-y-2">
+                <div className="md:px-6 md:pb-6 md:pt-2 space-y-2">
                     <div className="flex gap-3">
                         <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting || isSkipping} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
                             <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
@@ -114,7 +114,7 @@ export function Step3Branding() {
                 </div>
             }
         >
-            <div className="px-6 pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><ImageIcon className="w-4 h-4 text-primary" /></div>
@@ -127,9 +127,9 @@ export function Step3Branding() {
                 <p className="text-sm text-muted-foreground">{t('branding.description')}</p>
             </div>
 
-            {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
+            {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
-            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="px-6 pt-5 pb-6 space-y-4" noValidate>
+            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="md:px-6 pt-5 pb-6 space-y-4" noValidate>
                 <div className="rounded-xl border-2 border-border overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/60">
                         <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />

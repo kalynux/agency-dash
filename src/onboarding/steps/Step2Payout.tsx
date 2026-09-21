@@ -56,7 +56,7 @@ export function Step2Payout() {
     return (
         <OnboardingLayout stepKey={2} viewingStepOverride={2}
             ctaSlot={
-                <div className="px-6 pb-6 pt-2 flex gap-3">
+                <div className="md:px-6 md:pb-6 md:pt-2 flex gap-3">
                     <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
                         <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
                     </Button>
@@ -68,7 +68,7 @@ export function Step2Payout() {
                 </div>
             }
         >
-            <div className="px-6 pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="w-4 h-4 text-primary" /></div>
                     <h1 className="text-lg font-bold text-foreground">{t('payout.title')}</h1>
@@ -76,11 +76,11 @@ export function Step2Payout() {
                 <p className="text-sm text-muted-foreground">{t('payout.description')}</p>
             </div>
 
-            {apiError && <div role="alert" className="mx-6 mt-4 p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
+            {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
             {/* The same editor Account → Payout runs, so a method is added the one
                 way everywhere and onboarding can't drift from settings. */}
-            <div className="px-6 pt-5 pb-6 space-y-4">
+            <div className="md:px-6 pt-5 pb-6 space-y-4">
                 <PayoutMethodsEditor value={entries} onChange={setEntries} />
                 <p className="text-xs text-muted-foreground text-center">{t('payout.footnote')}</p>
             </div>
