@@ -70,6 +70,18 @@ export interface AuthStrategy {
    */
   endSession(): Promise<void>;
 
+  /**
+   * Whether `PATCH /me/password` hands this transport its replacement credential.
+   *
+   * The change revokes every token minted under the old password — including
+   * the pair the request itself rode on — and re-issues a pair **as cookies
+   * only**; the body carries no `tokens` (api-doc/me/password.md). So a cookie
+   * client stays signed in, and a bearer client is refused with
+   * `AUTH_PASSWORD_CHANGED` on its next request unless it signs in again with
+   * the new password. `authService.changePassword` reads this to know which.
+   */
+  readonly reissuedOnPasswordChange: boolean;
+
   readonly paths: AuthPaths;
 }
 
@@ -120,6 +132,9 @@ export const cookieAuthStrategy: AuthStrategy = {
       // best-effort
     }
   },
+
+  // The replacement pair arrives in `Set-Cookie` on the password change itself.
+  reissuedOnPasswordChange: true,
 
   paths: {
     login: '/auth/login',
@@ -208,6 +223,10 @@ export const bearerAuthStrategy: AuthStrategy = {
     // pair IS the logout (changelog §3.6). Nothing can throw here.
     await tokenStore.clear();
   },
+
+  // ⚠ The replacement pair is cookies-only, which this transport ignores — so a
+  // password change revokes the pair this device holds and hands nothing back.
+  reissuedOnPasswordChange: false,
 
   paths: {
     login: '/auth/mobile/login',

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, replaceCredential } from './api';
 import { authStrategy } from '@/platform/auth/strategy';
 import { startRefreshScheduler, stopRefreshScheduler } from '@/platform/auth/refreshScheduler';
 import { unregisterPushDevice } from '@/lib/pushDevice';
@@ -191,13 +191,42 @@ export const authService = {
     /**
      * PATCH /me/password — shared, role-agnostic; the password lives on the
      * User record, so one call covers every role. 403 USER_INVALID_PASSWORD
-     * when `oldPassword` is wrong.
+     * when `oldPassword` is wrong. Everyone else holding a token for this
+     * account is signed out with `AUTH_PASSWORD_CHANGED`.
      *
-     * The caller keeps their session: the response carries a fresh credential.
-     * Everyone else holding a token for this account is signed out with
-     * `AUTH_PASSWORD_CHANGED`.
+     * **Keeping THIS device signed in depends on the transport.** The change
+     * revokes the pair the request rode on and re-issues one as cookies only:
+     *
+     *   - cookie — the replacement is already installed when this resolves;
+     *   - bearer — nothing came back, so the old pair is dead. We sign in again
+     *     with the new password (`identifier` is the account's sign-in phone or
+     *     email) as soon as the 200 lands, inside `replaceCredential` so a poll
+     *     refused in between is replayed instead of signing the user out.
+     *
+     * Resolves `signedIn: false` — rather than throwing — when the password DID
+     * change but that re-sign-in failed: the caller must still treat the change
+     * as done (the new password is live), and send the user to sign in.
+     *
+     * See api-doc/me/password.md ("A BEARER client is signed out by its own
+     * password change").
      */
-    changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-        return api.patch<{ success: boolean; message: string }>('/me/password', { oldPassword, newPassword });
+    async changePassword(
+        oldPassword: string,
+        newPassword: string,
+        identifier: string,
+    ): Promise<{ signedIn: boolean }> {
+        await api.patch<{ success: boolean; message: string }>('/me/password', {
+            oldPassword,
+            newPassword,
+        });
+        if (authStrategy.reissuedOnPasswordChange) return { signedIn: true };
+
+        try {
+            await replaceCredential(() => authService.login({ identifier, password: newPassword }));
+            return { signedIn: true };
+        } catch (err) {
+            console.error('[auth] password changed, but signing back in failed', err);
+            return { signedIn: false };
+        }
     },
 };

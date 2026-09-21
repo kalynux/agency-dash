@@ -49,6 +49,54 @@ let refreshBlockedBy: ApiError | null = null;
 /** Fallback when a 429 carries no `Retry-After` — the buckets are per-minute. */
 const DEFAULT_REFRESH_BACKOFF_SECONDS = 60;
 
+// ─── Credential replacement ───────────────────────────────────────────────────
+//
+// A bearer client's own password change revokes the pair it holds and hands no
+// replacement back (the new pair is cookies-only — api-doc/me/password.md), so it
+// signs in again with the new password straight away. Between the change landing
+// and the new pair being stored, anything still riding the OLD pair — a poll, a
+// request already in flight — is refused with `AUTH_PASSWORD_CHANGED`. That code
+// is terminal, and acting on it would sign the user out of the very session they
+// are in the middle of replacing.
+//
+// So a terminal refusal of a credential this client has since REPLACED is not a
+// verdict on the one it holds now: it is replayed once, with the current one. A
+// refusal of the credential still in hand signs out exactly as before. On cookies
+// `authHeaders()` is always empty, so the two always compare equal and nothing
+// here ever engages.
+
+let credentialSwap: Promise<unknown> | null = null;
+
+/**
+ * Run `work` — which installs a new credential — while holding back any sign-out
+ * caused by a request that carried the old one. Resolves or rejects with `work`.
+ *
+ * Start it only AFTER the call that revokes the old credential has answered:
+ * a refusal of that call itself would otherwise wait on the swap it is part of.
+ */
+export async function replaceCredential<T>(work: () => Promise<T>): Promise<T> {
+    const run = work();
+    credentialSwap = run;
+    try {
+        return await run;
+    } finally {
+        if (credentialSwap === run) credentialSwap = null;
+    }
+}
+
+function sameHeaders(a: Record<string, string>, b: Record<string, string>): boolean {
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);
+}
+
+/** Whether the credential a refused request carried is no longer the one we hold. */
+async function credentialReplacedSince(sent: Record<string, string>): Promise<boolean> {
+    // A swap still in flight decides what "the one we hold" is. Its failure is
+    // its caller's to report; here it only means nothing was replaced.
+    if (credentialSwap) await credentialSwap.catch(() => undefined);
+    return !sameHeaders(sent, await authStrategy.authHeaders());
+}
+
 // ─── Auth error classification (P1.4) ─────────────────────────────────────────
 
 /** What the request path should do about a failed response. */
@@ -325,6 +373,11 @@ async function request<T>(
         if (action === 'refresh' && isRetry) action = 'signOut';
 
         if (action === 'signOut') {
+            // Refused a credential we have since replaced — see "Credential
+            // replacement" above. Once only: a replay refused again is a verdict.
+            if (!isRetry && (await credentialReplacedSince(authHeaders))) {
+                return request<T>(path, init, true, kind);
+            }
             flushQueue(err);
             await hardLogout(err);
             throw err;

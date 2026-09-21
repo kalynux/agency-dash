@@ -19,31 +19,24 @@
  * main Wi-Mall site, not here — the same boundary `/forgot-password` lives on —
  * so this card's job ends at "we sent it".
  *
- * **Phone** has two proofs, and the difference decides this whole half of the
- * card:
+ * **Phone** is proved by a **six-digit WhatsApp code** (`/api/me/phone/verify/*`)
+ * — the one proof every dashboard and the storefront use (2026-09-21). The older
+ * connection proof (`POST /api/me/phone/confirm`) serves the bot surface only,
+ * so this card no longer offers it.
  *
- *   * a **WhatsApp connection on the number being claimed** — stronger, because
- *     a message actually arrived FROM that number, and it is the customer path;
- *   * a **six-digit code we send** (`/api/me/phone/verify/*`) — weaker, and the
- *     only one an agency can complete.
- *
- * An agency never registers through the bot, so it holds no connection,
- * `CONTACT_CHANGE_PHONE_UNPROVEN` is the only answer the connection confirm can
- * give it, and `phone_verified` could never become true at all. So the code is
- * what this card leads with, and the connection confirm survives as a one-line
- * shortcut for the account that happens to hold one.
+ * ⚠ `PATCH /api/me/phone` sends no code by itself, on purpose — so starting a
+ * change here requests the code straight away, as the next call.
  *
  * ⚠ **The number being verified is chosen server-side** — the pending one if a
  * change is in flight, otherwise the current one. `completesPendingChange` says
  * which, and it is the field the copy branches on: entering the code either
  * *moves* the sign-in identifier or merely proves the one already there.
  *
- * ⛔ Outside Meta's 24-hour service window the send currently fails on this
- * deployment (`PHONE_VERIFICATION_DELIVERY_FAILED`, measured 2026-09-14): only
- * an approved template may be sent there and the WABA holds none. The way out is
- * for the user to message the bot once, which opens the window — and which also
- * creates the connection the stronger proof wants, so one instruction serves
- * both paths.
+ * ⛔ **`PHONE_VERIFICATION_DELIVERY_FAILED` is a temporary failure, shown with a
+ * Resend button and — if it happens again — a way to reach support.** It is
+ * NEVER an instruction to message the WhatsApp bot: the backend has already
+ * tried free text and the approved template by then, and until 2026-09-21 that
+ * advice actively made delivery fail. See phone-verification.types.ts.
  *
  * ⚠ A contact change does **not** sign other devices out. Only a password change
  * does. The copy says so, because a security screen implies otherwise.
@@ -74,10 +67,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
+  AlertTriangle,
   AtSign,
   CheckCircle2,
   Loader2,
-  MessageCircle,
   Phone,
   ShieldCheck,
   X,
@@ -99,10 +92,7 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
 import { ApiError } from '@/types/api';
-import {
-  CONTACT_CHANGE_PHONE_UNPROVEN,
-  type ContactState,
-} from '@/types/contact.types';
+import type { ContactState } from '@/types/contact.types';
 import {
   CODE_DESTROYING_ERRORS,
   PHONE_VERIFICATION_CODE_INVALID,
@@ -146,10 +136,8 @@ export function ContactChangeCard() {
   /** Which field is being edited, if any. Only one at a time. */
   const [editing, setEditing] = useState<Channel | null>(null);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState<Channel | 'confirm' | 'send' | 'code' | null>(null);
+  const [busy, setBusy] = useState<Channel | 'send' | 'code' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** True once the phone confirm has answered `PHONE_UNPROVEN` — routes to Connect. */
-  const [needsConnection, setNeedsConnection] = useState(false);
 
   // ─── OTP state ──────────────────────────────────────────────────────────────
   /** The last code we sent, if this session sent one. */
@@ -158,8 +146,12 @@ export function ContactChangeCard() {
   /** `details.attemptsLeft` off the last wrong code. */
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
-  /** WhatsApp refused the send — the one refusal with a real remedy behind it. */
-  const [deliveryFailed, setDeliveryFailed] = useState(false);
+  /**
+   * Consecutive `PHONE_VERIFICATION_DELIVERY_FAILED` answers. The first is shown
+   * as "try again in a minute"; from the second on, support is offered too — a
+   * refusal on every route is a platform or Meta-side fault only they can read.
+   */
+  const [deliveryFailures, setDeliveryFailures] = useState(0);
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
@@ -214,14 +206,13 @@ export function ContactChangeCard() {
     setCode('');
     setAttemptsLeft(null);
     setCodeError(null);
-    setDeliveryFailed(false);
+    setDeliveryFailures(0);
   };
 
   const startEdit = (channel: Channel) => {
     setEditing(channel);
     setDraft('');
     setError(null);
-    setNeedsConnection(false);
   };
 
   const request = async (channel: Channel) => {
@@ -230,19 +221,30 @@ export function ContactChangeCard() {
     try {
       if (channel === 'email') await contactService.changeEmail({ email: draft.trim() });
       else await contactService.changePhone({ phone: draft.trim() });
-      setEditing(null);
-      setDraft('');
-      // The target just moved, so any code on screen was minted for the old one.
-      if (channel === 'phone') resetCode();
-      await load();
-      toast.success(
-        channel === 'email' ? t('contact.email.requested') : t('contact.phone.requested'),
-      );
     } catch (err) {
       setError(getApiErrorMessage(err));
-    } finally {
       setBusy(null);
+      return;
     }
+
+    setEditing(null);
+    setDraft('');
+    if (channel === 'email') {
+      await load();
+      setBusy(null);
+      toast.success(t('contact.email.requested'));
+      return;
+    }
+
+    // The target just moved, so any code on screen was minted for the old one.
+    resetCode();
+    await load();
+    setBusy(null);
+    // `PATCH /me/phone` deliberately sends nothing — sending there would start
+    // the resend cooldown and this call would then be refused with 429. So the
+    // code is requested here, as the next step, and it goes to the NEW number.
+    // `sendCode` reports its own success and failure.
+    await sendCode();
   };
 
   const cancel = async (channel: Channel) => {
@@ -251,34 +253,10 @@ export function ContactChangeCard() {
     try {
       if (channel === 'email') await contactService.cancelEmailChange();
       else await contactService.cancelPhoneChange();
-      setNeedsConnection(false);
       if (channel === 'phone') resetCode();
       await load();
       toast.success(t('contact.cancelled'));
     } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const confirmPhone = async () => {
-    setBusy('confirm');
-    setError(null);
-    setNeedsConnection(false);
-    try {
-      await contactService.confirmPhone();
-      resetCode();
-      await load();
-      toast.success(t('contact.phone.confirmed'));
-    } catch (err) {
-      // Not a failure — the next step, and for an agency it is the expected
-      // answer rather than an edge case. Say what would make it work instead of
-      // printing a sentence the user cannot act on from here.
-      if (err instanceof ApiError && err.code === CONTACT_CHANGE_PHONE_UNPROVEN) {
-        setNeedsConnection(true);
-        return;
-      }
       setError(getApiErrorMessage(err));
     } finally {
       setBusy(null);
@@ -292,30 +270,33 @@ export function ContactChangeCard() {
   const sendCode = async () => {
     setBusy('send');
     setCodeError(null);
-    setDeliveryFailed(false);
     setAttemptsLeft(null);
-    setNeedsConnection(false);
     try {
       const result = await phoneVerificationService.request();
       setSent(result);
       setCode('');
+      setDeliveryFailures(0);
       setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
       setNow(Date.now());
       toast.success(t('contact.phone.verify.sentToast', { phone: result.phoneMasked }));
     } catch (err) {
-      if (err instanceof ApiError) {
-        // The 502 with a remedy behind it: outside Meta's 24-hour window this
-        // deployment has no approved template to send, and the fix is the user
-        // messaging the bot once — which the notice below says.
-        if (err.code === PHONE_VERIFICATION_DELIVERY_FAILED) setDeliveryFailed(true);
-        // Honour the server's own countdown over our default.
-        if (
-          err.code === PHONE_VERIFICATION_RESEND_TOO_SOON &&
-          err.retryAfterSeconds !== undefined
-        ) {
-          setCooldownEndsAt(Date.now() + err.retryAfterSeconds * 1000);
-          setNow(Date.now());
-        }
+      // WhatsApp refused every route. Its own notice below says so and carries
+      // the support link, so it does not also go through `codeError`. No
+      // cooldown is set: a failed send is not stored, so the server has not
+      // started one, and Resend is worth offering straight away.
+      if (err instanceof ApiError && err.code === PHONE_VERIFICATION_DELIVERY_FAILED) {
+        setDeliveryFailures((n) => n + 1);
+        return;
+      }
+      setDeliveryFailures(0);
+      // Honour the server's own countdown over our default.
+      if (
+        err instanceof ApiError &&
+        err.code === PHONE_VERIFICATION_RESEND_TOO_SOON &&
+        err.retryAfterSeconds !== undefined
+      ) {
+        setCooldownEndsAt(Date.now() + err.retryAfterSeconds * 1000);
+        setNow(Date.now());
       }
       setCodeError(getApiErrorMessage(err));
     } finally {
@@ -522,9 +503,10 @@ export function ContactChangeCard() {
               )}
 
               {/* ── Proving the number ─────────────────────────────────────
-                  The code, not the connection, because an agency holds no
-                  connection by construction. Which number this proves is the
-                  server's choice, and `completesChange` is what it chose. */}
+                  The WhatsApp code is the only proof a dashboard uses, for a
+                  change and for the current number alike. Which number this
+                  proves is the server's choice, and `completesChange` is what
+                  it chose. */}
               {showVerify && (
                 <div className="space-y-3 rounded-lg border p-3">
                   <div>
@@ -627,53 +609,37 @@ export function ContactChangeCard() {
                       {busy === 'send' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       {cooldownLeft > 0
                         ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
-                        : t('contact.phone.verify.send')}
+                        : deliveryFailures > 0
+                          ? t('common:actions.retry')
+                          : t('contact.phone.verify.send')}
                     </Button>
                   )}
 
                   {codeError && <p className="text-xs text-destructive">{codeError}</p>}
 
-                  {/* The 502 that is the current state of this deployment for
-                      anyone outside the 24-hour window. Messaging the bot opens
-                      that window — and creates the connection the shortcut below
-                      wants — so one instruction serves both ways out. */}
-                  {(deliveryFailed || needsConnection) && (
-                    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  {/* WhatsApp refused every route — free text and the approved
+                      template. A temporary failure: the Resend button above is
+                      the primary action, support the secondary once it has
+                      happened twice. ⛔ Never "message our bot first": the
+                      backend has already done everything that could help. */}
+                  {deliveryFailures > 0 && (
+                    <div
+                      role="alert"
+                      className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                    >
                       <p className="flex items-start gap-1.5">
-                        <MessageCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                        {deliveryFailed
-                          ? t('contact.phone.verify.deliveryFailed')
-                          : t('contact.phone.unproven')}
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                        {t('contact.phone.verify.deliveryFailed')}
                       </p>
-                      <Link
-                        to="/dashboard/settings/notifications"
-                        className="inline-block font-medium underline"
-                      >
-                        {t('contact.phone.connectLink')}
-                      </Link>
-                    </div>
-                  )}
-
-                  {/* The stronger proof, kept as a shortcut rather than the way
-                      through: it needs a WhatsApp connection on the number, which
-                      an agency only has if it is also a customer. `NOT_PENDING`
-                      is all it could answer with no change in flight, so it is
-                      offered only when there is one. */}
-                  {state.pendingPhone && (
-                    <div className="border-t pt-2">
-                      <p className="text-xs text-muted-foreground">
-                        {t('contact.phone.verify.connectedAlready')}
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => void confirmPhone()}
-                        disabled={busy === 'confirm'}
-                        className="h-auto gap-1.5 p-0 text-xs"
-                      >
-                        {busy === 'confirm' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        {t('contact.phone.confirm')}
-                      </Button>
+                      {deliveryFailures > 1 && (
+                        <Link
+                          to="/dashboard/tickets"
+                          state={{ create: true }}
+                          className="inline-block font-medium underline"
+                        >
+                          {t('contact.phone.verify.contactSupport')}
+                        </Link>
+                      )}
                     </div>
                   )}
                 </div>

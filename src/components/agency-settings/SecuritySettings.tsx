@@ -24,6 +24,8 @@ import {
   isBiometricUnlockEnabled,
 } from '@/lib/biometricUnlock';
 import { updateBiometricPassword } from '@/platform/auth/biometricLogin';
+import { authStrategy } from '@/platform/auth/strategy';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getBiometryInfo, type BiometryInfo } from '@/platform/biometrics';
 import { isNative } from '@/platform/env';
 import { openBiometricEnrollmentSettings } from '@/platform/permissions';
@@ -212,9 +214,18 @@ function BiometricUnlockCard() {
   );
 }
 
-/** Change the account password via the shared PATCH /me/password endpoint. */
+/**
+ * Change the account password via the shared PATCH /me/password endpoint.
+ *
+ * ⚠ On the bearer transport (the mobile app) the change revokes this device's
+ * own session and hands no replacement back, so `changePassword` signs in again
+ * with the new password. The note above the form says so up front, and if that
+ * re-sign-in fails the user is sent to sign in rather than left on a screen
+ * whose next request would do it for them, unexplained.
+ */
 function ChangePasswordCard() {
   const { t } = useTranslation('account');
+  const { session, logout } = useOnboarding();
   const [apiError, setApiError] = useState<string | null>(null);
   // Rebuilt on a language switch so the field errors follow the UI.
   const schema = useMemo(() => buildPasswordSchema(t), [t]);
@@ -232,13 +243,25 @@ function ChangePasswordCard() {
   const onSubmit = async (values: PasswordFormValues) => {
     setApiError(null);
     try {
-      await authService.changePassword(values.oldPassword, values.newPassword);
+      const { signedIn } = await authService.changePassword(
+        values.oldPassword,
+        values.newPassword,
+        // What the bearer re-sign-in presents. The sign-in phone is always set
+        // (E.164) and is refreshed after an in-app phone change.
+        session?.user.login_phone ?? '',
+      );
       // Keep the biometric credential in step. Without this, changing a password
       // here silently breaks the fingerprint button: the next unlock 401s, the
       // credential is thrown away, and the user is back to typing with no idea
       // which of the two things they did caused it. A no-op when nothing is
       // stored, and best-effort — the password change already succeeded.
       await updateBiometricPassword(values.newPassword);
+      if (!signedIn) {
+        // The new password is live but this device holds a revoked session.
+        toast.success(t('security.password.signInAgain'));
+        await logout();
+        return;
+      }
       toast.success(t('security.password.success'));
       reset();
     } catch (err) {
@@ -267,6 +290,13 @@ function ChangePasswordCard() {
           <div role="alert" className="mb-4 p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">
             {apiError}
           </div>
+        )}
+        {/* Before the form, as api-doc/me/password.md asks: on this transport
+            the change ends the session it is made from. */}
+        {!authStrategy.reissuedOnPasswordChange && (
+          <p className="mb-4 text-xs text-muted-foreground">
+            {t('security.password.reSignInNote')}
+          </p>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div className="space-y-2">

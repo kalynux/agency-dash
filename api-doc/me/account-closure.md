@@ -11,8 +11,13 @@ Reference for closing — and anonymising — the authenticated **customer's** o
 > **This anonymises and retains. It is not a deletion, and it must not be presented to a
 > customer as one.** The account row survives so that past orders, tickets and bookings still
 > resolve; what is removed is the person. Design record:
-> ADR-A02 (`backend/docs/ADR-A02-ACCOUNT-CLOSURE.md` — not mirrored in this repository).
+> [ADR-A02](../../docs/ADR-A02-ACCOUNT-CLOSURE.md).
 >
+> ADR-A02 **D-2** is explicit about the second half: no statutory erasure obligation has been
+> established in this market, so nothing here — in your UI copy, in a help page or in a privacy
+> policy — may describe this as satisfying a legal right. It satisfies a reasonable
+> expectation. Use the word **close**, and say what is kept.
+
 > [!NOTE]
 > **A customer can also close their account from a chat**, since MCP parity step 7 — as a
 > deliberate **two step**: `account_close_preview` (a read) answers `canClose`, the two
@@ -20,11 +25,6 @@ Reference for closing — and anonymising — the authenticated **customer's** o
 > `account_close` run. The sentence is written on the backend for the reason this whole
 > paragraph exists: the automation layer has no copy table, and "deleted" is exactly the word
 > it would reach for. Contract: `api-doc/n8n/bot-surface.md` § 16.3.
-
-> ADR-A02 **D-2** is explicit about the second half: no statutory erasure obligation has been
-> established in this market, so nothing here — in your UI copy, in a help page or in a privacy
-> policy — may describe this as satisfying a legal right. It satisfies a reasonable
-> expectation. Use the word **close**, and say what is kept.
 
 ---
 
@@ -58,7 +58,7 @@ this at somebody else.
 
 **Why a typed phrase and not the password.** Customers on this platform are *passwordless by
 default* — registration mints a random password and they sign in through the messaging bot
-(see auth/customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)) — so a password prompt would make
+(see [auth/customer-auth.md](../auth/customer-auth.md)) — so a password prompt would make
 closure impossible for most of the people entitled to it. The phrase does the one job a
 confirmation can do: it makes the request impossible to send by accident. The access token is
 what proves who is asking.
@@ -146,7 +146,7 @@ prints.
 ### The one thing this does not reach: geo-tracker
 
 Anonymising here does not reach the second service. It does not have to —
-`geo-tracker/docs/ADR-B02-CLOSED-ACCOUNT-TRAIL.md` (`backend/geo-tracker/docs/ADR-B02-CLOSED-ACCOUNT-TRAIL.md` — not mirrored in this repository)
+[`geo-tracker/docs/ADR-B02-CLOSED-ACCOUNT-TRAIL.md`](../../../geo-tracker/docs/ADR-B02-CLOSED-ACCOUNT-TRAIL.md)
 records the position and the evidence for it: geo-tracker stores **no customer identity at
 all**, and the one customer-derived value it holds (the drop-off coordinate on a live tracking
 session) never reaches Postgres and dies with the session.
@@ -175,6 +175,6 @@ identifiers to in any case.
 ## Related
 
 - [password.md](./password.md) — the other `/api/me` account verb
-- auth/customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository) — why customers are passwordless
-- customer/profile.md (`backend/jovi-mall/api-doc/customer/profile.md` — not mirrored in this repository) — the profile this anonymises
+- [auth/customer-auth.md](../auth/customer-auth.md) — why customers are passwordless
+- [customer/profile.md](../customer/profile.md) — the profile this anonymises
 - [errors/README.md](../errors/README.md) — the error envelope

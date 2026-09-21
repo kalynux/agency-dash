@@ -4,7 +4,8 @@
 // Role-agnostic and mounted beside the `/api/me/phone` contact-change verbs,
 // because it is the same subject reached by a different proof. Read
 // `phone-verification.types.ts` first: the number being verified is chosen by
-// the SERVER, and this is the only proof a dashboard role can actually complete.
+// the SERVER, and this is the proof every dashboard (and the storefront) uses —
+// both to verify the current number and to complete a phone change.
 //
 // See api-doc/me/phone-verification.md.
 

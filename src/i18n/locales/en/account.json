@@ -224,7 +224,9 @@
       "confirm": "Confirm new password",
       "rules": "At least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character.",
       "submit": "Update Password",
-      "success": "Password updated successfully."
+      "success": "Password updated successfully.",
+      "reSignInNote": "In this app, changing your password also ends the session you're in. We'll sign you straight back in with the new password.",
+      "signInAgain": "Password changed. Please sign in again with your new password."
     },
     "twoFactor": {
       "title": "Two-Factor Authentication",
@@ -402,13 +404,8 @@
       "label": "Sign-in phone",
       "newLabel": "New phone number",
       "hint": "We'll send a six-digit code to the new number on WhatsApp. You keep signing in with your current number until you enter it.",
-      "submit": "Start the change",
-      "requested": "Now send a code to that number and enter it below.",
+      "submit": "Send the code",
       "pendingHint": "Waiting for this number to be verified.",
-      "confirm": "Confirm without a code",
-      "confirmed": "Your sign-in phone has been changed.",
-      "unproven": "That number is not connected on WhatsApp, so there is nothing to confirm against. Enter a code instead, or send /connect to our bot from that number and redeem the code it replies with.",
-      "connectLink": "Go to messaging channels",
       "verify": {
         "verified": "Verified",
         "titleCurrent": "Verify this number",
@@ -428,8 +425,8 @@
         "attemptsLeft_other": "{{count}} attempts left before this code is cancelled.",
         "verifiedToast": "Your phone number is verified.",
         "changedToast": "Your sign-in phone has been changed and verified.",
-        "deliveryFailed": "WhatsApp wouldn't take the code. Send any message to our bot from that number first — that opens the 24-hour window we're allowed to reply in — then ask for a new code.",
-        "connectedAlready": "Already connected this number on WhatsApp?",
+        "deliveryFailed": "We couldn't send your code on WhatsApp right now. Please try again in a minute.",
+        "contactSupport": "Still not working? Contact support",
         "activatesAccount": "Entering this code also activates your account — it is the only thing still pending."
       }
     }

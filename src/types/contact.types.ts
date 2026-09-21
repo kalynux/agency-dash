@@ -18,32 +18,29 @@
 // confirming swaps them in a single write. There is no window in which both work,
 // and none in which neither does.
 //
-// ─── Why THIS confirm has no OTP — and where the OTP actually lives ───────────
+// ─── The phone proof is a WhatsApp code ───────────────────────────────────────
 //
-// This platform integrates **no SMS provider**, and a WhatsApp message to a number
-// that has not messaged the bot is outside Meta's 24-hour service window — so it
-// would have to be a paid, pre-approved template billed to a credit wallet.
+// **Every client confirms a phone change with a six-digit code sent to the new
+// number on WhatsApp** (owner decision, 2026-09-21):
 //
-// What the platform already has is the *inbound* direction. A messaging connection
-// exists only because a message arrived FROM that number and the account holder
-// redeemed the resulting code while signed in. That is a stronger proof of control
-// than an OTP and it is already built, so `POST /api/me/phone/confirm` requires it.
+//   PATCH /api/me/phone { phone }        → pending, nothing moves, NO code sent
+//   POST  /api/me/phone/verify/request   → code sent to the PENDING number
+//   POST  /api/me/phone/verify/confirm   → login_phone swaps (`changed: true`)
 //
-// Consequences a client must handle, not wait out:
-//   * an account with **no WhatsApp connection cannot use this confirm** — send
-//     the user to the connections screen first;
-//   * a **Telegram** connection does not count (a chat id bears no relation to a
-//     phone number);
-//   * the connected number must be **the number being claimed**, not merely any
-//     connected number.
+// The code half lives in phone-verification.types.ts. The PATCH deliberately
+// does not send the code itself: that would start the 60-second resend cooldown,
+// and the explicit request every client makes next would be refused with 429.
 //
-// ⚠ **There IS a code-based proof, and for an agency it is the only one that can
-// succeed.** `/api/me/phone/verify/*` (phone-verification.types.ts) sends a
-// six-digit WhatsApp code, and it exists precisely because dashboard roles never
-// register through the bot, hold no connection, and could therefore never reach
-// `phone_verified` at all. The two are not alternatives to pick between — each
-// serves accounts the other cannot. The confirm below stays because it is the
-// stronger proof and it is the customer path; it is not this app's default.
+// ⚠ **The account's WhatsApp link moves with the number.** If the account was
+// linked to the bot from the number being given up, confirming the code moves
+// that link to the new one (or removes it, if the new number is already linked
+// to another account) — so WhatsApp notifications follow the change, and a
+// recycled SIM is not left holding this account.
+//
+// ⛔ `POST /api/me/phone/confirm` — the older CONNECTION proof ("send /connect to
+// the bot from the new number") — still exists, but it serves the bot surface
+// only. This app does not call it, and must not grow copy telling anyone to
+// message the bot from their new number.
 //
 // ⚠ A contact change is NOT a credential change: it does not sign other devices
 // out. Only `PATCH /api/me/password` does that.
@@ -112,12 +109,6 @@ export interface ChangePhoneResponse {
   message?: string;
 }
 
-export interface ConfirmPhoneResponse {
-  success: true;
-  data: { phone: string };
-  message?: string;
-}
-
 export interface CancelPendingResponse {
   success: true;
   data: null;
@@ -125,19 +116,6 @@ export interface CancelPendingResponse {
 }
 
 // ─── Error codes worth a real screen ──────────────────────────────────────────
-
-/**
- * No WhatsApp connection on this account matches the pending number.
- *
- * **Not an error state so much as the next step**, and the one code here that
- * deserves a route rather than a message: the fix is to send `/connect` to the
- * bot *from the new number* and redeem the code.
- *
- * For an agency this is the EXPECTED answer, not an edge case — it holds no
- * connection by construction. The route it deserves is the OTP flow, which the
- * contact card offers first; only then the connections screen.
- */
-export const CONTACT_CHANGE_PHONE_UNPROVEN = 'CONTACT_CHANGE_PHONE_UNPROVEN';
 
 /** Nothing in flight, or it was superseded by a newer request. */
 export const CONTACT_CHANGE_NOT_PENDING = 'CONTACT_CHANGE_NOT_PENDING';

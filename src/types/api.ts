@@ -542,8 +542,10 @@ export const REFRESHABLE_AUTH_CODE = 'AUTH_TOKEN_EXPIRED';
  * `AUTH_SESSION_CAP_REACHED` is the one every client gets wrong. A sign-in is
  * bounded at **90 days regardless of activity** (`AUTH_ABSOLUTE_SESSION_CAP`,
  * default 7776000s), and the cap is measured from the `auth_time` claim — which
- * is *copied*, never restamped, through every refresh and every `auth-me`. So a
- * retry presents the very claim that just failed. It is the one 401 on this API
+ * is *copied*, never restamped, through every refresh and every `auth-me`. Only
+ * proving a credential restamps it — a sign-in, or a password change (the old
+ * password was presented). So a retry presents the very claim that just failed.
+ * It is the one 401 on this API
  * that no credential you hold can fix, and a client that treats it as transient
  * loops until it is killed. See api-doc/MIGRATION-2026-08.md § 4.
  *

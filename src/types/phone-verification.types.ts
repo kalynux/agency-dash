@@ -3,21 +3,21 @@
 // ─── Why this exists BESIDE the connection proof ──────────────────────────────
 //
 // There are two proofs of a phone number on this platform, and they are not
-// alternatives you pick between — each serves accounts the other cannot reach:
+// alternatives you pick between — each serves a different door:
 //
-//   * `POST /api/me/phone/confirm` (contact.types.ts) proves the number with an
-//     existing WhatsApp CONNECTION on it. Stronger — a message actually arrived
-//     FROM that number — and it is the customer path, because customers reach
-//     the platform through the bot in the first place.
+//   * `POST /api/me/phone/confirm` proves the number with an existing WhatsApp
+//     CONNECTION on it. Stronger — a message actually arrived FROM that number —
+//     and it serves **the bot surface only** (`contact_confirm_phone`), where the
+//     customer is already chatting from the number.
 //
 //   * `POST /api/me/phone/verify/confirm` (here) proves it with a code we sent.
-//     Weaker, and it is the path for **vendor · agency · agent · admin**.
+//     Weaker, and it serves **every dashboard and the storefront** — customers
+//     included since 2026-09-21 (owner decision).
 //
-// An agency never registers through the bot, so it holds no connection, the
-// connection proof can never succeed for it, and `phone_verified` could never
-// have become true. That is what this flow is for — and it is why this
-// dashboard's phone half is built on THIS surface, with the connection confirm
-// kept only as the shortcut for an account that happens to have one.
+// An agency never registers through the bot, so it holds no connection and
+// `phone_verified` could never have become true without this flow. This
+// dashboard confirms phone changes with the code and nothing else; it no longer
+// calls the connection confirm at all.
 //
 // ⚠ **The target is chosen server-side** — the pending number if a change is in
 // flight, otherwise the number already on the account. The confirm body is
@@ -57,10 +57,11 @@ export interface PhoneVerificationStateResponse {
 /**
  * `POST /api/me/phone/verify/request` — no body.
  *
- * `delivery` is `"text"` inside Meta's 24-hour service window and `"template"`
- * outside it. It is reported because it is the first thing to ask in support
- * when a code did not arrive — see the deployment limitation on
- * {@link PHONE_VERIFICATION_DELIVERY_FAILED}.
+ * `delivery` is `"text"` when the code went as a free-form message inside Meta's
+ * 24-hour service window, and `"template"` otherwise: outside the window, or
+ * inside it when the free-form send was refused and the backend fell back to the
+ * approved template. It is reported because it is the first thing to ask in
+ * support when a code did not arrive. It never says WHICH template.
  */
 export interface PhoneVerificationRequestResult {
   phoneMasked: string;
@@ -121,14 +122,21 @@ export const PHONE_VERIFICATION_TOO_MANY_ATTEMPTS = 'PHONE_VERIFICATION_TOO_MANY
 export const PHONE_VERIFICATION_RESEND_TOO_SOON = 'PHONE_VERIFICATION_RESEND_TOO_SOON';
 
 /**
- * 502 — WhatsApp refused the send. Retryable, but usually not by retrying alone.
+ * 502 — WhatsApp refused the send on EVERY route. A temporary failure: show it
+ * with a Resend button, and a way to reach support if it happens again.
  *
- * ⛔ **Outside Meta's 24-hour window this does not work on the current
- * deployment** (measured 2026-09-14): only an approved template may be sent
- * there and this WABA holds zero. So a user who has not messaged the platform in
- * the last 24 hours gets this every time, and the way out is for them to message
- * the bot once — which opens the window, and incidentally also creates the
- * connection the stronger proof wants.
+ * The backend already falls back to the approved AUTHENTICATION template
+ * wherever free-form text cannot go, so by the time this comes back nothing the
+ * user could do in the bot would change it.
+ *
+ * ⛔ **Never ask the user to message the WhatsApp bot first.** Until 2026-09-21
+ * the doc said to, and this dashboard did — it made things worse (the bot and
+ * the send path spelt the window key differently, so texting the bot steered
+ * the code onto a free-text path that was then refused with no template
+ * attempt). Both halves are fixed server-side, and the advice is withdrawn.
+ *
+ * A failed send does not start the resend cooldown — the code is stored only
+ * after a successful send — so Resend can be offered straight away.
  */
 export const PHONE_VERIFICATION_DELIVERY_FAILED = 'PHONE_VERIFICATION_DELIVERY_FAILED';
 

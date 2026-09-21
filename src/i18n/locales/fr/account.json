@@ -224,7 +224,9 @@
       "confirm": "Confirmer le nouveau mot de passe",
       "rules": "Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.",
       "submit": "Mettre à jour le mot de passe",
-      "success": "Mot de passe mis à jour."
+      "success": "Mot de passe mis à jour.",
+      "reSignInNote": "Dans l'application, changer de mot de passe met aussi fin à la session en cours. Nous vous reconnectons aussitôt avec le nouveau mot de passe.",
+      "signInAgain": "Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe."
     },
     "twoFactor": {
       "title": "Authentification à deux facteurs",
@@ -402,13 +404,8 @@
       "label": "Téléphone de connexion",
       "newLabel": "Nouveau numéro de téléphone",
       "hint": "Nous enverrons un code à six chiffres au nouveau numéro sur WhatsApp. Vous continuez à vous connecter avec votre numéro actuel tant que vous ne l'avez pas saisi.",
-      "submit": "Démarrer la modification",
-      "requested": "Envoyez maintenant un code à ce numéro, puis saisissez-le ci-dessous.",
+      "submit": "Envoyer le code",
       "pendingHint": "En attente de la vérification de ce numéro.",
-      "confirm": "Confirmer sans code",
-      "confirmed": "Votre téléphone de connexion a été modifié.",
-      "unproven": "Ce numéro n'est pas connecté sur WhatsApp : il n'y a donc rien à confirmer. Saisissez plutôt un code, ou envoyez /connect à notre bot depuis ce numéro et validez le code qu'il vous répond.",
-      "connectLink": "Aller aux canaux de messagerie",
       "verify": {
         "verified": "Vérifié",
         "titleCurrent": "Vérifier ce numéro",
@@ -428,8 +425,8 @@
         "attemptsLeft_other": "Encore {{count}} tentatives avant l'annulation de ce code.",
         "verifiedToast": "Votre numéro de téléphone est vérifié.",
         "changedToast": "Votre téléphone de connexion a été modifié et vérifié.",
-        "deliveryFailed": "WhatsApp a refusé l'envoi du code. Envoyez d'abord un message quelconque à notre bot depuis ce numéro — cela ouvre la fenêtre de 24 heures pendant laquelle nous pouvons répondre — puis demandez un nouveau code.",
-        "connectedAlready": "Ce numéro est déjà connecté sur WhatsApp ?",
+        "deliveryFailed": "Nous n'avons pas pu envoyer votre code sur WhatsApp pour le moment. Réessayez dans une minute.",
+        "contactSupport": "Toujours bloqué ? Contactez le support",
         "activatesAccount": "La saisie de ce code active également votre compte — c'est la seule chose qui reste en attente."
       }
     }
