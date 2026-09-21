@@ -8,7 +8,8 @@
 #   · @capacitor/android — keeps every `@CapacitorPlugin` class, its
 #     `@PluginMethod` / `@PermissionCallback` / `@ActivityCallback` members, and
 #     anything extending `com.getcapacitor.Plugin`. That covers all thirteen
-#     linked plugins, including the two @aparajita ones.
+#     linked plugins, including the two @aparajita ones — but NOT the annotation
+#     types themselves, which is the one gap this file has to close (below).
 #   · firebase-messaging — keeps its Service and the reflective entry points FCM
 #     uses to deliver a background message.
 #   · AndroidX — keeps what the framework instantiates by name.
@@ -24,6 +25,25 @@
 # leaving the mapping usable — the standard pairing.
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ─── Capacitor's annotation types ────────────────────────────────────────────
+# ⛔ Without this, EVERY plugin permission check crashes the release build.
+#
+# `PluginHandle` stores the plugin's `@CapacitorPlugin` annotation in a field,
+# and `Bridge.getPermissionStates()` reads `permissions()` off it. Nothing in
+# the program implements an annotation interface — ART builds a proxy at
+# runtime, which R8 cannot see — so R8 full mode (AGP 8's default) concluded the
+# field could only ever hold null, deleted it and its write, and compiled the
+# getter to `return null`. Measured on the 2026-09-16 release APK: `PluginHandle`
+# kept five fields, none of them the annotation, and `checkPermissions` on
+# Geolocation, Camera and PushNotifications all died with an NPE on the
+# `CapacitorPlugins` thread — which takes the whole app down. That is the
+# "pin my location" and "take a photo / photo library" crash in onboarding.
+#
+# Keeping the annotation types pins them, and R8 must then assume instances it
+# cannot see. `**` covers `com.getcapacitor.annotation.*` and the two that live
+# one package up (`PluginMethod`, the legacy `NativePlugin`).
+-keep @interface com.getcapacitor.** { *; }
 
 # ─── The WebView bridge ──────────────────────────────────────────────────────
 # Capacitor's bridge is annotated and therefore already kept, but any class
