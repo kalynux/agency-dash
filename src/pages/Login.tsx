@@ -28,6 +28,20 @@ import { buildLoginSchema, type LoginFormValues } from '@/lib/validation-schemas
 import { ApiError, type AgencyAuthSession } from '@/types/api';
 
 /**
+ * `AUTH_ROLE_NOT_FOUND` from `/auth/login` means the password was RIGHT and the
+ * account simply has no agency role — the backend checks the password first
+ * (AuthService.login), so this reader has proved the account is theirs and may
+ * be told what it lacks, and how to add it.
+ *
+ * Password form only. `errors:codes.AUTH_ROLE_NOT_FOUND` stays generic because
+ * the same code is any `requireRole` 403 in the API, and the fingerprint path
+ * keeps it too: there it means a stored credential whose role has since gone.
+ */
+const LOGIN_ERROR_OVERRIDES: Record<string, string> = {
+  AUTH_ROLE_NOT_FOUND: 'auth:login.errors.roleMissing',
+};
+
+/**
  * Sign in to the agency dashboard.
  *
  * Until now this screen redirected to the main Wi-Mall site, because the
@@ -185,7 +199,7 @@ export function Login() {
       // Covers the 429 too: the credential bucket is 20/min/IP, and
       // `getApiErrorMessage` interpolates `Retry-After` into the copy. A 429 is
       // NOT a sign-out — see api.ts → classifyAuthError.
-      setApiError(getApiErrorMessage(err));
+      setApiError(getApiErrorMessage(err, LOGIN_ERROR_OVERRIDES));
     }
   };
 

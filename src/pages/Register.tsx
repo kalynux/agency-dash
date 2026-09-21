@@ -20,6 +20,25 @@ import {
 } from '@/lib/validation-schemas';
 
 /**
+ * The phone or email already belongs to an account — any account, whatever its
+ * roles, since one person may hold several on ONE account. The catalogued
+ * "already registered" is a dead end for someone who came to run an agency; the
+ * way through is to sign in to that account and add the Agency role, which is
+ * done on the main Wi-Mall site (this app has no add-role screen).
+ *
+ * Screen-scoped rather than a change to `errors:codes`: the backend also sends
+ * these two codes when an administrator edits someone's phone or email, where
+ * "add a role" would be nonsense.
+ *
+ * ⚠ The copy names Agency — the role asked for — and never the account's
+ * existing role: anyone can type a number into this form.
+ */
+const REGISTER_ERROR_OVERRIDES: Record<string, string> = {
+  AUTH_PHONE_TAKEN: 'auth:register.errors.phoneTaken',
+  AUTH_EMAIL_TAKEN: 'auth:register.errors.emailTaken',
+};
+
+/**
  * Create an agency account.
  *
  * This screen creates the account and nothing else. A fresh agency comes back at
@@ -87,9 +106,9 @@ export function Register() {
     } catch (err) {
       // Includes the 429: registration shares the credential bucket at
       // 20/min/IP, and `getApiErrorMessage` interpolates `Retry-After` into the
-      // copy. Also the ones worth reading verbatim — `AUTH_PHONE_TAKEN` and
-      // `AUTH_EMAIL_TAKEN` both have catalogued messages.
-      setApiError(getApiErrorMessage(err));
+      // copy. `AUTH_PHONE_TAKEN` / `AUTH_EMAIL_TAKEN` get this screen's own
+      // wording — see REGISTER_ERROR_OVERRIDES.
+      setApiError(getApiErrorMessage(err, REGISTER_ERROR_OVERRIDES));
     }
   };
 
