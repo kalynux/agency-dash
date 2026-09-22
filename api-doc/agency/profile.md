@@ -161,9 +161,9 @@ See [profile-schema.md](./profile-schema.md) for the meaning and validation rule
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "message": "...",
     "statusCode": 404,
-    "category": "not_found",
-    "message": "..."
+    "category": "not_found"
   }
 }
 ```
@@ -245,7 +245,7 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
 > **Clearable fields**: nullable strings (`avatarFileId`, `kyc_details.registration_number`,
 > `kyc_details.transport_license_id`, HQ `support_contact.email`) accept `null` **or `""`** to clear —
 > both are stored and returned as `null`. Omit a key to leave it unchanged.
-> See [Conventions](../README.md).
+> See [Conventions](../README.md#conventions).
 
 #### Response
 
@@ -308,9 +308,9 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
     "statusCode": 400,
     "category": "validation",
-    "message": "Validation failed",
     "details": {
       "fields": [
         {
@@ -332,9 +332,9 @@ All fields are **optional** — send only what changed. This maps 1:1 to `Update
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "message": "...",
     "statusCode": 404,
-    "category": "not_found",
-    "message": "..."
+    "category": "not_found"
   }
 }
 ```
@@ -397,9 +397,9 @@ Authorization: Bearer <jwt_token>
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "DELIVERY_AGENCY_NOT_FOUND",
+    "message": "...",
     "statusCode": 404,
-    "category": "not_found",
-    "message": "..."
+    "category": "not_found"
   }
 }
 ```

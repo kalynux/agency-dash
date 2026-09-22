@@ -2,18 +2,17 @@
 
 **Verified against source on 2026-09-08** — all 6 routes, the four assignment constants (offer timeout 120 s, 20 candidates, 2 rounds, trust floor 0), the broadcast/first-to-accept rule, the four handover-pickup sources and their per-status mapping, and the `auto_assign_enabled` default, against `jovi-mall/src/modules/shipment-assignment/` and `src/modules/delivery/`.
 
-> **Verified against source 2026-08-24 (PLAN-3), no correction needed.** All 6 routes checked
-> against `src/modules/delivery/agency.routes.ts:140-179` and
-> `src/modules/shipment-assignment/domain/services/`.
+How an agency places a shipment with an agent under the **agent-acceptance workflow**. Assignment is
+no longer a direct push: the agency (or the system) creates an **offer**, and the shipment becomes
+the agent's only once they accept. See [agent offers](../agent/offers.md) for the agent's side.
+
+> ### ⚠ An eligibility failure is LOUD on `assign-agent` and SILENT on the other two
 >
-> ### 🔴 One thing this page does not say, and should
->
-> **An eligibility failure is LOUD on `assign-agent` and SILENT on the other two.**
 > `assignment-candidates` and `auto-assign` both go through
 > `AssignmentCandidateService.canTakeCod`, which is
 > `try { await this.exposure.assertCanTakeCodShipment(…) } catch { return false }`
-> (`shipment-assignment/domain/services/assignment-candidate.service.ts:320-331`). The
-> refusal — its code, its `details`, its reason — is **discarded along with the candidate**.
+> (`shipment-assignment/domain/services/assignment-candidate.service.ts:320-331`). The refusal —
+> its code, its `details`, its reason — is **discarded along with the candidate**.
 >
 > | Path | An ineligible agent shows up as |
 > |---|---|
@@ -24,14 +23,10 @@
 > So "the candidate list is shorter than my roster" is normal *and* is the only symptom of a
 > misconfiguration. The most common cause by far is a contract whose **`cod.threshold` is still
 > its default `0`** —
-> [detail](./cod-cash-management.md#risk-controls-affecting-your-operation). When a COD shipment
-> yields no candidates, read `GET /api/agency/agents/:agentId/eligibility` for the agents you
-> expected: it reports **every** failing reason at once, and it is the diagnostic this screen
-> should link to rather than leaving an operator to guess.
-
-How an agency places a shipment with an agent under the **agent-acceptance workflow**. Assignment is
-no longer a direct push: the agency (or the system) creates an **offer**, and the shipment becomes
-the agent's only once they accept. See agent offers (`backend/jovi-mall/api-doc/agent/offers.md` — not mirrored in this repository) for the agent's side.
+> [detail](./cod-cash-management.md#risk). When a COD shipment yields no candidates, read
+> [`GET /api/agency/agents/:agentId/eligibility`](./agent-roster.md) for the agents you expected:
+> it reports **every** failing rule at once (`agency-roster.controller.ts:670-677`), and it is the
+> diagnostic this screen should link to rather than leaving an operator to guess.
 
 ## Base Path
 

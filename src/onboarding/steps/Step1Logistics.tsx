@@ -150,7 +150,7 @@ export function Step1Logistics() {
     }, [submitLogistics, saveDraft, roleEntity, t]);
 
     return (
-        <OnboardingLayout stepKey={1} viewingStepOverride={1}
+        <OnboardingLayout stepKey={1}
             ctaSlot={
                 <div className="md:px-6 md:pb-6 md:pt-2">
                     <Button type="submit" form="step1-logistics-form" disabled={isSubmitting} className="w-full h-12 rounded-xl font-semibold gap-2">
@@ -205,7 +205,9 @@ export function Step1Logistics() {
                     {errors.headquarters_addresses && !Array.isArray(errors.headquarters_addresses) && (
                         <p className="text-xs text-destructive mb-3" role="alert">{errors.headquarters_addresses.message}</p>
                     )}
-                    <div className="space-y-4">
+                    {/* Cards from `md` up, flat rows split by a rule on a phone.
+                        The cards must stay DIRECT children for `divide-y`. */}
+                    <div className="max-md:divide-y md:space-y-4">
                         {fields.map((field, index) => (
                             <HQAddressCard key={field.id} index={index} isPrimary={index === 0}
                                 canRemove={fields.length > 1} control={control} register={register}
@@ -255,9 +257,17 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
         );
     };
 
+    // A card from `md` up; on a phone the address sits flat on the page and the
+    // parent's `max-md:divide-y` separates it from the next one.
     return (
-        <div className={cn('rounded-xl border-2 overflow-hidden', isPrimary ? 'border-primary/25' : 'border-border')}>
-            <div className={cn('flex items-center justify-between px-4 py-2.5', isPrimary ? 'bg-primary/5 dark:bg-primary/10' : 'bg-muted/60')}>
+        <div className={cn(
+            'max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:overflow-hidden',
+            isPrimary ? 'md:border-primary/25' : 'md:border-border',
+        )}>
+            <div className={cn(
+                'flex items-center justify-between max-md:pb-3 md:px-4 md:py-2.5',
+                isPrimary ? 'md:bg-primary/5 md:dark:bg-primary/10' : 'md:bg-muted/60',
+            )}>
                 <div className="flex items-center gap-2">
                     <Building className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className={cn('text-xs font-semibold', isPrimary ? 'text-primary' : 'text-muted-foreground')}>
@@ -273,7 +283,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                 )}
             </div>
 
-            <div className="p-4 bg-card space-y-4">
+            <div className="space-y-4 md:p-4 md:bg-card">
                 <FieldRow label={t('logistics.findLocation')} required error={addrErrors?.geo?.message}>
                     <Controller control={control} name={`headquarters_addresses.${index}.geo`} render={({ field }) => (
                         <AddressSearchInput

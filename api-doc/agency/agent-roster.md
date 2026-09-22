@@ -2,28 +2,6 @@
 
 **Verified against source on 2026-09-08** — all 30 routes (the `DELETE` terminate alias included), the `terms_proposed_by` authority rule and its `details.proposer` payload, `awaitingDecisionFrom`, the four negotiable term groups and the agent-only pair, the COD-headroom error shape, the multi-agency cap and the eight contract notification templates, against `jovi-mall/src/modules/agents/`.
 
-> **Verified against source 2026-08-24 (PLAN-3), and no correction was needed.** All **30**
-> routes on `/api/agency/agents` were checked one-for-one against
-> `src/modules/agents/routes/agency-roster.routes.ts` (including the `DELETE /:membershipId`
-> alias for `/terminate`, and the declaration-order rule that keeps `/eligible`, `/history`,
-> `/browse`, `/requests`, `/status-requests` and `/terms-proposals` from being matched as ids).
-> Four claims that matter most were re-derived from the service layer rather than trusted:
->
-> | Claim | Verdict |
-> |---|---|
-> | Authority is **`termsProposedBy`**, not `origin` / `initiatedBy` | ✅ correct — `origin` is audit-only, and `origin: "invitation"` now just means "the agency raised this" |
-> | A **live** contract changes by proposal, never by edit | ✅ `PATCH /:membershipId/terms` answers **409 `CONTRACT_TERMS_LIVE_EDIT_NOT_ALLOWED`** on a live contract and points at `/terms-proposals`; on a `pending` one it is the agency's counter |
-> | The **email-invite subsystem is gone** | ✅ documented in § The handshake; the surviving `origin: "invitation"` / `invitedAt` / `invited` names are vocabulary, not a live flow |
-> | `withdrawn` is a **contract** status, not a shipment status | ✅ — the shipment enum geo-tracker shares is untouched by it |
->
-> ⚠ **`assigned_admin_id` is a LOCK, not an assignment.** It does not appear on this page and
-> must not be introduced to it as one. It is a wi-admin concept.
->
-> This page was **17 lines behind** in this repository before 2026-08-24 despite being the same
-> length as the backend's copy — the change was the § Transfers link moving from the deleted
-> public `/api/admin/agents/transfer` to `/api/internal/admin/agents/transfer`. Same size,
-> different content: do not use line count as a staleness signal.
-
 ## Base Path
 
 ```
@@ -46,7 +24,7 @@ All endpoints are scoped to the calling agency. A contract belonging to another 
 ## Overview
 
 > **This is the canonical document for the agent↔agency contract.** The agent-facing
-> Agency membership (`backend/jovi-mall/api-doc/agent/agency-membership.md` — not mirrored in this repository) doc documents the agent's endpoints but
+> [Agency membership](../agent/agency-membership.md) doc documents the agent's endpoints but
 > defers here for the lifecycle, the DTO reference and the error catalogue. Keep this one correct
 > and the other follows.
 
@@ -223,7 +201,7 @@ not to your magazin's `coverage_areas` — an agency contracts agents for a regi
 into before it declares it. **Mark your declared regions in the list** (a "you cover this" badge, or
 a "Your coverage areas" group above the rest) so both parties can see the difference; do not
 disable the others. The agent's side is given the same hint — see
-`agencyCoverageAreas` (`backend/jovi-mall/api-doc/agent/agency-membership.md #coverage-regions-are-picked-not-typed` — not mirrored in this repository).
+[`agencyCoverageAreas`](../agent/agency-membership.md#coverage-regions-are-picked-not-typed).
 
 **Rows written before this change may still hold free text** (`"Douala"`, `"Yaoundé"`). Reading is
 unaffected — the assignment gate still resolves them loosely — but the first save of such a contract
@@ -442,7 +420,7 @@ is working today. Filter by `status`, or use `GET /eligible`, for the live view.
 > no `photo` key. The detail endpoint returns the full profile, whose `vehicleInfo.photo` is a
 > resolved file object or `null`; the list omits the key rather than reporting `photo: null` for a
 > file it never looked up. `color` is a lowercase English token — see
-> agent/profile.md (`backend/jovi-mall/api-doc/agent/profile.md` — not mirrored in this repository) for the palette and render your own localized label.
+> [agent/profile.md](../agent/profile.md) for the palette and render your own localized label.
 
 `cashHeld` mirrors `membership.codOutstandingBalance`: cash this agent holds that is attributable to
 **your** contract, and the figure that gates termination. It is deliberately **not** the agent's pot
@@ -461,7 +439,7 @@ rejects an amount above it with `CONTRACT_SETTLEMENT_EXCEEDS_OUTSTANDING`.
 > `agent.vehicleInfo` here is the **full** shape, including `photo` — a resolved file object
 > (`{ id, key, url, access, mimeType, size, originalName }`) or `null`. The roster *list* above returns the
 > photo-less summary instead, so it never reports `photo: null` for a file it did not look up.
-> `color` is a lowercase English token (see agent/profile.md (`backend/jovi-mall/api-doc/agent/profile.md` — not mirrored in this repository) for the palette);
+> `color` is a lowercase English token (see [agent/profile.md](../agent/profile.md) for the palette);
 > render your own localized label and swatch.
 
 **Error Responses**:
@@ -732,7 +710,7 @@ request.
 |--------|------|-------------|
 | `404` | `CONTRACT_NOT_FOUND` | No such contract on your roster |
 | `422` | `CONTRACT_COD_THRESHOLD_OUT_OF_BOUNDS` | Outside the absolute per-contract bounds. `details: { requested, min, max }` |
-| `422` | `CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM` | The agent's pool has no room. `details: { requested, headroom, shortfall, hint }` |
+| `422` | `CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM` | The agent's pool has no room. `details: { requested, headroom, shortfall, hint }`. Since 2026-09-21 the pool is automatic (0 until the agent is verified, then their plan's value) and the agent may lower it themselves, so the fix is on the agent's side or another agency's slice. `hint` is prose: display it, never parse it |
 | `422` | `CONTRACT_COD_THRESHOLD_BELOW_OUTSTANDING` | You cannot set a threshold beneath cash the agent already holds under this contract. `details: { requested, outstandingBalance, hint }` |
 
 ---
@@ -980,7 +958,7 @@ The agent's own views add three counterparty fields to this shape
 (`AgentMembershipWithAgencyDto`): `agencyName`, `agencyCountry` and `agencyCoverageAreas`. The last
 two exist because an agent cannot read your magazin, and their coverage picker needs the same
 catalogue and the same "which of these does the agency actually serve" hint your own does. See
-the agent doc (`backend/jovi-mall/api-doc/agent/agency-membership.md #coverage-regions-are-picked-not-typed` — not mirrored in this repository).
+[the agent doc](../agent/agency-membership.md#coverage-regions-are-picked-not-typed).
 
 ### `ContractTermsProposalDto`
 
@@ -1310,7 +1288,7 @@ every counter after the first.
 
 All eight event names are consumed by the **agent** stack with different copy; a `recipientRole`
 discriminator in the payload decides whose they are. See
-the agent's side (`backend/jovi-mall/api-doc/agent/agency-membership.md #notifications` — not mirrored in this repository).
+[the agent's side](../agent/agency-membership.md#notifications).
 
 > **WhatsApp is dark for the three new situations** until `agency_agent_contract_terms_countered`,
 > `_terms_proposed` and `_terms_resolved` are created and approved in Meta Business Manager. In-app,
@@ -1323,7 +1301,7 @@ the agent's side (`backend/jovi-mall/api-doc/agent/agency-membership.md #notific
 ## Transfers
 
 Moving an agent between agencies is **admin-only** — an agency must not be able to pull an agent off
-a rival's roster. See `POST /api/internal/admin/agents/transfer` (`backend/jovi-mall/api-doc/admin/agents.md` — not mirrored in this repository).
+a rival's roster. See [`POST /api/internal/admin/agents/transfer`](../admin/agents.md).
 
 ---
 

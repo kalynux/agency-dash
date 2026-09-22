@@ -3,12 +3,12 @@
 **Verified against source on 2026-09-08** — every route claim on this page against the mount it is written under — in particular that the agency serves only `GET /shipments/:id/delivery-proof/file` (`agency.routes.ts:128`) and not the metadata read (`agent.routes.ts:139`) — plus the 10 MB / one-image proof limits, against `jovi-mall/src/modules/delivery/` and `src/core/uploads/upload-config.ts`.
 
 Your slice of Phases **4** (Per-service hardening) and **5** (Legacy close-out) of
-`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` (`backend/PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` — not mirrored in this repository).
+[`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md`](../../../PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md).
 
 - **Written:** 2026-08-21 · **Phase 4:** 2026-08-19 → 08-20 · **Phase 5:** 2026-08-20
 - **Read first, then this:** [../FRONTEND-CHANGELOG-phase-4-5.md](../FRONTEND-CHANGELOG-phase-4-5.md)
-- 🔴 **Then this, before your next release:** [../FRONTEND-CHANGELOG-private-files.md](../files/private-files.md)
-- **Also:** [`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md`](../geo-tracker/FRONTEND-CHANGELOG-phase-4-5.md)
+- 🔴 **Then this, before your next release:** [../FRONTEND-CHANGELOG-private-files.md](../FRONTEND-CHANGELOG-private-files.md)
+- **Also:** [`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md`](../../../geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md)
   — the live map
 - **Previous instalment:** [FRONTEND-CHANGELOG-phase-2-3.md](./FRONTEND-CHANGELOG-phase-2-3.md)
 
@@ -35,7 +35,7 @@ products and the storage surfaces answer exactly as their documents describe.
 ## 1 · 🔴 Delivery-proof photos are no longer fetchable by URL
 
 **This is the one that breaks a shipped screen.** Read
-[../FRONTEND-CHANGELOG-private-files.md](../files/private-files.md) in full; this is
+[../FRONTEND-CHANGELOG-private-files.md](../FRONTEND-CHANGELOG-private-files.md) in full; this is
 the agency-shaped summary.
 
 ### What happened
@@ -61,19 +61,19 @@ The `shipments/` tree left the static mount. Every `FileDetail` for a file in it
 ### Where it shows on your screens
 
 - `deliveryProof` on `GET /api/agency/shipments/:id`
-> 🔴 **Corrected 2026-09-08** (S5; DOC-PROGRAM F-17 class 6 — the backend copy was fixed on
-> 2026-09-06 and this one was not). A second bullet here read
+
+> 🔴 **Corrected 2026-09-06** (DOC-PROGRAM F-17 class 6). A second bullet here read
 > *"`GET /api/agency/shipments/:id/delivery-proof` (the metadata read — **still useful**…)"*.
-> **That route is not served on the agency side and never was.** `agency.routes.ts:128` registers
-> exactly one delivery-proof route, `/shipments/:id/delivery-proof/file`; the metadata read is the
-> **agent's** (`agent.routes.ts:139`). An agency dashboard that followed this bullet got a 404.
-> The way an agency learns there *is* a proof — including `originalName` and `size` — is the
-> `deliveryProof` object on `GET /api/agency/shipments/:id`, which is the bullet above and was
-> always correct.
+> **That route is not served on the agency side and never was.** `agency.routes.ts` registers
+> exactly one delivery-proof route, `/shipments/:id/delivery-proof/file`; the metadata read is
+> the **agent's** (`agent.routes.ts:139`). An agency dashboard that followed this bullet got a
+> 404. The way an agency learns there *is* a proof — including `originalName` and `size` — is
+> the `deliveryProof` object on `GET /api/agency/shipments/:id`, which is the bullet above and
+> was always correct.
 >
-> It survived `route-coverage.js` and `phantom-routes.js` because both match a path SHAPE against
-> the whole tree, and `/shipments/:id/delivery-proof` really is served — on the other role's
-> mount. **A route claim is only checkable against the mount it is written under.**
+> It survived `route-coverage.js` and `phantom-routes.js` because both match a path SHAPE
+> against the whole tree, and `/shipments/:id/delivery-proof` really is served — on the other
+> role's mount. **A route claim is only checkable against the mount it is written under.**
 
 ### The fix
 
@@ -201,7 +201,7 @@ Written up in [tickets.md § Administrator snapshot](./tickets.md). The four thi
 
 ## 6 · The live map — behaviour, not contract
 
-Detail in [`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md`](../geo-tracker/FRONTEND-CHANGELOG-phase-4-5.md).
+Detail in [`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md`](../../../geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-4-5.md).
 **No frame, no field and no error code changed.** Two things to know:
 
 1. **`TRACKING_SESSION_TTL` is 72 h**, up from 48 h. That is the ceiling on how long a session
@@ -254,10 +254,10 @@ and deliberately writes no data migrations. Nothing to build; it explains what y
 | Topic | Document |
 |---|---|
 | The cross-role summary | [../FRONTEND-CHANGELOG-phase-4-5.md](../FRONTEND-CHANGELOG-phase-4-5.md) |
-| 🔴 Private files, `access`, the proof route | [../FRONTEND-CHANGELOG-private-files.md](../files/private-files.md) |
+| 🔴 Private files, `access`, the proof route | [../FRONTEND-CHANGELOG-private-files.md](../FRONTEND-CHANGELOG-private-files.md) |
 | Shipments | [shipments.md](./shipments.md) |
 | Live tracking — this side | [live-tracking.md](./live-tracking.md) |
-| Live tracking — the socket | [`geo-tracker/api-doc/tracking-websocket.md`](../geo-tracker/tracking-websocket.md) |
+| Live tracking — the socket | [`geo-tracker/api-doc/tracking-websocket.md`](../../../geo-tracker/api-doc/tracking-websocket.md) |
 | Sessions and tokens | [../auth/README.md](../auth/README.md) |
 | Uploads | [../uploads/README.md](../uploads/README.md) · [file-management.md](./file-management.md) · [storage.md](./storage.md) |
 | Tickets | [tickets.md](./tickets.md) |

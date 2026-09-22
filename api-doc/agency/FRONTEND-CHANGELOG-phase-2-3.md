@@ -3,7 +3,7 @@
 **Verified against source on 2026-09-08** — the route claims on this page against `jovi-mall/src/modules/delivery/agency.routes.ts` and `src/api/index.ts`.
 
 Your slice of Phases **2** (Deployability) and **3** (Cross-service correctness) of
-`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` (`backend/PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` — not mirrored in this repository).
+[`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md`](../../../PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md).
 
 - **Written:** 2026-08-21 · **Phase 2:** 2026-08-18 → 08-19 · **Phase 3:** 2026-08-19
 - **Read first, then this:** [../FRONTEND-CHANGELOG-phase-2-3.md](../FRONTEND-CHANGELOG-phase-2-3.md)
@@ -67,7 +67,7 @@ open on a wall screen all afternoon is exactly this case.
 There is no refresh path over the socket and there deliberately never will be.
 
 Detail: [../tracking/live-tracking.md](../tracking/live-tracking.md) ·
-[`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-2-3.md`](../geo-tracker/FRONTEND-CHANGELOG-phase-2-3.md)
+[`geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-2-3.md`](../../../geo-tracker/api-doc/FRONTEND-CHANGELOG-phase-2-3.md)
 
 ---
 

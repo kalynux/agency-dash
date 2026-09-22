@@ -35,7 +35,7 @@ The limit caps the **total bytes of media the agency owns**:
 - any **images / documents** uploaded through `POST /api/files/upload`
 - any **videos** uploaded through `POST /api/files/upload/video`
 - **agent delivery proofs** — an agent's optional proof-of-delivery photo is
-  uploaded on the **agency's** storage (see Agent → Delivery proof (`backend/jovi-mall/api-doc/agent/delivery-proof.md` — not mirrored in this repository)),
+  uploaded on the **agency's** storage (see [Agent → Delivery proof](../agent/delivery-proof.md)),
   so it counts here, not against the agent.
 
 There is no digital-asset class for agencies, so nothing is subtracted — an
@@ -121,9 +121,9 @@ nothing is stored:
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "UPLOAD_POLICY_VIOLATION",
+    "message": "Upload policy violations found",
     "statusCode": 400,
     "category": "validation",
-    "message": "Upload policy violations found",
     "details": { "violations": [
       { "code": "QUOTA_EXCEEDED",
         "message": "Storage quota exceeded. Maximum: 5.00 GB, Current: 4.90 GB, Requested: 0.30 GB",

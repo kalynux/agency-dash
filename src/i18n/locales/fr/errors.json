@@ -282,7 +282,7 @@
     "CONTRACT_TERMS_PROPOSAL_NOT_YOURS": "Vous avez émis cette proposition — c'est au livreur d'y répondre. Vous pouvez l'annuler.",
     "CONTRACT_SETTLEMENT_EXCEEDS_OUTSTANDING": "C'est plus que ce que le livreur doit à votre agence.",
     "CONTRACT_COD_THRESHOLD_OUT_OF_BOUNDS": "Ce plafond COD est hors des limites autorisées.",
-    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": "Cela dépasse le solde COD restant du livreur. Demandez-lui de relever son plafond global.",
+    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": "Le pool d'espèces de ce livreur n'a pas assez de place. Ce pool vient de son forfait une fois son identité vérifiée, et toutes les agences avec lesquelles il travaille le partagent. Fixez un plafond plus bas, ou demandez au livreur s'il a choisi d'en porter moins.",
     "CONTRACT_COD_THRESHOLD_BELOW_OUTSTANDING": "Vous ne pouvez pas fixer un plafond inférieur aux espèces que le livreur détient déjà pour vous.",
     "CONNECTION_NOT_FOUND": "Cette connexion est introuvable.",
     "CONNECTION_VENDOR_NOT_FOUND": "Ce vendeur est introuvable.",
@@ -410,7 +410,7 @@
     "COD_CODE_ATTEMPTS_EXCEEDED": "Trop de codes incorrects. Demandez-en un nouveau.",
     "COD_CODE_RESEND_TOO_SOON": "Veuillez patienter avant de demander un nouveau code.",
     "COD_AGENT_NOT_ASSIGNED": "Il s'agit d'une expédition en paiement à la livraison — un livreur doit l'accepter avant la récupération.",
-    "COD_AGENT_EXPOSURE_EXCEEDED": "Cette expédition dépasserait le plafond d'encaisse de ce livreur.",
+    "COD_AGENT_EXPOSURE_EXCEEDED": "Cette expédition ferait dépasser au livreur le plafond d'espèces fixé dans votre contrat. Relevez son plafond COD, ou attendez qu'il dépose les espèces qu'il détient.",
     "COD_AGENT_TRUST_TOO_LOW": "L'indice de confiance de ce livreur est trop faible pour transporter des expéditions en paiement à la livraison.",
     "COD_AGENT_HAS_OUTSTANDING_CASH": "Ce livreur détient encore des espèces non déposées — enregistrez d'abord son dépôt.",
     "COD_DEPOSIT_INVALID_AMOUNT": "Saisissez un montant entier positif.",
@@ -653,6 +653,15 @@
     "PRODUCT_SHARE_WINDOW_CLOSED": "Cette conversation est hors de la fenêtre de messagerie, rien ne peut y être envoyé pour le moment.",
     "WISHLIST_ITEM_NOT_FOUND": "Cet article n'est plus dans la liste d'envies.",
     "STORAGE_DOWNLOAD_NOT_SUPPORTED": "Ce déploiement ne peut pas fournir le contenu de ce fichier. C’est un problème de configuration, pas un problème de fichier — contactez le support."
+  },
+  "detailed": {
+    "COD_AGENT_EXPOSURE_EXCEEDED": {
+      "poolBinds": "Cette expédition ferait dépasser au livreur son propre pool d'espèces, désormais inférieur au plafond de votre contrat. Relever votre plafond n'y changera rien : il doit déposer les espèces qu'il détient, ou son pool doit remonter."
+    },
+    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": {
+      "some": "Le pool d'espèces de ce livreur n'a pas assez de place. Le maximum que vous pouvez fixer est {{headroom}}. Pour plus, demandez au livreur : il a peut-être choisi de porter moins que ce que permet son forfait.",
+      "none": "Le pool d'espèces de ce livreur n'a plus de place pour vous. Il reste à 0 tant que son identité n'est pas vérifiée, et ses autres agences en détiennent peut-être déjà la totalité, à moins qu'il n'ait choisi d'en porter moins."
+    }
   },
   "categories": {
     "authentication": "Votre session a pris fin. Veuillez vous reconnecter.",

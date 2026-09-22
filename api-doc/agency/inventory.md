@@ -2,21 +2,13 @@
 
 **Verified against source on 2026-09-08** — all 11 routes and the counted-vs-derived stock distinction that decides what is billed, against `jovi-mall/src/modules/inventory/routes.ts`, `repositories/agency-stock-level.repository.ts` and `services/`.
 
-> 🆕 **This page was 151 lines behind in this repository until 2026-08-24 (PLAN-3).** The whole
-> of the **physical-shelf** surface was missing: receipts, returns, physical counts,
-> depot-to-depot transfers and the movement ledger (§ 6 and § 7 below), together with the
-> `catalogStock` / `storageFee` / `suspension` sub-objects on a list row. If you built the
-> inventory screen from the old copy, it can show what a vendor's catalogue *claims* and not
-> what is on the shelf. **All 11 routes verified against
-> `src/api/index.ts:154-155` + `src/modules/inventory/routes/` on 2026-08-24.**
-
 Which SKUs this agency warehouses, at which depot, **how many are physically on the
 shelf**, what they cost in storage rent, and what the agency can do about them. Backs the
 agency dashboard's inventory screen.
 
 > Related docs: [Magazin](./magazin.md) (the depots themselves) ·
 > [Stock requests](./stock-requests.md) (changing a recorded quantity) ·
-> Vendor → Delivery Agencies (`backend/jovi-mall/api-doc/vendor/delivery-agencies.md #list-an-agencys-pickup-locations` — not mirrored in this repository)
+> [Vendor → Delivery Agencies](../vendor/delivery-agencies.md#list-an-agencys-pickup-locations)
 > (how a vendor picks a depot) · [Earnings](./earnings.md) ·
 > [Storage statements](./storage-invoices.md) (the monthly rent record) ·
 > [Front-end changelog](../FRONTEND-CHANGELOG-agency-storage.md).
@@ -454,9 +446,9 @@ anything blocks it you get:
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "INVENTORY_PRODUCT_UNSUSPEND_BLOCKED",
+    "message": "This product cannot go back on sale yet — the vendor has to resolve the issues below first.",
     "statusCode": 422,
     "category": "business_rule",
-    "message": "This product cannot go back on sale yet — the vendor has to resolve the issues below first.",
     "details": {
       "blockers": [
         { "code": "CATALOG_PRODUCT_NO_DELIVERY_AGENCY", "message": "Your connection with this delivery agency needs to be approved (or reapproved) before this product can be activated." }

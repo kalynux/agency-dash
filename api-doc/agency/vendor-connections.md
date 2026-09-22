@@ -18,7 +18,7 @@ Authorization: Bearer <access_token>
 
 ## Overview
 
-Symmetric counterpart to Vendor: Agency Connections (`backend/jovi-mall/api-doc/vendor/agency-connections.md` — not mirrored in this repository) — read
+Symmetric counterpart to [Vendor: Agency Connections](../vendor/agency-connections.md) — read
 that doc first for the full status lifecycle (`pending → active/rejected/withdrawn`,
 `active ⇄ paused_reapproval`, `→ terminated`, re-request reuses the same record). This doc covers
 the agency side: searching vendors, sending/receiving requests, and approving/rejecting.
@@ -161,7 +161,7 @@ connection paused because the vendor changed its policies (`paused_reapproval �
 
 Identical `ConnectionDto` shape and `AgencyVendorListItemDto`/`AgencyVendorPolicySummaryDto` browse
 shape (mirroring `VendorAgencyListItemDto` on the vendor side) — see
-Vendor: Agency Connections (`backend/jovi-mall/api-doc/vendor/agency-connections.md #response-field-reference` — not mirrored in this repository) for the
+[Vendor: Agency Connections](../vendor/agency-connections.md#response-field-reference) for the
 full `ConnectionDto` reference.
 
 ```typescript
@@ -204,4 +204,4 @@ You receive an agency notification (in-app, always; plus your configured seconda
 Toggle these as a group via the `connectionUpdated` flag on
 [notification preferences](./notifications.md) (default: on). Vendors receive the symmetric
 notification when you (the agency) are the actor — see
-Vendor Notifications — Events (`backend/jovi-mall/api-doc/vendor/notifications.md #events` — not mirrored in this repository).
+[Vendor Notifications — Events](../vendor/notifications.md#events).

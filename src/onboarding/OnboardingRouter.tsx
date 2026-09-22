@@ -26,7 +26,10 @@ function UnknownStepFallback({ step }: { step: number | null }) {
  *
  * Routing strategy (revised for back-navigation support):
  * - `currentStep` = the backend's "next required step" (the max the user must reach).
- * - `viewingStep` = the step the user is currently looking at (can be any step ≤ currentStep).
+ * - The step being LOOKED AT is the route's, and nothing else: each step
+ *   component hands its own number to the layout (`stepKey`) and to
+ *   `goBack(fromStep)`. There is no stored copy to go stale when the stepper,
+ *   Android back or a typed URL moves the route without the store's help.
  * - StepGuard allows access to any step N where N ≤ currentStep, blocking only
  *   future steps (e.g. can't jump from step 1 to step 3).
  * - No useEffect-driven forced navigation; URL is authoritative for which step is rendered.

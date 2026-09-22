@@ -282,7 +282,7 @@
     "CONTRACT_TERMS_PROPOSAL_NOT_YOURS": "You raised this proposal — the agent has to answer it. You can cancel it instead.",
     "CONTRACT_SETTLEMENT_EXCEEDS_OUTSTANDING": "That is more than the agent owes your agency.",
     "CONTRACT_COD_THRESHOLD_OUT_OF_BOUNDS": "That COD limit is outside the allowed range.",
-    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": "That exceeds the agent's remaining COD pool. Ask them to raise their global limit.",
+    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": "That's more than this agent's COD pool has room for. The pool comes from their plan once they're verified, and every agency they work for shares it. Set a lower limit, or ask the agent whether they chose to carry less.",
     "CONTRACT_COD_THRESHOLD_BELOW_OUTSTANDING": "You cannot set a limit below the cash the agent already holds for you.",
     "CONNECTION_NOT_FOUND": "This connection could not be found.",
     "CONNECTION_VENDOR_NOT_FOUND": "That vendor could not be found.",
@@ -410,7 +410,7 @@
     "COD_CODE_ATTEMPTS_EXCEEDED": "Too many incorrect codes. Please request a new one.",
     "COD_CODE_RESEND_TOO_SOON": "Please wait before requesting another code.",
     "COD_AGENT_NOT_ASSIGNED": "This is a cash-on-delivery shipment — an agent must accept it before pickup.",
-    "COD_AGENT_EXPOSURE_EXCEEDED": "This agent's cash-on-delivery exposure limit would be exceeded by this shipment.",
+    "COD_AGENT_EXPOSURE_EXCEEDED": "This shipment would take the agent past the cash-on-delivery limit on your contract with them. Raise their COD limit, or wait until they deposit the cash they're holding.",
     "COD_AGENT_TRUST_TOO_LOW": "This agent's trust score is too low to carry cash-on-delivery shipments.",
     "COD_AGENT_HAS_OUTSTANDING_CASH": "This agent still holds undeposited cash — record their deposit first.",
     "COD_DEPOSIT_INVALID_AMOUNT": "Enter a positive whole amount.",
@@ -653,6 +653,15 @@
     "PRODUCT_SHARE_WINDOW_CLOSED": "That conversation is outside the messaging window, so nothing can be sent to it right now.",
     "WISHLIST_ITEM_NOT_FOUND": "That item is no longer on the wishlist.",
     "STORAGE_DOWNLOAD_NOT_SUPPORTED": "This deployment can’t serve that file’s contents. It’s a configuration issue, not a problem with the file — contact support."
+  },
+  "detailed": {
+    "COD_AGENT_EXPOSURE_EXCEEDED": {
+      "poolBinds": "This shipment would take the agent past their own COD pool, which is now lower than the limit on your contract. Raising your limit won't help: they need to deposit the cash they're holding, or their pool needs to go back up."
+    },
+    "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": {
+      "some": "That's more than this agent's COD pool has room for. The most you can set is {{headroom}}. For more, ask the agent: they may have chosen to carry less than their plan allows.",
+      "none": "This agent's COD pool has no room left for you. It stays at 0 until they're verified, and their other agencies may already hold all of it, or they chose to carry less."
+    }
   },
   "categories": {
     "authentication": "Your session has ended. Please sign in again.",

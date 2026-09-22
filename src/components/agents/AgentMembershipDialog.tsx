@@ -409,7 +409,7 @@ function MembershipBody({
   const negotiablePayload = buildNegotiablePayload(terms, termsSeed);
   const employmentDirty = Object.keys(employmentPayload).length > 0;
   const negotiableDirty = Object.keys(negotiablePayload).length > 0;
-  // `0` and an empty box are the same instruction — no cap — so the comparison
+  // `0` and an empty box are the same instruction — no COD — so the comparison
   // is on the number, not on the text. A half-typed `-` is neither dirty nor
   // sendable.
   const codValue = threshold.trim() === '' ? 0 : Number(threshold);
@@ -923,26 +923,36 @@ function MembershipBody({
                     formatNumber(membership.codThreshold)
                   ) : (
                     <span className="text-base font-normal text-muted-foreground">
-                      {t('membership.cod.noCap')}
+                      {t('membership.cod.noCod')}
                     </span>
                   )}
                 </p>
               </div>
             </div>
 
+            {/* `0` is not "uncapped": it grants no COD at all, and it is where
+                every contract starts. The assignment candidates list and
+                auto-assign drop such an agent from COD runs without saying why,
+                so this sheet is the one place that can say it. */}
+            {editable && membership.codThreshold === 0 && (
+              <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+                {t('membership.cod.zeroWarning')}
+              </p>
+            )}
+
             {editable && (
               <div className="mt-4 space-y-1.5">
                 <Label htmlFor={`cod-${mid}`} className="text-xs text-muted-foreground">
                   {t('membership.cod.editLabel')}
                 </Label>
-                {/* Seeded with the stored cap and empty means "no cap", the same
-                    bargain the shipment ceiling above strikes — this is an edit
-                    of the figure on screen, not a box for a delta. */}
+                {/* Seeded with the stored cap, and empty saves `0` — which is
+                    NO COD, not "no cap" like the shipment ceiling above. This is
+                    an edit of the figure on screen, not a box for a delta. */}
                 <Input
                   id={`cod-${mid}`}
                   type="number"
                   min={0}
-                  placeholder={t('membership.cod.noCap')}
+                  placeholder={t('membership.cod.placeholder')}
                   value={threshold}
                   onChange={(e) => setThreshold(e.target.value)}
                 />

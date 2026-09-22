@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
 import { LanguagePicker } from '@/components/common/LanguagePicker';
 import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
+import { useKeyboardOpen } from '@/platform/shell/keyboard';
 import type { AgencyOnboardingStep } from '@/types/api';
 
 // ─── Step metadata ────────────────────────────────────────────────────────────
@@ -139,15 +140,21 @@ function StepProgress({
 interface OnboardingLayoutProps {
     children: ReactNode;
     ctaSlot?: ReactNode;
+    /** The step being rendered — and so the step the header shows. */
     stepKey: AgencyOnboardingStep;
-    viewingStepOverride?: number;
 }
 
-export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverride }: OnboardingLayoutProps) {
+export function OnboardingLayout({ children, ctaSlot, stepKey }: OnboardingLayoutProps) {
     const { t } = useTranslation('onboarding');
-    const { session, logout, currentStep, viewingStep } = useOnboarding();
+    const { session, logout, currentStep } = useOnboarding();
+    // Hides the sticky mobile CTA while typing — see the bar below. Always false
+    // off native, so the web build keeps its bar.
+    const keyboardOpen = useKeyboardOpen();
     const agencyName = session?.role_entity.agency_name ?? t('layout.fallbackAgencyName');
-    const displayStep = viewingStepOverride ?? viewingStep ?? currentStep;
+    // The header shows the step on screen, never a stored copy of it: a copy
+    // goes stale whenever the route moves without the store (stepper tap,
+    // Android back, a typed URL) and then titles one step over another's form.
+    const displayStep = stepKey;
     const maxReached = currentStep ?? 1;
 
     return (
@@ -181,14 +188,18 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
             </header>
 
             {/* ── Clickable Step progress ── */}
-            {displayStep !== null && displayStep !== 0 && (
+            {displayStep !== 0 && (
                 <nav aria-label={t('layout.progressLabel')} className="bg-card border-b border-border">
-                    <StepProgress current={displayStep as number} maxReached={maxReached as number} />
+                    <StepProgress current={displayStep} maxReached={maxReached} />
                 </nav>
             )}
 
-            {/* ── Scrollable content ── */}
-            <main className="flex-1 overflow-y-auto">
+            {/* ── Content ──
+                The DOCUMENT scrolls (the page is `min-h-screen`), so `main` gets
+                no `overflow` of its own: it never scrolled anything, but it did
+                clip absolutely positioned popovers near its end — the address
+                search's result list — into a little inner scroll box. */}
+            <main className="flex-1">
                 <div className="w-full max-w-xl mx-auto px-4 py-6 md:py-10">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
@@ -218,12 +229,19 @@ export function OnboardingLayout({ children, ctaSlot, stepKey, viewingStepOverri
             </main>
 
             {/* ── Sticky mobile CTA ──
-                `pb` clears the gesture bar the shell now draws behind (P3.3).
-                Capacitor zeroes the bottom inset while the keyboard is up, so
-                the button rides the keys rather than sitting a bar's width
-                above them. */}
-            {ctaSlot && (
-                <div className="md:hidden bg-card border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
+                `sticky bottom-0`, because the document is what scrolls: without
+                it the bar was just the last thing on the page, at the far end of
+                a long step. `pb` clears the gesture bar the shell draws behind
+                (P3.3).
+
+                Hidden while the native keyboard is up. Pinned over the keys it
+                would sit on top of the very field being typed in — the WebView
+                scrolls a focused input to its bottom edge, which is where the bar
+                is. The in-flow bar this replaced could never cover a field, so
+                "ride the keys" no longer holds once it sticks. Same call as
+                `MobileTabBar`, and as vendor-dash's onboarding. */}
+            {ctaSlot && !keyboardOpen && (
+                <div className="md:hidden sticky bottom-0 z-20 bg-card border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
                     {ctaSlot}
                 </div>
             )}

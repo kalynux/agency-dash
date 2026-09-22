@@ -2,34 +2,6 @@
 
 **Verified against source on 2026-09-08** — all 9 COD routes, every request validator, the COD config constants (exposure default 300 000, trust 80/50/×0.5, penalties −5/−20, reserve 10 %/30 d, both 2-day deadlines), the per-contract `late_deposit` scoping, the per-contract `remittance_terms` deadline and the AGENT-WIDE exposure sum, against `jovi-mall/src/modules/cod/` and `src/modules/shipment-assignment/`.
 
-> **Verified against source 2026-08-24 (PLAN-3).** All **9** routes checked against
-> `src/modules/delivery/agency.routes.ts:201-254`, and every number on this page re-derived
-> from `src/modules/cod/config/cod.config.ts`:
->
-> | Claim | Constant | Value |
-> |---|---|---|
-> | 2 days to answer an agent's declaration | `DEPOSIT_CONFIRM_DEADLINE_DAYS` | **2** ✅ |
-> | agent's own deposit deadline fallback | `DEPOSIT_DEADLINE_DAYS` | **2** ✅ |
-> | rolling reserve | `RESERVE_PERCENT` / `RESERVE_DAYS` | **10 %** / **30 days** ✅ |
-> | trust tiers | `TRUST_FULL_THRESHOLD` / `TRUST_REDUCED_THRESHOLD` / `TRUST_REDUCED_MULTIPLIER` | **80** / **50** / **×0.5** ✅ |
-> | trust penalties | `TRUST_PENALTY_LATE_DEPOSIT` / `TRUST_PENALTY_SHORTFALL` | **−5** / **−20** ✅ |
-> | `deposit_not_confirmed` opens against the **agency** | `cod-discrepancy.model.ts:13,36` | ✅ |
->
-> One material addition was made — see the 🔴 box under
-> [§ Risk controls](#risk-controls-affecting-your-operation): **`cod.threshold` defaults to
-> `0`, and two of the three dispatch paths refuse silently because of it.**
->
-> ### The agency is not the agent's payer
->
-> Worth stating plainly, because the cash chain on this page runs *through* you and the wage
-> chain does not. Cash-on-delivery money travels **Customer → Agent → Agency → Platform**.
-> **Agent earnings travel the other way and never touch you**: an agent is paid by the
-> **platform**, through the ordinary hold → release → payout pipeline, exactly like a vendor
-> or an agency (`src/modules/earnings/services/earnings-split.service.ts:388,530` — *"The
-> agent is paid by the PLATFORM, like any other beneficiary"*). Your contract's `fee_split`
-> decides how the delivery fee is *divided*; it does not make you the disburser. Nothing in
-> this dashboard pays an agent, and there is no agency route that could.
-
 ## Base Path
 
 ```
@@ -410,24 +382,33 @@ resolves the flag.
   `0` grants no COD headroom at all. A raise can be refused if the agent's pool is already fully
   allocated across their contracts.
 
-  > ### 🔴 `threshold: 0` is the DEFAULT, and on two of the three paths it fails silently
+  **Since 2026-09-21 the agent's pool is automatic, and it is also a cap.** An agent's pool is 0
+  until their identity is verified, then their plan's value (Free **500 000**, Plus 1 000 000,
+  Pro 2 000 000), unless the agent chose to carry less or an administrator set a value. Before this,
+  it stayed 0 until an administrator typed a number, which refused every slice you tried to give a
+  new agent. The effective limit is now `min(your slice, the agent's pool)` × trust. The two are
+  equal whenever your slice fits in the pool, which is the normal state. They differ only when the
+  agent's pool went **down** after you set your slice (plan downgrade, verification withdrawn), and
+  then `COD_AGENT_EXPOSURE_EXCEEDED` carries **`details.poolBinds: true`**: the agent's own pool,
+  not your slice, is what refused, so raising your slice will not help. See
+  [FRONTEND-CHANGELOG-cod-pool.md](./FRONTEND-CHANGELOG-cod-pool.md).
+
+  > ### ⚠ `threshold: 0` is the DEFAULT, and on two of the three paths it fails silently
   >
-  > **Added 2026-08-24 (PLAN-3) from source.** The sentence above is true and badly
-  > understated. Three facts compose into the most likely "why can I not dispatch this agent"
-  > support ticket this dashboard will generate:
+  > The sentence above is true and badly understated. Three facts compose into the most likely
+  > "why can I not dispatch this agent" support ticket a dashboard will generate:
   >
-  > **1. Every new contract starts at zero.** `cod.threshold` has `default: 0` in the schema
-  > and in `contractDefaults`
-  > (`src/modules/agents/models/agent-agency-membership.model.ts:348-354,406-412`). Approving
-  > an agent does **not** grant them any cash headroom.
+  > **1. Every new contract starts at zero.** `cod.threshold` has `default: 0` in the schema and
+  > in `contractDefaults` (`agents/models/agent-agency-membership.model.ts:348,406`). Approving
+  > an agent grants them **no** cash headroom.
   >
   > **2. Zero is not "unset".** The gate reads `contract.cod?.threshold ?? 0` and passes it as
-  > the base limit — `shipment-assignment.service.ts:1004` → `contract-policy.service.ts:383`
-  > on the manual path, `assignment-candidate.service.ts:226` on the ranking path. In
+  > the base limit — `shipment-assignment.service.ts:1004` → `contract-policy.service.ts:383` on
+  > the manual path, `assignment-candidate.service.ts:226` on the ranking path. In
   > `limitBreakdown`, `base = maxExposureOverride ?? COD_CONFIG.AGENT_MAX_EXPOSURE_DEFAULT`
-  > (`cod/services/cod-exposure.service.ts:265`) — and **`0` is not nullish**, so the
-  > platform default of **300,000** minor units (`cod.config.ts:32`) is never reached. `base` is
-  > `0`, and `exposure + amount > 0` refuses every COD shipment however small.
+  > (`cod/services/cod-exposure.service.ts:265`) — and **`0` is not nullish**, so the platform
+  > default of 300,000 minor units (`cod.config.ts:32`) is never reached. `base` is `0`, and
+  > `exposure + amount > 0` refuses every COD shipment however small.
   >
   > **3. Two of the three dispatch paths say nothing.**
   >
@@ -437,17 +418,16 @@ resolves the flag.
   > | `GET /api/agency/shipments/:id/assignment-candidates` | ❌ **Silent** — the agent is simply absent from the list |
   > | `POST /api/agency/shipments/:id/auto-assign` | ❌ **Silent** — no candidate, so nothing is offered |
   >
-  > Both silent paths share one cause: `canTakeCod` wraps the gate in
-  > `try { … } catch { return false }`
-  > (`shipment-assignment/domain/services/assignment-candidate.service.ts:320-331`), so the
-  > reason is discarded along with the candidate.
+  > Both silent paths share one cause: `canTakeCod` wraps the gate in `try { … } catch { return
+  > false }` (`shipment-assignment/domain/services/assignment-candidate.service.ts:320-331`), so
+  > the reason is discarded along with the candidate.
   >
-  > **What to build.** Treat `threshold === 0` on an `active` contract as an actionable warning
-  > in the roster and on the assignment panel, not as a neutral value — and when
+  > **What to build.** Treat `threshold === 0` on an `active` contract as an actionable warning in
+  > the roster and on the assignment panel, not as a neutral value — and when
   > `assignment-candidates` comes back short for a COD shipment, check the contracts of the
   > missing agents before reporting a platform fault.
-  > `GET /api/agency/agents/:agentId/eligibility` reports every blocker at once and is the right
-  > diagnostic to link to.
+  > [`GET /api/agency/agents/:agentId/eligibility`](./agent-roster.md) reports every blocker at
+  > once and is the right diagnostic to link to.
 
 - **Trust tiers** — the base threshold is then scaled by the agent's trust score
   (≥80 → full, 50–79 → halved, <50 → blocked: `COD_AGENT_TRUST_TOO_LOW`). An open `cash_shortfall`

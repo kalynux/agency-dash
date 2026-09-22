@@ -279,11 +279,12 @@
     "cod": {
       "held": "Espèces détenues",
       "cap": "Plafond actuel",
-      "noCap": "Aucun plafond",
-      "placeholder": "Nouveau plafond d'espèces (0 = aucun)",
+      "noCod": "Pas de COD",
+      "zeroWarning": "Aucune livraison contre remboursement ne peut être confiée à ce livreur tant que vous n'avez pas fixé un plafond supérieur à 0.",
+      "placeholder": "0 = pas de COD",
       "editLabel": "Modifier le plafond",
       "set": "Définir",
-      "hint": "Une part du pool global d'espèces du livreur — une augmentation peut être refusée si d'autres agences utilisent ce pool."
+      "hint": "Votre part du pool d'espèces du livreur. Ce pool vient de son forfait une fois son identité vérifiée, et toutes les agences avec lesquelles il travaille le partagent : une augmentation peut donc être refusée."
     },
     "terms": {
       "title": "Conditions du contrat",

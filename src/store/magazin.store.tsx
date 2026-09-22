@@ -8,9 +8,12 @@ import type { AgencyMagazin } from '@/types/magazin.types';
 // of truth for the business name and logo: the logo in particular only exists as
 // a magazin file, so app chrome reading the session can never show it.
 //
-// Consumed by the sidebar's identity block and by the Account → Store editor,
-// which writes back through `setData` so a rename or a new logo lands in the
-// chrome immediately, without a refetch or a reload.
+// Consumed by the sidebar's identity block, the depot pickers and every other
+// reader of `headquartersAddresses`. The Account → Store and Account → Locations
+// editors write back through `setData`, so a rename, a new logo or a new depot
+// (with its server `_id`) lands everywhere immediately, without a refetch or a
+// reload. An editor must never keep a private copy of the magazin — its saves
+// would then be invisible to everything else until a reload.
 
 /** The magazin as a standard resource — same shape `useResource` hands back. */
 export type MagazinState = Resource<AgencyMagazin>;

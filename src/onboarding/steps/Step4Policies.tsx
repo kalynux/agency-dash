@@ -133,13 +133,17 @@ function Section({
     title: string;
     children: React.ReactNode;
 }) {
+    // A bordered card with a tinted title band from `md` up. On a phone the
+    // section sits flat on the page, the band is a plain title row, and the
+    // form's `max-md:divide-y` draws the rule between sections — so a Section
+    // must stay a DIRECT child of the form.
     return (
-        <div className="rounded-xl border-2 border-border overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-3 bg-muted/80 border-b border-border">
+        <div className="max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden md:shadow-sm">
+            <div className="flex items-center gap-2 max-md:pb-3 md:px-4 md:py-3 md:bg-muted/80 md:border-b md:border-border">
                 <Icon className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</span>
             </div>
-            <div className="p-4 bg-card space-y-4">{children}</div>
+            <div className="space-y-4 md:p-4 md:bg-card">{children}</div>
         </div>
     );
 }
@@ -253,14 +257,13 @@ export function Step4Policies() {
     return (
         <OnboardingLayout
             stepKey={4}
-            viewingStepOverride={4}
             ctaSlot={
                 <div className="md:px-6 md:pb-6 md:pt-2">
                     <div className="flex gap-3">
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={goBack}
+                            onClick={() => goBack(4)}
                             disabled={isSubmitting}
                             className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground"
                         >
@@ -305,7 +308,7 @@ export function Step4Policies() {
             <form
                 id="step4-policies-form"
                 onSubmit={handleSubmit(handleSave)}
-                className="md:px-6 pt-5 pb-6 space-y-8"
+                className="md:px-6 pt-5 pb-6 max-md:divide-y md:space-y-8"
                 noValidate
             >
                 {/* ── Pricing ── */}
@@ -463,8 +466,8 @@ export function Step4Policies() {
                             {t('policies.additionalFeesHint')}
                         </p>
 
-                        {/* COD handling fee */}
-                        <div className="rounded-lg border border-border p-3 space-y-3">
+                        {/* COD handling fee — boxed from `md` up, flat on a phone. */}
+                        <div className="space-y-3 md:rounded-lg md:border md:border-border md:p-3">
                             <div className="flex items-center gap-1.5">
                                 <p className="text-xs font-semibold text-muted-foreground">
                                     {t('policies.codHandlingFee')}

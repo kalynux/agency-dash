@@ -2,20 +2,6 @@
 
 **Verified against source on 2026-09-08** — the board route and its guards, every `TrackingBoard*` field, the trackable-agent rule, the 200-shipment cap, the three `permission_revoked` reasons and the four-step ETA destination chain, against `jovi-mall/src/modules/tracking-integration/` and `geo-tracker/internal/modules/tracking/service/service.go`.
 
-> **Verified against source 2026-08-24 (PLAN-3).** Every field of the response below was
-> read off `src/modules/tracking-integration/services/agency-tracking-board.service.ts:34-142`
-> (the `TrackingBoard*` interfaces and `buildTrackingBoard`), the agent set off
-> `…/services/visible-agents.service.ts:25-52` (`TRACKABLE_SHIPMENT_STATUSES` and
-> `trackableShipmentsForAgency`), the route and guard off
-> `src/modules/delivery/agency.routes.ts:15-16,199` and the cap off
-> `…/config/tracking-integration.config.ts:45` (`TRACKING_BOARD_MAX_SHIPMENTS`, default
-> **200**). All matched.
->
-> **One correction was applied**: step 7 of *Drawing the map* told you a
-> `permission_revoked` frame means "the shipment finished". It does not — that is the single
-> reading the closed three-value `reason` set exists to prevent, and it was the most
-> consequential stale sentence in this repository's tracking docs.
-
 The agency live-tracking map is served by **two** services, and the split is the
 point:
 
@@ -160,53 +146,53 @@ the road, and the replacement agent is tracked from the moment they accept.
    Every `location_broadcast` frame then moves that agent's marker.
 4. On selecting a shipment, plot `origin.address.coordinates` and
    `destination.coordinates`.
-5. **Live ETA to the selected shipment.** Prefer **`shipmentId`** — the server resolves the
-   drop-off from that shipment's own tracking session, so you do not have to hand a
-   customer's coordinates to another service:
+5. **Live ETA to the selected shipment** — re-subscribe with that shipment's
+   drop-off and geo-tracker enriches every broadcast with `etaSeconds` and
+   `distanceMeters`:
    ```json
    { "type": "subscribe",
      "payload": { "agentId": "507f1f77bcf86cd799439101",
-                  "shipmentId": "507f1f77bcf86cd799439100" } }
+                  "destination": { "latitude": 4.0611, "longitude": 9.7359 } } }
    ```
-   Sending `destination` still works and is an **override** — nothing replaces it for the
-   life of the subscription, and it is per-subscription rather than persisted, so send it
-   again after a reconnect. **Sending neither now also yields an ETA** when the agent has
-   exactly one open session; with several deliveries in flight the server declines rather
-   than guessing. Full resolution table:
-   [geo-tracker/tracking-websocket.md § How the destination is resolved](../geo-tracker/tracking-websocket.md#how-the-destination-is-resolved).
+   The destination is per-subscription and not persisted; send it again after a
+   reconnect.
 
-   The chain is **first hit wins**: **① your `destination` → ② the session for the
-   `shipmentId` you sent → ③ the agent's SOLE open session → ④ no ETA.**
-
-   > ⚠ **② deliberately does NOT fall back to ③.** If you name a `shipmentId` whose tracking
-   > session is not open, you get **no ETA at all** — not the agent's other drop-off. That is
-   > intentional: an ETA to the wrong address is worse than none, because it looks right. So a
-   > missing `etaSeconds` on a `shipmentId` subscription means *"that shipment has no open
-   > session"*, never *"the server is still working it out"* — do not retry it into existence.
+   > **You usually no longer need to send it** (Phase 3 · 3.C, recorded here 2026-09-06 —
+   > DOC-PROGRAM F-45). geo-tracker now **pulls the drop-off from jovi-mall itself** at session
+   > activation and resolves it per watcher, so the target chain is:
+   > **① your `destination` (still an override) → ② the session for a `shipmentId` you send →
+   > ③ the agent's SOLE open session → ④ no ETA.**
+   > Sending `{"agentId": …, "shipmentId": …}` is the precise form for a multi-drop agent.
+   > ⚠ **② deliberately does not fall back to ③** — an ETA to the wrong drop-off is worse than
+   > none — and ③ deliberately refuses to guess when an agent has several open sessions.
+   > A watcher who subscribed before the pull landed gets the ETA on their next subscribe, not
+   > immediately.
 6. **Road line between the two pins** (optional) — geo-tracker's
    `POST /routing/route` with `{ origin, destination }`. Without it, a straight
-   line between the two pins is a reasonable fallback. ⚠ On the default
-   `ROUTING_PROVIDER=osrm` this works; `/routing/geocode` on the same service does **not**
-   — see [geo-tracker/routing.md](../geo-tracker/routing.md).
-7. 🔴 **A `permission_revoked` frame does not mean the delivery finished.** Read
-   `payload.reason` first — it is a **closed set of three** and only
-   `shipment_completed` is about a delivery:
+   line between the two pins is a reasonable fallback.
+7. A `permission_revoked` frame means **your subscription ended — NOT that the delivery did.**
+   Drop the marker and refetch the board, then read `payload.reason` before telling the user
+   anything. It is a **closed set of three**:
 
-   | `reason` | What it means here | What the board should do |
+   | `reason` | What happened | What to show |
    |---|---|---|
-   | `shipment_completed` | jovi-mall was asked and said this agency is no longer entitled to that agent. | Drop the marker, refetch the board. **The only value from which you may show "delivered".** |
-   | `authorization_expired` | The token the socket was opened with was rejected. Nothing is known about the shipment. | Reconnect with a fresh token and re-subscribe. **Say nothing about the delivery.** Keep the row; it is almost certainly still in flight. |
-   | `authorization_unavailable` | jovi-mall could not be asked. Nothing is known. | Retry with backoff. Report no outcome. |
+   | `shipment_completed` | jovi-mall was asked and said the agent is no longer watchable. | **The only value from which you may report a delivery outcome.** |
+   | `authorization_expired` | jovi-mall **rejected the access token** the socket was opened with. Nothing is known about the shipment. | Get a fresh token, reconnect, re-subscribe. Say nothing about the delivery. |
+   | `authorization_unavailable` | jovi-mall **could not be asked** — unreachable, 5xx, timeout. | Retry with backoff. Report no outcome. |
 
-   Treat any unrecognised value as `authorization_expired`. Until 2026-08-19 all three were
-   sent as `shipment_completed`, which is how a dashboard came to tell an operator a delivery
-   had completed because an access token aged out.
+   **Treat an unrecognised value as `authorization_expired`.**
 
-   > **This is also why you should reconnect on a cadence shorter than the 15-minute access
-   > TTL.** geo-tracker validates the token **at the handshake only** — no timer re-validates
-   > it — but when a revocation check fires it re-forwards *that same, now stale* token to
-   > jovi-mall. So a socket held open past the TTL is fine right up until a revocation happens
-   > to fire, at which point every watcher on it is dropped as `authorization_expired`.
+   > ⚠ **This step read *"the shipment finished, or they were released by a reassignment"* until
+   > 2026-09-06** (DOC-PROGRAM F-45) — the single-meaning reading that the three-value set was
+   > introduced to end, on the page an agency-dashboard author reads first. Acting on it reproduces
+   > the original defect *after the fix shipped*: telling an agency a delivery completed because a
+   > 15-minute access token aged out, which on a long-lived socket is the **commonest** of the
+   > three. See [tracking/live-tracking.md](../tracking/live-tracking.md#permission_revoked-does-not-always-mean-the-delivery-ended)
+   > and geo-tracker's `api-doc/tracking-websocket.md`, both of which were already correct.
+   >
+   > This is also why you should **reconnect on a cadence shorter than the 15-minute access TTL**:
+   > geo-tracker validates the token at the handshake and never on a timer, but re-forwards *that
+   > same token* when a revocation check fires.
 
 ### Refreshing
 

@@ -1,13 +1,12 @@
 # Billing, Plans & Credit — Cross-Dashboard Guide
 
-**Verified against source on 2026-09-08** — the per-role caps and free-tier numbers, the four
-`BILLING_LIMIT_EXCEEDED` paths and its `details` shape, and the admin base path, against
+**Verified against source on 2026-09-08** — the per-role caps and free-tier numbers, and the four
+`BILLING_LIMIT_EXCEEDED` paths with its `details` shape, against
 `jovi-mall/scripts/seed/seed-pricing-plans.ts`,
-`jovi-mall/src/modules/billing/services/entitlement.service.ts`,
+`src/modules/billing/services/entitlement.service.ts`,
 `src/modules/catalog/controllers/vendor-product.controller.ts`,
-`src/modules/catalog/domain/services/ProductBulkOperationsService.ts`,
-`src/modules/catalog/repositories/mongo/product.repository.mongo.ts` and `src/api/index.ts`.
-**Corrected:** the Admin base path was the deleted `/api/admin` mount.
+`src/modules/catalog/domain/services/ProductBulkOperationsService.ts` and
+`src/modules/catalog/repositories/mongo/product.repository.mongo.ts`.
 
 One billing engine now serves **four dashboards**: vendor, agency, agent, and
 admin. Vendors already had plans + a credit wallet; **agencies and agents now have
@@ -37,19 +36,20 @@ server job). Activating a plan grants its `credit_allowance` once into the role'
 ## Per-dashboard summary
 
 > ⚠ **The Admin column is NOT a browser surface.** jovi-mall's public `/api/admin/*` mount was
-> deleted at the Phase 5 cutover (`src/api/index.ts:186-195`) and the live route census has **zero**
+> deleted at the Phase 5 cutover (`src/api/index.ts:186-189`) and the live route census has **zero**
 > `/api/admin/*` routes. The admin billing surface is eight routes under
 > `/api/internal/admin/billing/*`, reachable only by **wi-admin** with a service token — no browser
 > session of any role can reach it, and the admin dashboard talks to wi-admin's `/api/v1/*`, never
-> to this. Corrected 2026-09-08; this table listed the dead mount.
+> to this. Corrected 2026-09-06 (DOC-PROGRAM F-30); the prose below had been fixed earlier and this
+> table had not, which is the half-corrected-page failure mode described in F-29.
 
 | | Vendor | Agency | Agent | Admin |
 |---|---|---|---|---|
 | **Base path** | `/api/vendor` | `/api/agency` | `/api/agent` | `/api/internal/admin/billing` ⚠ |
-| **Doc** | vendor/billing.md (`backend/jovi-mall/api-doc/./vendor/billing.md` — not mirrored in this repository) | [agency/billing.md](./agency/billing.md) | agent/billing.md (`backend/jovi-mall/api-doc/./agent/billing.md` — not mirrored in this repository) | admin/billing.md (`backend/jovi-mall/api-doc/./admin/billing.md` — not mirrored in this repository) |
+| **Doc** | [vendor/billing.md](./vendor/billing.md) | [agency/billing.md](./agency/billing.md) | [agent/billing.md](./agent/billing.md) | [admin/billing.md](./admin/billing.md) |
 | **Free tier** | `starter` | `agency_free` | `agent_free` | — |
-| **Plan limit** | products / storage / commission | `max_unterminated_shipments` (**soft**) | `max_unterminated_shipments` (**hard**) | defines all |
-| **Free-tier limit** | 15 products, 1 GB storage, 7% commission | **1000** unterminated shipments, **5 GB** storage | **20** concurrent deliveries, **1 GB** storage | — |
+| **Plan limit** | products / storage / commission | `max_unterminated_shipments` (**soft**) | `max_unterminated_shipments` (**hard**) · `max_cod_pool` (COD cash, **once KYC-verified**) | defines all |
+| **Free-tier limit** | 15 products, 1 GB storage, 7% commission | **1000** unterminated shipments, **5 GB** storage | **20** concurrent deliveries, **1 GB** storage, **500 000 XAF** COD pool | — |
 | **Enforcement** | **four** catalogue paths blocked at cap (`403 BILLING_LIMIT_EXCEEDED`) — see below | never blocks — alert only | offer-accept blocked at cap (`422 AGENT_AT_CAPACITY`) | — |
 | **Paid tiers today** | active | `is_active:false` (build UI, not yet buyable) | `is_active:false` | manage via catalog |
 
@@ -106,7 +106,7 @@ understand a 15-product refusal unless your UI says which products are consuming
 caller, for the marketing site — which prints real prices and previously had to hand-copy them out of
 `seed-pricing-plans.ts` and `credit.config.ts`. Same numbers, a trimmed projection (`id` instead of
 `_id`, no internal timestamps), plus `?role=` / `?includeInactive=true` and a 5-minute
-`Cache-Control`. Contract: public/README.md (`backend/jovi-mall/api-doc/public/README.md` — not mirrored in this repository).
+`Cache-Control`. Contract: [public/README.md](./public/README.md).
 
 **Dashboards should keep using the authenticated `GET /api/{role}/plans`** — it is scoped to the
 caller's role and needs no filtering. The public route exists for pages that have no session at all.
@@ -130,8 +130,8 @@ Swap `{role}` for `vendor`, `agency`, or `agent`:
 
 **Payment / verify / polling** mechanics (gateway `instructions`, Stripe client-secret
 flow, the two-plan activate-now-vs-queue rule, idempotent verify, ~3–5s polling) are
-documented once in vendor/billing.md (`backend/jovi-mall/api-doc/./vendor/billing.md` — not mirrored in this repository) and apply unchanged to
-every role. Stripe specifics: vendor/stripe-payments.md (`backend/jovi-mall/api-doc/vendor/stripe-payments.md` — not mirrored in this repository).
+documented once in [vendor/billing.md](./vendor/billing.md) and apply unchanged to
+every role. Stripe specifics: [vendor/stripe-payments.md](./vendor/stripe-payments.md).
 
 ### Response field names (changed)
 
@@ -144,10 +144,10 @@ must be updated.
 ## Admin (catalog + assignment)
 
 - `GET /api/internal/admin/billing/plans?role=vendor|agency|agent` — full catalog incl. inactive (omit `role` for all).
-- `POST /api/internal/admin/billing/plans` — create a plan of any role; send only the limit fields that role uses (`max_active_products`/`max_storage_bytes`/`commission_percent` for vendor, `max_unterminated_shipments` for agency/agent, `live_tracking_enabled` for both).
+- `POST /api/internal/admin/billing/plans` — create a plan of any role; send only the limit fields that role uses (`max_active_products`/`max_storage_bytes`/`commission_percent` for vendor, `max_unterminated_shipments` for agency/agent, `max_cod_pool` for agent — ⚠ `null` there means no COD, not unlimited — and `live_tracking_enabled` for both).
 - `POST /api/internal/admin/billing/{vendors|agencies|agents}/:id/plan` — manually assign/queue a plan (comps/support/migrations), no payment. Assigning an agent plan updates their delivery ceiling immediately.
 
-See admin/billing.md (`backend/jovi-mall/api-doc/./admin/billing.md` — not mirrored in this repository).
+See [admin/billing.md](./admin/billing.md).
 
 ## Notifications each dashboard must render
 
@@ -160,7 +160,7 @@ and these situations — build them into the notification UI and preferences scr
 | `plan.expired` | vendor, agency, agent | Plan expired → handover or downgrade to free | `plans` |
 | `shipment.cap.exceeded` | agency only | Crossed the unterminated-shipment soft cap (once per crossing) | `plans` |
 
-- Per-role notification docs: vendor (`backend/jovi-mall/api-doc/./vendor/notifications.md` — not mirrored in this repository) · [agency](./agency/notifications.md) · agent (`backend/jovi-mall/api-doc/./agent/notifications.md` — not mirrored in this repository).
+- Per-role notification docs: [vendor](./vendor/notifications.md) · [agency](./agency/notifications.md) · [agent](./agent/notifications.md).
 - Each notification is in-app (always) + push + one preference-gated channel, localized.
 - **Deep-link route:** every plan/cap notification's `action.path` is `plans` — each SPA must implement a `plans` route (it's appended to `VENDOR_APP_URL` / `AGENCY_APP_URL` / `AGENT_APP_URL`).
 - WhatsApp needs the `{vendor,agency,agent}_plan_*` and `agency_shipment_cap_exceeded` templates approved in Meta before that channel delivers (in-app/push/email/Telegram work regardless): [whatsapp-templates.md](./notifications/whatsapp-templates.md) §9.

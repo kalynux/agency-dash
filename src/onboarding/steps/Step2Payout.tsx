@@ -54,10 +54,10 @@ export function Step2Payout() {
     }, [entries, schema, saveDraft, submitPayout, roleEntity, t]);
 
     return (
-        <OnboardingLayout stepKey={2} viewingStepOverride={2}
+        <OnboardingLayout stepKey={2}
             ctaSlot={
                 <div className="md:px-6 md:pb-6 md:pt-2 flex gap-3">
-                    <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
+                    <Button type="button" variant="outline" onClick={() => goBack(2)} disabled={isSubmitting} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
                         <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
                     </Button>
                     <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting} className="flex-1 h-12 rounded-xl font-semibold gap-2">

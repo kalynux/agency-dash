@@ -281,11 +281,12 @@
     "cod": {
       "held": "COD cash held",
       "cap": "Current cap",
-      "noCap": "No cap",
-      "placeholder": "New COD threshold (0 = none)",
+      "noCod": "No COD",
+      "zeroWarning": "Cash-on-delivery runs can't go to this agent until you set a limit above 0.",
+      "placeholder": "0 = no COD",
       "editLabel": "Change the cap",
       "set": "Set",
-      "hint": "A slice of the agent's global COD pool — a raise can be refused if other agencies use the pool."
+      "hint": "Your slice of the agent's COD pool. The pool comes from their plan once they're verified, and every agency they work for shares it, so a raise can be refused."
     },
     "terms": {
       "title": "Contract terms",

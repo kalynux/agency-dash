@@ -14,6 +14,13 @@ import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
 import { TIMEZONES } from '@/lib/timezones';
 
+// A bordered card with a tinted title band from `md` up. On a phone the section
+// sits flat on the page, the band is a plain title row, and the form's
+// `max-md:divide-y` draws the rule between sections.
+const SECTION_CLASS = 'max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden';
+const SECTION_BAND_CLASS = 'flex items-center gap-2 max-md:pb-3 md:px-4 md:py-2.5 md:bg-muted/60';
+const SECTION_BODY_CLASS = 'md:p-4 md:bg-card';
+
 function FieldRow({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
     return (
         <div className="space-y-1.5">
@@ -94,11 +101,11 @@ export function Step3Branding() {
     }, [submitBranding, t]);
 
     return (
-        <OnboardingLayout stepKey={3} viewingStepOverride={3}
+        <OnboardingLayout stepKey={3}
             ctaSlot={
                 <div className="md:px-6 md:pb-6 md:pt-2 space-y-2">
                     <div className="flex gap-3">
-                        <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting || isSkipping} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
+                        <Button type="button" variant="outline" onClick={() => goBack(3)} disabled={isSubmitting || isSkipping} className="h-12 w-24 rounded-xl font-semibold gap-1.5 border-input text-muted-foreground">
                             <ChevronLeft className="w-4 h-4" /> {t('actions.back')}
                         </Button>
                         <Button type="submit" form="step3-branding-form" disabled={isSubmitting || isSkipping} className="flex-1 h-12 rounded-xl font-semibold gap-2">
@@ -129,13 +136,16 @@ export function Step3Branding() {
 
             {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
-            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="md:px-6 pt-5 pb-6 space-y-4" noValidate>
-                <div className="rounded-xl border-2 border-border overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/60">
+            {/* Cards from `md` up. On a phone each section sits flat on the page
+                and a rule between them does the grouping; the sections must stay
+                DIRECT children of the form for `divide-y` / `first:` / `last:`. */}
+            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="md:px-6 pt-5 pb-6 max-md:divide-y md:space-y-4" noValidate>
+                <div className={SECTION_CLASS}>
+                    <div className={SECTION_BAND_CLASS}>
                         <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-xs font-semibold text-muted-foreground">{t('branding.logoSection')}</span>
                     </div>
-                    <div className="p-4 bg-card">
+                    <div className={SECTION_BODY_CLASS}>
                         <div className="flex items-center gap-4">
                             {/* The tile is the control — clicking it opens the media library. */}
                             <MediaPickerTrigger
@@ -175,12 +185,12 @@ export function Step3Branding() {
                     </div>
                 </div>
 
-                <div className="rounded-xl border-2 border-border overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/60">
+                <div className={SECTION_CLASS}>
+                    <div className={SECTION_BAND_CLASS}>
                         <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-xs font-semibold text-muted-foreground">{t('branding.timezoneSection')}</span>
                     </div>
-                    <div className="p-4 bg-card">
+                    <div className={SECTION_BODY_CLASS}>
                         <FieldRow label={t('branding.timezone')} hint={t('branding.timezoneHint')} error={errors.timezone?.message}>
                             <Controller control={control} name="timezone" render={({ field }) => (
                                 <Select value={field.value ?? ''} onValueChange={field.onChange}>

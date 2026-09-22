@@ -22,7 +22,7 @@ Authorization: Bearer <access_token>
 
 > [!NOTE]
 > This is the same ticketing engine documented for other roles (see
-> vendor/tickets.md (`backend/jovi-mall/api-doc/vendor/tickets.md` — not mirrored in this repository)) — the same controllers/services are mounted under
+> [vendor/tickets.md](../vendor/tickets.md)) — the same controllers/services are mounted under
 > `/api/vendor/tickets`, `/api/agency/tickets`, `/api/agent/tickets`, `/api/customer/tickets` and
 > `/api/internal/admin/tickets`, scoped to the caller's role. Mechanics (follower system, priority locking,
 > visibility rules) are identical across roles; this document lists the **current, authoritative**
@@ -143,13 +143,13 @@ Body:
 ```
 
 > **Actor summary for `agency`.** `name` resolves to **`DeliveryAgency.display_name`, falling back
-> to `Magazin.name`** (`ticket-enrichment.service.ts:375`), and `avatar` to the resolved logo
+> to `Magazin.name`** (`ticket-enrichment.service.ts:355`), and `avatar` to the resolved logo
 > **file object** (from the **Magazin's** `logo_file_id`) — used for `created_by`, `assigned_to`,
 > and every entry in `followers` when the actor is an agency.
-> ⚠ **This said `name` resolves to `agency_name`; there is no such field on the agency profile.**
-> The business name lives on the **Magazin**, the profile holds only `display_name` — so the
-> fallback is a lookup into another collection, and an agency with neither resolves to **`''`**,
-> not `null`.
+> ⚠ **This said `name` resolves to `agency_name` until 2026-09-06; there is no such field on the
+> agency profile.** The business name lives on the **Magazin**, the profile holds only
+> `display_name` — so the fallback is a lookup into another collection, and an agency with
+> neither resolves to **`''`**, not `null`.
 >
 > **Entity summary for non-`ORDER`/`PRODUCT`/`BOOKING` types** (e.g. `SHIPMENT`, `DELIVERY`,
 > `AGENCY`) degrades to a generic placeholder: `label` is `"<Type> <last 6 chars of id>"` and
@@ -566,7 +566,6 @@ Body:
     "fileSize": 184320,
     "mimeType": "image/jpeg",
     "url": "http://localhost:8022/api/files/images/2026/02/a1b2c3…_checkout-error.png",
-    "access": "public",
     "uploadedBy": "string",
     "uploadedByRole": "agency",
     "uploadedByActor": {
@@ -635,10 +634,14 @@ into ready-to-render summary objects. The original `*_id` fields are kept alongs
 attachment `uploadedByActor`). **`assigned_admin` is NOT one of these** — it has its own shape,
 below:
 ```json
-{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar": { "id": "…", "key": "…", "url": "https://.../logo.png", "access": "public", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" } }
+{ "user_id": "string", "role": "agency", "name": "FastTrack Logistics", "avatar": { "id": "…", "key": "images/2026/07/logo.png", "url": "https://.../images/2026/07/logo.png", "access": "public", "mimeType": "image/png", "size": 24576, "originalName": "logo.png" } }
 ```
-- `name`: admin/customer/agent → `name`; vendor → `display_name` (falls back to `business_name`);
-  **agency → `agency_name`**.
+- `name`: admin/customer/agent → `name`; **vendor → `Vendor.display_name`, falling back to
+  `Store.name`**; **agency → `DeliveryAgency.display_name`, falling back to `Magazin.name`**
+  (`ticket-enrichment.service.ts:302, 355`). ⚠ **The fallbacks read `business_name` and
+  `agency_name` until 2026-09-06 and neither field exists** — business identity lives on the
+  Store/Magazin, the profile holds only `display_name`. With both absent the value is **`''`**,
+  not `null`.
 - `avatar`: profile photo/logo where one exists, as a resolved **file object** (`{ id, key, url, access, mimeType, size, originalName }`) — **agency → resolved from `logo_file_id`** — otherwise `null`.
 - Unresolvable references fall back to the capitalised role name (e.g. `"Agency"`) with `avatar: null`.
 

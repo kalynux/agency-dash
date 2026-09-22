@@ -1,4 +1,5 @@
 import i18n from '@/i18n';
+import { formatNumber } from '@/lib/format';
 import { ApiError, type ErrorCategory } from '@/types/api';
 
 /**
@@ -35,6 +36,48 @@ export function getGenericErrorMessage(): string {
   return i18n.t('errors:generic');
 }
 
+interface DetailedMessage {
+  /** Key under `errors:detailed.*`. */
+  key: string;
+  context?: Record<string, unknown>;
+}
+
+/**
+ * The few codes whose true sentence depends on `details`, not on the code alone.
+ *
+ * Each resolver reads only the typed fields documented for its code and returns
+ * a key under `errors:detailed.*`, or `undefined` to fall through to the code's
+ * own copy. That copy is written to be true without the details, so an older
+ * server, or a payload missing a field, still gets a correct message.
+ *
+ * Free text in `details` (a `hint`) is never matched and never shown: it is
+ * English server copy, the same as `error.message`.
+ */
+const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMessage | undefined> = {
+  // The limit is `min(our slice, the agent's pool) × trust` since 2026-09-21, and
+  // `poolBinds` says which of the two refused, so whether raising our slice can
+  // help. Absent (an older server) means the slice. See
+  // api-doc/agency/FRONTEND-CHANGELOG-cod-pool.md.
+  COD_AGENT_EXPOSURE_EXCEEDED: (d) =>
+    d.poolBinds === true ? { key: 'COD_AGENT_EXPOSURE_EXCEEDED.poolBinds' } : undefined,
+  // `headroom` is what is left of the agent's pool once every other contract's
+  // slice is taken out, so it is the most this contract can be set to.
+  CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM: (d) => {
+    if (typeof d.headroom !== 'number') return undefined;
+    return d.headroom > 0
+      ? { key: 'CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM.some', context: { headroom: formatNumber(d.headroom) } }
+      : { key: 'CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM.none' };
+  },
+};
+
+function detailedMessage(err: ApiError): DetailedMessage | undefined {
+  const resolve = DETAILED[err.code];
+  const details = err.details;
+  if (!resolve || !details || typeof details !== 'object' || Array.isArray(details)) return undefined;
+  const found = resolve(details as Record<string, unknown>);
+  return found && i18n.exists(`${CODES_NS}:detailed.${found.key}`) ? found : undefined;
+}
+
 /**
  * Standard way to turn any thrown value into a user-facing, localized message.
  *
@@ -45,8 +88,9 @@ export function getGenericErrorMessage(): string {
  * @param context interpolation values passed to the resolved message, so a
  *   catalogued error can name the limit or amount it is about.
  *
- * Resolution is four tiers, narrowest first: per-screen override → the code's
- * own copy → `error.category` → generic. The category tier exists because the
+ * Resolution is five tiers, narrowest first: per-screen override → the code's
+ * `details`-dependent copy (see {@link DETAILED}) → the code's own copy →
+ * `error.category` → generic. The category tier exists because the
  * backend registry has 547 codes and no client will ever map all of them; the
  * category still tells the user the one thing that changes what they do next
  * (sign in again / it's your input / it's ours / wait and retry).
@@ -68,6 +112,13 @@ export function getApiErrorMessage(
       err.retryAfterSeconds !== undefined
         ? { seconds: err.retryAfterSeconds, ...context }
         : context;
+    const detailed = detailedMessage(err);
+    if (detailed) {
+      return i18n.t(
+        `${CODES_NS}:detailed.${detailed.key}` as never,
+        { ...withRetry, ...detailed.context } as never,
+      ) as unknown as string;
+    }
     if (hasCode(err.code)) return translateCode(err.code, withRetry);
     if (err.category) return translateCategory(err.category, withRetry);
     return getGenericErrorMessage();

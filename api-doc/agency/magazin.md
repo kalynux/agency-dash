@@ -4,7 +4,7 @@
 
 ## Overview
 
-The **Magazin** is a delivery agency's business surface — the single source of truth for its **public business identity and its logistics footprint**: business name, description, logo, support contacts, the **regions it serves** (`coverageAreas`) and its physical **headquarters / pickup locations** (`headquartersAddresses`). It is the counterpart of a vendor's Store (`backend/jovi-mall/api-doc/vendor/store.md` — not mirrored in this repository): the agency **profile** (`/api/agency/profile`) holds only personal + account data (contact display name, avatar, payout, policies, KYC) plus the set-once `country` that anchors coverage/HQ, while the **magazin** holds everything business/operational.
+The **Magazin** is a delivery agency's business surface — the single source of truth for its **public business identity and its logistics footprint**: business name, description, logo, support contacts, the **regions it serves** (`coverageAreas`) and its physical **headquarters / pickup locations** (`headquartersAddresses`). It is the counterpart of a vendor's [Store](../vendor/store.md): the agency **profile** (`/api/agency/profile`) holds only personal + account data (contact display name, avatar, payout, policies, KYC) plus the set-once `country` that anchors coverage/HQ, while the **magazin** holds everything business/operational.
 
 Each agency has exactly one magazin, **auto-created on first access** (and provisioned at signup / when `POST /api/agency` sets the initial name).
 
@@ -120,7 +120,7 @@ Update the authenticated agency's magazin.
 - `supportPhone` (string, **E.164** e.g. `+237612345678`, *clearable*).
 - `supportWhatsapp` (string, **E.164**, *clearable*).
 
-> Phone and email formats are platform-wide — see [Contact formats](../README.md).
+> Phone and email formats are platform-wide — see [Contact formats](../README.md#contact-formats-phone--email).
 - `coverage_areas` (`string[]`, min 1): **Full replace.** Region keys of the agency's `country` (from `locations.json`). Entries that aren't regions of that country → `400 AGENCY_COVERAGE_AREA_INVALID`.
   - The **same catalogue** now backs the coverage picker on an agent contract's terms (`coverage.regions`) — see [Coverage regions are picked, not typed](./agent-roster.md#coverage-regions-are-picked-not-typed). A contract may name any region of the country, not only the ones listed here; these are shown alongside as "regions this agency serves".
 - `headquarters_addresses` (`object[]`, min 1): **Full replace**; index 0 = primary. Each entry is `{ id?, label, address_description, support_contact:{ phone, email? }, geo }`. Every **new or edited** entry must carry a geocoded `geo` (a selected `/api/geo/search` result) resolving inside the agency's `country` — else `400 ADDRESS_GEO_REQUIRED` / `400 ADDRESS_COUNTRY_MISMATCH`. `location`, `region` and `city` are all derived from `geo` on write. Same flow as a vendor `business_addresses` entry.
@@ -132,7 +132,7 @@ Update the authenticated agency's magazin.
   - "Unchanged" (grandfathered, geo not required) means the **same geocoded place**, plus *either* the same `address_description` *or* a matching `id`. Adding or renaming a `label`, omitting `region`/`city`, and (when you send `id`) correcting the address text are therefore not "edits" — re-saving the list never forces a re-geocode of legacy rows. Moving the pin always is an edit, `id` or not.
 - `version` (**required**, number): current magazin version for optimistic locking.
 
-**Clearing a field**: every *clearable* field accepts `null` **or `""`** (stored/returned as `null`); omit a key to leave it unchanged. `name`, `coverage_areas`, and `headquarters_addresses` are full-replace, not clearable. See [Conventions](../README.md).
+**Clearing a field**: every *clearable* field accepts `null` **or `""`** (stored/returned as `null`); omit a key to leave it unchanged. `name`, `coverage_areas`, and `headquarters_addresses` are full-replace, not clearable. See [Conventions](../README.md#conventions).
 
 #### Response
 

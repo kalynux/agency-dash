@@ -56,11 +56,11 @@ export interface OnboardingState {
      * Used as the canonical "max allowed step" for the router guard.
      */
     currentStep: AgencyOnboardingStep | null;
-    /**
-     * The step the user is currently *viewing* (may be a previous completed step
-     * when they navigate backwards using the Back button).
-     */
-    viewingStep: AgencyOnboardingStep | null;
+    // There is deliberately no "viewing step" here. The step on screen is the
+    // route's, and only the rendered step component knows it for certain: a
+    // stored copy went stale on every navigation the store did not perform —
+    // a stepper tap, Android back, a typed URL — and then "Back" computed from
+    // it. The layout reads `stepKey`, and `goBack` is told where it is.
 
     /**
      * Draft form values for each step.
@@ -101,8 +101,11 @@ export interface OnboardingState {
     submitPayout: (payload: PayoutPayload) => Promise<void>;
     submitBranding: (payload: BrandingPayload) => Promise<void>;
     submitPolicies: (payload: PoliciesPayload) => Promise<void>;
-    /** Navigate to the previous step (if already on step > 1). */
-    goBack: () => void;
+    /**
+     * Navigate to the step before `fromStep` — the step the caller is rendering.
+     * A no-op on step 1.
+     */
+    goBack: (fromStep: AgencyOnboardingStep) => void;
     logout: () => Promise<void>;
     clearError: () => void;
 }
@@ -132,7 +135,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     const [isInitializing, setIsInitializing] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<ApiError | null>(null);
-    const [viewingStep, setViewingStep] = useState<AgencyOnboardingStep | null>(null);
     const [drafts, setDrafts] = useState<StepDrafts>({
         logistics: null,
         payout: null,
@@ -181,7 +183,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
             const res = await authService.getAuthMeAgency();
             setSession(res.data);
-            setViewingStep(res.data.role_entity.onboarding_step);
         } catch (err) {
             if (err instanceof ApiError && err.isUnauthorized) {
                 setSession(null);
@@ -235,12 +236,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
             // when the user goes back and resubmits an earlier step.
             // Exception: if backend says 0 (complete), go to dashboard immediately.
             if (backendStep === 0) {
-                setViewingStep(0 as AgencyOnboardingStep);
                 navigate('/dashboard', { replace: true });
             } else {
-                const nextViewStep = (submittedFromStep + 1) as AgencyOnboardingStep;
-                setViewingStep(nextViewStep);
-                navigate(stepToRoute(nextViewStep), { replace: true });
+                navigate(stepToRoute((submittedFromStep + 1) as AgencyOnboardingStep), { replace: true });
             }
         },
         [navigate],
@@ -308,7 +306,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const onHardLogout = () => {
             setSession(null);
-            setViewingStep(null);
             setDrafts({ logistics: null, payout: null, branding: null, policies: null });
             // Same reset `logout()` performs: a later visit to a guarded route
             // is free to ask the server again.
@@ -321,7 +318,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
     const adoptSession = useCallback((next: AgencyAuthSession) => {
         setSession(next);
-        setViewingStep(next.role_entity.onboarding_step);
         setError(null);
         // The login response IS the session, and it is newer than anything
         // `auth-me` could return, so the boot call is already satisfied.
@@ -362,13 +358,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         [refreshSession],
     );
 
-    const goBack = useCallback(() => {
-        const v = viewingStep;
-        if (!v || v <= 1) return;
-        const prevStep = (v - 1) as AgencyOnboardingStep;
-        setViewingStep(prevStep);
-        navigate(stepToRoute(prevStep), { replace: true });
-    }, [viewingStep, navigate]);
+    const goBack = useCallback((fromStep: AgencyOnboardingStep) => {
+        if (fromStep <= 1) return;
+        navigate(stepToRoute((fromStep - 1) as AgencyOnboardingStep), { replace: true });
+    }, [navigate]);
 
     const logout = useCallback(async () => {
         try {
@@ -393,7 +386,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
                 isSubmitting,
                 error,
                 currentStep,
-                viewingStep,
                 drafts,
                 saveDraft,
                 initialize,

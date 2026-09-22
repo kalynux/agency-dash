@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { useResource } from '@/hooks/useResource';
 import { magazinService } from '@/services/magazin.service';
+import { useMagazin } from '@/store/magazin.store';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { AnyTFunction } from '@/i18n/tx';
@@ -273,8 +274,9 @@ function AddressRowHeading({
       : t('locations.branchAddress', { number: index + 1 });
 
   return (
-    // Negative margins pull the band out to the card's own `p-4` edges.
-    <div className="-mx-4 -mt-4 flex items-center justify-between gap-2 rounded-t-lg border-b bg-muted/40 px-4 py-2.5">
+    // From `md` up, negative margins pull the band out to the card's own `p-4`
+    // edges. On a phone there is no card, so it is a plain title row.
+    <div className="flex items-center justify-between gap-2 md:-mx-4 md:-mt-4 md:rounded-t-lg md:border-b md:bg-muted/40 md:px-4 md:py-2.5">
       <span className="flex min-w-0 items-center gap-2">
         <Building className="w-4 h-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0">
@@ -303,13 +305,13 @@ function AddressRowHeading({
 
 export function LocationsSettings() {
   const { t } = useTranslation(['settings', 'common']);
-  const {
-    data: magazin,
-    isLoading,
-    error,
-    refetch,
-    setData,
-  } = useResource(() => magazinService.getMagazin(), []);
+  // The SHARED magazin, not a private fetch. This page used to hold its own
+  // copy, so a save updated only itself: the depot pickers in Inventory, the
+  // stock dialogs, the verification checklist and the agent dialogs kept the old
+  // list — without the new depots or their server `_id`s — until a reload.
+  // `setData(updated)` below now lands the PATCH reply (the full magazin,
+  // `headquartersAddresses` with every `_id`) everywhere at once.
+  const { data: magazin, isLoading, error, refetch, setData } = useMagazin();
 
   // The operating country anchors both the region list and the geo search bias.
   // It lives on the profile, not the magazin, so it is read separately.
@@ -546,9 +548,16 @@ export function LocationsSettings() {
               <p className="mb-2 text-xs text-destructive">{fieldErrors.addresses}</p>
             )}
 
-            <div className="space-y-4">
+            {/* Cards from `md` up. On a phone each address sits flat on the page
+                and a rule between them does the grouping — a border plus its
+                padding cost every field ~30px of width. The rows must stay
+                DIRECT children for `divide-y` / `first:` / `last:` to apply. */}
+            <div className="max-md:divide-y md:space-y-4">
               {form.addresses.map((entry, index) => (
-                <div key={entry.uid} className="space-y-3 rounded-lg border p-4">
+                <div
+                  key={entry.uid}
+                  className="space-y-3 max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-lg md:border md:p-4"
+                >
                   <AddressRowHeading
                     index={index}
                     label={entry.label}

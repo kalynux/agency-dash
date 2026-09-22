@@ -6,7 +6,7 @@ Changing the recorded stock of a SKU you warehouse. Every change needs both
 signatures — yours and the vendor's.
 
 > Related docs: [Inventory](./inventory.md) (where these requests surface per SKU) ·
-> Vendor → Stock requests (`backend/jovi-mall/api-doc/vendor/stock-requests.md` — not mirrored in this repository) (the mirror) ·
+> [Vendor → Stock requests](../vendor/stock-requests.md) (the mirror) ·
 > [Vendor connections](./vendor-connections.md) (the flow this one is modelled on) ·
 > [Front-end changelog](../FRONTEND-CHANGELOG-agency-storage.md).
 

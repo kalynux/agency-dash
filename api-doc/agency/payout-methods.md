@@ -103,7 +103,7 @@ Every text field is **trimmed first, then length-checked**: `"   "` is refused, 
 | Field | Type | Required? | Validation |
 |---|---|---|---|
 | `provider` | `string` | Yes | Min 1 char after trim. E.g. `"MTN Mobile Money"`, `"Orange Money"` |
-| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code (e.g. `+237670000000`). [Contact formats](../README.md) |
+| `phone_number` | `string` | Yes | **E.164** — leading `+` and country code (e.g. `+237670000000`). [Contact formats](../README.md#contact-formats-phone--email) |
 | `account_name` | `string` | Yes | Min 1 char after trim |
 
 ```json
@@ -213,8 +213,8 @@ Rejected — the PAN is present:
   "requestId": "3f8a1c74-9b2e-4d10-8c55-6a0f2b7e19dd",
   "error": {
     "code": "VALIDATION_ERROR",
-    "category": "validation",
     "statusCode": 400,
+    "category": "validation",
     "details": {
       "fields": [
         { "path": "payout_details.0.card.number", "message": "Card numbers and security codes are never accepted or stored. Send only brand, last4, holder, expiry and country (plus a gateway token if you have one)." },
