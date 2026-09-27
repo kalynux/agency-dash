@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Inbox, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -25,7 +25,8 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass, type RenderPageHeader } from '@/components/layout/PageContainer';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { StockRequestCard } from '@/components/inventory/requests/StockRequestCard';
 import { StockRequestSheet } from '@/components/inventory/requests/StockRequestSheet';
 import { stockRequestsService } from '@/services/stock-requests.service';
@@ -46,7 +47,7 @@ const EMPTY_META: StockRequestListMeta = { total: 0, page: 1, limit: PAGE_LIMIT,
 const STATUSES: StockRequestStatus[] = ['pending', 'approved', 'rejected', 'withdrawn'];
 const DIRECTIONS: StockRequestDirection[] = ['awaiting_me', 'raised_by_me'];
 
-export function StockRequestsTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
+export function StockRequestsTab() {
   const { t } = useTranslation(['inventory', 'common']);
   const { refetch: refetchBadge } = useStockRequests();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -91,6 +92,11 @@ export function StockRequestsTab({ renderHeader }: { renderHeader: RenderPageHea
   useEffect(() => {
     load();
   }, [load]);
+
+  usePageRefresh(() => {
+    load();
+    refetchBadge();
+  }, isLoading);
 
   /** An action resolved a request: the list, the badge and the sheet all move. */
   const handleResolved = () => {
@@ -137,10 +143,6 @@ export function StockRequestsTab({ renderHeader }: { renderHeader: RenderPageHea
 
   return (
     <div className="space-y-6">
-      {renderHeader([
-        { id: 'refresh', label: t('page.refresh'), icon: RefreshCw, onSelect: load, busy: isLoading },
-      ])}
-
       <SearchFilterBar
         activeCount={activeFilterCount}
         onReset={resetFilters}

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { ShipmentMoneySection } from '@/components/shipments/ShipmentMoney';
 import { AssignmentPanel } from '@/components/shipments/AssignmentPanel';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { DeliveryProofPanel } from '@/components/shipments/DeliveryProofPanel';
 import { DeliveryReviewPanel } from '@/components/shipments/DeliveryReviewPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
@@ -223,6 +224,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                   <span className="min-w-0 truncate" title={detail.vendor.businessName}>
                     {detail.vendor.businessName}
                   </span>
+                  <VerifiedBadge verified={detail.vendor.verified} className="-ms-0.5" />
                 </p>
                 {detail.vendor.phone && (
                   <a

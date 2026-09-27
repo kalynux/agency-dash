@@ -123,8 +123,12 @@ export function resolveFileUrl(
   return `${base}/${key}`;
 }
 
-/** The three storage trees that left the public mount. */
-const AUTHORIZED_KEY_PREFIXES = ['digital/', 'shipments/', 'ticket-attachments/'] as const;
+/**
+ * The storage trees that are not on the public mount: the three that left it on
+ * 2026-08-19, plus `cod-proofs/` (COD hand-over receipts, private from the start
+ * on 2026-09-27).
+ */
+const AUTHORIZED_KEY_PREFIXES = ['digital/', 'shipments/', 'ticket-attachments/', 'cod-proofs/'] as const;
 
 /**
  * The single place this app decides what kind of file it is holding.

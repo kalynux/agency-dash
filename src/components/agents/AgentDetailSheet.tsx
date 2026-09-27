@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { VehicleIcon } from '@/components/agents/VehicleIcon';
 import { txStatic } from '@/i18n/tx';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import type { AgentDirectoryItem, AgentRating } from '@/types/agent.types';
 
 function StatRow({ label, value }: { label: string; value: ReactNode }) {
@@ -87,7 +88,10 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
               )}
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
-              <SheetTitle className="text-base leading-tight">{agent.name}</SheetTitle>
+              <SheetTitle className="text-base leading-tight">
+                {agent.name}
+                <VerifiedBadge verified={agent.kycVerified} className="ms-1" />
+              </SheetTitle>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {agent.kycVerified ? (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
@@ -97,7 +101,8 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
                 ) : (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800">
                     <Shield className="w-3 h-3" />
-                    {t('detail.unverified')}
+                    {/* Verification gates COD only — say what it costs, not "blocked". */}
+                    {t('detail.notVerifiedCod')}
                   </Badge>
                 )}
                 <Badge variant="secondary" className="gap-1 text-xs font-medium">

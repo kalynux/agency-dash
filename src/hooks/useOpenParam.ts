@@ -49,6 +49,36 @@ export function useOpenParam(): OpenParam {
 }
 
 /**
+ * `?new=1` — the "create" form of a list screen is open.
+ *
+ * In the URL for the same reason as `?open=`: another screen can link straight
+ * into the form (the cash summary's "Declare a remittance" does). Written with
+ * `replace`, so opening and closing the form adds no history entries.
+ */
+export function useCreateParam(): [boolean, (open: boolean) => void] {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isOpen = searchParams.get('new') === '1';
+
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (next === isOpen) return;
+      const params = new URLSearchParams(searchParams);
+      if (next) params.set('new', '1');
+      else params.delete('new');
+      setSearchParams(params, { replace: true });
+    },
+    [isOpen, searchParams, setSearchParams],
+  );
+
+  return [isOpen, setOpen];
+}
+
+/** `?new=1` appended to a path — the link form of {@link useCreateParam}. */
+export function withCreateParam(path: string): string {
+  return `${path}?new=1`;
+}
+
+/**
  * The `?open=` treatment for a screen that has **no detail sheet** — the vendor
  * connections list and the COD deposit list, which are flat rows with inline
  * actions.

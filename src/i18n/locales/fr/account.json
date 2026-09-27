@@ -211,8 +211,7 @@
     "unlocks": {
       "title": "Ce que débloque la vérification",
       "cod": "Les commandes en paiement à la livraison. Tant qu'un administrateur ne vous a pas vérifié, le paiement à la livraison n'est pas proposé aux clients sur vos livraisons — quelle que soit votre politique.",
-      "payouts": "Les retraits sans plafond. Une agence non vérifiée peut être limitée à un montant fixe par période glissante ; la vérification supprime ce plafond.",
-      "otherwiseOpen": "Rien d'autre n'est bloqué. Vous pouvez prendre des expéditions, recruter des agents et travailler avec des vendeurs tout à fait normalement pendant l'examen."
+      "otherwiseOpen": "Rien d'autre n'est bloqué. Vous pouvez prendre des expéditions, recruter des agents, travailler avec des vendeurs et retirer tout votre solde tout à fait normalement pendant l'examen."
     }
   },
   "security": {
@@ -367,19 +366,6 @@
       },
       "noBalance": "Aucun solde disponible à retirer pour l'instant.",
       "belowMinimum": "Le versement minimum est de {{amount}}."
-    },
-    "allowance": {
-      "title": "Plafond de retrait",
-      "explainer": "Tant qu'un administrateur n'a pas vérifié votre agence, vous pouvez retirer jusqu'à {{cap}} tous les {{windowDays}} jours. La vérification supprime ce plafond.",
-      "used": "{{used}} sur {{cap}} utilisés",
-      "remaining": "{{remaining}} restants",
-      "remainingInline": "dont {{remaining}} dans votre plafond de retrait",
-      "resetsAt": "Une partie de votre plafond se libère le {{date}} — la fenêtre est glissante, il revient donc progressivement et non en une seule fois.",
-      "refusal": {
-        "allowanceSpent": "Vous avez utilisé tout votre plafond de retrait pour cette période. Faites vérifier votre agence pour le supprimer, ou attendez qu'il se libère — réessayer n'y changera rien.",
-        "remainderBelowMinimum": "Il ne reste que {{remaining}} de votre plafond pour cette période, soit moins que le versement minimum de {{minAmount}}. L'argent est bien là ; c'est le plafond qui le rend inaccessible. Faites vérifier votre agence pour le supprimer, ou attendez qu'il se libère — réessayer n'y changera rien."
-      },
-      "verifyCta": "Faire vérifier mon agence"
     }
   },
   "contact": {

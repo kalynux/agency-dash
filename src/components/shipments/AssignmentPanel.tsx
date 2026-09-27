@@ -11,6 +11,8 @@ import { shipmentsService } from '@/services/shipments.service';
 import { formatCurrency } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ReassignDialog } from '@/components/shipments/ReassignDialog';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import type { AgentSummary } from '@/types/agent.types';
 import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentDetail, ShipmentOffer, AssignmentCandidate } from '@/types/shipment.types';
@@ -50,6 +52,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   const canOffer = detail.status === 'assigned' && !hasBoundAgent && !pendingOffer;
   const nameFor = (id: string | null) =>
     id ? agents.find((a) => a.id === id)?.name ?? t('assignment.unnamedAgent') : null;
+  const verifiedFor = (id: string) => agents.find((a) => a.id === id)?.verified;
 
   const afterOffer = (result: { offer: ShipmentOffer; autoAccepted: boolean } | null, agentId: string | null) => {
     if (!result) return;
@@ -125,7 +128,10 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{detail.agent.name}</p>
+              <p className="flex items-center gap-1 text-sm font-medium">
+                <span className="truncate">{detail.agent.name}</span>
+                <VerifiedBadge verified={detail.agent.verified} />
+              </p>
               <p className="text-xs text-muted-foreground">{detail.agent.phone}</p>
             </div>
             <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-200">
@@ -200,7 +206,15 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                 ) : (
                   activeAgents.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name}
+                      <span className="flex items-center gap-1">
+                        {a.name}
+                        <VerifiedBadge verified={a.verified} />
+                        <AgentWorkload
+                          active={a.activeShipmentCount}
+                          forYou={a.activeShipmentsForYou}
+                          className="ms-1 text-xs text-muted-foreground"
+                        />
+                      </span>
                     </SelectItem>
                   ))
                 )}
@@ -263,7 +277,8 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                     // AND the only symptom of a misconfiguration — most often a
                     // contract whose `cod.threshold` is still its default `0`,
                     // which silently removes an agent from every COD candidate
-                    // list. So this dead end names the likely cause and points at
+                    // list, or (since 2026-09-27) an agent not yet KYC-verified —
+                    // who stays a candidate for prepaid runs. So this dead end names the likely cause and points at
                     // the one endpoint that reports every failing reason at once.
                     // See api-doc/agency/assignment.md (the box at the top).
                     <div className="space-y-2 px-1 py-6 text-center">
@@ -290,11 +305,12 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                         className="w-full text-start rounded-md p-2 hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium">
+                          <span className="flex items-center gap-1 text-sm font-medium">
                             {t('assignment.candidateRank', {
                               rank: c.rank + 1,
                               name: nameFor(c.agentId) ?? c.agentId.slice(-6),
                             })}
+                            <VerifiedBadge verified={verifiedFor(c.agentId)} />
                           </span>
                           <Badge variant="secondary">
                             {t('common:units.percent', { value: (c.score * 100).toFixed(0) })}

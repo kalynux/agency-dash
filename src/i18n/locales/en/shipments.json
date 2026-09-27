@@ -62,9 +62,10 @@
   },
   "autoAssign": {
     "label": "Auto-assign",
-    "tooltip": "When on, each newly-dispatched shipment starts an auto-assignment broadcast: the nearest eligible agent is offered it, then the next-nearest every couple of minutes while earlier offers still stand. First to accept wins. If nobody takes it after two rounds, you're told and can assign manually.",
-    "enabled": "Auto-assignment enabled.",
-    "disabled": "Auto-assignment disabled."
+    "on": "On",
+    "off": "Off",
+    "tooltipOn": "New shipments are offered to your nearest eligible agent automatically. Change this in Settings → Preferences.",
+    "tooltipOff": "New shipments wait for you to assign them. Turn on auto-assignment in Settings → Preferences."
   },
   "reject": {
     "trigger": "Reject shipment",
@@ -126,7 +127,7 @@
     "handoverNote": "Note: {{note}}",
     "handoverFallback": "Fallback location — original point could not be resolved.",
     "candidatesEmptyHint": "Agents are left out silently when they are at capacity, paused, or outside this delivery’s area.",
-    "candidatesEmptyCodHint": "For a cash-on-delivery run, agents are also left out silently when their cash limit is too low — a new contract starts at zero, which removes the agent from every COD list until you raise it.",
+    "candidatesEmptyCodHint": "For a cash-on-delivery run, agents are also left out silently when they aren't verified yet, or when their cash limit is too low — a new contract starts at zero, which removes the agent from every COD list until you raise it.",
     "candidatesEmptyCheck": "Check an agent’s eligibility"
   },
   "reassignDialog": {
@@ -169,6 +170,14 @@
     "codHandlingFee": "COD handling fee",
     "youKeep": "You keep",
     "estimateCaveat": "An estimate: the agent's split is read again when the money is actually paid out, so changing their contract before delivery changes this.",
+    "youEarnedTitle": "You earned",
+    "finalCaveat": "Final: these are the amounts actually credited for this delivery.",
+    "returnedCodZero": "A returned cash-on-delivery shipment earns nothing: no cash was collected, so there is no fee, agent share or COD fee.",
+    "allocation": {
+      "held": "Held in escrow",
+      "released": "Released to your balance",
+      "reversed": "Reversed"
+    },
     "orderValue": "Order value {{amount}} — the whole order, which can split across several shipments and agencies.",
     "setPricing": "Set your delivery pricing",
     "unavailableShort": {

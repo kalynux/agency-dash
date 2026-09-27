@@ -9,11 +9,17 @@
       "short": "How you're notified"
     },
     "preferences": {
-      "description": "Personalize how the dashboard looks",
-      "short": "Theme and appearance"
+      "description": "How shipments reach your agents, and how the dashboard looks",
+      "short": "Assignment and theme"
     }
   },
   "preferences": {
+    "autoAssign": "Auto-assign shipments to agents",
+    "autoAssignHint": "When on, every shipment a vendor hands to you is offered to your nearest eligible agent straight away — the first to accept takes it. If nobody accepts after two rounds, you're told and can assign it yourself. Shipments already waiting are not affected.",
+    "autoAssignOn": "Auto-assignment enabled — new shipments go to your agents automatically.",
+    "autoAssignOff": "Auto-assignment disabled — you'll assign new shipments yourself.",
+    "autoAssignLoadError": "Couldn't load the auto-assignment setting.",
+    "retry": "Retry",
     "theme": "Theme",
     "themeHint": "Choose your preferred theme",
     "themeFollowingDevice": "Following your device — currently {{theme}}",

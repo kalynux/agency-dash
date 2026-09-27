@@ -46,6 +46,7 @@ import {
   clearStripeResume,
   type StripeResumeKind,
 } from './billing.constants';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 interface PaymentRequest {
   title: string;
@@ -115,6 +116,8 @@ export function BillingTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  usePageRefresh(load, loading);
 
   // Refresh the live figures after a successful payment (plan + balance).
   const refreshAfterPayment = useCallback(async () => {

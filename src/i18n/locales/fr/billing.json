@@ -16,6 +16,7 @@
     "empty": "Aucune transaction pour l'instant.",
     "via": "via {{gateway}}",
     "reversalNote": "Rétrofacturation/remboursement — ce débit a été annulé.",
+    "internalNote": "Mouvement entre vos propres soldes — ni une entrée ni une sortie d'argent.",
     "creditsSuffix": "cr",
     "table": {
       "activity": "Activité",
@@ -27,7 +28,8 @@
       "all": "Toutes",
       "plan": "Forfaits",
       "credit": "Crédits",
-      "earning": "Revenus"
+      "earning": "Revenus",
+      "payout": "Versements"
     },
     "categoryChip": {
       "plan": "Forfait",
@@ -43,7 +45,11 @@
       "completed": "Terminée",
       "hold": "En suspens",
       "release": "Libérée",
-      "reversal": "Annulée"
+      "reversal": "Annulée",
+      "reserve_hold": "Vers la réserve",
+      "reserve_release": "Depuis la réserve",
+      "processing": "En cours d'envoi",
+      "rejected": "Refusée"
     }
   },
   "plan": {

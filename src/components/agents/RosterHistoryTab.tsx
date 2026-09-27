@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { membershipEventAt } from '@/types/agent.types';
 import type { AgentHistoryEvent } from '@/types/agent.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 /**
  * Agents → History: every membership event across the whole roster, newest
@@ -101,6 +102,8 @@ export function RosterHistoryTab() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  usePageRefresh(load, isLoading);
 
   // The event carries `agentId`, never a name — identity is resolved against the
   // roster, which the provider has already fetched for the other two tabs. The

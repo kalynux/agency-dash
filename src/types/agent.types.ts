@@ -291,8 +291,21 @@ export interface AgentProfile {
    * `AGENT_AT_CAPACITY` instead of lagging it.
    */
   activeShipmentCount: number;
+  /**
+   * The part of `activeShipmentCount` that is YOURS, counted with the same
+   * statuses — never more than the total. Added 2026-09-27.
+   */
+  activeShipmentsForYou: number;
   trackingAllowed: boolean;
+  /** The EFFECTIVE score (an administrator's pin when set) — the one the agent sees too. */
   trustScore: number;
+  /**
+   * The platform's KYC verdict (`kyc.status === 'verified'`) — the badge beside
+   * the name. NOT always true on a roster: since 2026-09-27 an unverified agent
+   * may hold a contract and take prepaid work. `false` matters for COD only —
+   * a COD shipment to them is refused, and their COD limit is dormant.
+   */
+  verified: boolean;
 }
 
 /** One row from GET /api/agency/agents — a membership joined to its agent + cash held. */
@@ -316,13 +329,19 @@ export interface RosterEntry {
  * in the manage sheet. Fold it onto the row with {@link mergeAgentDetail}.
  */
 export interface AgentProfileDetail
-  extends Omit<AgentProfile, 'availability' | 'workingState' | 'activeShipmentCount' | 'trustScore'> {
+  extends Omit<
+    AgentProfile,
+    'availability' | 'workingState' | 'activeShipmentCount' | 'activeShipmentsForYou' | 'trustScore' | 'verified'
+  > {
   availability?: AgentAvailability | { state: AgentAvailability } | null;
   workingState?: AgentWorkingState | { state: AgentWorkingState } | null;
   capacity?: { activeShipmentCount?: number; maxActiveShipments?: number; remaining?: number } | null;
   /** Flat on the roster row, absent here — kept optional so either shape parses. */
   activeShipmentCount?: number;
+  activeShipmentsForYou?: number;
   trustScore?: number;
+  /** Roster-only, like the trust score — the row's value is what the sheet shows. */
+  verified?: boolean;
 }
 
 /** The state token, whether it came as the sub-document or already flattened. */
@@ -347,7 +366,9 @@ export function mergeAgentDetail(roster: AgentProfile, detail: AgentProfileDetai
     workingState: stateToken(detail.workingState) ?? roster.workingState,
     activeShipmentCount:
       detail.capacity?.activeShipmentCount ?? detail.activeShipmentCount ?? roster.activeShipmentCount,
+    activeShipmentsForYou: detail.activeShipmentsForYou ?? roster.activeShipmentsForYou,
     trustScore: detail.trustScore ?? roster.trustScore,
+    verified: detail.verified ?? roster.verified,
   };
 }
 
@@ -376,6 +397,10 @@ export interface AgentSummary {
   /** This contract's slice of the agent's COD pool, minor units. */
   codThreshold: number;
   activeShipmentCount: number;
+  /** See {@link AgentProfile.activeShipmentsForYou}. */
+  activeShipmentsForYou: number;
+  /** See {@link AgentProfile.verified}. */
+  verified: boolean;
 }
 
 export function toAgentSummary(entry: RosterEntry): AgentSummary {
@@ -394,6 +419,8 @@ export function toAgentSummary(entry: RosterEntry): AgentSummary {
     vehicleInfo: entry.agent.vehicleInfo,
     codThreshold: entry.membership.codThreshold,
     activeShipmentCount: entry.agent.activeShipmentCount,
+    activeShipmentsForYou: entry.agent.activeShipmentsForYou,
+    verified: entry.agent.verified === true,
   };
 }
 
@@ -446,7 +473,12 @@ export interface AgentDirectoryItem {
   homeBase: AgentHomeBase;
   /** Composite 0–100. */
   trustScore: number;
-  /** Always true here — unverified agents are filtered out server-side. */
+  /**
+   * Since 2026-09-27 unverified agents ARE listed. KYC gates cash on delivery
+   * only — an unverified agent can be requested, contracted and given prepaid
+   * shipments. Render `false` as a badge, ⛔ never as a reason to hide the row
+   * or disable *Request*, and never filter on it client-side.
+   */
   kycVerified: boolean;
   /** Does the agent want work right now? */
   availability: AgentAvailability;

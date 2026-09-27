@@ -1,0 +1,83 @@
+{
+  "page": {
+    "title": "Statistiques",
+    "description": "Ce que votre agence a réellement gagné, livré et encaissé en espèces sur une période — chaque montant est ce qui a été crédité, pas une estimation.",
+    "descriptionShort": "Revenus, livraisons et espèces"
+  },
+  "range": {
+    "label": "Période",
+    "presets": {
+      "thisMonth": "Ce mois-ci",
+      "lastMonth": "Le mois dernier",
+      "last7": "7 derniers jours",
+      "last30": "30 derniers jours",
+      "last90": "90 derniers jours",
+      "custom": "Période personnalisée"
+    },
+    "from": "Du",
+    "to": "Au",
+    "invalid": "La date de fin doit être égale ou postérieure à la date de début.",
+    "tooLong": "Une période peut durer 366 jours au maximum.",
+    "footer": "Chiffres au {{computedAt}} · jours comptés en {{timezone}}"
+  },
+  "earnings": {
+    "title": "Revenus",
+    "description": "L'argent crédité pour vos livraisons sur cette période. Daté au moment du crédit : à la livraison pour une commande payée en ligne, à l'encaissement pour le paiement à la livraison.",
+    "net": "Revenus nets",
+    "netHint": "Net agence {{agencyNet}} moins {{reversed}} annulés sur cette période.",
+    "netHintNoReversal": "Rien n'a été annulé sur cette période.",
+    "deliveriesCredited_one": "{{count}} livraison créditée",
+    "deliveriesCredited_other": "{{count}} livraisons créditées",
+    "feesEarned": "Frais de livraison gagnés",
+    "feesEarnedHint": "Avant la part de vos livreurs. Sur une commande payée en ligne retournée, ce sont les frais de retour.",
+    "codFees": "Frais de gestion des espèces",
+    "codFeesHint": "Conservés en entier — jamais partagés avec les livreurs.",
+    "agentShares": "Parts des livreurs",
+    "agentSharesHint": "Ce que vos livreurs ont reçu sur ces frais.",
+    "agencyNet": "Net agence",
+    "agencyNetHint": "Frais gagnés − parts des livreurs + frais de gestion des espèces.",
+    "notSeparable": "Non séparable",
+    "notSeparableHint": "Une course en paiement à la livraison n'avait pas de frais de livraison enregistrés : les frais de gestion des espèces ne peuvent donc pas en être séparés. Le net ci-dessous reste exact.",
+    "whereNow": "Où se trouve cet argent maintenant",
+    "status": {
+      "held": "Bloqué en séquestre",
+      "released": "Versé sur votre solde",
+      "reversed": "Annulé"
+    }
+  },
+  "deliveries": {
+    "title": "Issues des livraisons",
+    "description": "Les expéditions arrivées à chaque issue sur cette période, chacune comptée une fois.",
+    "delivered": "Livrées",
+    "returned": "Retournées",
+    "failed": "Échouées",
+    "returnedCodNote": "Une expédition en paiement à la livraison retournée ne rapporte rien — aucune somme n'a été encaissée."
+  },
+  "cod": {
+    "title": "Paiement à la livraison",
+    "description": "Les espèces sont une dette, pas un revenu — elles appartiennent à la plateforme jusqu'à leur reversement, elles sont donc séparées de vos revenus.",
+    "collected": "Encaissé par les livreurs",
+    "deposited": "Dépôts confirmés",
+    "remitted": "Reversé à la plateforme",
+    "owedNow": "Dû actuellement",
+    "owedNowHint": "Ce que vous devez à la plateforme en ce moment, quelle que soit la période.",
+    "manage": "Gérer les espèces"
+  },
+  "perAgent": {
+    "title": "Par livreur",
+    "description": "Chaque livreur ayant des livraisons créditées ou des espèces encaissées sur cette période.",
+    "agent": "Livreur",
+    "deliveries": "Livraisons créditées",
+    "share": "Part du livreur",
+    "cash": "Espèces encaissées",
+    "empty": "Aucun livreur n'a livré ni encaissé d'espèces sur cette période."
+  },
+  "payouts": {
+    "title": "Versements",
+    "paidInPeriod": "Versé sur cette période",
+    "lifetime": "Versé depuis le début",
+    "lifetimeHint": "Tous les versements jamais payés à votre agence, quelle que soit la période.",
+    "manage": "Paramètres de versement"
+  },
+  "empty": "Rien n'a été crédité, livré ni encaissé sur cette période."
+}

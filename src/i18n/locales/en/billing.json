@@ -16,6 +16,7 @@
     "empty": "No transactions yet.",
     "via": "via {{gateway}}",
     "reversalNote": "Chargeback/refund — this charge was unwound.",
+    "internalNote": "Moved between your own balances — not counted as money in or out.",
     "creditsSuffix": "cr",
     "table": {
       "activity": "Activity",
@@ -27,7 +28,8 @@
       "all": "All",
       "plan": "Plans",
       "credit": "Credits",
-      "earning": "Earnings"
+      "earning": "Earnings",
+      "payout": "Payouts"
     },
     "categoryChip": {
       "plan": "Plan",
@@ -43,7 +45,11 @@
       "completed": "Completed",
       "hold": "On hold",
       "release": "Released",
-      "reversal": "Reversed"
+      "reversal": "Reversed",
+      "reserve_hold": "To reserve",
+      "reserve_release": "From reserve",
+      "processing": "On its way",
+      "rejected": "Declined"
     }
   },
   "plan": {

@@ -1,0 +1,83 @@
+{
+  "page": {
+    "title": "Analytics",
+    "description": "What your agency actually earned, delivered and handled in cash over a period — every figure is what was credited, not an estimate.",
+    "descriptionShort": "Earnings, deliveries and cash"
+  },
+  "range": {
+    "label": "Period",
+    "presets": {
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "custom": "Custom range"
+    },
+    "from": "From",
+    "to": "To",
+    "invalid": "The end date must be on or after the start date.",
+    "tooLong": "A period can be at most 366 days.",
+    "footer": "Figures as of {{computedAt}} · days counted in {{timezone}}"
+  },
+  "earnings": {
+    "title": "Earnings",
+    "description": "Money credited to you for deliveries in this period. Dated when it was credited: at delivery for an online-paid order, at cash collection for cash on delivery.",
+    "net": "Net earnings",
+    "netHint": "Agency net {{agencyNet}} minus {{reversed}} reversed in this period.",
+    "netHintNoReversal": "Nothing was reversed in this period.",
+    "deliveriesCredited_one": "{{count}} delivery credited",
+    "deliveriesCredited_other": "{{count}} deliveries credited",
+    "feesEarned": "Delivery fees earned",
+    "feesEarnedHint": "Before your agents' share. On a returned online-paid order this is the return fee.",
+    "codFees": "COD handling fees",
+    "codFeesHint": "Kept whole — never shared with agents.",
+    "agentShares": "Agents' shares",
+    "agentSharesHint": "What your agents were credited out of those fees.",
+    "agencyNet": "Agency net",
+    "agencyNetHint": "Fees earned − agents' shares + COD fees.",
+    "notSeparable": "Not separable",
+    "notSeparableHint": "A cash-on-delivery run had no recorded delivery fee, so the COD fee can't be split out of it. The net below is still exact.",
+    "whereNow": "Where that money is now",
+    "status": {
+      "held": "Held in escrow",
+      "released": "Released to your balance",
+      "reversed": "Reversed"
+    }
+  },
+  "deliveries": {
+    "title": "Delivery outcomes",
+    "description": "Shipments that reached each outcome in this period, each counted once.",
+    "delivered": "Delivered",
+    "returned": "Returned",
+    "failed": "Failed",
+    "returnedCodNote": "A returned cash-on-delivery shipment earns nothing — no cash was collected."
+  },
+  "cod": {
+    "title": "Cash on delivery",
+    "description": "Cash is a liability, not income — it belongs to the platform until remitted, so it is kept apart from your earnings.",
+    "collected": "Collected by agents",
+    "deposited": "Deposits confirmed",
+    "remitted": "Remitted to the platform",
+    "owedNow": "Owed now",
+    "owedNowHint": "What you owe the platform at this moment, whatever the period.",
+    "manage": "Manage cash"
+  },
+  "perAgent": {
+    "title": "By agent",
+    "description": "Every agent with credited deliveries or collected cash in this period.",
+    "agent": "Agent",
+    "deliveries": "Deliveries credited",
+    "share": "Agent's share",
+    "cash": "COD collected",
+    "empty": "No agent delivered or collected cash in this period."
+  },
+  "payouts": {
+    "title": "Payouts",
+    "paidInPeriod": "Paid out in this period",
+    "lifetime": "Paid out all time",
+    "lifetimeHint": "Every payout ever paid to your agency, whatever the period.",
+    "manage": "Payout settings"
+  },
+  "empty": "Nothing was credited, delivered or collected in this period."
+}

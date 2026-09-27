@@ -47,9 +47,35 @@ export const codCashService = {
     return api.post<CodDepositResponse>(`/agency/cod/deposits/${id}/reject`, { reason });
   },
 
-  /** POST /agency/cod/remittances — declare a cash transfer to the platform. */
-  declareRemittance(amount: number, reference: string, note?: string): Promise<CodRemittanceResponse> {
-    return api.post<CodRemittanceResponse>('/agency/cod/remittances', { amount, reference, note });
+  /** GET /agency/cod/deposits/:id/proof/file — the agent's evidence photo (private bytes). */
+  getDepositProofFile(id: string): Promise<Blob> {
+    return api.getBlob(`/agency/cod/deposits/${id}/proof/file`);
+  },
+
+  /**
+   * POST /agency/cod/remittances — declare a cash transfer to the platform.
+   *
+   * Multipart since 2026-09-27: the receipt photo is required and must be in
+   * field `file` (any other name is a `VALIDATION_ERROR`, not a missing proof).
+   * `reference` and `note` are optional; empty ones are left out.
+   */
+  declareRemittance(
+    proof: File,
+    amount: number,
+    reference?: string,
+    note?: string,
+  ): Promise<CodRemittanceResponse> {
+    const form = new FormData();
+    form.append('file', proof);
+    form.append('amount', String(amount));
+    if (reference?.trim()) form.append('reference', reference.trim());
+    if (note?.trim()) form.append('note', note.trim());
+    return api.postForm<CodRemittanceResponse>('/agency/cod/remittances', form);
+  },
+
+  /** GET /agency/cod/remittances/:id/proof/file — your own receipt photo (private bytes). */
+  getRemittanceProofFile(id: string): Promise<Blob> {
+    return api.getBlob(`/agency/cod/remittances/${id}/proof/file`);
   },
 
   /** GET /agency/cod/remittances — remittance history. */

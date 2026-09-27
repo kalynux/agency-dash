@@ -28,6 +28,7 @@ import { getApiErrorMessage } from '@/lib/errors';
 import { NotesThread } from './NotesThread';
 import { AttachmentsPanel } from './AttachmentsPanel';
 import { ActorAvatar } from './ActorAvatar';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import {
   statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, TICKET_STATUSES,
   priorityLabel, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
@@ -368,7 +369,10 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                     <div className="flex items-center gap-2.5">
                       <ActorAvatar actor={assignee} />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{assignee.name}</p>
+                        <p className="flex items-center gap-1 text-sm font-medium">
+                          <span className="truncate">{assignee.name}</span>
+                          <VerifiedBadge verified={assignee.verified} />
+                        </p>
                         <p className="text-xs text-muted-foreground">{roleLabel(assignee.role)}</p>
                       </div>
                     </div>
@@ -399,7 +403,10 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                         <li key={f.user_id} className="flex items-center gap-2.5">
                           <ActorAvatar actor={f} className="h-7 w-7" />
                           <div className="min-w-0">
-                            <p className="truncate text-sm">{f.name}</p>
+                            <p className="flex items-center gap-1 text-sm">
+                              <span className="truncate">{f.name}</span>
+                              <VerifiedBadge verified={f.verified} />
+                            </p>
                             <p className="text-xs text-muted-foreground">{roleLabel(f.role)}</p>
                           </div>
                         </li>

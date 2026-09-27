@@ -1,4 +1,8 @@
 {
+  "workload": {
+    "summary": "{{active}} active · {{forYou}} for you",
+    "hint": "Shipments this agent is carrying right now for every agency they serve, and how many of those are yours."
+  },
   "tabs": {
     "connections": {
       "description": "Every agent contract your agency has, past and present — only contracted agents can take your shipments",
@@ -88,6 +92,7 @@
   },
   "card": {
     "kycVerified": "KYC Verified",
+    "notVerifiedCod": "Not verified — can't carry COD yet",
     "viewDetails": "View details for {{name}}",
     "serviceRadius": "{{km}} km",
     "trust": "Trust {{score}}",
@@ -139,6 +144,15 @@
     "empty": "No agent contracts yet — find an agent in the Browse tab.",
     "emptyCategory": "Nothing in this category yet.",
     "holdsCash": "Holds {{amount}}",
+    "dispatch": {
+      "ready": "Ready for orders",
+      "offline": "Offline",
+      "on_break": "On break",
+      "at_capacity": "At capacity",
+      "blocked": "Can't dispatch",
+      "readyHint": "The dispatcher can hand this agent a delivery right now.",
+      "blockedHint": "Online, but a dispatch rule is failing (tracking or device location). Open the contract for details."
+    },
     "accept": "Accept",
     "decline": "Decline",
     "withdraw": "Withdraw",
@@ -148,7 +162,7 @@
   },
   "detail": {
     "kycVerified": "KYC Verified",
-    "unverified": "Unverified",
+    "notVerifiedCod": "Not verified — can't carry COD yet",
     "homeBase": "Home base",
     "serviceRadius": "Works within {{km}} km of here",
     "trackRecord": "Track record",
@@ -283,6 +297,7 @@
       "cap": "Current cap",
       "noCod": "No COD",
       "zeroWarning": "Cash-on-delivery runs can't go to this agent until you set a limit above 0.",
+      "dormantUnverified": "Inactive until the agent is verified.",
       "placeholder": "0 = no COD",
       "editLabel": "Change the cap",
       "set": "Set",
@@ -340,7 +355,6 @@
       "loadFailed": "Could not load eligibility.",
       "rules": {
         "platform_ban": "Platform ban",
-        "kyc": "KYC",
         "active": "Agent active",
         "approved": "Contract in force",
         "available": "Available",
@@ -351,7 +365,6 @@
       "reasons": {
         "agent_not_found": "agent not found",
         "platform_banned": "banned from the platform",
-        "kyc_not_verified": "KYC not verified",
         "agent_not_active": "the agent's account is not active",
         "membership_not_approved": "the contract is not in force",
         "not_available": "not available right now",

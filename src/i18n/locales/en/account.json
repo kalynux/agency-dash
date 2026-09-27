@@ -211,8 +211,7 @@
     "unlocks": {
       "title": "What verification unlocks",
       "cod": "Cash-on-delivery orders. Until an administrator verifies you, customers are not offered COD on your deliveries — whatever your COD policy says.",
-      "payouts": "Uncapped withdrawals. An unverified agency can be limited to a fixed amount per rolling window; verification removes the limit.",
-      "otherwiseOpen": "Nothing else is held back. You can take shipments, sign agents and work with vendors exactly as normal while this is pending."
+      "otherwiseOpen": "Nothing else is held back. You can take shipments, sign agents, work with vendors and withdraw your whole balance exactly as normal while this is pending."
     }
   },
   "security": {
@@ -367,19 +366,6 @@
       },
       "noBalance": "No available balance to withdraw yet.",
       "belowMinimum": "Minimum payout is {{amount}}."
-    },
-    "allowance": {
-      "title": "Withdrawal limit",
-      "explainer": "Until an administrator verifies your agency, you can withdraw up to {{cap}} every {{windowDays}} days. Getting verified removes the limit.",
-      "used": "{{used}} of {{cap}} used",
-      "remaining": "{{remaining}} left",
-      "remainingInline": "{{remaining}} of this is within your withdrawal limit",
-      "resetsAt": "Some of your limit frees up again on {{date}} — the window rolls, so it returns a little at a time rather than all at once.",
-      "refusal": {
-        "allowanceSpent": "You've used your whole withdrawal limit for this window. Verify your agency to lift it, or wait for it to free up — trying again won't help.",
-        "remainderBelowMinimum": "Only {{remaining}} of your limit is left this window, which is under the {{minAmount}} minimum payout. The money is there; the limit is what is out of reach. Verify your agency to lift it, or wait for the limit to free up — trying again won't help."
-      },
-      "verifyCta": "Verify your agency"
     }
   },
   "contact": {

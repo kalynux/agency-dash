@@ -26,7 +26,9 @@ import {
   transactionStatusMeta,
   transactionAmount,
   isReversalTransaction,
+  isInternalTransaction,
 } from './transactions.constants';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 const PAGE_LIMIT = 20;
 
@@ -85,6 +87,8 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
   useEffect(() => {
     load(page, category);
   }, [load, page, category, refreshKey]);
+
+  usePageRefresh(() => load(page, category), loading);
 
   // The endpoint has no text search, so this narrows the page already loaded.
   const query = search.trim().toLowerCase();
@@ -146,11 +150,15 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                 <tbody>
                   {visibleRows.map((tx) => {
                     const amount = transactionAmount(tx);
+                    const internal = isInternalTransaction(tx);
                     return (
-                      <tr key={tx.id} className="border-b align-top last:border-0">
+                      <tr
+                        key={tx.id}
+                        className={cn('border-b align-top last:border-0', internal && 'text-muted-foreground')}
+                      >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{tx.description}</span>
+                            <span className={cn(!internal && 'font-medium')}>{tx.description}</span>
                             <CategoryChip category={tx.category} />
                           </div>
                           {tx.gateway && (
@@ -162,6 +170,9 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                             <p className="mt-0.5 text-xs text-orange-600">
                               {t('transactions.reversalNote')}
                             </p>
+                          )}
+                          {internal && (
+                            <p className="mt-0.5 text-xs">{t('transactions.internalNote')}</p>
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-muted-foreground">{formatDate(tx.createdAt)}</td>
@@ -182,11 +193,12 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
             <ul className="-mx-4 divide-y border-y md:hidden">
               {visibleRows.map((tx) => {
                 const amount = transactionAmount(tx);
+                const internal = isInternalTransaction(tx);
                 return (
-                  <li key={tx.id} className="p-4">
+                  <li key={tx.id} className={cn('p-4', internal && 'text-muted-foreground')}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-medium">{tx.description}</p>
+                        <p className={cn('truncate', !internal && 'font-medium')}>{tx.description}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(tx.createdAt)}
                           {tx.gateway && ` · ${gatewayLabel(tx.gateway)}`}
@@ -200,6 +212,7 @@ export function TransactionsTab({ refreshKey = 0 }: { refreshKey?: number }) {
                     {isReversalTransaction(tx) && (
                       <p className="mt-2 text-xs text-orange-600">{t('transactions.reversalNote')}</p>
                     )}
+                    {internal && <p className="mt-2 text-xs">{t('transactions.internalNote')}</p>}
                   </li>
                 );
               })}

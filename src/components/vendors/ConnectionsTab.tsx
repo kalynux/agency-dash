@@ -14,6 +14,7 @@ import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import {
   useOpenParam,
@@ -22,6 +23,7 @@ import {
   HIGHLIGHT_CLASS,
 } from '@/hooks/useOpenParam';
 import type { ConnectionDto, ConnectionStatus, VendorBrowseItemDto } from '@/types/vendor-connection.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 /** DOM-id prefix for a deep-linked connection row. */
 const CONNECTION_ROW = 'connection';
@@ -247,6 +249,8 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
     load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
   /** The name shown on a row — also what the search box matches against. */
   const nameFor = (connection: ConnectionDto): string => {
     const vendor = vendorDisplay.get(connection.vendorId);
@@ -318,7 +322,10 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{nameFor(connection)}</p>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <p className="text-sm font-medium truncate min-w-0">{nameFor(connection)}</p>
+                      <VerifiedBadge verified={vendor?.kycVerified} />
+                    </div>
                     <ConnectionStatusBadge status={connection.status} className="text-[10px] mt-0.5" />
                   </div>
                 </div>

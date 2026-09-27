@@ -7,7 +7,6 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Radio,
-  RefreshCw,
   Route,
   Users,
   Wifi,
@@ -19,6 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AsyncBoundary, EmptyState } from '@/components/common/state-views';
 import { PageHeader } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { useResource } from '@/hooks/useResource';
 import { useGeoTrackerSocket, type TrackingScope } from '@/hooks/useGeoTrackerSocket';
 import { useIsBelowDesktop } from '@/hooks/use-mobile';
@@ -143,6 +143,11 @@ export function LiveTracking() {
   }, [selected, shipment]);
 
   const socket = useGeoTrackerSocket(agentIds, scopes);
+
+  usePageRefresh(() => {
+    board.refetch();
+    socket.reconnect();
+  }, board.isLoading);
 
   // Refetch the board on ANY revocation, whatever the reason.
   //
@@ -290,6 +295,7 @@ export function LiveTracking() {
 
   const nameFor = (id: string) =>
     agents.find((a) => a.agentId === id)?.name ?? t('agent.fallbackName', { code: id.slice(-6) });
+  const verifiedFor = (id: string) => agents.find((a) => a.agentId === id)?.verified === true;
 
   const focusPresent = !!focusAgentId && agentIds.includes(focusAgentId);
 
@@ -359,15 +365,6 @@ export function LiveTracking() {
           </span>
         }
         actionItems={[
-          {
-            id: 'refresh',
-            label: t('common:actions.refresh'),
-            icon: RefreshCw,
-            onSelect: () => {
-              board.refetch();
-              socket.reconnect();
-            },
-          },
           // The side panel only exists from `lg` up, so on anything narrower
           // there is nothing for this to toggle.
           ...(isBelowDesktop
@@ -443,6 +440,7 @@ export function LiveTracking() {
                 fixes={socket.fixes}
                 trails={socket.trails}
                 nameFor={nameFor}
+                verifiedFor={verifiedFor}
                 focusAgentId={focusAgentId}
                 selectedAgentId={selected}
                 onSelectAgent={selectAgent}

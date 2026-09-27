@@ -1,11 +1,13 @@
 import { formatCurrency } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Wallet, Users, PackageOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, Wallet, Users, PackageOpen, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { InfoHint } from '@/components/common/InfoHint';
+import { withCreateParam } from '@/hooks/useOpenParam';
 import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -20,53 +22,83 @@ import { cn } from '@/lib/utils';
 import { codCashService } from '@/services/cod-cash.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { CodSummary } from '@/types/cod-cash.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 type HoldingFilter = 'all' | 'holding' | 'settled';
 
-interface Stat {
-  icon: React.ElementType;
-  label: string;
+/**
+ * The three numbers are not equals, and the layout says so.
+ *
+ * "Owed to platform" is the agency's one liability and the only one it can act
+ * on from here (by declaring a remittance), so it is the hero: full width on a
+ * phone, primary-filled, with the action beside it. The other two explain
+ * where that money is — still out with agents, or collected but unsettled —
+ * and sit side by side underneath as a pair.
+ *
+ * This replaces three identical tiles on desktop and a list of rows on a phone
+ * that hid every explanation behind an ⓘ. The hints are one short line each,
+ * and on a money screen they are part of the number, not a footnote.
+ */
+function OwedCard({
+  value,
+  hint,
+  canRemit,
+  className,
+}: {
   value: string;
   hint: string;
-}
-
-function StatCard({ icon: Icon, label, value, hint }: Stat) {
+  canRemit: boolean;
+  className?: string;
+}) {
+  const { t } = useTranslation('cash');
   return (
-    <Card className={compactCardClass}>
-      <CardContent className={cn(compactCardContentClass, 'flex items-start justify-between gap-3')}>
-        <div className="min-w-0">
-          <p className="text-sm leading-snug text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold leading-tight mt-0.5">{value}</p>
-          {hint && <p className="text-xs leading-snug text-muted-foreground mt-1">{hint}</p>}
+    <Card className={cn(compactCardClass, 'border-primary bg-primary text-primary-foreground', className)}>
+      <CardContent className={cn(compactCardContentClass, 'flex h-full flex-col gap-3')}>
+        <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
+          <Wallet className="h-4 w-4" />
+          {t('summary.owedToPlatform')}
         </div>
-        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Icon className="w-4 h-4 text-primary" />
+        <p className="text-3xl font-bold leading-none tabular-nums break-words">{value}</p>
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-2">
+          <p className="text-xs leading-snug text-primary-foreground/75">{hint}</p>
+          {canRemit && (
+            <Button asChild size="sm" variant="secondary" className="gap-1.5">
+              <Link to={withCreateParam('/dashboard/cash/remittances')}>
+                <Send className="h-3.5 w-3.5" />
+                {t('summary.declareRemittance')}
+              </Link>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-/**
- * One stat as a row rather than a tile — the phone form of {@link StatCard}.
- *
- * Three tiles stacked cost ~270px before the agent list starts, which on a
- * 640px-tall viewport is the whole first screen spent on numbers nobody scrolled
- * here for. As rows the same three read in ~130px, and the hint that justified
- * each tile's third line moves behind the ⓘ.
- */
-function StatRow({ icon: Icon, label, value, hint }: Stat) {
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  hint: string;
+}) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-muted-foreground">
-        <span className="truncate">{label}</span>
-        <InfoHint label={label}>{hint}</InfoHint>
-      </span>
-      <span className="shrink-0 font-semibold tabular-nums">{value}</span>
-    </div>
+    <Card className={compactCardClass}>
+      <CardContent className={cn(compactCardContentClass, 'flex h-full flex-col gap-1.5')}>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="leading-tight">{label}</span>
+        </div>
+        {/* `break-words`: "1 250 000 FCFA" in a half-width phone column must
+            wrap rather than push the card wider than the screen. */}
+        <p className="text-lg font-semibold leading-tight tabular-nums break-words sm:text-2xl">{value}</p>
+        <p className="mt-auto text-xs leading-snug text-muted-foreground">{hint}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -104,6 +136,8 @@ export function SummaryTab() {
     load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
@@ -130,47 +164,32 @@ export function SummaryTab() {
 
   const agentsHoldingCash = summary.agents.filter((a) => a.cashHeld > 0).length;
 
-  const stats: Stat[] = [
-    {
-      icon: Wallet,
-      label: t('summary.owedToPlatform'),
-      value: formatCurrency(summary.liability.balance, summary.liability.currency),
-      hint: t('summary.owedHint'),
-    },
-    {
-      icon: PackageOpen,
-      label: t('summary.unsettled'),
-      value: formatCurrency(summary.unsettledCollections.amount, summary.liability.currency),
-      hint: t('summary.unsettledHint', { count: summary.unsettledCollections.count }),
-    },
-    {
-      icon: Users,
-      label: t('summary.heldByAgents'),
-      value: formatCurrency(
-        summary.agents.reduce((sum, a) => sum + a.cashHeld, 0),
-        summary.liability.currency,
-      ),
-      hint: t('summary.heldByAgentsHint', { count: agentsHoldingCash }),
-    },
-  ];
+  const currency = summary.liability.currency;
+  const heldByAgents = summary.agents.reduce((sum, a) => sum + a.cashHeld, 0);
 
   return (
     <div className="space-y-6">
-      {/* Tiles where there is width for them, rows where there is not. The
-          breakpoint is `sm` because that is where the existing grid already
-          went three-across. */}
-      <div className="hidden gap-4 sm:grid sm:grid-cols-3">
-        {stats.map((s) => (
-          <StatCard key={s.label} {...s} />
-        ))}
+      {/* Hero full width + a pair on a phone; three across from `md`. */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <OwedCard
+          className="col-span-2 md:col-span-1"
+          value={formatCurrency(summary.liability.balance, currency)}
+          hint={t('summary.owedHint')}
+          canRemit={summary.liability.balance > 0}
+        />
+        <MiniStat
+          icon={Users}
+          label={t('summary.heldByAgents')}
+          value={formatCurrency(heldByAgents, currency)}
+          hint={t('summary.heldByAgentsHint', { count: agentsHoldingCash })}
+        />
+        <MiniStat
+          icon={PackageOpen}
+          label={t('summary.unsettled')}
+          value={formatCurrency(summary.unsettledCollections.amount, currency)}
+          hint={t('summary.unsettledHint', { count: summary.unsettledCollections.count })}
+        />
       </div>
-      <Card className={cn(compactCardClass, 'sm:hidden')}>
-        <CardContent className="divide-y p-0">
-          {stats.map((s) => (
-            <StatRow key={s.label} {...s} />
-          ))}
-        </CardContent>
-      </Card>
 
       <SearchFilterBar
         value={search}
@@ -203,6 +222,7 @@ export function SummaryTab() {
                 <RecordCard
                   key={a.id}
                   title={a.name}
+                  titleAdornment={<VerifiedBadge verified={a.verified} />}
                   primary={
                     a.cashHeld > 0 ? (
                       <span className="text-amber-600">
@@ -239,7 +259,12 @@ export function SummaryTab() {
                 ) : (
                   visibleAgents.map((a) => (
                     <tr key={a.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={a.name}>{a.name}</span></td>
+                      <td className="p-4 font-medium">
+                        <span className="flex max-w-[16rem] items-center gap-1">
+                          <span className="truncate" title={a.name}>{a.name}</span>
+                          <VerifiedBadge verified={a.verified} />
+                        </span>
+                      </td>
                       <td className="p-4">
                         {a.cashHeld > 0 ? (
                           <span className="text-amber-600 font-medium">{formatCurrency(a.cashHeld, summary.liability.currency)}</span>

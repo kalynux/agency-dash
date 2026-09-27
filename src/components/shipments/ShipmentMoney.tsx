@@ -7,14 +7,15 @@
  * where the decision is actually made — scanning the queue, and again in the
  * sheet next to the agent picker. Everything money-shaped is in this one file so
  * the "this is an estimate" caveat is worded once: the contract's `fee_split` is
- * re-read when the money is really split, so it can move before delivery.
+ * re-read when the money is really split, so it can move before delivery. Once
+ * the delivery is paid out (`estimated: false`) the figure is final and says so.
  *
  * See api-doc/agency/shipments.md#money.
  */
 
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Banknote, CreditCard, Wallet } from 'lucide-react';
+import { BadgeCheck, Banknote, CreditCard, Wallet } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { tx } from '@/i18n/tx';
@@ -29,6 +30,42 @@ import type {
 /** `true` while no agent has accepted — `expectedAmount` is then a projection, not a snapshot. */
 function isProjected(cod: ShipmentCodInfo): boolean {
   return cod.status === null;
+}
+
+/**
+ * `true` once the delivery has been paid out and the figures are the real
+ * entries. Only an explicit `false` counts: a payload that omits the flag is
+ * still an estimate, which is the safe reading for money not yet credited.
+ */
+function isFinal(earning: AgencyEarning): boolean {
+  return earning.estimated === false;
+}
+
+/**
+ * The headline amount — exact once final, "≈" while it is still an estimate.
+ * Shared by the list cell and the detail tile so the two never disagree.
+ */
+function useEarningCopy(earning: AgencyEarning, shipment: Pick<ShipmentListItem, 'status' | 'paymentMethod'>) {
+  const { t } = useTranslation('shipments');
+  const final = isFinal(earning);
+  const money = formatCurrency(earning.amount, earning.currency);
+  // A returned COD run earns nothing: no cash was collected, so no entry is
+  // written. The server already sends 0; this only says why.
+  const returnedCod =
+    shipment.status === 'returned' && shipment.paymentMethod === 'cash_on_delivery' && earning.amount === 0;
+  return {
+    final,
+    title: final ? t('money.youEarnedTitle') : t('money.youEarnTitle'),
+    amount: final ? money : t('money.approx', { amount: money }),
+    allocation: final && earning.allocationStatus
+      ? tx(t, `shipments:money.allocation.${earning.allocationStatus}`)
+      : null,
+    caveat: returnedCod
+      ? t('money.returnedCodZero')
+      : final
+        ? t('money.finalCaveat')
+        : t('money.estimateCaveat'),
+  };
 }
 
 /**
@@ -72,6 +109,30 @@ function EarningBreakdown({ earning, className }: { earning: AgencyEarning; clas
 }
 
 // ─── List row ─────────────────────────────────────────────────────────────────
+
+/** The payout half of a list row: "≈ amount" while estimated, the exact figure once paid. */
+function EarningCell({ earning, shipment }: { earning: AgencyEarning; shipment: ShipmentListItem }) {
+  const copy = useEarningCopy(earning, shipment);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex cursor-help items-center gap-1.5 text-xs text-success">
+          <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="font-numeric font-semibold">{copy.amount}</span>
+          {copy.final && <BadgeCheck className="h-3 w-3 flex-shrink-0" aria-label={copy.title} />}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[16rem] space-y-1.5">
+        <p className="font-medium">
+          {copy.title}
+          {copy.allocation && <span className="font-normal opacity-75"> · {copy.allocation}</span>}
+        </p>
+        <EarningBreakdown earning={earning} />
+        <p className="opacity-75">{copy.caveat}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export interface ShipmentMoneyCellProps {
   shipment: ShipmentListItem;
@@ -117,23 +178,7 @@ export function ShipmentMoneyCell({ shipment, className }: ShipmentMoneyCellProp
       ) : null}
 
       {agencyEarning ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex cursor-help items-center gap-1.5 text-xs text-success">
-              <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="font-numeric font-semibold">
-                {t('money.approx', {
-                  amount: formatCurrency(agencyEarning.amount, agencyEarning.currency),
-                })}
-              </span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-[16rem] space-y-1.5">
-            <p className="font-medium">{t('money.youEarnTitle')}</p>
-            <EarningBreakdown earning={agencyEarning} />
-            <p className="opacity-75">{t('money.estimateCaveat')}</p>
-          </TooltipContent>
-        </Tooltip>
+        <EarningCell earning={agencyEarning} shipment={shipment} />
       ) : agencyEarningUnavailable ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -210,6 +255,23 @@ function MoneyTile({
   );
 }
 
+/** The payout tile: title and amount switch from estimate to final once the delivery is paid. */
+function EarningTile({ earning, detail }: { earning: AgencyEarning; detail: ShipmentDetail }) {
+  const copy = useEarningCopy(earning, detail);
+  return (
+    <MoneyTile
+      icon={Wallet}
+      tone="success"
+      label={copy.title}
+      amount={copy.amount}
+      caption={copy.allocation ?? undefined}
+    >
+      <EarningBreakdown earning={earning} className="mt-2 text-muted-foreground" />
+      <p className="mt-2 text-xs text-muted-foreground">{copy.caveat}</p>
+    </MoneyTile>
+  );
+}
+
 /**
  * The money region of the detail sheet: cash at the door on the left, the
  * agency's net payout on the right, and the parent order's value underneath as
@@ -266,16 +328,7 @@ export function ShipmentMoneySection({ detail }: { detail: ShipmentDetail }) {
         )}
 
         {agencyEarning ? (
-          <MoneyTile
-            icon={Wallet}
-            tone="success"
-            label={t('money.youEarnTitle')}
-            amount={t('money.approx', {
-              amount: formatCurrency(agencyEarning.amount, agencyEarning.currency),
-            })}
-          >
-            <EarningBreakdown earning={agencyEarning} className="mt-2 text-muted-foreground" />
-          </MoneyTile>
+          <EarningTile earning={agencyEarning} detail={detail} />
         ) : agencyEarningUnavailable ? (
           <MoneyTile
             icon={Wallet}
@@ -297,9 +350,6 @@ export function ShipmentMoneySection({ detail }: { detail: ShipmentDetail }) {
         ) : null}
       </div>
 
-      {agencyEarning && (
-        <p className="mt-2 text-xs text-muted-foreground">{t('money.estimateCaveat')}</p>
-      )}
 
       {/* The whole order, which can split across several shipments and several
           agencies — so it is deliberately *not* presented next to the COD figure

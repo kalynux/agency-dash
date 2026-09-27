@@ -2,7 +2,7 @@ import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Navigation, Package, RefreshCw, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Navigation, Package, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -11,15 +11,17 @@ import {
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
 import { listSurfaceClass, PageHeader } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { shipmentsService } from '@/services/shipments.service';
 import { useShipments } from '@/store/shipments.store';
 import { useAgentsRoster } from '@/store/agents.store';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { ShipmentMoneyCell } from '@/components/shipments/ShipmentMoney';
 import { ShipmentDetailSheet } from '@/components/shipments/ShipmentDetailSheet';
 import { useOpenParam } from '@/hooks/useOpenParam';
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
-import { AutoAssignToggle } from '@/components/shipments/AutoAssignToggle';
+import { AutoAssignStatusChip } from '@/components/shipments/AutoAssignStatusChip';
 import { getApiErrorMessage } from '@/lib/errors';
 import { describeAddress } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
@@ -114,6 +116,11 @@ export function Shipments() {
     load();
   }, [load]);
 
+  usePageRefresh(() => {
+    load();
+    refetchBadge();
+  }, isLoading);
+
   // Debounce typing into the query the API actually runs, and go back to page 1
   // whenever the search changes — page 3 of the old result set means nothing.
   useEffect(() => {
@@ -162,6 +169,7 @@ export function Shipments() {
   }, [openId]);
 
   const agentNameFor = (id: string) => agents.find((a) => a.id === id)?.name ?? t('status.assigned');
+  const agentVerifiedFor = (id: string) => agents.find((a) => a.id === id)?.verified;
 
   /**
    * "Douala → Yaoundé" from the row's own pickup/drop-off. Both are optional on
@@ -205,6 +213,7 @@ export function Shipments() {
       >
         <Navigation className="w-3.5 h-3.5 flex-shrink-0" />
         {agentNameFor(shipment.agentId)}
+        <VerifiedBadge verified={agentVerifiedFor(shipment.agentId)} className="-ms-0.5" />
       </Link>
     ) : shipment.trackingNumber ? (
       <span className="text-sm text-muted-foreground">{shipment.trackingNumber}</span>
@@ -217,19 +226,10 @@ export function Shipments() {
       <PageHeader
         title={t('page.title')}
         description={t('page.description')}
-        // Not an action but a standing setting, and a switch rather than a
-        // button — so it rides the bar directly instead of going through
+        // Not an action but a status (the switch lives in Settings →
+        // Preferences) — so it rides the bar directly instead of going through
         // `actionItems`, which can only describe things you press.
-        actions={<AutoAssignToggle />}
-        actionItems={[
-          {
-            id: 'refresh',
-            label: t('page.refresh'),
-            icon: RefreshCw,
-            onSelect: load,
-            busy: isLoading,
-          },
-        ]}
+        actions={<AutoAssignStatusChip />}
       />
 
       {/* Filters & Search */}
@@ -332,8 +332,11 @@ export function Shipments() {
                           <div className="flex items-start gap-2">
                             <Store className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
                             <div className="min-w-0">
-                              <div className="max-w-[12rem] truncate text-sm font-medium" title={shipment.vendor.businessName}>
-                                {shipment.vendor.businessName}
+                              <div className="flex max-w-[12rem] items-center gap-1 text-sm font-medium">
+                                <span className="truncate" title={shipment.vendor.businessName}>
+                                  {shipment.vendor.businessName}
+                                </span>
+                                <VerifiedBadge verified={shipment.vendor.verified} />
                               </div>
                               {shipment.vendor.phone && (
                                 <a
@@ -415,6 +418,7 @@ export function Shipments() {
                       <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                         <Store className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{shipment.vendor.businessName}</span>
+                        <VerifiedBadge verified={shipment.vendor.verified} className="-ms-0.5" />
                       </span>
                       <span className="flex-shrink-0 text-muted-foreground">·</span>
                       {shipment.agentId ? (
@@ -425,6 +429,7 @@ export function Shipments() {
                         >
                           <Navigation className="w-3.5 h-3.5 flex-shrink-0" />
                           <span className="truncate">{agentNameFor(shipment.agentId)}</span>
+                          <VerifiedBadge verified={agentVerifiedFor(shipment.agentId)} />
                         </Link>
                       ) : (
                         <span className="flex-shrink-0 text-muted-foreground">

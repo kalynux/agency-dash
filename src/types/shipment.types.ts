@@ -74,21 +74,31 @@ export interface ShipmentCodInfo {
 export type AgencyEarningBasis = 'contract_percentage' | 'contract_flat';
 
 /**
- * What this delivery is expected to pay the agency, with the agent's cut already
- * taken out. Itemised because each part moves independently.
+ * Where a paid delivery's money sits now — present only once `estimated` is
+ * `false`. `held` is in escrow, `released` is available, `reversed` was taken back.
+ */
+export type AgencyEarningAllocationStatus = 'held' | 'released' | 'reversed';
+
+/**
+ * What this delivery pays the agency, with the agent's cut already taken out.
+ * Itemised because each part moves independently.
  *
- * ⚠️ An estimate, not a promise: the contract's `fee_split` is read live again
- * when the money is actually split, so renegotiating it before delivery changes
- * what is paid. A prepaid shipment's `deliveryFee` is firm (snapshotted when the
- * order was paid); a COD shipment's is recomputed from the agency's live
- * `policies.pricing` at collection.
+ * Until the delivery is paid out this is an **estimate**: the contract's
+ * `fee_split` is read live again when the money is actually split, so
+ * renegotiating it before delivery changes what is paid. Once the split has run
+ * (`estimated: false`) every figure is read from the entries actually written.
+ *
+ * A returned cash-on-delivery shipment reads `0`: no cash was collected, so
+ * nothing is credited — no RTO fee, no agent share, no COD fee.
  */
 export interface AgencyEarning {
   /** What you keep: `earnedFee − agentCut + codHandlingFee`. */
   amount: number;
   currency: string;
-  /** Always `true` — see the caveat above. */
+  /** `true` until the delivery is paid out; `false` once the figures are the real entries. */
   estimated: boolean;
+  /** Present once `estimated` is `false`. An unknown value renders as the plain final figure. */
+  allocationStatus?: AgencyEarningAllocationStatus | null;
   /** The gross fee, before anything is carved out. */
   deliveryFee: number;
   /** What this run earns out of it — the same figure unless the shipment already `returned`, when it is the agency's `rto_fee` instead. */
@@ -125,6 +135,8 @@ export interface ShipmentVendorSummary {
   id: string;
   businessName: string;
   phone: string;
+  /** The vendor's KYC verdict (`kyc_details.legit_verified`) — the badge beside the name. */
+  verified: boolean;
 }
 
 export interface ShipmentCustomerSummary {
@@ -275,6 +287,8 @@ export interface ShipmentAgent {
   name: string;
   phone: string;
   avatarUrl: string | null;
+  /** The agent's KYC verdict (`kyc.status === 'verified'`) — the badge beside the name. */
+  verified: boolean;
 }
 
 export interface ShipmentStatusHistoryEntry {

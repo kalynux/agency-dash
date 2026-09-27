@@ -9,11 +9,17 @@
       "short": "Comment vous êtes notifié"
     },
     "preferences": {
-      "description": "Personnalisez l'apparence du tableau de bord",
-      "short": "Thème et apparence"
+      "description": "Comment les expéditions parviennent à vos livreurs, et l'apparence du tableau de bord",
+      "short": "Affectation et thème"
     }
   },
   "preferences": {
+    "autoAssign": "Affecter automatiquement les expéditions aux livreurs",
+    "autoAssignHint": "Lorsque cette option est activée, chaque expédition qu'un vendeur vous confie est aussitôt proposée à votre livreur éligible le plus proche — le premier qui accepte la prend. Si personne n'accepte après deux tours, vous êtes prévenu et pouvez l'affecter vous-même. Les expéditions déjà en attente ne sont pas concernées.",
+    "autoAssignOn": "Affectation automatique activée — les nouvelles expéditions partent automatiquement vers vos livreurs.",
+    "autoAssignOff": "Affectation automatique désactivée — vous affecterez vous-même les nouvelles expéditions.",
+    "autoAssignLoadError": "Impossible de charger le réglage d'affectation automatique.",
+    "retry": "Réessayer",
     "theme": "Thème",
     "themeHint": "Choisissez votre thème préféré",
     "themeFollowingDevice": "Suit votre appareil — actuellement {{theme}}",

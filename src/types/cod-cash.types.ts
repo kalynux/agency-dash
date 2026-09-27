@@ -1,8 +1,22 @@
 // Agency — COD Cash Management — see api-doc/agency/cod-cash-management.md
 
+import type { FileRef } from '@/types/file.types';
+
+/**
+ * The photo a declarer attached as evidence of a hand-over (2026-09-27, see
+ * api-doc/agency/FRONTEND-CHANGELOG-cod-cash-proof.md).
+ *
+ * ⚠ **`url` is always `null`** — `cod-proofs/` is a private tree (receipts carry
+ * account numbers). The bytes come from the record's own `…/proof/file` route.
+ * `originalName` is optional here because the deposit rows omit it.
+ */
+export type CodProof = Omit<FileRef, 'originalName'> & { originalName?: string };
+
 export interface CodSummaryAgent {
   id: string;
   name: string;
+  /** The agent's KYC verdict (`kyc.status === 'verified'`) — the badge beside the name. */
+  verified: boolean;
   cashHeld: number;
 }
 
@@ -33,6 +47,12 @@ export interface CodDeposit {
   reference?: string | null;
   resolvedAt?: string | null;
   rejectionReason?: string | null;
+  /**
+   * The agent's evidence photo. `null` on a deposit you recorded at the desk
+   * (`declaredAt: null`) and on any declaration from before 2026-09-27 — a
+   * normal state, not an error.
+   */
+  proof?: CodProof | null;
 }
 
 export type CodRemittanceStatus = 'declared' | 'confirmed' | 'rejected';
@@ -42,8 +62,11 @@ export interface CodRemittance {
   agencyId: string;
   amount: number;
   currency: string;
-  reference: string;
+  /** Optional since 2026-09-27 — `null` on new rows declared without one. */
+  reference: string | null;
   note: string | null;
+  /** Your transfer receipt. `null` only on remittances declared before 2026-09-27. */
+  proof: CodProof | null;
   status: CodRemittanceStatus;
   declaredAt: string;
   resolvedAt: string | null;

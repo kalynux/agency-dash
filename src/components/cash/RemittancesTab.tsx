@@ -5,24 +5,26 @@ import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodRemittanceStatusBadge } from '@/components/cash/CodRemittanceStatusBadge';
-import { BlockHeading } from '@/components/common/InfoHint';
+import { CodProofImage } from '@/components/cash/CodProofImage';
+import { CodProofPicker } from '@/components/cash/CodProofPicker';
+import { CashFormField } from '@/components/cash/CashFormField';
+import { AddRecordButton } from '@/components/common/AddRecordButton';
 import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import { ResponsiveModal } from '@/components/common/ResponsiveModal';
 import {
   FilterOptionGroup,
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import {
-  compactCardClass,
-  compactCardContentClass,
-  listSurfaceClass,
-} from '@/components/layout/PageContainer';
-import { cn } from '@/lib/utils';
-import { getApiErrorMessage } from '@/lib/errors';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { useCreateParam } from '@/hooks/useOpenParam';
+import { getApiErrorMessage, getErrorCode, getFieldErrorMessage } from '@/lib/errors';
 import type { CodListMeta, CodRemittance, CodRemittanceStatus } from '@/types/cod-cash.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 const PAGE_LIMIT = 20;
 
@@ -40,9 +42,11 @@ export function RemittancesTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [formOpen, setFormOpen] = useCreateParam();
   const [amount, setAmount] = useState('');
   const [reference, setReference] = useState('');
   const [note, setNote] = useState('');
+  const [proof, setProof] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const statusOptions = useMemo(
@@ -77,20 +81,37 @@ export function RemittancesTab() {
     load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
+  // The receipt photo is what gates the declaration now; the reference is
+  // optional, like the note (2026-09-27).
   const handleSubmit = async () => {
     const amountNum = Number(amount);
-    if (!amountNum || amountNum <= 0 || !reference.trim()) return;
+    if (!amountNum || amountNum <= 0 || !proof) return;
     setIsSubmitting(true);
     try {
-      await codCashService.declareRemittance(amountNum, reference.trim(), note || undefined);
+      await codCashService.declareRemittance(proof, amountNum, reference, note);
       toast.success(t('remittances.declared'));
+      setFormOpen(false);
       setAmount('');
       setReference('');
       setNote('');
+      setProof(null);
       setPage(1);
       load();
     } catch (err) {
-      toast.error(getApiErrorMessage(err));
+      // A malformed field names itself in `details`; everything else resolves
+      // by code. Both image refusals (wrong type — typically an iPhone HEIC —
+      // or too big) get one sentence that says what to do instead.
+      const fieldMessage =
+        getErrorCode(err) === 'VALIDATION_ERROR' ? getFieldErrorMessage(err) : undefined;
+      toast.error(
+        fieldMessage ??
+          getApiErrorMessage(err, {
+            UPLOAD_POLICY_VIOLATION: 'cash:proof.invalid',
+            CATALOG_FILE_TOO_LARGE: 'cash:proof.invalid',
+          }),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -106,23 +127,6 @@ export function RemittancesTab() {
 
   return (
     <div className="space-y-6">
-      <Card className={compactCardClass}>
-        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          {/* The hint used to sit under the row as a third line of prose; on a
-              phone that pushed the submit button off the fold. */}
-          <BlockHeading title={t('remittances.declareTitle')} hint={t('remittances.declareHint')} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
-            <Input type="number" min={1} placeholder={t('remittances.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Input placeholder={t('remittances.referencePlaceholder')} value={reference} onChange={(e) => setReference(e.target.value)} />
-            <Input placeholder={t('remittances.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button className="gap-2" disabled={!amount || !reference.trim() || isSubmitting} onClick={handleSubmit}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {t('remittances.declare')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <SearchFilterBar
         value={search}
         onChange={setSearch}
@@ -133,6 +137,13 @@ export function RemittancesTab() {
         filterDescription={t('remittances.filterDescription')}
         resultCount={query ? visibleRemittances.length : meta.total}
         resultNounKey="common:nouns.remittance"
+        trailing={
+          <AddRecordButton
+            label={t('remittances.declareAction')}
+            icon={Send}
+            onClick={() => setFormOpen(true)}
+          />
+        }
       >
         <FilterSection label={t('remittances.status')}>
           <FilterOptionGroup
@@ -168,7 +179,7 @@ export function RemittancesTab() {
               visibleRemittances.map((r) => (
                 <RecordCard
                   key={r.id}
-                  title={r.reference}
+                  title={r.reference ?? t('remittances.noReference')}
                   badge={<CodRemittanceStatusBadge status={r.status} />}
                   primary={formatCurrency(r.amount, r.currency)}
                   meta={[formatDateTime(r.declaredAt)]}
@@ -177,6 +188,16 @@ export function RemittancesTab() {
                       label: t('remittances.table.resolved'),
                       value: r.resolvedAt ? formatDateTime(r.resolvedAt) : '—',
                       hideWhenEmpty: false,
+                    },
+                    {
+                      label: t('remittances.table.proof'),
+                      value: (
+                        <CodProofImage
+                          key={r.id}
+                          proof={r.proof}
+                          fetchFile={() => codCashService.getRemittanceProofFile(r.id)}
+                        />
+                      ),
                     },
                   ]}
                   note={r.note}
@@ -191,6 +212,7 @@ export function RemittancesTab() {
                 <tr className="border-b bg-muted/50">
                   <th className="text-start p-4 text-sm font-medium">{t('remittances.table.reference')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('remittances.table.amount')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('remittances.table.proof')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('remittances.table.status')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('remittances.table.declared')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('remittances.table.resolved')}</th>
@@ -199,19 +221,32 @@ export function RemittancesTab() {
               <tbody>
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
-                    <tr key={i} className="border-b"><td colSpan={5} className="p-4"><div className="h-10 bg-muted animate-pulse rounded" /></td></tr>
+                    <tr key={i} className="border-b"><td colSpan={6} className="p-4"><div className="h-10 bg-muted animate-pulse rounded" /></td></tr>
                   ))
                 ) : loadError ? (
-                  <tr><td colSpan={5} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>{t('common:actions.retry')}</Button></td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center"><p className="text-muted-foreground mb-4">{loadError}</p><Button variant="outline" onClick={load}>{t('common:actions.retry')}</Button></td></tr>
                 ) : visibleRemittances.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">
                     {query ? t('remittances.emptyFiltered') : t('remittances.empty')}
                   </td></tr>
                 ) : (
                   visibleRemittances.map((r) => (
                     <tr key={r.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={r.reference}>{r.reference}</span></td>
+                      <td className="p-4 font-medium">
+                        {r.reference ? (
+                          <span className="block max-w-[16rem] truncate" title={r.reference}>{r.reference}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="p-4">{formatCurrency(r.amount, r.currency)}</td>
+                      <td className="p-4">
+                        <CodProofImage
+                          key={r.id}
+                          proof={r.proof}
+                          fetchFile={() => codCashService.getRemittanceProofFile(r.id)}
+                        />
+                      </td>
                       <td className="p-4"><CodRemittanceStatusBadge status={r.status} /></td>
                       <td className="p-4 text-sm text-muted-foreground">{formatDateTime(r.declaredAt)}</td>
                       <td className="p-4 text-sm text-muted-foreground">{r.resolvedAt ? formatDateTime(r.resolvedAt) : t('common:values.notAvailable')}</td>
@@ -233,6 +268,75 @@ export function RemittancesTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Declare a transfer — a sheet on a phone, a dialog on desktop. The
+          receipt photo is required; the reference is optional, like the note. */}
+      <ResponsiveModal
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        title={t('remittances.declareTitle')}
+        description={t('remittances.declareHint')}
+        desktopClassName="sm:max-w-md"
+        mobileClassName="h-auto max-h-[92dvh]"
+        disableClose={isSubmitting}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              className="max-md:w-full"
+              disabled={isSubmitting}
+              onClick={() => setFormOpen(false)}
+            >
+              {t('common:actions.cancel')}
+            </Button>
+            <Button
+              className="gap-2 max-md:w-full"
+              disabled={!amount || !proof || isSubmitting}
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {t('remittances.declare')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <CashFormField label={t('remittances.amount')} htmlFor="remittance-amount">
+            <Input
+              id="remittance-amount"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </CashFormField>
+          <CashFormField label={t('remittances.proofLabel')}>
+            <CodProofPicker value={proof} onChange={setProof} disabled={isSubmitting} />
+          </CashFormField>
+          <CashFormField
+            label={t('remittances.table.reference')}
+            htmlFor="remittance-reference"
+            optional
+          >
+            <Input
+              id="remittance-reference"
+              placeholder={t('remittances.referenceExample')}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+            />
+          </CashFormField>
+          <CashFormField label={t('remittances.note')} htmlFor="remittance-note" optional>
+            <Textarea
+              id="remittance-note"
+              rows={2}
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </CashFormField>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 }

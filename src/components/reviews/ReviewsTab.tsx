@@ -51,6 +51,7 @@ import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Review } from '@/types/review.types';
 import { ReviewStars, ReviewStatusMark, ReviewStatusSentence } from './ReviewStatusViews';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 const PAGE_LIMIT = 20;
 
@@ -82,6 +83,8 @@ export function ReviewsTab() {
         : (await reviewsService.list({ status: 'pending', page: 1, limit: 1 })).meta.total;
     return { list, held };
   }, [page, status]);
+
+  usePageRefresh(resource.refetch, resource.isLoading);
 
   const reviews = resource.data?.list.data ?? [];
   const meta = resource.data?.list.meta;

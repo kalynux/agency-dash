@@ -32,6 +32,7 @@ const Agents = lazy(() => import('@/pages/Agents').then((m) => ({ default: m.Age
 const CashManagement = lazy(() => import('@/pages/CashManagement').then((m) => ({ default: m.CashManagement })));
 const Vendors = lazy(() => import('@/pages/Vendors').then((m) => ({ default: m.Vendors })));
 const Transactions = lazy(() => import('@/pages/Transactions').then((m) => ({ default: m.Transactions })));
+const Analytics = lazy(() => import('@/pages/Analytics').then((m) => ({ default: m.Analytics })));
 const MediaLibrary = lazy(() => import('@/pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary })));
 const Account = lazy(() => import('@/pages/Account').then((m) => ({ default: m.Account })));
 const Settings = lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })));
@@ -47,6 +48,7 @@ import { Header } from '@/components/layout/Header';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { StatusBarScrim } from '@/components/layout/StatusBarScrim';
+import { PageRefreshProvider } from '@/store/pageRefresh.store';
 import { useIsMobile, useIsBelowDesktop } from '@/hooks/use-mobile';
 import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 import { MOBILE_TAB_PATHS } from '@/config/navigation';
@@ -266,6 +268,7 @@ function DashboardShell() {
                     fail at — a chunk that 404s because the site was redeployed
                     mid-session. See `RouteErrorBoundary`. */}
                 <RouteErrorBoundary>
+                <PageRefreshProvider>
                 <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route index element={<Overview />} />
@@ -281,6 +284,7 @@ function DashboardShell() {
                   {/* Legacy alias — earnings now live under Account → Payout. */}
                   <Route path="earnings" element={<Navigate to="/dashboard/account/payout" replace />} />
                   <Route path="transactions" element={<Transactions />} />
+                  <Route path="analytics" element={<Analytics />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="tickets" element={<Tickets />} />
                   <Route path="agents" element={<Navigate to="/dashboard/agents/connections" replace />} />
@@ -304,6 +308,7 @@ function DashboardShell() {
                   <Route path="*" element={<DeepLinkCatchAll />} />
                 </Routes>
                 </Suspense>
+                </PageRefreshProvider>
                 </RouteErrorBoundary>
               </main>
             </div>

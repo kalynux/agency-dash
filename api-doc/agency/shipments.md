@@ -248,7 +248,7 @@ agency-scoped data; `agencyEarning.agentCut` is the agency's view of the same nu
       },
       "agencyEarning": null,
       "agencyEarningUnavailable": "no_agent",
-      "vendor": { "id": "507f1f77bcf86cd799439aaa", "businessName": "Acme Store", "phone": "+237670000001" },
+      "vendor": { "id": "507f1f77bcf86cd799439aaa", "businessName": "Acme Store", "phone": "+237670000001", "verified": true },
       "customer": { "id": "507f1f77bcf86cd799439ccc", "name": "Jane Doe", "phone": "+237670000002" },
       "itemCount": 2,
       "itemImages": [
@@ -353,6 +353,10 @@ The `vendor` block is present on **every** shipment, including one whose items w
 in your own magazin (`pickup.mode: "storage_based"`) — `businessName` is the vendor's store name, and
 who supplied the goods does not depend on where you collect them.
 
+`vendor.verified` (detail **and** list) is the vendor's KYC verdict (`kyc_details.legit_verified`),
+and `agent.verified` (detail) the agent's (`kyc.status === "verified"`). Both drive the verified badge
+beside the name; neither is ever absent.
+
 **Success Response** (`200 OK`):
 ```json
 {
@@ -423,9 +427,10 @@ who supplied the goods does not depend on where you collect them.
       "logo": { "id": "...", "key": "images/2026/07/logo.png", "url": "https://…/logo.png", "access": "public", "mimeType": "image/png", "size": 8213, "originalName": "logo.png" },
       "supportPhone": "+237670000009",
       "supportEmail": "support@douala-express.cm",
-      "supportWhatsapp": null
+      "supportWhatsapp": null,
+      "verified": true
     },
-    "vendor": { "id": "507f1f77bcf86cd799439aaa", "businessName": "Acme Store", "phone": "+237670000001", "email": "acme@example.com" },
+    "vendor": { "id": "507f1f77bcf86cd799439aaa", "businessName": "Acme Store", "phone": "+237670000001", "email": "acme@example.com", "verified": true },
     "customer": {
       "id": "507f1f77bcf86cd799439ccc",
       "name": "Jane Doe",
@@ -440,7 +445,7 @@ who supplied the goods does not depend on where you collect them.
         "country": "CM"
       }
     },
-    "agent": { "id": "507f1f77bcf86cd799439077", "name": "Paul Biya Jr.", "phone": "+237670000003", "avatar": null },
+    "agent": { "id": "507f1f77bcf86cd799439077", "name": "Paul Biya Jr.", "phone": "+237670000003", "avatar": null, "verified": true },
     "handover": null,
     "statusHistory": [
       { "status": "assigned", "changedAt": "2026-07-05T09:00:00.000Z", "changedByUserId": null, "changedByRole": "system" },
@@ -656,8 +661,13 @@ they have auto-accept on), and `data.shipment.assignmentState` is `offered` (or 
 
 **Key errors**: `SHIPMENT_NOT_OFFERABLE` (422), `SHIPMENT_ALREADY_HAS_AGENT` (409),
 `SHIPMENT_ALREADY_HAS_PENDING_OFFER` (409), `AGENT_NOT_ELIGIBLE_FOR_ASSIGNMENT` (422),
-`COD_AGENT_EXPOSURE_EXCEEDED` / `COD_AGENT_TRUST_TOO_LOW` (422, COD only). Full list in
-[assignment.md](assignment.md#offer).
+`AGENT_KYC_NOT_VERIFIED` / `COD_AGENT_EXPOSURE_EXCEEDED` / `COD_AGENT_TRUST_TOO_LOW` (422, COD only).
+Full list in [assignment.md](assignment.md#offer).
+
+> ⚠ **Since 2026-09-27 only a KYC-verified agent may carry a COD shipment** — the one place
+> verification still gates agent work. An unverified agent takes prepaid shipments normally; a COD
+> one is refused `422 AGENT_KYC_NOT_VERIFIED` (`details: { kycStatus, hint }`) on offer, accept and
+> reassign, before any cash arithmetic.
 
 ---
 

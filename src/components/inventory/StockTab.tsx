@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Info, RefreshCw, Warehouse } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -17,7 +17,8 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass, type RenderPageHeader } from '@/components/layout/PageContainer';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { InventoryCard, InventoryTableRow } from '@/components/inventory/InventoryRow';
 import { InventorySummaryCards } from '@/components/inventory/InventorySummaryCards';
 import { InventoryDetailSheet } from '@/components/inventory/InventoryDetailSheet';
@@ -47,7 +48,7 @@ const EMPTY_META: InventoryListMeta = {
   totalPages: 1,
 };
 
-export function StockTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
+export function StockTab() {
   const { t } = useTranslation(['inventory', 'common']);
   // Depot filter options come from the magazin the app already loaded, not from
   // a second endpoint — and it keeps the labels here identical to the ones
@@ -102,6 +103,8 @@ export function StockTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  usePageRefresh(load, isLoading);
 
   // Debounce typing into the query the API actually runs, and go back to page 1
   // whenever the search changes — page 3 of the old result set means nothing.
@@ -167,10 +170,6 @@ export function StockTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
 
   return (
     <div className="space-y-6">
-      {renderHeader([
-        { id: 'refresh', label: t('page.refresh'), icon: RefreshCw, onSelect: load, busy: isLoading },
-      ])}
-
       {/* Phase 1: the COUNTED numbers are derived, not counted. Say so once, at
           the top, rather than letting every zero on the screen be read as a stock
           level. The agreed quantity beside them is real, which is why the banner

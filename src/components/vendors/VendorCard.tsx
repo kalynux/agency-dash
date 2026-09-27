@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, RotateCcw, ShieldCheck, Store, XCircle } from 'lucide-react';
+import { Info, RotateCcw, Store, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
@@ -38,15 +39,15 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
+              {/* No `flex-wrap`: the seal belongs beside the name, so a long
+                  name ellipsizes rather than pushing the seal onto its own line. */}
+              <div className="flex items-center gap-1">
                 {/* `truncate` sets `white-space: nowrap`, and as a flex item this
                     <p> defaults to `min-width: auto` — so its minimum size was
                     the whole untruncated name, the ellipsis never fired, and the
                     name pushed the action buttons past the card's edge. */}
                 <p className="font-semibold text-sm truncate min-w-0">{vendor.displayName ?? vendor.businessName}</p>
-                {vendor.kycVerified && (
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" aria-label={t('card.kycVerified')} />
-                )}
+                <VerifiedBadge verified={vendor.kycVerified} className="text-sm" />
               </div>
 
               {addr && (

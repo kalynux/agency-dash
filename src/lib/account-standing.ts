@@ -18,13 +18,15 @@
 //
 // ─── What being unverified actually costs ─────────────────────────────────────
 //
-// Cash, and only cash:
+// Cash on delivery, and only that:
 //
 //   * **COD is refused.** `CodEligibilityService` requires
 //     `kyc_details.legit_verified` at checkout, so an unverified agency's
 //     `policies.cod.enabled` toggle has no effect — orders simply never arrive
 //     as COD. Worth saying on the toggle; silently ignoring it is worse.
-//   * **Payouts can be capped.** See `payoutAllowance` in `earnings.types.ts`.
+//
+// (Payouts were capped for unverified accounts from 2026-09-15 until the cap
+// was deleted on 2026-09-27; `payoutAllowance` is now always `null`.)
 //
 // Everything else stays open on purpose — the platform's position is that
 // working with an unverified counterparty is the vendor's or agency's own

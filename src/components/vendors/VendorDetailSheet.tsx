@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { tx } from '@/i18n/tx';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
 function PolicyRow({ label, value }: { label: string; value: ReactNode }) {
@@ -49,7 +50,10 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
               )}
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
-              <SheetTitle className="text-base leading-tight">{vendor.displayName ?? vendor.businessName}</SheetTitle>
+              <SheetTitle className="text-base leading-tight">
+                {vendor.displayName ?? vendor.businessName}
+                <VerifiedBadge verified={vendor.kycVerified} className="ms-1" />
+              </SheetTitle>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {vendor.kycVerified ? (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { ActorAvatar } from './ActorAvatar';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { roleLabel } from './ticket.constants';
 import type { TicketActor } from '@/types/ticket.types';
 
@@ -67,7 +68,10 @@ export function FollowerSelect({ followers, value, onChange, disabled }: Followe
                 >
                   <ActorAvatar actor={f} className="h-6 w-6" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate">{f.name}</span>
+                    <span className="flex items-center gap-1">
+                      <span className="truncate">{f.name}</span>
+                      <VerifiedBadge verified={f.verified} />
+                    </span>
                     <span className="block text-xs text-muted-foreground">{roleLabel(f.role)}</span>
                   </span>
                   <span

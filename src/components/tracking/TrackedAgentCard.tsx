@@ -11,6 +11,7 @@ import {
 } from '@/components/tracking/stall-cause';
 import { useStallDiagnosis } from '@/hooks/useStallDiagnosis';
 import { cn } from '@/lib/utils';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { isConclusiveRevoke } from '@/types/tracking.types';
 import type {
   AgentLiveFix,
@@ -263,7 +264,10 @@ export function TrackedAgentCard({
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-medium leading-4">{agent.name}</span>
+            <span className="flex items-center gap-1 text-[13px] font-medium leading-4">
+              <span className="truncate">{agent.name}</span>
+              <VerifiedBadge verified={agent.verified} />
+            </span>
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-4 text-muted-foreground">
               <span className="flex items-center gap-1">
                 <VehicleIcon vehicleType={agent.vehicleType} className="h-3 w-3" />

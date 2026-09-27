@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ActorAvatar } from './ActorAvatar';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { FollowerSelect } from './FollowerSelect';
 import { roleLabel, relativeTime, NOTE_MAX_LENGTH } from './ticket.constants';
 import type { TicketNote, TicketActor } from '@/types/ticket.types';
@@ -102,8 +103,9 @@ export function NotesThread({
               <ActorAvatar actor={note.author} role={note.author_role} />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">
+                  <span className="flex items-center gap-1 text-sm font-medium">
                     {note.author?.name ?? roleLabel(note.author_role)}
+                    <VerifiedBadge verified={note.author?.verified} />
                   </span>
                   <Badge
                     variant="secondary"

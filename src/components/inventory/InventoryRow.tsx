@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import { Ban, Clock3, MapPinOff, Package, Store, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CatalogStockCell, StockLevelCell, StockSourceBadge } from '@/components/inventory/StockLevels';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import { describeDepot, isSuspended } from '@/types/inventory.types';
 import type { InventoryListItem } from '@/types/inventory.types';
@@ -93,13 +94,13 @@ export function VendorCell({ item }: { item: InventoryListItem }) {
   return (
     <div className="flex items-start gap-2">
       <Store className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-      <div
-        className="min-w-0 max-w-[12rem] truncate text-sm font-medium"
-        title={item.vendor.businessName ?? undefined}
-      >
-        {item.vendor.businessName ?? (
-          <span className="italic text-muted-foreground">{t('table.unnamedVendor')}</span>
-        )}
+      <div className="flex min-w-0 max-w-[12rem] items-center gap-1 text-sm font-medium">
+        <span className="truncate" title={item.vendor.businessName ?? undefined}>
+          {item.vendor.businessName ?? (
+            <span className="italic text-muted-foreground">{t('table.unnamedVendor')}</span>
+          )}
+        </span>
+        <VerifiedBadge verified={item.vendor.verified} />
       </div>
     </div>
   );
@@ -216,6 +217,7 @@ export function InventoryCard({
         <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <Store className="h-3.5 w-3.5 flex-shrink-0" />
           <span className="truncate">{item.vendor.businessName ?? t('table.unnamedVendor')}</span>
+          <VerifiedBadge verified={item.vendor.verified} className="-ms-0.5" />
         </span>
         <span className="flex-shrink-0 text-muted-foreground">·</span>
         <DepotCell item={item} />

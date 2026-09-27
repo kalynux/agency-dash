@@ -25,9 +25,9 @@
  * See api-doc/agency/storage-invoices.md.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, FileText, Info, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Info } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +37,8 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import { listSurfaceClass, type RenderPageHeader } from '@/components/layout/PageContainer';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { StorageStatementSheet } from '@/components/inventory/statements/StorageStatementSheet';
 import { storageInvoicesService } from '@/services/storage-invoices.service';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -65,7 +66,7 @@ const STATUS_STYLE: Record<StorageInvoiceStatus, string> = {
   void: 'text-muted-foreground bg-muted border-border',
 };
 
-export function StorageStatementsTab({ renderHeader }: { renderHeader: RenderPageHeader }) {
+export function StorageStatementsTab() {
   const { t } = useTranslation(['inventory', 'common']);
 
   const [invoices, setInvoices] = useState<StorageInvoice[]>([]);
@@ -96,25 +97,13 @@ export function StorageStatementsTab({ renderHeader }: { renderHeader: RenderPag
     void load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
   const rangeStart = (meta.page - 1) * meta.limit + 1;
   const rangeEnd = Math.min(meta.page * meta.limit, meta.total);
 
-  const header = useMemo(
-    () =>
-      renderHeader([
-        {
-          id: 'reload',
-          label: t('common:actions.refresh'),
-          icon: RefreshCw,
-          onSelect: () => void load(),
-        },
-      ]),
-    [renderHeader, load, t],
-  );
-
   return (
     <div className="space-y-4">
-      {header}
 
       {/* Stated once, at the top, before any number or button. */}
       <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">

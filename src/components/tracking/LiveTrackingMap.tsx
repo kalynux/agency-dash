@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { Crosshair, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { txStatic } from '@/i18n/tx';
+import { verifiedBadgeHtml } from '@/components/common/verified-badge';
 import { formatFixAge } from '@/components/tracking/format';
 import { cn } from '@/lib/utils';
 import { getTileProvider, type TileProvider } from '@/config/map';
@@ -42,6 +43,8 @@ interface LiveTrackingMapProps {
   /** Recent positions per agentId (oldest→newest) for the live trail polyline. */
   trails: Record<string, GeoPosition[]>;
   nameFor: (id: string) => string;
+  /** The agent's KYC verdict — a verified seal after the name on the marker and popup. */
+  verifiedFor?: (id: string) => boolean;
   /** Deep-link target (?agent=…) — flown to once it has a position. */
   focusAgentId?: string | null;
   /** Currently selected agent (card click) — highlighted + flown to. */
@@ -78,21 +81,26 @@ const DEFAULT_CENTER: L.LatLngExpression = [4.05, 9.7];
 const DEFAULT_ZOOM = 6;
 const FOCUS_ZOOM = 15;
 
-function markerInnerHtml(name: string, heading?: number): string {
+/** The name, then the verified seal when the agent is verified. */
+function nameHtml(name: string, verified: boolean, badgePx: number): string {
+  return escapeHtml(name) + (verified ? ` ${verifiedBadgeHtml(txStatic('common:values.verified'), badgePx)}` : '');
+}
+
+function markerInnerHtml(name: string, verified: boolean, heading?: number): string {
   const hasHeading = typeof heading === 'number';
   const headingStyle = hasHeading ? `transform:rotate(${heading}deg)` : 'display:none';
   return (
     `<span class="agent-marker__pulse"></span>` +
     `<span class="agent-marker__heading" style="${headingStyle}"><span class="agent-marker__arrow"></span></span>` +
     `<span class="agent-marker__dot"></span>` +
-    `<span class="agent-marker__label">${escapeHtml(name)}</span>`
+    `<span class="agent-marker__label" data-sig="${escapeHtml(`${verified ? 1 : 0}${name}`)}">${nameHtml(name, verified, 11)}</span>`
   );
 }
 
-function buildIcon(name: string, heading?: number): L.DivIcon {
+function buildIcon(name: string, verified: boolean, heading?: number): L.DivIcon {
   return L.divIcon({
     className: 'agent-marker-icon',
-    html: markerInnerHtml(name, heading),
+    html: markerInnerHtml(name, verified, heading),
     iconSize: [44, 44],
     iconAnchor: [22, 22],
     popupAnchor: [0, -18],
@@ -100,7 +108,7 @@ function buildIcon(name: string, heading?: number): L.DivIcon {
 }
 
 /** Update an existing marker's DOM in place, so setLatLng can still animate the move. */
-function updateIconEl(marker: L.Marker, name: string, heading?: number): void {
+function updateIconEl(marker: L.Marker, name: string, verified: boolean, heading?: number): void {
   const el = marker.getElement();
   if (!el) return;
   const headingEl = el.querySelector<HTMLElement>('.agent-marker__heading');
@@ -113,7 +121,12 @@ function updateIconEl(marker: L.Marker, name: string, heading?: number): void {
     }
   }
   const labelEl = el.querySelector<HTMLElement>('.agent-marker__label');
-  if (labelEl && labelEl.textContent !== name) labelEl.textContent = name;
+  // Rewritten only when the name or the verdict changes, never on a plain move.
+  const sig = `${verified ? 1 : 0}${name}`;
+  if (labelEl && labelEl.dataset.sig !== sig) {
+    labelEl.dataset.sig = sig;
+    labelEl.innerHTML = nameHtml(name, verified, 11);
+  }
 }
 
 function mapsLink(lat: number, lng: number, label: string): string {
@@ -123,7 +136,7 @@ function mapsLink(lat: number, lng: number, label: string): string {
   );
 }
 
-function popupHtml(name: string, fix: AgentLiveFix): string {
+function popupHtml(name: string, verified: boolean, fix: AgentLiveFix): string {
   const { latitude: lat, longitude: lng } = fix.position;
   const meta = [
     typeof fix.speedMps === 'number'
@@ -140,7 +153,7 @@ function popupHtml(name: string, fix: AgentLiveFix): string {
     .join(' · ');
   return (
     `<div class="agent-popup">` +
-    `<p class="agent-popup__name">${escapeHtml(name)}</p>` +
+    `<p class="agent-popup__name">${nameHtml(name, verified, 14)}</p>` +
     `<p class="agent-popup__coords">${lat.toFixed(5)}, ${lng.toFixed(5)}</p>` +
     (meta ? `<p class="agent-popup__meta">${escapeHtml(meta)}</p>` : '') +
     `<p class="agent-popup__seen">${escapeHtml(txStatic('tracking:agent.updated', { when: formatFixAge(fix.receivedAt) }))}</p>` +
@@ -177,6 +190,7 @@ export function LiveTrackingMap({
   fixes,
   trails,
   nameFor,
+  verifiedFor,
   focusAgentId,
   selectedAgentId,
   onSelectAgent,
@@ -213,9 +227,9 @@ export function LiveTrackingMap({
   const lastSceneRef = useRef<string | null>(null);
 
   // Latest props for imperative handlers, so we never rebind Leaflet listeners.
-  const propsRef = useRef({ fixes, nameFor, onSelectAgent });
+  const propsRef = useRef({ fixes, nameFor, verifiedFor, onSelectAgent });
   useEffect(() => {
-    propsRef.current = { fixes, nameFor, onSelectAgent };
+    propsRef.current = { fixes, nameFor, verifiedFor, onSelectAgent };
   });
 
   const hasScene = !!(startPin || endPin);
@@ -286,7 +300,7 @@ export function LiveTrackingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const { nameFor: name } = propsRef.current;
+    const { nameFor: name, verifiedFor: isVerified } = propsRef.current;
 
     // Remove markers/trails for agents that are no longer present.
     for (const [id, marker] of markersRef.current) {
@@ -307,19 +321,20 @@ export function LiveTrackingMap({
       const fix = fixes[id];
       const latlng = toLatLng(fix.position);
       const label = name(id);
+      const verified = isVerified?.(id) === true;
       const isSelected = id === selectedAgentId;
 
       let marker = markersRef.current.get(id);
       if (!marker) {
-        marker = L.marker(latlng, { icon: buildIcon(label, fix.headingDegrees) });
+        marker = L.marker(latlng, { icon: buildIcon(label, verified, fix.headingDegrees) });
         marker.on('click', () => propsRef.current.onSelectAgent?.(id));
-        marker.bindPopup(popupHtml(label, fix), { className: 'agent-popup-wrap' });
+        marker.bindPopup(popupHtml(label, verified, fix), { className: 'agent-popup-wrap' });
         marker.addTo(map);
         markersRef.current.set(id, marker);
       } else {
         marker.setLatLng(latlng);
-        marker.setPopupContent(popupHtml(label, fix));
-        updateIconEl(marker, label, fix.headingDegrees);
+        marker.setPopupContent(popupHtml(label, verified, fix));
+        updateIconEl(marker, label, verified, fix.headingDegrees);
       }
       // The selected agent sits above the others, and above the shipment pins,
       // because it is the thing that moves.

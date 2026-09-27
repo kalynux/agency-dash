@@ -39,7 +39,6 @@ import {
   Circle,
   Clock,
   FileCheck2,
-  Gauge,
   Loader2,
   Lock,
   ShieldCheck,
@@ -366,8 +365,9 @@ export function VerificationSettings() {
             anything but `verified`, including `under_review`, because someone
             waiting is exactly who wants to know what they are waiting for.
 
-            ⚠ **Two items, and there are only two.** Cash-on-delivery and the
-            payout allowance are the whole list; everything else an agency does
+            ⚠ **One item, and there is only one.** Cash-on-delivery is the whole
+            list — the unverified payout allowance was deleted on 2026-09-27, so
+            withdrawals are uncapped for everyone. Everything else an agency does
             is open whether or not anybody has vetted it, and the platform's
             position is that trading with an unverified counterparty is the
             other party's judgement, not a platform refusal. So this reads as
@@ -382,10 +382,6 @@ export function VerificationSettings() {
                 <li className="flex gap-2">
                   <Banknote className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {t('verification.unlocks.cod')}
-                </li>
-                <li className="flex gap-2">
-                  <Gauge className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  {t('verification.unlocks.payouts')}
                 </li>
               </ul>
               <p className="mt-2 text-xs text-muted-foreground">

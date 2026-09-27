@@ -15,9 +15,9 @@
 //
 // ⚠ **It does, since 2026-09-15, gate CASH.** An unverified agency cannot carry
 // cash-on-delivery orders (`CodEligibilityService` reads
-// `kyc_details.legit_verified` at checkout), and its payouts can be capped per
-// rolling window (`payoutAllowance`, see earnings.types.ts). Nothing else is
-// refused — working with an unverified counterparty is the other party's
+// `kyc_details.legit_verified` at checkout). Nothing else is refused — payouts
+// are uncapped for everyone since 2026-09-27, and working with an unverified
+// counterparty is the other party's
 // judgement to make. `lib/account-standing.ts` is where that distinction lives.
 //
 // ⚠ This record's `status` is NOT the agency account's `status`. The account

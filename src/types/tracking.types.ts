@@ -63,6 +63,8 @@ export interface TrackingBoardAgent {
   avatar: FileRef | null;
   phone: string | null;
   vehicleType: string | null;
+  /** The agent's KYC verdict (`kyc.status === 'verified'`) — the badge beside the name. */
+  verified: boolean;
   /** Newest first. An agent running several deliveries has several entries. */
   shipments: TrackingBoardShipment[];
 }

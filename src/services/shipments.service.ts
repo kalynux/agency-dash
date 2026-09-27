@@ -120,6 +120,11 @@ export const shipmentsService = {
   // with one at creation (`ACR-YYMMDD-HHMMSS-XXXXX`), so it is never absent and
   // never editable — read it off `trackingNumber` on any shipment payload.
 
+  /** GET /agency/assignment-settings — the stored auto-assignment toggle. */
+  getAssignmentSettings(): Promise<AssignmentSettingsResponse> {
+    return api.get<AssignmentSettingsResponse>('/agency/assignment-settings');
+  },
+
   /** PATCH /agency/assignment-settings — toggle standing auto-assignment participation. */
   updateAssignmentSettings(autoAssignEnabled: boolean): Promise<AssignmentSettingsResponse> {
     return api.patch<AssignmentSettingsResponse>('/agency/assignment-settings', { autoAssignEnabled });

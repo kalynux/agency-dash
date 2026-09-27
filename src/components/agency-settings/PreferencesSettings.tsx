@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Monitor, Moon, Sun, Zap } from 'lucide-react';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { useAutoAssignSetting } from '@/hooks/useAutoAssignSetting';
 import { useUIStore } from '@/store';
 import type { Theme } from '@/lib/theme';
 
@@ -25,6 +29,8 @@ export function PreferencesSettings() {
   return (
     <Card className={sectionSurfaceClass}>
       <CardContent className="space-y-4 max-md:px-0">
+        <AutoAssignRow />
+        <Separator />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Icon className="w-5 h-5 text-muted-foreground" />
@@ -55,5 +61,44 @@ export function PreferencesSettings() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Standing auto-assignment: once on, the backend offers every shipment handed
+ * to this agency to the nearest eligible agent by itself — the agency's
+ * counterpart of the vendor's "auto-redirect orders to agency".
+ */
+function AutoAssignRow() {
+  const { t } = useTranslation('settings');
+  const { enabled, loadError, saving, reload, setEnabled } = useAutoAssignSetting();
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        <Zap className="w-5 h-5 mt-0.5 flex-shrink-0 text-muted-foreground" />
+        <div>
+          <Label htmlFor="auto-assign" className="font-medium text-base">
+            {t('preferences.autoAssign')}
+          </Label>
+          <p className="text-sm text-muted-foreground">{t('preferences.autoAssignHint')}</p>
+          {loadError && (
+            <p className="mt-1 text-sm text-destructive">
+              {t('preferences.autoAssignLoadError')}{' '}
+              <button type="button" className="underline" onClick={() => void reload()}>
+                {t('preferences.retry')}
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+      <Switch
+        id="auto-assign"
+        className="mt-0.5"
+        checked={enabled === true}
+        disabled={enabled === null || saving}
+        onCheckedChange={setEnabled}
+      />
+    </div>
   );
 }

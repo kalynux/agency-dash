@@ -22,6 +22,7 @@ import { agentsService } from '@/services/agents.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { HISTORY_MEMBERSHIP_STATUSES } from '@/types/agent.types';
 import type { AgentDirectoryItem, AgentListMeta, AgentMembership } from '@/types/agent.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 // ─── Per-card action slot ───────────────────────────────────────────────────────
 // Which control belongs on a card is decided by `contract`: absent or terminal →
@@ -171,6 +172,8 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
   useEffect(() => {
     loadAgents(appliedFilters, appliedSearch, page);
   }, [appliedFilters, appliedSearch, page, loadAgents]);
+
+  usePageRefresh(() => loadAgents(appliedFilters, appliedSearch, page), loadingAgents);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);

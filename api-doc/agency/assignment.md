@@ -16,7 +16,7 @@ the agent's only once they accept. See [agent offers](../agent/offers.md) for th
 >
 > | Path | An ineligible agent shows up as |
 > |---|---|
-> | `PATCH …/assign-agent` | a `422` naming the blocker (`COD_AGENT_EXPOSURE_EXCEEDED`, `COD_AGENT_TRUST_TOO_LOW`, `CONTRACT_SHIPMENT_VALUE_EXCEEDED`, …) |
+> | `PATCH …/assign-agent` | a `422` naming the blocker (`AGENT_KYC_NOT_VERIFIED`, `COD_AGENT_EXPOSURE_EXCEEDED`, `COD_AGENT_TRUST_TOO_LOW`, `CONTRACT_SHIPMENT_VALUE_EXCEEDED`, …) |
 > | `GET …/assignment-candidates` | **absent from the list** |
 > | `POST …/auto-assign` | **no candidate**, so nothing is offered |
 >
@@ -27,6 +27,13 @@ the agent's only once they accept. See [agent offers](../agent/offers.md) for th
 > [`GET /api/agency/agents/:agentId/eligibility`](./agent-roster.md) for the agents you expected:
 > it reports **every** failing rule at once (`agency-roster.controller.ts:670-677`), and it is the
 > diagnostic this screen should link to rather than leaving an operator to guess.
+>
+> ⚠ **But "every rule" means every ELIGIBILITY rule** (corrected 2026-09-22). That endpoint is
+> `AgentEligibilityService.evaluate` alone — platform ban · active · contract · online ·
+> tracking · device location · capacity (KYC left this list 2026-09-27 and is now part of the COD
+> gate: an unverified agent reads green there and is refused COD shipments only). It does **not** run the COD, value-ceiling or coverage
+> gates, so an agent refused by one of those reads **all green** there. For them, `assign-agent` on
+> that agent either places the offer or returns the `422` that names the blocker.
 
 ## Base Path
 
@@ -47,6 +54,7 @@ to the agency's own shipments; a shipment outside scope is `404 SHIPMENT_NOT_FOU
 - [`POST /api/agency/shipments/:id/offer/cancel`](#cancel) — withdraw the live offer
 - [`POST /api/agency/shipments/:id/reassign`](#reassign) — change agents (release the current agent, offer a replacement)
 - [`PATCH /api/agency/assignment-settings`](#settings) — toggle auto-assignment participation
+- [`GET /api/agency/assignment-settings`](#settings) — read the stored toggle
 
 ---
 
@@ -75,7 +83,10 @@ immediate answer.
 `AGENT_NOT_ELIGIBLE_FOR_ASSIGNMENT` (422, `details.reasons`), the **contract-term gates**
 (`CONTRACT_COVERAGE_REGION_NOT_COVERED` with `details: { deliveryRegion, coveredRegions }`,
 `CONTRACT_SHIPMENT_VALUE_EXCEEDED` with `details: { shipmentValue, ceiling }`), and COD gates
-(`COD_AGENT_EXPOSURE_EXCEEDED`, `COD_AGENT_TRUST_TOO_LOW`).
+(`AGENT_KYC_NOT_VERIFIED` with `details: { kycStatus, hint }` — since 2026-09-27 the agent must be
+KYC-verified to carry a COD shipment, checked first; then `COD_AGENT_TRUST_TOO_LOW`,
+`COD_AGENT_EXPOSURE_EXCEEDED`). The same COD gates run on `/accept` and `/reassign`. An unverified
+agent is **not** refused prepaid shipments.
 
 > **A manual assign is gated exactly like the auto pool.** The same coverage and value-ceiling
 > checks that filter auto-assignment candidates run here, on `/accept`, and on `/reassign` — gating
@@ -102,16 +113,22 @@ qualifies.
 **How the ranking is built** (nearest-first):
 - **Eligible agents** — active · active contract with this agency · online · tracking allowed · device
   location on · under capacity.
-- **Location gate** — an agent with no resolvable position is dropped (they can't be ranked by
-  proximity). A live/last-known position, or the agent's declared home base, counts; a deployment can
-  require a *fresh* live fix (`REQUIRE_LIVE_POSITION`).
+- **Location** — removes nobody by default. A live/last-known position, or the agent's declared home
+  base, places an agent by distance. An agent with **no position on file** — the normal state before
+  their first delivery — is **kept and ranked after every located agent**, with `distance_km: null`.
+  *(Changed 2026-09-22: they used to be dropped, so a new agent could never be offered a first
+  shipment while `/eligibility` showed them all green.)* A deployment can require a *fresh* live fix
+  instead (`REQUIRE_LIVE_POSITION`), which drops everyone without one — every never-tracked agent
+  included.
 - **Trust floor** — below `MIN_TRUST_SCORE` (platform default `0`, so inert until raised) an agent
   gets no auto offer.
 - **COD gate** (COD orders only) — agents over their COD headroom on this agency's contract are removed
-  entirely.
+  entirely, and so (since 2026-09-27) is every agent whose KYC is not `verified`. Unverified agents
+  are candidates for prepaid shipments as usual.
 - **Order** — survivors are capped to the nearest `MAX_AUTO_CANDIDATES` (default **20**) and ordered
   nearest-first via the road-network distance matrix (haversine fallback when the geo provider is
-  unavailable). The weighted `score`/`breakdown` on the [candidate preview](#candidates) is for
+  unavailable), then the agents with no position — who are therefore the first cut when more than 20
+  qualify. The weighted `score`/`breakdown` on the [candidate preview](#candidates) is for
   explainability and tie-breaking, **not** the primary sort — proximity is.
 
 **The broadcast — the key behaviour for the UI.** The full ranking is snapshotted onto a temporary
@@ -134,7 +151,9 @@ shipment as **searching** until an agent binds or you are told it is unfilled.
 Preview the ranked pool without offering — the same nearest-first order auto-assignment would use.
 Returns each candidate with `rank` (0 = nearest) and a score breakdown (`distance_km`,
 `distance_score`, `free_capacity`, `capacity_score`, `trust_score`, `weighted`). The `weighted` score
-is explanatory/tie-break context; the list order is proximity.
+is explanatory/tie-break context; the list order is proximity. `distance_km` is `null` for an agent
+with no position on file (listed after the located ones) and for everyone when the pickup point has
+no coordinates.
 
 ```json
 {
@@ -272,6 +291,15 @@ defaults and are **not** configurable per agency. Stored on `assignment_settings
 
 ```json
 { "success": true, "message": "Assignment settings updated", "data": { "autoAssignEnabled": true } }
+```
+
+### GET /api/agency/assignment-settings
+
+Read the stored toggle (added 2026-09-27 — before this the value could only be written). Returns
+the same `data` shape as the PATCH; `false` when never set.
+
+```json
+{ "success": true, "data": { "autoAssignEnabled": true } }
 ```
 
 ---

@@ -1,4 +1,8 @@
 {
+  "workload": {
+    "summary": "{{active}} en cours · {{forYou}} pour vous",
+    "hint": "Les expéditions que ce livreur transporte en ce moment pour toutes les agences qu'il sert, et combien d'entre elles sont les vôtres."
+  },
   "tabs": {
     "connections": {
       "description": "Tous les contrats de livreurs de votre agence, passés et présents — seuls les livreurs sous contrat peuvent prendre vos expéditions",
@@ -87,6 +91,7 @@
   },
   "card": {
     "kycVerified": "KYC vérifié",
+    "notVerifiedCod": "Non vérifié — pas encore de paiement à la livraison",
     "viewDetails": "Voir le détail de {{name}}",
     "serviceRadius": "{{km}} km",
     "trust": "Confiance {{score}}",
@@ -139,6 +144,15 @@
     "empty": "Aucun contrat de livreur pour l'instant — trouvez un livreur dans l'onglet Parcourir.",
     "emptyCategory": "Rien dans cette catégorie pour l'instant.",
     "holdsCash": "Détient {{amount}}",
+    "dispatch": {
+      "ready": "Prêt à livrer",
+      "offline": "Hors ligne",
+      "on_break": "En pause",
+      "at_capacity": "Au maximum",
+      "blocked": "Non assignable",
+      "readyHint": "Le dispatch peut confier une livraison à ce livreur dès maintenant.",
+      "blockedHint": "En ligne, mais une règle de dispatch échoue (suivi ou localisation de l'appareil). Ouvrez le contrat pour le détail."
+    },
     "accept": "Accepter",
     "decline": "Refuser",
     "withdraw": "Retirer",
@@ -148,7 +162,7 @@
   },
   "detail": {
     "kycVerified": "KYC vérifié",
-    "unverified": "Non vérifié",
+    "notVerifiedCod": "Non vérifié — pas encore de paiement à la livraison",
     "homeBase": "Point d'attache",
     "serviceRadius": "Travaille dans un rayon de {{km}} km d'ici",
     "trackRecord": "Historique",
@@ -281,6 +295,7 @@
       "cap": "Plafond actuel",
       "noCod": "Pas de COD",
       "zeroWarning": "Aucune livraison contre remboursement ne peut être confiée à ce livreur tant que vous n'avez pas fixé un plafond supérieur à 0.",
+      "dormantUnverified": "Inactif tant que le livreur n'est pas vérifié.",
       "placeholder": "0 = pas de COD",
       "editLabel": "Modifier le plafond",
       "set": "Définir",
@@ -338,7 +353,6 @@
       "loadFailed": "Impossible de charger l'éligibilité.",
       "rules": {
         "platform_ban": "Bannissement de la plateforme",
-        "kyc": "KYC",
         "active": "Livreur actif",
         "approved": "Contrat en vigueur",
         "available": "Disponible",
@@ -349,7 +363,6 @@
       "reasons": {
         "agent_not_found": "livreur introuvable",
         "platform_banned": "banni de la plateforme",
-        "kyc_not_verified": "KYC non vérifié",
         "agent_not_active": "le compte du livreur n'est pas actif",
         "membership_not_approved": "le contrat n'est pas en vigueur",
         "not_available": "indisponible en ce moment",

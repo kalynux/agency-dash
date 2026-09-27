@@ -45,6 +45,20 @@
     "agency": "Agence",
     "platform": "Plateforme"
   },
+  "proof": {
+    "none": "Aucune photo",
+    "view": "Voir la photo",
+    "loading": "Chargement de la photo…",
+    "loadFailed": "Échec du chargement — réessayer",
+    "open": "Ouvrir la photo en grand",
+    "alt": "Preuve de la remise d'espèces",
+    "viewerTitle": "Photo justificative",
+    "attach": "Joindre le reçu",
+    "replace": "Remplacer",
+    "remove": "Retirer la photo",
+    "hint": "Le reçu du virement ou une capture d'écran. JPEG, PNG ou WebP, 10 Mo maximum.",
+    "invalid": "Cette image ne peut pas être utilisée. Essayez un JPEG ou un PNG de moins de 10 Mo."
+  },
   "summary": {
     "loading": "Chargement de votre position de trésorerie…",
     "loadFailed": "Impossible de charger votre position de trésorerie.",
@@ -69,7 +83,8 @@
     "agent": "Livreur",
     "cashHeld": "Espèces détenues",
     "emptyRoster": "Aucun livreur dans votre équipe pour l'instant",
-    "emptyFiltered": "Aucun livreur ne correspond à votre recherche ou à vos filtres"
+    "emptyFiltered": "Aucun livreur ne correspond à votre recherche ou à vos filtres",
+    "declareRemittance": "Déclarer un reversement"
   },
   "deposits": {
     "alertTitle_one": "{{count}} remise en attente de votre réponse",
@@ -80,7 +95,6 @@
     "recordTitle": "Enregistrer des espèces reçues d'un livreur",
     "selectAgent": "Choisir un livreur",
     "amount": "Montant",
-    "notePlaceholder": "Note (facultatif)",
     "record": "Enregistrer le dépôt",
     "recordHint": "Si le livreur a remis moins que ce qu'il détient, enregistrez ce que vous avez réellement reçu et signalez un écart pour la différence.",
     "recorded": "Dépôt enregistré — les espèces dues par le livreur ont été réduites.",
@@ -99,6 +113,7 @@
       "date": "Date",
       "actions": "Actions",
       "reference": "Réf. : {{reference}}",
+      "proof": "Photo",
       "awaitingAdmin": "En attente d'un administrateur"
     },
     "emptyFiltered": "Aucun dépôt ne correspond à votre recherche",
@@ -111,13 +126,14 @@
     "rejectPlaceholder": "ex. Rien n'a été remis au guichet ; notre caisse est équilibrée.",
     "rejectSubmit": "Refuser la déclaration",
     "rejected": "Déclaration refusée — aucun mouvement d'argent.",
-    "agentHeld": "{{amount}} détenus"
+    "agentHeld": "{{amount}} détenus",
+    "agent": "Livreur",
+    "note": "Note"
   },
   "remittances": {
     "declareTitle": "Déclarer un transfert d'espèces à la plateforme",
     "amount": "Montant",
-    "referencePlaceholder": "Référence (ex. id de virement)",
-    "notePlaceholder": "Note (facultatif)",
+    "noReference": "Sans référence",
     "declare": "Déclarer",
     "declareHint": "Un administrateur confirme la réception ; ce n'est qu'alors que votre dette diminue et que les encaissements se règlent (les plus anciens d'abord).",
     "declared": "Reversement déclaré — en attente de confirmation de la plateforme.",
@@ -131,18 +147,22 @@
     "table": {
       "reference": "Référence",
       "amount": "Montant",
+      "proof": "Reçu",
       "status": "Statut",
       "declared": "Déclaré le",
       "resolved": "Résolu le"
     },
     "emptyFiltered": "Aucun reversement ne correspond à votre recherche",
-    "empty": "Aucun reversement dans cette catégorie pour l'instant"
+    "empty": "Aucun reversement dans cette catégorie pour l'instant",
+    "declareAction": "Déclarer un reversement",
+    "proofLabel": "Reçu du virement",
+    "note": "Note",
+    "referenceExample": "ex. ID de transaction bancaire ou mobile money"
   },
   "discrepancies": {
     "raiseTitle": "Signaler un problème d'espèces avec un livreur",
     "selectAgent": "Choisir un livreur",
     "amountPlaceholder": "Montant en jeu",
-    "notePlaceholder": "Note (facultatif)",
     "raise": "Signaler",
     "raiseHint": "Un manquant de caisse applique une pénalité de confiance immédiate et bloque toute nouvelle affectation en paiement à la livraison pour ce livreur jusqu'à résolution.",
     "raised": "Écart signalé — un administrateur l'examinera et le résoudra.",
@@ -164,6 +184,8 @@
       "opened": "Ouvert le"
     },
     "empty": "Aucun écart signalé pour l'instant",
-    "emptyFiltered": "Aucun écart ne correspond à votre recherche ou à vos filtres"
+    "emptyFiltered": "Aucun écart ne correspond à votre recherche ou à vos filtres",
+    "raiseAction": "Signaler un écart",
+    "note": "Note"
   }
 }

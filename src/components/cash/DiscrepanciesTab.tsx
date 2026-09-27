@@ -5,12 +5,16 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAgentsRoster } from '@/store/agents.store';
 import { codCashService } from '@/services/cod-cash.service';
 import { CodDiscrepancyStatusBadge } from '@/components/cash/CodDiscrepancyStatusBadge';
-import { BlockHeading } from '@/components/common/InfoHint';
+import { CashFormField } from '@/components/cash/CashFormField';
+import { AddRecordButton } from '@/components/common/AddRecordButton';
 import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import { ResponsiveModal } from '@/components/common/ResponsiveModal';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import {
   ResponsiveSelect,
   type ResponsiveSelectOption,
@@ -20,12 +24,8 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import {
-  compactCardClass,
-  compactCardContentClass,
-  listSurfaceClass,
-} from '@/components/layout/PageContainer';
-import { cn } from '@/lib/utils';
+import { listSurfaceClass } from '@/components/layout/PageContainer';
+import { useCreateParam } from '@/hooks/useOpenParam';
 import { getApiErrorMessage } from '@/lib/errors';
 import type {
   CodDiscrepancy,
@@ -33,6 +33,7 @@ import type {
   CodDiscrepancyType,
   CodListMeta,
 } from '@/types/cod-cash.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 const PAGE_LIMIT = 20;
 
@@ -53,6 +54,7 @@ export function DiscrepanciesTab() {
   const [statusFilter, setStatusFilter] = useState<CodDiscrepancyStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<CodDiscrepancyType | 'all'>('all');
 
+  const [formOpen, setFormOpen] = useCreateParam();
   const [agentId, setAgentId] = useState('');
   const [type, setType] = useState<CodDiscrepancyType>('cash_shortfall');
   const [amount, setAmount] = useState('');
@@ -110,12 +112,17 @@ export function DiscrepanciesTab() {
     load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
   const handleSubmit = async () => {
     if (!agentId) return;
     setIsSubmitting(true);
     try {
-      await codCashService.raiseDiscrepancy(agentId, type, amount ? Number(amount) : undefined, note || undefined);
+      await codCashService.raiseDiscrepancy(agentId, type, amount ? Number(amount) : undefined, note.trim() || undefined);
       toast.success(t('discrepancies.raised'));
+      setFormOpen(false);
+      setAgentId('');
+      setType('cash_shortfall');
       setAmount('');
       setNote('');
       setPage(1);
@@ -128,6 +135,7 @@ export function DiscrepanciesTab() {
   };
 
   const agentName = (id: string) => agents.find((a) => a.id === id)?.name ?? id;
+  const agentVerified = (id: string) => agents.find((a) => a.id === id)?.verified;
 
   // The list endpoint takes page/limit only, so search and filters narrow the
   // page already loaded.
@@ -145,38 +153,6 @@ export function DiscrepanciesTab() {
 
   return (
     <div className="space-y-6">
-      <Card className={compactCardClass}>
-        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          <BlockHeading title={t('discrepancies.raiseTitle')} hint={t('discrepancies.raiseHint')} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-            {/* Searchable: an agency with fifty agents cannot scroll to one in
-                a dropdown, and the sheet has room for the filter box. */}
-            <ResponsiveSelect
-              value={agentId}
-              onValueChange={setAgentId}
-              options={agentOptions}
-              placeholder={t('discrepancies.selectAgent')}
-              title={t('discrepancies.selectAgent')}
-              className="h-10 w-full min-w-0"
-            />
-            <ResponsiveSelect
-              value={type}
-              onValueChange={(v) => setType(v)}
-              options={discrepancyTypeOptions}
-              title={t('discrepancies.table.type')}
-              aria-label={t('discrepancies.table.type')}
-              className="h-10 w-full min-w-0"
-            />
-            <Input type="number" min={0} placeholder={t('discrepancies.amountPlaceholder')} value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Input placeholder={t('discrepancies.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button variant="destructive" className="gap-2 sm:col-span-2 lg:col-span-1" disabled={!agentId || isSubmitting} onClick={handleSubmit}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
-              {t('discrepancies.raise')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="space-y-3">
         <p className="text-sm font-medium">{t('discrepancies.historyTitle')}</p>
         <SearchFilterBar
@@ -189,6 +165,13 @@ export function DiscrepanciesTab() {
           filterDescription={t('discrepancies.filterDescription')}
           resultCount={visibleDiscrepancies.length}
           resultNounKey="common:nouns.discrepancy"
+          trailing={
+            <AddRecordButton
+              label={t('discrepancies.raiseAction')}
+              icon={AlertTriangle}
+              onClick={() => setFormOpen(true)}
+            />
+          }
         >
           <FilterSection label={t('discrepancies.status')}>
             <FilterOptionGroup value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
@@ -227,6 +210,7 @@ export function DiscrepanciesTab() {
                 <RecordCard
                   key={d.id}
                   title={agentName(d.agentId)}
+                  titleAdornment={<VerifiedBadge verified={agentVerified(d.agentId)} />}
                   badge={<CodDiscrepancyStatusBadge status={d.status} />}
                   primary={d.amount != null ? formatCurrency(d.amount, d.currency) : undefined}
                   meta={[
@@ -266,7 +250,12 @@ export function DiscrepanciesTab() {
                 ) : (
                   visibleDiscrepancies.map((d) => (
                     <tr key={d.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
+                      <td className="p-4 font-medium">
+                        <span className="flex max-w-[16rem] items-center gap-1">
+                          <span className="truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span>
+                          <VerifiedBadge verified={agentVerified(d.agentId)} />
+                        </span>
+                      </td>
                       <td className="p-4 text-sm">{t(`discrepancyType.${d.type}` as 'discrepancyType.other')}</td>
                       <td className="p-4">{d.amount != null ? formatCurrency(d.amount, d.currency) : t('common:values.notAvailable')}</td>
                       <td className="p-4"><CodDiscrepancyStatusBadge status={d.status} /></td>
@@ -289,6 +278,84 @@ export function DiscrepanciesTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Raise a discrepancy — a sheet on a phone, a dialog on desktop. The
+          hint carries the consequence (a trust penalty and a COD block), which
+          is exactly what should be read before pressing the red button. */}
+      <ResponsiveModal
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        title={t('discrepancies.raiseTitle')}
+        description={t('discrepancies.raiseHint')}
+        desktopClassName="sm:max-w-md"
+        mobileClassName="h-auto max-h-[92dvh]"
+        disableClose={isSubmitting}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              className="max-md:w-full"
+              disabled={isSubmitting}
+              onClick={() => setFormOpen(false)}
+            >
+              {t('common:actions.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              className="gap-2 max-md:w-full"
+              disabled={!agentId || isSubmitting}
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              {t('discrepancies.raise')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <CashFormField label={t('discrepancies.table.agent')}>
+            {/* Searchable: an agency with fifty agents cannot scroll to one in
+                a dropdown, and the sheet has room for the filter box. */}
+            <ResponsiveSelect
+              value={agentId}
+              onValueChange={setAgentId}
+              options={agentOptions}
+              placeholder={t('discrepancies.selectAgent')}
+              title={t('discrepancies.selectAgent')}
+              className="h-10 w-full min-w-0"
+            />
+          </CashFormField>
+          <CashFormField label={t('discrepancies.table.type')}>
+            <ResponsiveSelect
+              value={type}
+              onValueChange={(v) => setType(v)}
+              options={discrepancyTypeOptions}
+              title={t('discrepancies.table.type')}
+              aria-label={t('discrepancies.table.type')}
+              className="h-10 w-full min-w-0"
+            />
+          </CashFormField>
+          <CashFormField label={t('discrepancies.amountPlaceholder')} htmlFor="discrepancy-amount" optional>
+            <Input
+              id="discrepancy-amount"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </CashFormField>
+          <CashFormField label={t('discrepancies.note')} htmlFor="discrepancy-note" optional>
+            <Textarea
+              id="discrepancy-note"
+              rows={3}
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </CashFormField>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 }

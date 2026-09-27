@@ -112,7 +112,9 @@ api.getBlob(path)                 // authorized files — raw bytes, not an enve
 carries `url: null` / `access: 'authorized'`, so the bytes must be fetched **with
 the session** and turned into an object URL. For this dashboard that means every
 delivery-proof photo — see
-[api-doc/files/private-files.md](api-doc/files/private-files.md).
+[api-doc/files/private-files.md](api-doc/files/private-files.md). Since 2026-09-27
+`cod-proofs/` (COD deposit / remittance receipts) is private the same way; its
+bytes come from `…/cod/{deposits,remittances}/:id/proof/file`.
 
 Every service and feature store calls the real API — there is no mock data left
 in the app.

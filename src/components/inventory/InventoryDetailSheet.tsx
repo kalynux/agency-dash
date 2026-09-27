@@ -37,6 +37,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { describeAddress } from '@/types/shipment.types';
 import { describeDepot } from '@/types/inventory.types';
 import type { InventoryDetail } from '@/types/inventory.types';
@@ -336,6 +337,7 @@ export function InventoryDetailSheet({
                   <span className="italic text-muted-foreground">{t('detail.unnamedVendor')}</span>
                 )}
               </span>
+              <VerifiedBadge verified={detail.vendor.verified} className="-ms-0.5" />
             </p>
           </section>
 

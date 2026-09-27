@@ -20,6 +20,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import type { AgentSummary } from '@/types/agent.types';
 import type {
   ReassignPayload,
@@ -151,7 +153,15 @@ export function ReassignDialog({
                 ) : (
                   replacementOptions.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name}
+                      <span className="flex items-center gap-1">
+                        {a.name}
+                        <VerifiedBadge verified={a.verified} />
+                        <AgentWorkload
+                          active={a.activeShipmentCount}
+                          forYou={a.activeShipmentsForYou}
+                          className="ms-1 text-xs text-muted-foreground"
+                        />
+                      </span>
                     </SelectItem>
                   ))
                 )}

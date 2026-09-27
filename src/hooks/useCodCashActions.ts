@@ -38,8 +38,8 @@ export function useCodCashActions() {
   );
 
   const declareRemittance = useCallback(
-    (amount: number, reference: string, note?: string) =>
-      run('declare-remittance', async () => (await codCashService.declareRemittance(amount, reference, note)).data, {
+    (proof: File, amount: number, reference?: string, note?: string) =>
+      run('declare-remittance', async () => (await codCashService.declareRemittance(proof, amount, reference, note)).data, {
         success: t('remittances.declared'),
       }),
     [run, t],

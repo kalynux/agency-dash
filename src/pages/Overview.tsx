@@ -32,6 +32,7 @@ import {
   sectionRuleClass,
   sectionSurfaceClass,
 } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { SectionHeading } from '@/components/common/InfoHint';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -122,10 +123,10 @@ function MetricCard({ title, value, icon: Icon, isLoading, onClick, hint, accent
 export function Overview() {
   const { t } = useTranslation('overview');
   const navigate = useNavigate();
-  const { balance, isLoading: earningsLoading } = useEarnings();
-  const { activeCount } = useShipments();
-  const { roster } = useAgentsRoster();
-  const { pendingActionCount } = useVendorConnections();
+  const { balance, isLoading: earningsLoading, refetch: refetchEarnings } = useEarnings();
+  const { activeCount, refetch: refetchShipments } = useShipments();
+  const { roster, refetch: refetchRoster } = useAgentsRoster();
+  const { pendingActionCount, refetch: refetchVendors } = useVendorConnections();
 
   const dashboard = useResource(async () => {
     const [recent, cod, declared] = await Promise.all([
@@ -139,6 +140,15 @@ export function Overview() {
       declaredCount: declared.meta.total,
     };
   }, []);
+
+  // Every figure on this screen, including the ones read from shared stores.
+  usePageRefresh(() => {
+    dashboard.refetch();
+    refetchEarnings();
+    refetchShipments();
+    refetchRoster();
+    refetchVendors();
+  }, dashboard.isLoading || earningsLoading);
 
   const currency = balance?.currency ?? 'XAF';
   const codLiability = dashboard.data?.cod.liability.balance ?? 0;

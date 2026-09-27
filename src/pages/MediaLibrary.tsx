@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/common/state-views';
 import { PageHeader } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
 import { nativeMediaAvailable } from '@/platform/media';
 import {
@@ -414,6 +415,8 @@ export function MediaLibrary() {
   useEffect(() => {
     load();
   }, [load]);
+
+  usePageRefresh(load, isLoading);
 
   const pageStats = useMemo(() => {
     let attached = 0;

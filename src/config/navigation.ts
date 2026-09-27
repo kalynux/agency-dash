@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CreditCard,
   Receipt,
+  BarChart3,
   Image,
   ClipboardList,
   FileText,
@@ -107,6 +108,9 @@ export const PRIMARY_NAV: NavItem[] = [
   },
   { labelKey: 'nav:primary.media', path: '/dashboard/media', icon: Image },
   { labelKey: 'nav:primary.transactions', path: '/dashboard/transactions', icon: Receipt },
+  // What was actually credited over a period — earnings, outcomes, COD cash
+  // (kept apart: it is a liability, not income), per-agent and payouts.
+  { labelKey: 'nav:primary.analytics', path: '/dashboard/analytics', icon: BarChart3 },
   {
     labelKey: 'nav:primary.cash',
     path: '/dashboard/cash',

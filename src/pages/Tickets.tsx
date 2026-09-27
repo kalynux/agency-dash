@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Plus, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, RefreshCw, Tag,
+  Plus, Ticket as TicketIcon, HelpCircle, ChevronLeft, ChevronRight, Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/state-views';
 import { PageHeader } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import {
   FilterField, FilterOptionGroup, FilterSection, SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
@@ -144,6 +145,8 @@ export function Tickets() {
     load();
   }, [load]);
 
+  usePageRefresh(load, isLoading);
+
   // The agency list endpoint has no text search, so search filters the loaded page.
   const filtered = tickets.filter((ticket) => {
     if (!searchQuery.trim()) return true;
@@ -187,13 +190,6 @@ export function Tickets() {
             primary: true,
           },
           { id: 'faq', label: t('page.faq'), icon: HelpCircle, onSelect: () => setFaqOpen(true) },
-          {
-            id: 'refresh',
-            label: t('page.refresh'),
-            icon: RefreshCw,
-            onSelect: load,
-            busy: isLoading,
-          },
         ]}
       />
 

@@ -20,6 +20,7 @@
  *   cash         COD cash management
  *   tickets      support tickets
  *   billing      plans, credit wallet, payment methods, transactions
+ *   analytics    agency analytics: earnings, outcomes, COD cash, per agent, payouts
  *   notifications notification centre + per-type display copy
  *   media        media library
  *   account      account tabs: profile, security, preferences, payout, billing
@@ -42,6 +43,7 @@ export const NAMESPACES = [
   'cash',
   'tickets',
   'billing',
+  'analytics',
   'notifications',
   'media',
   'account',

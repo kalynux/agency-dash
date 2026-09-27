@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { StockTab } from '@/components/inventory/StockTab';
 import { StockRequestsTab } from '@/components/inventory/requests/StockRequestsTab';
 import { StorageStatementsTab } from '@/components/inventory/statements/StorageStatementsTab';
-import { SubPageHeader, type RenderPageHeader } from '@/components/layout/PageContainer';
+import { SubPageHeader } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
 const VALID_TABS = ['stock', 'requests', 'statements'] as const;
@@ -40,20 +40,6 @@ export function Inventory() {
     ? (tab as InventoryTab)
     : 'stock';
 
-  /**
-   * Rendered BY the tab, not beside it: both tabs put their reload button in the
-   * header's action slot, and that button belongs to the tab that owns the
-   * request it re-runs.
-   */
-  const renderHeader: RenderPageHeader = (actions) => (
-    <SubPageHeader
-      path={`/dashboard/inventory/${activeTab}`}
-      description={t(`tabs.${activeTab}.description`)}
-      shortDescription={t(`tabs.${activeTab}.short`)}
-      actionItems={actions}
-    />
-  );
-
   return (
     // Swipeable like every other tabbed page (Account, Agents, Cash, Settings,
     // Vendors). Without it these three were the only tabs on a phone reachable
@@ -66,9 +52,17 @@ export function Inventory() {
       toPath={(next) => `/dashboard/inventory/${next}`}
       className="animate-fade-in space-y-6"
     >
-      {activeTab === 'stock' && <StockTab renderHeader={renderHeader} />}
-      {activeTab === 'requests' && <StockRequestsTab renderHeader={renderHeader} />}
-      {activeTab === 'statements' && <StorageStatementsTab renderHeader={renderHeader} />}
+      {/* Each tab offers its own reload to this header via `usePageRefresh` —
+          the button re-runs the request of whichever tab is mounted. */}
+      <SubPageHeader
+        path={`/dashboard/inventory/${activeTab}`}
+        description={t(`tabs.${activeTab}.description`)}
+        shortDescription={t(`tabs.${activeTab}.short`)}
+      />
+
+      {activeTab === 'stock' && <StockTab />}
+      {activeTab === 'requests' && <StockRequestsTab />}
+      {activeTab === 'statements' && <StorageStatementsTab />}
     </TabSwipeArea>
   );
 }

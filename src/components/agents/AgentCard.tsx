@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, MapPin, ShieldCheck, Star, User } from 'lucide-react';
+import { Banknote, Info, MapPin, Star, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { VehicleIcon } from '@/components/agents/VehicleIcon';
@@ -55,12 +56,10 @@ export function AgentCard({ agent, onInfo, rightSlot }: AgentCardProps) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1">
                 {/* `min-w-0` so `truncate` actually fires inside a flex row — see VendorCard. */}
                 <p className="font-semibold text-sm truncate min-w-0">{agent.name}</p>
-                {agent.kycVerified && (
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" aria-label={t('card.kycVerified')} />
-                )}
+                <VerifiedBadge verified={agent.kycVerified} className="text-sm" />
               </div>
 
               {agent.homeBase.label && (
@@ -81,6 +80,16 @@ export function AgentCard({ agent, onInfo, rightSlot }: AgentCardProps) {
                   <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
                   {t('card.trust', { score: agent.trustScore })}
                 </span>
+                {/* Since 2026-09-27 the directory lists unverified agents too.
+                    Verification gates cash on delivery ONLY — so this is a
+                    badge, never a reason to hide the row or disable Request.
+                    Strict `false`: an absent flag is no claim either way. */}
+                {agent.kycVerified === false && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                    <Banknote className="w-2.5 h-2.5" />
+                    {t('card.notVerifiedCod')}
+                  </span>
+                )}
                 <span
                   className={cn(
                     'inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-muted',

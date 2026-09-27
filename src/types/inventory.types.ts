@@ -95,6 +95,8 @@ export interface InventoryDepot {
 export interface InventoryVendorSummary {
   id: string;
   businessName: string | null;
+  /** The vendor's KYC verdict (`kyc_details.legit_verified`) — the badge beside the name. */
+  verified: boolean;
 }
 
 /**

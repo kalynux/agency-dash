@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { vendorConnectionsService } from '@/services/vendor-connections.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { ConnectionDto, VendorBrowseItemDto, VendorConnectionListMeta } from '@/types/vendor-connection.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 // ─── Per-card action slot ───────────────────────────────────────────────────────
 // `browse` only annotates { id, status } — pending/paused_reapproval need the full
@@ -260,6 +261,8 @@ export function BrowseTab({ onConnectionChange }: BrowseTabProps) {
   useEffect(() => {
     loadVendors(appliedFilters, appliedSearch, page);
   }, [appliedFilters, appliedSearch, page, loadVendors]);
+
+  usePageRefresh(() => loadVendors(appliedFilters, appliedSearch, page), loadingVendors);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);

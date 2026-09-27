@@ -11,8 +11,12 @@ import {
 } from '@/components/common/SearchFilterBar';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useAgentActions } from '@/hooks/useAgentActions';
+import { useResource } from '@/hooks/useResource';
+import { agentsService } from '@/services/agents.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import { AgentMembershipDialog } from '@/components/agents/AgentMembershipDialog';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
@@ -31,6 +35,7 @@ import {
   type MembershipStatus,
   type RosterEntry,
 } from '@/types/agent.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 /**
  * Agents → Connections tab: every contract your agency has, past and present,
@@ -56,6 +61,33 @@ import {
  * or ours to pull back — never both, and never inferred: `availableActions`
  * names the verbs the server will accept.
  */
+
+type DispatchState = 'ready' | 'offline' | 'on_break' | 'at_capacity' | 'blocked';
+
+const DISPATCH_STYLE: Record<DispatchState, { dot: string; text: string }> = {
+  ready: { dot: 'bg-emerald-500', text: 'text-emerald-600' },
+  on_break: { dot: 'bg-amber-500', text: 'text-amber-600' },
+  at_capacity: { dot: 'bg-amber-500', text: 'text-amber-600' },
+  offline: { dot: 'bg-muted-foreground/50', text: 'text-muted-foreground' },
+  blocked: { dot: 'bg-red-500', text: 'text-red-600' },
+};
+
+/**
+ * Can the dispatcher hand this agent a delivery right now? "Yes" is never
+ * inferred here: it is membership in `GET /agency/agents/eligible`, which runs
+ * every server rule (ban, tracking, device location, capacity — KYC left the
+ * list on 2026-09-27 and now gates COD shipments only). The roster
+ * row only explains a "no" — and when it can't (online and free, yet not
+ * eligible), the failing rule is one the row doesn't carry, so it says so.
+ */
+function dispatchState(entry: RosterEntry, eligibleIds: Set<string>): DispatchState {
+  if (eligibleIds.has(entry.agent.id)) return 'ready';
+  const availability = String(entry.agent.availability);
+  if (availability === 'offline') return 'offline';
+  if (availability === 'on_break') return 'on_break';
+  if (entry.agent.workingState === 'at_capacity') return 'at_capacity';
+  return 'blocked';
+}
 
 type StatusChip =
   | 'all'
@@ -131,6 +163,17 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
       ? roster.find((e) => e.membership.id === openContractId) ?? null
       : null;
   const activeEntry = selected ?? deepLinked;
+
+  // Re-read whenever the roster does, so a refetch after a mutation (or a pause
+  // taking effect) moves both together. Until it answers — or if it fails — no
+  // row shows a dispatch state rather than a guessed one.
+  const eligible = useResource(() => agentsService.listEligible(), [roster]);
+  // The roster refetch re-runs `eligible` too — it is keyed on `roster`.
+  usePageRefresh(refetch, isLoading || eligible.isLoading);
+  const eligibleIds = useMemo(
+    () => (eligible.data ? new Set(eligible.data.data.map((a) => a.id)) : null),
+    [eligible.data],
+  );
 
   /** The pending status change on this contract, in either direction. */
   const requestByContract = useMemo(() => {
@@ -238,6 +281,10 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
             const pendingApprove = actions.pendingKey === `approve:${membership.id}`;
             const pendingReject = actions.pendingKey === `reject:${membership.id}`;
             const pendingWithdraw = actions.pendingKey === `withdraw:${membership.id}`;
+            // Only an active contract is dispatchable at all; any other status
+            // already says why through its badge.
+            const dispatch =
+              eligibleIds && membership.status === 'active' ? dispatchState(entry, eligibleIds) : null;
 
             // A decision belongs to this row rather than to the sheet behind
             // it. Those buttons take the full width on a phone instead of being
@@ -266,7 +313,10 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">{agent.name}</span>
+                        <span className="flex min-w-0 items-center gap-1">
+                          <span className="truncate text-sm font-medium">{agent.name}</span>
+                          <VerifiedBadge verified={agent.verified} className="text-sm" />
+                        </span>
                         <MembershipStatusBadge
                           status={membership.status}
                           className="flex-shrink-0 text-[10px]"
@@ -276,6 +326,32 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                           fourth row is what made this list feel like a stack of
                           blocks. The vehicle is what gives way when it is tight. */}
                       <div className="mt-0.5 flex items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
+                        {/* First, because it is what a dispatcher scans the list
+                            for; it keeps its width and the vehicle gives way. */}
+                        {dispatch && (
+                          <>
+                            <span
+                              className={cn(
+                                'flex flex-shrink-0 items-center gap-1 font-medium',
+                                DISPATCH_STYLE[dispatch].text,
+                              )}
+                              title={
+                                dispatch === 'ready'
+                                  ? t('connections.dispatch.readyHint')
+                                  : dispatch === 'blocked'
+                                    ? t('connections.dispatch.blockedHint')
+                                    : undefined
+                              }
+                            >
+                              <span
+                                aria-hidden
+                                className={cn('h-1.5 w-1.5 rounded-full', DISPATCH_STYLE[dispatch].dot)}
+                              />
+                              {t(`connections.dispatch.${dispatch}` as 'connections.dispatch.ready')}
+                            </span>
+                            <span aria-hidden className="flex-shrink-0 opacity-40">·</span>
+                          </>
+                        )}
                         <VehicleIcon className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">
                           {agent.vehicleInfo
@@ -299,6 +375,16 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                           {agent.trustScore}
                         </span>
+                        {membership.status === 'active' && (
+                          <>
+                            <span aria-hidden className="flex-shrink-0 opacity-40">·</span>
+                            <AgentWorkload
+                              active={agent.activeShipmentCount}
+                              forYou={agent.activeShipmentsForYou}
+                              className="min-w-0 truncate"
+                            />
+                          </>
+                        )}
                         {cashHeld > 0 && (
                           <>
                             <span aria-hidden className="flex-shrink-0 opacity-40">·</span>

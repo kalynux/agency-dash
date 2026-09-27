@@ -43,6 +43,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
 import { ContractTermsFields } from '@/components/agents/ContractTermsFields';
@@ -711,7 +713,10 @@ function MembershipBody({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <DialogTitle className="truncate text-base">{agent.name}</DialogTitle>
+            <DialogTitle className="flex min-w-0 items-center gap-1 text-base">
+              <span className="truncate">{agent.name}</span>
+              <VerifiedBadge verified={agent.verified} />
+            </DialogTitle>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <MembershipStatusBadge status={membership.status} className="text-[10px]" />
               {membership.isPrimary && (
@@ -896,7 +901,12 @@ function MembershipBody({
             <InfoTile
               icon={Package}
               label={t('membership.tiles.activeJobs')}
-              value={agent.activeShipmentCount}
+              value={
+                <AgentWorkload
+                  active={agent.activeShipmentCount}
+                  forYou={agent.activeShipmentsForYou}
+                />
+              }
             />
             <InfoTile
               icon={Signal}
@@ -927,6 +937,15 @@ function MembershipBody({
                     </span>
                   )}
                 </p>
+                {/* Since 2026-09-27 a limit on an unverified agent is accepted
+                    but DORMANT: every COD shipment to them is refused with
+                    AGENT_KYC_NOT_VERIFIED until an administrator verifies them.
+                    Strict `false` — an absent flag is no claim either way. */}
+                {membership.codThreshold > 0 && agent.verified === false && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    {t('membership.cod.dormantUnverified')}
+                  </p>
+                )}
               </div>
             </div>
 

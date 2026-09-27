@@ -13,6 +13,7 @@ import { NAMESPACES } from './namespaces';
 import type { LanguageCode } from './config';
 
 import enAccount from './locales/en/account.json';
+import enAnalytics from './locales/en/analytics.json';
 import enAgents from './locales/en/agents.json';
 import enAuth from './locales/en/auth.json';
 import enBilling from './locales/en/billing.json';
@@ -35,6 +36,7 @@ import enVendors from './locales/en/vendors.json';
 export const enResources = {
   account: enAccount,
   agents: enAgents,
+  analytics: enAnalytics,
   auth: enAuth,
   billing: enBilling,
   cash: enCash,

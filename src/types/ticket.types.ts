@@ -56,6 +56,11 @@ export interface TicketActor {
   role: string;
   name: string;
   avatar_url: string | null;
+  /**
+   * The KYC verdict — present ONLY on `vendor` and `agent` actors. Absent on any
+   * other role (or an unresolved actor) means "no badge", not "unverified".
+   */
+  verified?: boolean;
 }
 
 export interface TicketEntityRef {

@@ -7,8 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { CodDepositStatusBadge } from '@/components/cash/CodDepositStatusBadge';
+import { CodProofImage } from '@/components/cash/CodProofImage';
+import { CashFormField } from '@/components/cash/CashFormField';
+import { AddRecordButton } from '@/components/common/AddRecordButton';
 import { BlockHeading } from '@/components/common/InfoHint';
 import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { ResponsiveActions } from '@/components/common/ResponsiveActions';
 import { ResponsiveModal } from '@/components/common/ResponsiveModal';
 import {
@@ -20,13 +24,10 @@ import {
   FilterSection,
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
-import {
-  compactCardClass,
-  compactCardContentClass,
-  listSurfaceClass,
-} from '@/components/layout/PageContainer';
+import { compactCardClass, listSurfaceClass } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 import {
+  useCreateParam,
   useOpenParam,
   useHighlightRow,
   rowDomId,
@@ -40,6 +41,7 @@ import { useCodCashActions } from '@/hooks/useCodCashActions';
 import { codCashService } from '@/services/cod-cash.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import type { CodDeposit, CodDepositStatus, CodListMeta } from '@/types/cod-cash.types';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 
 const PAGE_LIMIT = 20;
 
@@ -61,9 +63,12 @@ export function DepositsTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [formOpen, setFormOpen] = useCreateParam();
   const [agentId, setAgentId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const recordPending = actions.pendingKey === 'record-deposit';
+  const selectedAgent = agents.find((a) => a.id === agentId);
 
   const [rejectTarget, setRejectTarget] = useState<CodDeposit | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -126,11 +131,15 @@ export function DepositsTab() {
     refetchRoster();
   };
 
+  usePageRefresh(refresh, isLoading);
+
   const handleRecord = async () => {
     const amountNum = Number(amount);
     if (!agentId || !amountNum || amountNum <= 0) return;
-    const result = await actions.recordDeposit(agentId, amountNum, note || undefined);
+    const result = await actions.recordDeposit(agentId, amountNum, note.trim() || undefined);
     if (result) {
+      setFormOpen(false);
+      setAgentId('');
       setAmount('');
       setNote('');
       setPage(1);
@@ -154,6 +163,7 @@ export function DepositsTab() {
   };
 
   const agentName = (id: string) => agents.find((a) => a.id === id)?.name ?? id;
+  const agentVerified = (id: string) => agents.find((a) => a.id === id)?.verified;
 
   // The endpoint filters by status only, so text search narrows the loaded page.
   const query = search.trim().toLowerCase();
@@ -195,41 +205,6 @@ export function DepositsTab() {
         </Card>
       )}
 
-      {/* Record form */}
-      <Card className={compactCardClass}>
-        <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
-          <BlockHeading title={t('deposits.recordTitle')} hint={t('deposits.recordHint')} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
-            {/* The held amount rides along as the option's `description`, so it
-                is a muted suffix in the dropdown and a second line in the sheet
-                — it is the number that tells you whether the hand-over adds up,
-                and it should not be something you have to remember. */}
-            <ResponsiveSelect
-              value={agentId}
-              onValueChange={setAgentId}
-              options={agentOptions}
-              placeholder={t('deposits.selectAgent')}
-              title={t('deposits.selectAgent')}
-              className="h-10 w-full min-w-0"
-            />
-            <Input type="number" min={1} placeholder={t('deposits.amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Input placeholder={t('deposits.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button
-              className="gap-2"
-              disabled={!agentId || !amount || actions.pendingKey === 'record-deposit'}
-              onClick={handleRecord}
-            >
-              {actions.pendingKey === 'record-deposit' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <HandCoins className="w-4 h-4" />
-              )}
-              {t('deposits.record')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Search & filter */}
       <div className="space-y-3">
         <BlockHeading title={t('deposits.historyTitle')} />
@@ -246,6 +221,13 @@ export function DepositsTab() {
           filterDescription={t('deposits.filterDescription')}
           resultCount={query ? visibleDeposits.length : meta.total}
           resultNounKey="common:nouns.deposit"
+          trailing={
+            <AddRecordButton
+              label={t('deposits.record')}
+              icon={HandCoins}
+              onClick={() => setFormOpen(true)}
+            />
+          }
         >
           <FilterSection label={t('deposits.status')}>
             <FilterOptionGroup
@@ -292,6 +274,7 @@ export function DepositsTab() {
                     id={rowDomId(DEPOSIT_ROW, d.id)}
                     className={cn(highlighted === d.id && HIGHLIGHT_CLASS)}
                     title={agentName(d.agentId)}
+                    titleAdornment={<VerifiedBadge verified={agentVerified(d.agentId)} />}
                     badge={d.status ? <CodDepositStatusBadge status={d.status} /> : undefined}
                     primary={formatCurrency(d.amount, d.currency)}
                     meta={[
@@ -300,6 +283,27 @@ export function DepositsTab() {
                       d.reference ? t('deposits.table.reference', { reference: d.reference }) : null,
                     ].filter(Boolean)}
                     note={d.rejectionReason ?? d.note}
+                    fields={
+                      // Only a declaration can carry the agent's photo; a desk
+                      // recording (`declaredAt: null`) never does, so it gets
+                      // no row rather than a "No photo" that reads as missing.
+                      d.declaredAt
+                        ? [
+                            {
+                              label: t('deposits.table.proof'),
+                              value: (
+                                <CodProofImage
+                                  key={d.id}
+                                  proof={d.proof}
+                                  fetchFile={() => codCashService.getDepositProofFile(d.id)}
+                                  autoLoad={actionable}
+                                  title={agentName(d.agentId)}
+                                />
+                              ),
+                            },
+                          ]
+                        : undefined
+                    }
                     actions={
                       // The two decisions are a sheet rather than two buttons in
                       // the card: side-by-side "Confirm"/"Reject" at thumb width
@@ -344,6 +348,7 @@ export function DepositsTab() {
                   <th className="text-start p-4 text-sm font-medium">{t('deposits.table.recipient')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('deposits.table.status')}</th>
                   <th className="text-start p-4 text-sm font-medium">{t('deposits.table.date')}</th>
+                  <th className="text-start p-4 text-sm font-medium">{t('deposits.table.proof')}</th>
                   <th className="text-end p-4 text-sm font-medium">{t('deposits.table.actions')}</th>
                 </tr>
               </thead>
@@ -351,14 +356,14 @@ export function DepositsTab() {
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b">
-                      <td colSpan={6} className="p-4">
+                      <td colSpan={7} className="p-4">
                         <div className="h-10 bg-muted animate-pulse rounded" />
                       </td>
                     </tr>
                   ))
                 ) : loadError ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center">
+                    <td colSpan={7} className="p-8 text-center">
                       <p className="text-muted-foreground mb-4">{loadError}</p>
                       <Button variant="outline" onClick={load}>
                         {t('common:actions.retry')}
@@ -367,7 +372,7 @@ export function DepositsTab() {
                   </tr>
                 ) : visibleDeposits.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       {query ? t('deposits.emptyFiltered') : t('deposits.empty')}
                     </td>
                   </tr>
@@ -385,7 +390,12 @@ export function DepositsTab() {
                           highlighted === d.id && HIGHLIGHT_CLASS,
                         )}
                       >
-                        <td className="p-4 font-medium"><span className="block max-w-[16rem] truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span></td>
+                        <td className="p-4 font-medium">
+                          <span className="flex max-w-[16rem] items-center gap-1">
+                            <span className="truncate" title={agentName(d.agentId)}>{agentName(d.agentId)}</span>
+                            <VerifiedBadge verified={agentVerified(d.agentId)} />
+                          </span>
+                        </td>
                         <td className="p-4">
                           {formatCurrency(d.amount, d.currency)}
                         </td>
@@ -414,6 +424,24 @@ export function DepositsTab() {
                         <td className="p-4 text-sm text-muted-foreground">
                           {formatDateTime(d.declaredAt ?? d.recordedAt)}
                           {d.note && <div className="text-xs">{d.note}</div>}
+                        </td>
+                        {/* Beside Confirm / Reject on purpose: checking the photo
+                            before confirming is the reason it exists, so on a
+                            declaration awaiting you it loads by itself. */}
+                        <td className="p-4">
+                          {d.declaredAt ? (
+                            <CodProofImage
+                              key={d.id}
+                              proof={d.proof}
+                              fetchFile={() => codCashService.getDepositProofFile(d.id)}
+                              autoLoad={actionable}
+                              title={agentName(d.agentId)}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {t('common:values.notAvailable')}
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 text-end">
                           {actionable ? (
@@ -476,6 +504,81 @@ export function DepositsTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Record a desk deposit — a sheet on a phone, a dialog on desktop. */}
+      <ResponsiveModal
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        title={t('deposits.recordTitle')}
+        description={t('deposits.recordHint')}
+        desktopClassName="sm:max-w-md"
+        mobileClassName="h-auto max-h-[92dvh]"
+        disableClose={recordPending}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              className="max-md:w-full"
+              disabled={recordPending}
+              onClick={() => setFormOpen(false)}
+            >
+              {t('common:actions.cancel')}
+            </Button>
+            <Button
+              className="gap-2 max-md:w-full"
+              disabled={!agentId || !amount || recordPending}
+              onClick={handleRecord}
+            >
+              {recordPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <HandCoins className="h-4 w-4" />
+              )}
+              {t('deposits.record')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <CashFormField label={t('deposits.agent')}>
+            {/* The held amount rides along as the option's `description`, so it
+                is a muted suffix in the dropdown and a second line in the sheet
+                — it is the number that tells you whether the hand-over adds up,
+                and it should not be something you have to remember. */}
+            <ResponsiveSelect
+              value={agentId}
+              onValueChange={setAgentId}
+              options={agentOptions}
+              placeholder={t('deposits.selectAgent')}
+              title={t('deposits.selectAgent')}
+              className="h-10 w-full min-w-0"
+            />
+          </CashFormField>
+          <CashFormField
+            label={t('deposits.amount')}
+            htmlFor="deposit-amount"
+            hint={selectedAgent ? t('deposits.agentHeld', { amount: formatNumber(selectedAgent.cashHeld) }) : undefined}
+          >
+            <Input
+              id="deposit-amount"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </CashFormField>
+          <CashFormField label={t('deposits.note')} htmlFor="deposit-note" optional>
+            <Textarea
+              id="deposit-note"
+              rows={2}
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </CashFormField>
+        </div>
+      </ResponsiveModal>
 
       {/* Reject reason — a sheet on a phone, a dialog on desktop. */}
       <ResponsiveModal

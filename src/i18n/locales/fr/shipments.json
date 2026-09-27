@@ -63,9 +63,10 @@
   },
   "autoAssign": {
     "label": "Affectation auto",
-    "tooltip": "Lorsque cette option est activée, chaque nouvelle expédition lance une diffusion d'affectation automatique : le livreur éligible le plus proche reçoit l'offre, puis le suivant toutes les deux minutes environ, les offres précédentes restant valables. Le premier qui accepte l'emporte. Si personne ne l'accepte après deux tours, vous êtes prévenu et pouvez affecter manuellement.",
-    "enabled": "Affectation automatique activée.",
-    "disabled": "Affectation automatique désactivée."
+    "on": "Activée",
+    "off": "Désactivée",
+    "tooltipOn": "Les nouvelles expéditions sont proposées automatiquement à votre livreur éligible le plus proche. Modifiable dans Paramètres → Préférences.",
+    "tooltipOff": "Les nouvelles expéditions attendent que vous les affectiez. Activez l'affectation automatique dans Paramètres → Préférences."
   },
   "reject": {
     "trigger": "Refuser l'expédition",
@@ -127,7 +128,7 @@
     "handoverNote": "Note : {{note}}",
     "handoverFallback": "Lieu de repli — le point d'origine n'a pas pu être déterminé.",
     "candidatesEmptyHint": "Les agents sont écartés sans avertissement lorsqu'ils sont à pleine capacité, en pause, ou hors de la zone de cette livraison.",
-    "candidatesEmptyCodHint": "Pour une livraison contre remboursement, les agents sont aussi écartés sans avertissement si leur plafond de liquidités est trop bas — un nouveau contrat démarre à zéro, ce qui retire l'agent de toutes les listes COD jusqu'à ce que vous le releviez.",
+    "candidatesEmptyCodHint": "Pour une livraison contre remboursement, les agents sont aussi écartés sans avertissement s'ils ne sont pas encore vérifiés, ou si leur plafond de liquidités est trop bas — un nouveau contrat démarre à zéro, ce qui retire l'agent de toutes les listes COD jusqu'à ce que vous le releviez.",
     "candidatesEmptyCheck": "Vérifier l'éligibilité d'un agent"
   },
   "reassignDialog": {
@@ -170,6 +171,14 @@
     "codHandlingFee": "Frais de gestion des espèces",
     "youKeep": "Vous conservez",
     "estimateCaveat": "Une estimation : la part du livreur est relue au moment du versement réel, donc modifier son contrat avant la livraison change ce montant.",
+    "youEarnedTitle": "Vous avez gagné",
+    "finalCaveat": "Définitif : ce sont les montants réellement crédités pour cette livraison.",
+    "returnedCodZero": "Une expédition en paiement à la livraison retournée ne rapporte rien : aucune somme n'a été encaissée, donc ni frais, ni part du livreur, ni frais de gestion des espèces.",
+    "allocation": {
+      "held": "Bloqué en séquestre",
+      "released": "Versé sur votre solde",
+      "reversed": "Annulé"
+    },
     "orderValue": "Valeur de la commande {{amount}} — la commande entière, qui peut se répartir entre plusieurs expéditions et agences.",
     "setPricing": "Configurer votre tarification",
     "unavailableShort": {

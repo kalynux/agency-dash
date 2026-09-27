@@ -45,6 +45,20 @@
     "agency": "Agency",
     "platform": "Platform"
   },
+  "proof": {
+    "none": "No photo",
+    "view": "View photo",
+    "loading": "Loading photo…",
+    "loadFailed": "Couldn't load — retry",
+    "open": "Open the photo full size",
+    "alt": "Proof of the cash hand-over",
+    "viewerTitle": "Proof photo",
+    "attach": "Attach receipt",
+    "replace": "Replace",
+    "remove": "Remove photo",
+    "hint": "The transfer receipt or a screenshot. JPEG, PNG or WebP, up to 10 MB.",
+    "invalid": "This image can't be used. Try a JPEG or PNG under 10 MB."
+  },
   "summary": {
     "loading": "Loading cash position…",
     "loadFailed": "Could not load your cash position.",
@@ -67,7 +81,8 @@
     "agent": "Agent",
     "cashHeld": "Cash Held",
     "emptyRoster": "No agents on your roster yet",
-    "emptyFiltered": "No agents match your search or filter"
+    "emptyFiltered": "No agents match your search or filter",
+    "declareRemittance": "Declare a remittance"
   },
   "deposits": {
     "alertTitle_one": "{{count}} hand-over awaiting your answer",
@@ -77,7 +92,6 @@
     "recordTitle": "Record cash received from an agent",
     "selectAgent": "Select agent",
     "amount": "Amount",
-    "notePlaceholder": "Note (optional)",
     "record": "Record Deposit",
     "recordHint": "If the agent handed over less than they hold, record what you actually received and raise a discrepancy for the difference.",
     "recorded": "Deposit recorded — the agent's outstanding cash was reduced.",
@@ -96,6 +110,7 @@
       "date": "Date",
       "actions": "Actions",
       "reference": "Ref: {{reference}}",
+      "proof": "Photo",
       "awaitingAdmin": "Awaiting admin"
     },
     "emptyFiltered": "No deposits match your search",
@@ -108,13 +123,14 @@
     "rejectPlaceholder": "e.g. Nothing was handed over at the desk; our till reconciles.",
     "rejectSubmit": "Reject declaration",
     "rejected": "Declaration rejected — no money moved.",
-    "agentHeld": "{{amount}} held"
+    "agentHeld": "{{amount}} held",
+    "agent": "Agent",
+    "note": "Note"
   },
   "remittances": {
     "declareTitle": "Declare a cash transfer to the platform",
     "amount": "Amount",
-    "referencePlaceholder": "Reference (e.g. bank tx id)",
-    "notePlaceholder": "Note (optional)",
+    "noReference": "No reference",
     "declare": "Declare",
     "declareHint": "An admin confirms receipt; only then does your liability fall and collections settle (oldest first).",
     "declared": "Remittance declared — awaiting platform confirmation.",
@@ -128,18 +144,22 @@
     "table": {
       "reference": "Reference",
       "amount": "Amount",
+      "proof": "Receipt",
       "status": "Status",
       "declared": "Declared",
       "resolved": "Resolved"
     },
     "emptyFiltered": "No remittances match your search",
-    "empty": "No remittances in this category yet"
+    "empty": "No remittances in this category yet",
+    "declareAction": "Declare remittance",
+    "proofLabel": "Transfer receipt",
+    "note": "Note",
+    "referenceExample": "e.g. bank or mobile-money transaction ID"
   },
   "discrepancies": {
     "raiseTitle": "Flag a cash problem with an agent",
     "selectAgent": "Select agent",
     "amountPlaceholder": "Amount at stake",
-    "notePlaceholder": "Note (optional)",
     "raise": "Raise",
     "raiseHint": "A cash shortfall applies an immediate trust penalty and blocks new COD assignments to that agent until resolved.",
     "raised": "Discrepancy raised — an admin will review and resolve it.",
@@ -161,6 +181,8 @@
       "opened": "Opened"
     },
     "empty": "No discrepancies raised yet",
-    "emptyFiltered": "No discrepancies match your search or filters"
+    "emptyFiltered": "No discrepancies match your search or filters",
+    "raiseAction": "Raise discrepancy",
+    "note": "Note"
   }
 }

@@ -2,7 +2,7 @@ import { formatRelativeTime } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight, RefreshCw } from 'lucide-react';
+import { Bell, Check, ChevronLeft, ChevronRight, Settings, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import {
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
 import { listSurfaceClass, PageHeader } from '@/components/layout/PageContainer';
+import { usePageRefresh } from '@/store/pageRefresh.store';
 import { useNotifications } from '@/store/notifications.store';
 import { notificationsService } from '@/services/notifications.service';
 import { notificationVisual, notificationHref } from '@/lib/notification-display';
@@ -68,6 +69,11 @@ export function Notifications() {
   useEffect(() => {
     load();
   }, [load]);
+
+  usePageRefresh(() => {
+    load();
+    refetchBadge();
+  }, isLoading);
 
   const handleOpen = async (n: AgencyNotification) => {
     if (!n.isRead) {
@@ -246,16 +252,6 @@ export function Notifications() {
                 },
               ]
             : []),
-          {
-            id: 'refresh',
-            label: t('page.refresh'),
-            icon: RefreshCw,
-            onSelect: () => {
-              load();
-              refetchBadge();
-            },
-            busy: isLoading,
-          },
           {
             id: 'settings',
             label: t('page.settings'),

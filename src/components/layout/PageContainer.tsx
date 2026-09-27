@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, RefreshCw } from 'lucide-react';
 import { InfoHint } from '@/components/common/InfoHint';
+import { Button } from '@/components/ui/button';
 import { findNavTrail } from '@/config/navigation';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from './NotificationBell';
 import { PageActions, type PageAction } from './PageActions';
+import { usePageRefreshState } from '@/store/pageRefresh.store';
 import { mobileAppBarClass, mobileAppBarTitleRowClass } from './mobileChrome';
 
 export type { PageAction } from './PageActions';
@@ -89,6 +91,7 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   const { t } = useTranslation('common');
+  const refresh = usePageRefreshState();
   return (
     <div className={cn(mobileAppBarClass, className)}>
       <div
@@ -97,34 +100,53 @@ export function PageHeader({
           mobileAppBarTitleRowClass,
         )}
       >
-        <h1
-          className={cn(
-            'flex min-w-0 flex-1 items-center gap-x-1.5 text-lg font-bold tracking-tight md:text-2xl',
-            // A crumb is two names on one line, so it skips the desktop size
-            // step: "Cash Management › Discrepancies" at 3xl wraps on anything
-            // narrower than a wide laptop.
-            !parent && 'lg:text-3xl',
+        <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-2">
+          <h1
+            className={cn(
+              'flex min-w-0 items-center gap-x-1.5 text-lg font-bold tracking-tight md:text-2xl',
+              // A crumb is two names on one line, so it skips the desktop size
+              // step: "Cash Management › Discrepancies" at 3xl wraps on anything
+              // narrower than a wide laptop.
+              !parent && 'lg:text-3xl',
+            )}
+          >
+            {parent && (
+              <span className="flex min-w-0 items-center gap-x-1.5 max-md:hidden">
+                <span className="truncate text-muted-foreground">{parent}</span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0 text-muted-foreground/60 rtl:-scale-x-100"
+                />
+              </span>
+            )}
+            {/* `truncate`, not wrap: the row's height is the offset the search bar
+                pins to, so a title long enough to wrap would open a seam between
+                the two pinned bands. */}
+            <span className="truncate">{title}</span>
+            {description && shortDescription && (
+              <InfoHint className="shrink-0 md:hidden" label={t('form.aboutSection', { title })}>
+                {description}
+              </InfoHint>
+            )}
+          </h1>
+          {/* Beside the title rather than among the actions: it is on nearly
+              every data screen, so it earns a fixed, learnable spot — and on a
+              phone it must never fold into the ⋮ sheet. See `./PageRefresh`. */}
+          {refresh && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={refresh.refresh}
+              disabled={refresh.busy}
+              aria-label={t('actions.refresh')}
+              title={t('actions.refresh')}
+              className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className={cn('h-4 w-4', refresh.busy && 'animate-spin')} />
+            </Button>
           )}
-        >
-          {parent && (
-            <span className="flex min-w-0 items-center gap-x-1.5 max-md:hidden">
-              <span className="truncate text-muted-foreground">{parent}</span>
-              <ChevronRight
-                aria-hidden="true"
-                className="h-5 w-5 shrink-0 text-muted-foreground/60 rtl:-scale-x-100"
-              />
-            </span>
-          )}
-          {/* `truncate`, not wrap: the row's height is the offset the search bar
-              pins to, so a title long enough to wrap would open a seam between
-              the two pinned bands. */}
-          <span className="truncate">{title}</span>
-          {description && shortDescription && (
-            <InfoHint className="shrink-0 md:hidden" label={t('form.aboutSection', { title })}>
-              {description}
-            </InfoHint>
-          )}
-        </h1>
+        </div>
 
         <div className="flex flex-shrink-0 items-center gap-1 md:gap-2">
           {actions}
@@ -158,20 +180,6 @@ export function PageHeader({
     </div>
   );
 }
-
-/**
- * Handed down to a tab component so it can supply the page header's actions.
- *
- * The header belongs to the page (only it knows the crumb and the description),
- * but the button that reloads a tab belongs to the tab — it closes over that
- * tab's own `load` and its in-flight state. Rather than lift that state up, the
- * page passes down a renderer and the tab decides what goes in the action slot.
- *
- * Takes {@link PageAction}s rather than JSX so a tab's actions get the same
- * mobile treatment as a page's — an icon on the bar, or a labelled row in the
- * overflow sheet — instead of each tab having to decide for itself.
- */
-export type RenderPageHeader = (actions?: PageAction[]) => ReactNode;
 
 interface SubPageHeaderProps extends Omit<PageHeaderProps, 'title' | 'parent'> {
   /**

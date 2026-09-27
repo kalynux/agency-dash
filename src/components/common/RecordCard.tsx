@@ -13,6 +13,11 @@ export interface RecordField {
 export interface RecordCardProps {
   /** The one thing that identifies the record — a name, a reference, an order number. */
   title: ReactNode;
+  /**
+   * Glued to the title's end and never clipped by its ellipsis — the verified
+   * seal after a name. The status `badge` is a separate slot, further off.
+   */
+  titleAdornment?: ReactNode;
   /** Status badge, beside the title. */
   badge?: ReactNode;
   /** The figure this record is about, set against the title. Usually money. */
@@ -55,6 +60,7 @@ export interface RecordCardProps {
  */
 export function RecordCard({
   title,
+  titleAdornment,
   badge,
   primary,
   meta,
@@ -81,7 +87,14 @@ export function RecordCard({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 truncate font-medium">{title}</span>
+            {titleAdornment ? (
+              <span className="flex min-w-0 items-center gap-1 font-medium">
+                <span className="min-w-0 truncate">{title}</span>
+                {titleAdornment}
+              </span>
+            ) : (
+              <span className="min-w-0 truncate font-medium">{title}</span>
+            )}
             {badge && <span className="shrink-0">{badge}</span>}
           </div>
 
