@@ -216,6 +216,14 @@ export function buildRegisterSchema(t: T, options: { country?: CountryCode | nul
       // wrong with it is disagreeing with `password`, and repeating the
       // min-length rule here would report the same fault twice.
       confirmPassword: z.string(),
+      // Terms of Service / Privacy Policy consent — required for vendor, agency
+      // and agent sign-ups; the server answers a missing or false value with a
+      // `VALIDATION_ERROR` on `terms_accepted`. A boolean refined to `true`
+      // rather than `z.literal(true)`, so the unticked default (`false`) is
+      // still a valid form value to start from.
+      terms_accepted: z.boolean().refine((value) => value, {
+        message: v(t, 'terms.required'),
+      }),
     })
     .refine((value) => value.password === value.confirmPassword, {
       message: v(t, 'password.mismatch'),

@@ -95,5 +95,8 @@
     "nameTooShort": "Le nom de l'entreprise doit contenir au moins 2 caractères",
     "nameTooLong": "Le nom de l'entreprise ne doit pas dépasser 100 caractères",
     "descriptionTooLong": "Description trop longue (max. {{count}} caractères)"
+  },
+  "terms": {
+    "required": "Veuillez accepter les Conditions générales d'utilisation et la Politique de confidentialité pour continuer."
   }
 }

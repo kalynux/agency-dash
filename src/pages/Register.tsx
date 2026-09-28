@@ -1,23 +1,28 @@
 import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 
 import { AuthError, AuthLink, AuthShell } from '@/components/auth/AuthShell';
 import { FieldLabel, FieldMessage, PasswordField } from '@/components/auth/AuthFields';
+import { LegalLink } from '@/components/common/LegalLink';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { authService } from '@/services/auth.service';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
 import {
   AGENCY_NAME_MAX,
   buildRegisterSchema,
+  validationMessage,
   type RegisterFormValues,
 } from '@/lib/validation-schemas';
+import { ApiError } from '@/types/api';
 
 /**
  * The phone or email already belongs to an account — any account, whatever its
@@ -71,6 +76,7 @@ export function Register() {
     register,
     control,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
@@ -81,6 +87,8 @@ export function Register() {
       email: '',
       password: '',
       confirmPassword: '',
+      // Unticked: consent is given, never presumed.
+      terms_accepted: false,
     },
   });
 
@@ -95,6 +103,8 @@ export function Register() {
         agency_name: values.agency_name,
         password: values.password,
         email: values.email,
+        // The resolver only lets a submit through with the box ticked.
+        terms_accepted: true,
       });
 
       const step = res.data.role_entity.onboarding_step;
@@ -104,6 +114,17 @@ export function Register() {
       // parking someone on an onboarding flow with nothing left to fill in.
       navigate(step === 0 ? '/dashboard' : '/onboarding', { replace: true });
     } catch (err) {
+      // The server enforces the same rule as the schema. If it ever rejects the
+      // consent anyway (an older client, a replayed request), the error belongs
+      // on the checkbox, in the UI's language — not as raw server text in the
+      // banner.
+      if (err instanceof ApiError && err.fieldErrors().terms_accepted) {
+        setError('terms_accepted', {
+          type: 'server',
+          message: validationMessage(t, 'terms.required'),
+        });
+        return;
+      }
       // Includes the 429: registration shares the credential bucket at
       // 20/min/IP, and `getApiErrorMessage` interpolates `Retry-After` into the
       // copy. `AUTH_PHONE_TAKEN` / `AUTH_EMAIL_TAKEN` get this screen's own
@@ -251,6 +272,43 @@ export function Register() {
           registration={register('confirmPassword')}
         />
 
+        {/* Consent, directly above the button it unlocks, unticked by default.
+            The document names are links inside the label; a tap on one opens
+            the document and does not tick the box — a link is interactive
+            content, which a <label> never forwards to its control, and
+            LegalLink stops the click from bubbling as well. */}
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2.5">
+            <Controller
+              control={control}
+              name="terms_accepted"
+              render={({ field }) => (
+                <Checkbox
+                  id="terms_accepted"
+                  ref={field.ref}
+                  className="mt-0.5"
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onBlur={field.onBlur}
+                  aria-invalid={Boolean(errors.terms_accepted)}
+                  aria-describedby={errors.terms_accepted ? 'terms_accepted-message' : undefined}
+                />
+              )}
+            />
+            <Label htmlFor="terms_accepted" className="block text-sm font-normal leading-snug">
+              <Trans
+                ns="auth"
+                i18nKey="register.acceptTerms"
+                components={{
+                  terms: <LegalLink doc="terms" />,
+                  privacy: <LegalLink doc="privacy" />,
+                }}
+              />
+            </Label>
+          </div>
+          <FieldMessage id="terms_accepted-message" error={errors.terms_accepted?.message} />
+        </div>
+
         {/* Disabled in flight: registration shares the 20/min/IP credential
             bucket, and a double-submit spends two of them — or races two
             accounts onto one phone number. */}
@@ -258,8 +316,6 @@ export function Register() {
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {t('register.submit')}
         </Button>
-
-        <p className="text-center text-xs text-muted-foreground">{t('register.terms')}</p>
       </form>
     </AuthShell>
   );

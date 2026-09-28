@@ -200,6 +200,7 @@
       "action": "Envoyer pour vérification",
       "resubmit": "Renvoyer",
       "saveFirst": "Enregistrez vos modifications avant d'envoyer.",
+      "legalNotice": "En créant un compte, vous acceptez nos <terms>Conditions générales d'utilisation</terms> et notre <privacy>Politique de confidentialité</privacy>.",
       "outstanding_one": "{{count}} élément demandé par les vérificateurs manque encore. Vous pouvez tout de même envoyer.",
       "outstanding_other": "{{count}} éléments demandés par les vérificateurs manquent encore. Vous pouvez tout de même envoyer.",
       "succeeded": "Envoyé pour examen",

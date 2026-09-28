@@ -343,5 +343,12 @@
       "codeLabel": "The code the bot sent you",
       "submit": "Connect"
     }
+  },
+  "legal": {
+    "title": "Legal",
+    "description": "The terms that govern your use of Wi-Mall, and how we handle your data.",
+    "short": "Terms and privacy",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
   }
 }

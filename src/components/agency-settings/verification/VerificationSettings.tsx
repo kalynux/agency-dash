@@ -30,7 +30,7 @@
 // the business — see lib/account-standing.ts.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -73,6 +73,7 @@ import type { KycDocumentSlot, KycRecord, KycUpdatePayload } from '@/types/kyc.t
 
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
+import { LegalLink } from '@/components/common/LegalLink';
 import { SectionHeading } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { KycDocumentSlotCard } from './KycDocumentSlotCard';
@@ -538,6 +539,19 @@ export function VerificationSettings() {
             {dirty && (
               <p className="text-xs text-muted-foreground">{t('verification.submit.saveFirst')}</p>
             )}
+            {/* A notice, not a checkbox: consent was given at sign-up. It is
+                repeated where identity documents are handed over, because
+                that is where the Privacy Policy matters most. */}
+            <p className="text-xs text-muted-foreground">
+              <Trans
+                ns="account"
+                i18nKey="verification.submit.legalNotice"
+                components={{
+                  terms: <LegalLink doc="terms" />,
+                  privacy: <LegalLink doc="privacy" />,
+                }}
+              />
+            </p>
           </CardContent>
         </Card>
       )}

@@ -344,5 +344,12 @@
       "codeLabel": "Le code envoyé par le bot",
       "submit": "Connecter"
     }
+  },
+  "legal": {
+    "title": "Mentions légales",
+    "description": "Les conditions qui encadrent votre utilisation de Wi-Mall, et la façon dont nous traitons vos données.",
+    "short": "Conditions et confidentialité",
+    "terms": "Conditions générales d'utilisation",
+    "privacy": "Politique de confidentialité"
   }
 }

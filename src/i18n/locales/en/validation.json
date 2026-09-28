@@ -95,5 +95,8 @@
     "nameTooShort": "Business name must be at least 2 characters",
     "nameTooLong": "Business name must be 100 characters or fewer",
     "descriptionTooLong": "Description too long (max {{count}} characters)"
+  },
+  "terms": {
+    "required": "Please accept the Terms of Service and Privacy Policy to continue."
   }
 }

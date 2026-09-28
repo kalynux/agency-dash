@@ -29,6 +29,12 @@ export interface AgencyRegisterInput {
     password: string;
     /** Optional for agencies; required for vendors only. */
     email?: string;
+    /**
+     * Terms of Service / Privacy Policy consent. Typed as the literal `true`:
+     * the server rejects a missing or false value with a `VALIDATION_ERROR` on
+     * `terms_accepted`, so there is nothing else worth sending.
+     */
+    terms_accepted: true;
 }
 
 /**
@@ -104,6 +110,7 @@ export const authService = {
                 // optional-email schema expects — not an empty string.
                 email: input.email || undefined,
                 role: 'agency',
+                terms_accepted: input.terms_accepted,
             })
             .then(captureSession);
     },
