@@ -376,12 +376,15 @@ export function NotificationSettings() {
     );
   }
 
+  // The statuses that fall through to `push.idle` below.
+  const pushIdle = push.status === 'default' || push.status === 'granted';
+
   return (
     <>
     <Card className={sectionSurfaceClass}>
-      <CardContent className="space-y-8 max-md:px-0">
+      <CardContent className="space-y-6 md:space-y-8 max-md:px-0">
         {/* Delivery channel */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div>
             <h4 className="flex items-center gap-2 font-medium">
               {t('notifications.channels.title')}
@@ -399,9 +402,9 @@ export function NotificationSettings() {
 
           <div className="space-y-3" role="radiogroup" aria-label={t('notifications.channels.groupLabel')}>
             {/* In-app — always on, locked */}
-            <div className="flex items-start gap-4 p-4 border rounded-lg bg-muted/30">
-              <div className="p-2 rounded-full flex-shrink-0 bg-primary/10 text-primary">
-                <Bell className="w-5 h-5" />
+            <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 border rounded-lg bg-muted/30">
+              <div className="p-1.5 md:p-2 rounded-full flex-shrink-0 bg-primary/10 text-primary">
+                <Bell className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -410,7 +413,8 @@ export function NotificationSettings() {
                     <Lock className="w-3 h-3" /> {t('notifications.channels.alwaysOn')}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                {/* The "Always on" badge already says it on a phone. */}
+                <p className="text-sm text-muted-foreground max-md:hidden">
                   {t('notifications.channels.inAppHint')}
                 </p>
               </div>
@@ -432,7 +436,7 @@ export function NotificationSettings() {
                 <div
                   key={c.value}
                   className={cn(
-                    'flex items-start gap-3 p-4 border rounded-lg transition-colors',
+                    'flex items-start gap-3 p-3 md:p-4 border rounded-lg transition-colors',
                     selected && 'border-primary ring-1 ring-primary',
                     !verified && 'bg-muted/20',
                   )}
@@ -447,13 +451,13 @@ export function NotificationSettings() {
                     disabled={!verified}
                     onClick={() => selectChannel(c.value)}
                     className={cn(
-                      'flex min-w-0 flex-1 items-start gap-4 rounded-md text-start',
+                      'flex min-w-0 flex-1 items-start gap-3 md:gap-4 rounded-md text-start',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       verified ? 'cursor-pointer' : 'cursor-not-allowed',
                     )}
                   >
-                    <span className={cn('p-2 rounded-full flex-shrink-0', c.iconWrap)}>
-                      <c.Icon className="w-5 h-5" />
+                    <span className={cn('p-1.5 md:p-2 rounded-full flex-shrink-0', c.iconWrap)}>
+                      <c.Icon className="w-4 h-4 md:w-5 md:h-5" />
                     </span>
 
                     <span className="min-w-0 flex-1">
@@ -469,18 +473,21 @@ export function NotificationSettings() {
                           </Badge>
                         )}
                       </span>
+                      {/* The address is data and stays. The other three lines
+                          restate what the badge, the Connect button and the
+                          radio dot already show, so a phone drops them. */}
                       {c.value === 'email' && verified && agencyEmail ? (
                         <span className="block text-sm text-muted-foreground truncate">{agencyEmail}</span>
                       ) : !verified ? (
-                        <span className="block text-sm text-muted-foreground">
+                        <span className="block text-sm text-muted-foreground max-md:hidden">
                           {t('notifications.channels.connectHint')}
                         </span>
                       ) : selected ? (
-                        <span className="block text-sm text-muted-foreground">
+                        <span className="block text-sm text-muted-foreground max-md:hidden">
                           {t('notifications.channels.selectedHint')}
                         </span>
                       ) : (
-                        <span className="block text-sm text-muted-foreground">
+                        <span className="block text-sm text-muted-foreground max-md:hidden">
                           {t('notifications.channels.tapToUse')}
                         </span>
                       )}
@@ -552,18 +559,35 @@ export function NotificationSettings() {
         <Separator /> */}
 
         {/* Push */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <h4 className="font-medium flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-muted-foreground" /> {t('notifications.push.title')}
           </h4>
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-card gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="p-2 bg-primary/10 rounded-full flex-shrink-0">
-                <Smartphone className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between p-3 md:p-4 border rounded-lg bg-card gap-3 md:gap-4">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="p-1.5 md:p-2 bg-primary/10 rounded-full flex-shrink-0">
+                <Smartphone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="font-medium">{t('notifications.push.thisDevice')}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="flex items-center gap-1.5 font-medium">
+                  {t('notifications.push.thisDevice')}
+                  {/* The `idle` line is the only one that is a pitch rather
+                      than a state, so it is the only one a phone tucks away. */}
+                  {pushIdle && (
+                    <InfoHint
+                      className="md:hidden"
+                      label={t('common:form.aboutSection', { title: t('notifications.push.title') })}
+                    >
+                      {t('notifications.push.idle')}
+                    </InfoHint>
+                  )}
+                </p>
+                <p
+                  className={cn(
+                    'text-sm text-muted-foreground',
+                    pushIdle && 'max-md:hidden',
+                  )}
+                >
                   {push.status === 'registered'
                     ? t('notifications.push.enabled')
                     : push.status === 'unsupported' ||
@@ -602,10 +626,18 @@ export function NotificationSettings() {
         <Separator />
 
         {/* Events */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div>
-            <h4 className="font-medium">{t('notifications.events.title')}</h4>
-            <p className="text-sm text-muted-foreground">{t('notifications.events.description')}</p>
+            <h4 className="flex items-center gap-2 font-medium">
+              {t('notifications.events.title')}
+              <InfoHint
+                className="md:hidden"
+                label={t('common:form.aboutSection', { title: t('notifications.events.title') })}
+              >
+                {t('notifications.events.description')}
+              </InfoHint>
+            </h4>
+            <p className="text-sm text-muted-foreground max-md:hidden">{t('notifications.events.description')}</p>
           </div>
           <div className="space-y-1">
             {EVENTS.map((e) => {
@@ -613,7 +645,7 @@ export function NotificationSettings() {
               return (
                 <div key={e.key} className="flex items-center justify-between gap-4 py-2.5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-lg bg-muted text-muted-foreground flex-shrink-0">
+                    <div className="p-1.5 md:p-2 rounded-lg bg-muted text-muted-foreground flex-shrink-0">
                       <e.Icon className="w-4 h-4" />
                     </div>
                     {/* One line per event: the explanation lives behind the ⓘ, so six

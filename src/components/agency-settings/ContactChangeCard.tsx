@@ -76,12 +76,11 @@ import {
   X,
 } from 'lucide-react';
 
-import { SectionHeading } from '@/components/common/InfoHint';
+import { FieldHint, FieldLabel, InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { contactService } from '@/services/contact.service';
@@ -382,12 +381,27 @@ export function ContactChangeCard() {
 
   return (
     <Card className={sectionSurfaceClass}>
+      {/* No `short` copy exists for this section, so on a phone the whole
+          description moves behind an ⓘ beside the title — together with the
+          no-sign-out notice from the foot of the card (see there). */}
       <SectionHeading
         icon={AtSign}
-        title={t('contact.title')}
-        description={t('contact.description')}
+        className="max-md:gap-0"
+        title={
+          <>
+            {t('contact.title')}
+            <InfoHint
+              className="md:hidden"
+              label={t('common:form.aboutSection', { title: t('contact.title') })}
+            >
+              {t('contact.description')}
+              <span className="mt-2 block">{t('contact.noSignOutNotice')}</span>
+            </InfoHint>
+          </>
+        }
+        description={<span className="max-md:hidden">{t('contact.description')}</span>}
       />
-      <CardContent className="space-y-5 max-md:px-0">
+      <CardContent className="space-y-4 md:space-y-5 max-md:px-0">
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -434,7 +448,9 @@ export function ContactChangeCard() {
 
               {editing === 'email' && (
                 <div className="space-y-2 rounded-lg border p-3">
-                  <Label htmlFor="contact-email">{t('contact.email.newLabel')}</Label>
+                  <FieldLabel htmlFor="contact-email" hint={t('contact.email.hint')}>
+                    {t('contact.email.newLabel')}
+                  </FieldLabel>
                   <Input
                     id="contact-email"
                     type="email"
@@ -443,7 +459,7 @@ export function ContactChangeCard() {
                     placeholder={t('contact.email.placeholder')}
                     autoFocus
                   />
-                  <p className="text-xs text-muted-foreground">{t('contact.email.hint')}</p>
+                  <FieldHint>{t('contact.email.hint')}</FieldHint>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
                       {t('common:actions.cancel')}
@@ -463,7 +479,7 @@ export function ContactChangeCard() {
             </div>
 
             {/* ── Phone ────────────────────────────────────────────────────── */}
-            <div className="space-y-2 border-t pt-5">
+            <div className="space-y-2 border-t pt-4 md:pt-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
@@ -647,14 +663,16 @@ export function ContactChangeCard() {
 
               {editing === 'phone' && (
                 <div className="space-y-2 rounded-lg border p-3">
-                  <Label htmlFor="contact-phone">{t('contact.phone.newLabel')}</Label>
+                  <FieldLabel htmlFor="contact-phone" hint={t('contact.phone.hint')}>
+                    {t('contact.phone.newLabel')}
+                  </FieldLabel>
                   <PhoneInput
                     id="contact-phone"
                     value={draft}
                     onChange={setDraft}
                     defaultCountry={defaultCountry}
                   />
-                  <p className="text-xs text-muted-foreground">{t('contact.phone.hint')}</p>
+                  <FieldHint>{t('contact.phone.hint')}</FieldHint>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
                       {t('common:actions.cancel')}
@@ -675,8 +693,9 @@ export function ContactChangeCard() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            {/* Said out loud because a security screen implies the opposite. */}
-            <p className="text-xs text-muted-foreground">{t('contact.noSignOutNotice')}</p>
+            {/* Said out loud because a security screen implies the opposite —
+                inline from `md` up, and in the heading's ⓘ on a phone. */}
+            <p className="text-xs text-muted-foreground max-md:hidden">{t('contact.noSignOutNotice')}</p>
           </>
         ) : null}
       </CardContent>

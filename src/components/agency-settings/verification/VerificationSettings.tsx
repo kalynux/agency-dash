@@ -19,8 +19,8 @@
 // an agency that never does is not locked out of the dashboard.
 //
 // ⚠ **What it does gate is CASH, and only cash** (since 2026-09-15): COD orders
-// are refused at checkout for an unverified agency, and payouts can be capped
-// per rolling window. That is what `unlocks` below says, and it is the reason
+// are refused at checkout for an unverified agency (the payout cap that once sat
+// beside it was deleted on 2026-09-27). That is what `unlocks` below says, and it is the reason
 // this tab is worth finding — before this change the screen could not name a
 // single consequence. Everything else stays open on purpose, so nothing here
 // may read as "your account is blocked".
@@ -74,7 +74,7 @@ import type { KycDocumentSlot, KycRecord, KycUpdatePayload } from '@/types/kyc.t
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { LegalLink } from '@/components/common/LegalLink';
-import { SectionHeading } from '@/components/common/InfoHint';
+import { FieldHint, FieldLabel, InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { KycDocumentSlotCard } from './KycDocumentSlotCard';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
@@ -82,7 +82,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -285,6 +284,14 @@ export function VerificationSettings() {
           ? homeAddressForDisplay(record.homeAddress)
           : null;
 
+  // Unknown reads as "required": over-asking is the harmless side.
+  const homeAddressHint = t(
+    hasDepot === true
+      ? 'verification.identity.homeAddressOptionalHint'
+      : 'verification.identity.homeAddressRequiredHint',
+  );
+  const fileRules = t('verification.documents.fileRules', { mb: KYC_MAX_FILE_MB });
+
   const byKey = new Map(checklist.map((item) => [item.key, item]));
   const slotRequirement = (key: KycChecklistKey) => byKey.get(key);
 
@@ -378,14 +385,25 @@ export function VerificationSettings() {
           */}
           {phase !== 'verified' && (
             <div className="rounded-lg border bg-muted/40 p-3">
-              <p className="text-xs font-medium">{t('verification.unlocks.title')}</p>
+              {/* The COD line is the gate and stays visible everywhere; the
+                  "nothing else is held back" reassurance folds into the ⓘ on
+                  a phone. */}
+              <p className="flex items-center gap-1.5 text-xs font-medium">
+                {t('verification.unlocks.title')}
+                <InfoHint
+                  className="md:hidden"
+                  label={t('common:form.aboutSection', { title: t('verification.unlocks.title') })}
+                >
+                  {t('verification.unlocks.otherwiseOpen')}
+                </InfoHint>
+              </p>
               <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
                 <li className="flex gap-2">
                   <Banknote className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {t('verification.unlocks.cod')}
                 </li>
               </ul>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground max-md:hidden">
                 {t('verification.unlocks.otherwiseOpen')}
               </p>
             </div>
@@ -428,9 +446,11 @@ export function VerificationSettings() {
           description={t('verification.identity.description')}
           short={t('verification.identity.short')}
         />
-        <CardContent className="space-y-6 max-md:px-0">
+        <CardContent className="space-y-5 md:space-y-6 max-md:px-0">
           <div className="space-y-2">
-            <Label htmlFor="kyc-id-number">{t('verification.identity.idNumber')}</Label>
+            <FieldLabel htmlFor="kyc-id-number" hint={t('verification.identity.idNumberHint')}>
+              {t('verification.identity.idNumber')}
+            </FieldLabel>
             <Input
               id="kyc-id-number"
               value={form.idNumber}
@@ -441,13 +461,13 @@ export function VerificationSettings() {
                 setForm((prev) => (prev ? { ...prev, idNumber: e.target.value } : prev))
               }
             />
-            <p className="text-xs text-muted-foreground">
-              {t('verification.identity.idNumberHint')}
-            </p>
+            <FieldHint>{t('verification.identity.idNumberHint')}</FieldHint>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="kyc-home-address">{t('verification.identity.homeAddress')}</Label>
+            <FieldLabel htmlFor="kyc-home-address" hint={homeAddressHint}>
+              {t('verification.identity.homeAddress')}
+            </FieldLabel>
             {locked ? (
               <div className="rounded-lg border px-3 py-2 text-sm">
                 {shownAddress?.formatted_address ?? t('common:values.notAvailable')}
@@ -466,14 +486,7 @@ export function VerificationSettings() {
                 }
               />
             )}
-            <p className="text-xs text-muted-foreground">
-              {/* Unknown reads as "required": over-asking is the harmless side. */}
-              {t(
-                hasDepot === true
-                  ? 'verification.identity.homeAddressOptionalHint'
-                  : 'verification.identity.homeAddressRequiredHint',
-              )}
-            </p>
+            <FieldHint>{homeAddressHint}</FieldHint>
           </div>
         </CardContent>
       </Card>
@@ -482,13 +495,19 @@ export function VerificationSettings() {
       <Card className={sectionSurfaceClass}>
         <SectionHeading
           title={t('verification.documents.title')}
-          description={t('verification.documents.description')}
+          // On a phone the file rules ride in the heading's ⓘ with the
+          // description (the span only shows there); desktop keeps them inline
+          // below. An off-rule pick is still refused out loud by the slot.
+          description={
+            <>
+              {t('verification.documents.description')}
+              <span className="mt-2 block md:hidden">{fileRules}</span>
+            </>
+          }
           short={t('verification.documents.short')}
         />
-        <CardContent className="space-y-4 max-md:px-0">
-          <p className="text-xs text-muted-foreground">
-            {t('verification.documents.fileRules', { mb: KYC_MAX_FILE_MB })}
-          </p>
+        <CardContent className="space-y-3 md:space-y-4 max-md:px-0">
+          <p className="text-xs text-muted-foreground max-md:hidden">{fileRules}</p>
 
           {KYC_DOCUMENT_SLOTS.map((slot) => {
             const item = slotRequirement(SLOT_CHECKLIST_KEY[slot]);
@@ -663,10 +682,16 @@ function ChecklistRow({ item }: { item: KycChecklistItem }) {
             ? t('verification.checklist.required')
             : t('verification.checklist.optional')}
         </span>
+        {/* Where to edit it, not whether it is done — behind an ⓘ on a phone. */}
         {item.editedElsewhere && (
-          <span className="block text-xs text-muted-foreground">
-            {t('verification.checklist.elsewhere')}
-          </span>
+          <>
+            <InfoHint className="ms-1 align-middle md:hidden">
+              {t('verification.checklist.elsewhere')}
+            </InfoHint>
+            <span className="block text-xs text-muted-foreground max-md:hidden">
+              {t('verification.checklist.elsewhere')}
+            </span>
+          </>
         )}
       </span>
     </li>

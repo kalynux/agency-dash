@@ -7,6 +7,7 @@ import { buildPayoutSchema, toSubmittablePayoutDetails } from '@/onboarding/sche
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { PayoutMethodsEditor, toPayoutEntries, type PayoutEntry } from '@/components/agency-settings/payout';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/common/InfoHint';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
 
@@ -68,21 +69,26 @@ export function Step2Payout() {
                 </div>
             }
         >
-            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-3 md:pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="w-4 h-4 text-primary" /></div>
                     <h1 className="text-lg font-bold text-foreground">{t('payout.title')}</h1>
+                    {/* The footnote's reassurance, one tap away on a phone — it
+                        sits under the editor from `md` up. */}
+                    <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title: t('payout.title') })}>
+                        {t('payout.footnote')}
+                    </InfoHint>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('payout.description')}</p>
+                <p className="text-sm text-muted-foreground max-md:line-clamp-2">{t('payout.description')}</p>
             </div>
 
             {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
             {/* The same editor Account → Payout runs, so a method is added the one
                 way everywhere and onboarding can't drift from settings. */}
-            <div className="md:px-6 pt-5 pb-6 space-y-4">
+            <div className="md:px-6 pt-4 md:pt-5 pb-6 space-y-4">
                 <PayoutMethodsEditor value={entries} onChange={setEntries} />
-                <p className="text-xs text-muted-foreground text-center">{t('payout.footnote')}</p>
+                <p className="max-md:hidden text-xs text-muted-foreground text-center">{t('payout.footnote')}</p>
             </div>
         </OnboardingLayout>
     );

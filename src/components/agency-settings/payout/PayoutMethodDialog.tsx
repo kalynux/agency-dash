@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ResponsiveModal } from '@/components/common/ResponsiveModal';
+import { FieldHint, FieldLabel, InfoHint } from '@/components/common/InfoHint';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PaymentOptionGroup } from '@/components/common/PaymentOptionGroup';
 import { PaymentOptionSelect } from '@/components/common/PaymentOptionSelect';
@@ -63,6 +65,7 @@ export function PayoutMethodDialog({
   onSave,
 }: PayoutMethodDialogProps) {
   const { t, i18n } = useTranslation(['account', 'common']);
+  const isMobile = useIsMobile();
   const fieldId = useId();
   const schema = useMemo(() => buildPayoutMethodSchema(t), [t]);
   const countries = useMemo(() => countryOptions(i18n.language), [i18n.language]);
@@ -229,7 +232,7 @@ export function PayoutMethodDialog({
         </>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-4 md:space-y-5">
         <PaymentOptionGroup
           label={t('payout.paymentMethod')}
           labelTone="section"
@@ -238,7 +241,9 @@ export function PayoutMethodDialog({
           // a readable card into four wrapped lines on a phone.
           layout="tile"
           gridClassName="grid-cols-3"
-          description={t('payout.comingSoonHint')}
+          // A phone already reads "Soon" on the two greyed tiles; the sentence
+          // spelling it out is desktop-only.
+          description={isMobile ? undefined : t('payout.comingSoonHint')}
           value={method}
           onValueChange={(value) => setMethod(value as PayoutMethodType)}
           options={methodOptions}
@@ -345,13 +350,16 @@ export function PayoutMethodDialog({
             {/* Not a warning about our form — a statement about the API. It
                 refuses a PAN or a CVV with a 400 rather than dropping them, so
                 there is no field here that could take one. */}
-            <p className="rounded-lg border border-dashed p-3 text-xs leading-snug text-muted-foreground">
+            {/* On a phone it rides the "Last 4 digits" ⓘ instead — the field it
+                explains. */}
+            <p className="rounded-lg border border-dashed p-3 text-xs leading-snug text-muted-foreground max-md:hidden">
               {t('payout.cardSecurityNote')}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor={`${fieldId}-card-brand`}>{t('payout.cardBrand')}</Label>
+                {/* FieldLabel with no hint, so it lines up with its neighbour's. */}
+                <FieldLabel htmlFor={`${fieldId}-card-brand`}>{t('payout.cardBrand')}</FieldLabel>
                 <Select
                   value={cardBrand}
                   onValueChange={(value) => setCardBrand(value as CardBrandValue)}
@@ -370,7 +378,9 @@ export function PayoutMethodDialog({
                 <FieldError message={errorFor('card.brand')} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor={`${fieldId}-card-last4`}>{t('payout.cardLast4')}</Label>
+                <FieldLabel htmlFor={`${fieldId}-card-last4`} hint={t('payout.cardSecurityNote')}>
+                  {t('payout.cardLast4')}
+                </FieldLabel>
                 <Input
                   id={`${fieldId}-card-last4`}
                   inputMode="numeric"
@@ -461,8 +471,11 @@ export function PayoutMethodDialog({
         {!forcePreferred && (
           <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium">{t('payout.makePreferred')}</p>
-              <p className="text-xs text-muted-foreground">{t('payout.makePreferredHint')}</p>
+              <p className="flex items-center gap-1.5 text-sm font-medium">
+                {t('payout.makePreferred')}
+                <InfoHint className="md:hidden">{t('payout.makePreferredHint')}</InfoHint>
+              </p>
+              <FieldHint>{t('payout.makePreferredHint')}</FieldHint>
             </div>
             <Switch
               checked={makePreferred}

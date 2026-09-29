@@ -19,7 +19,7 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { InfoHint } from '@/components/common/InfoHint';
+import { FieldHint, InfoHint } from '@/components/common/InfoHint';
 import { ApiError } from '@/types/api';
 import { getApiErrorMessage } from '@/lib/errors';
 import { formatNumber } from '@/lib/format';
@@ -41,16 +41,26 @@ function FieldRow({
     info?: string;
     children: React.ReactNode;
 }) {
+    // `info` is an ⓘ at every width. `hint` is inline from `md` up; on a phone
+    // it rides in the same ⓘ (appended to `info`), or in a phone-only ⓘ of its
+    // own when there is no `info`. The error stays visible at every width.
     return (
         <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
                 <label className="block text-xs font-semibold text-muted-foreground tracking-wide">
                     {label}
                 </label>
-                {info && <InfoHint>{info}</InfoHint>}
+                {info ? (
+                    <InfoHint>
+                        {info}
+                        {hint && <span className="md:hidden mt-1.5 block">{hint}</span>}
+                    </InfoHint>
+                ) : hint && (
+                    <InfoHint className="md:hidden">{hint}</InfoHint>
+                )}
             </div>
             {children}
-            {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+            {hint && !error && <FieldHint>{hint}</FieldHint>}
             {error && (
                 <p className="text-xs text-destructive mt-1" role="alert">
                     {error}
@@ -138,7 +148,7 @@ function Section({
     // form's `max-md:divide-y` draws the rule between sections — so a Section
     // must stay a DIRECT child of the form.
     return (
-        <div className="max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden md:shadow-sm">
+        <div className="max-md:py-4 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden md:shadow-sm">
             <div className="flex items-center gap-2 max-md:pb-3 md:px-4 md:py-3 md:bg-muted/80 md:border-b md:border-border">
                 <Icon className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</span>
@@ -286,14 +296,14 @@ export function Step4Policies() {
             }
         >
             {/* Header */}
-            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-3 md:pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                         <ShieldCheck className="w-4 h-4 text-primary" />
                     </div>
                     <h1 className="text-lg font-bold text-foreground">{t('policies.title')}</h1>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('policies.description')}</p>
+                <p className="text-sm text-muted-foreground max-md:line-clamp-2">{t('policies.description')}</p>
             </div>
 
             {apiError && (
@@ -308,7 +318,7 @@ export function Step4Policies() {
             <form
                 id="step4-policies-form"
                 onSubmit={handleSubmit(handleSave)}
-                className="md:px-6 pt-5 pb-6 max-md:divide-y md:space-y-8"
+                className="md:px-6 pt-4 md:pt-5 pb-6 max-md:divide-y md:space-y-8"
                 noValidate
             >
                 {/* ── Pricing ── */}
@@ -327,9 +337,12 @@ export function Step4Policies() {
                             render={({ field }) => (
                                 <div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            {t('policies.storageToggle')}
-                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                                {t('policies.storageToggle')}
+                                            </p>
+                                            <InfoHint className="md:hidden">{t('policies.storageHint')}</InfoHint>
+                                        </div>
                                         <Switch
                                             checked={field.value}
                                             onCheckedChange={field.onChange}
@@ -337,10 +350,12 @@ export function Step4Policies() {
                                             className="data-[state=checked]:bg-primary disabled:opacity-40 disabled:cursor-not-allowed"
                                         />
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground mt-1">
-                                        {t('policies.storageHint')}
+                                    {/* The hint is desktop-only (the ⓘ carries it on a
+                                        phone); the lock warning shows at every width. */}
+                                    <p className={cn('text-[11px] text-muted-foreground mt-1', pickupEnabled && 'max-md:hidden')}>
+                                        <span className="max-md:hidden">{t('policies.storageHint')}</span>
                                         {!pickupEnabled && (
-                                            <span className="ms-1 text-warning">{t('policies.storageLocked')}</span>
+                                            <span className="md:ms-1 text-warning">{t('policies.storageLocked')}</span>
                                         )}
                                     </p>
                                 </div>
@@ -401,9 +416,12 @@ export function Step4Policies() {
                             render={({ field }) => (
                                 <div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            {t('policies.pickupToggle')}
-                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                                {t('policies.pickupToggle')}
+                                            </p>
+                                            <InfoHint className="md:hidden">{t('policies.pickupHint')}</InfoHint>
+                                        </div>
                                         <Switch
                                             checked={field.value}
                                             onCheckedChange={field.onChange}
@@ -411,10 +429,10 @@ export function Step4Policies() {
                                             className="data-[state=checked]:bg-primary disabled:opacity-40 disabled:cursor-not-allowed"
                                         />
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground mt-1">
-                                        {t('policies.pickupHint')}
+                                    <p className={cn('text-[11px] text-muted-foreground mt-1', storageEnabled && 'max-md:hidden')}>
+                                        <span className="max-md:hidden">{t('policies.pickupHint')}</span>
                                         {!storageEnabled && (
-                                            <span className="ms-1 text-warning">{t('policies.pickupLocked')}</span>
+                                            <span className="md:ms-1 text-warning">{t('policies.pickupLocked')}</span>
                                         )}
                                     </p>
                                 </div>
@@ -459,10 +477,13 @@ export function Step4Policies() {
 
                     {/* Additional fees */}
                     <div className="space-y-3 border-t border-border/60 pt-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            {t('policies.additionalFees')}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground -mt-1">
+                        <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                {t('policies.additionalFees')}
+                            </p>
+                            <InfoHint className="md:hidden">{t('policies.additionalFeesHint')}</InfoHint>
+                        </div>
+                        <p className="max-md:hidden text-[11px] text-muted-foreground -mt-1">
                             {t('policies.additionalFeesHint')}
                         </p>
 
@@ -682,22 +703,28 @@ export function Step4Policies() {
                     {/* Admin-preset fields — read-only display */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-border/60 pt-4">
                         <div className="space-y-1.5">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                {t('policies.inspector')}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    {t('policies.inspector')}
+                                </p>
+                                <InfoHint className="md:hidden">{t('policies.setByAdmin')}</InfoHint>
+                            </div>
                             <div className="flex items-center h-11 px-3 rounded-lg border border-border bg-muted text-sm text-muted-foreground select-none">
                                 {t('policies.inspectorValue')}
                             </div>
-                            <p className="text-xs text-muted-foreground">{t('policies.setByAdmin')}</p>
+                            <FieldHint>{t('policies.setByAdmin')}</FieldHint>
                         </div>
                         <div className="space-y-1.5">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                {t('policies.investigationFee')}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    {t('policies.investigationFee')}
+                                </p>
+                                <InfoHint className="md:hidden">{t('policies.setByAdmin')}</InfoHint>
+                            </div>
                             <div className="flex items-center h-11 px-3 rounded-lg border border-border bg-muted text-sm text-muted-foreground select-none">
                                 {formatNumber(1000)}
                             </div>
-                            <p className="text-xs text-muted-foreground">{t('policies.setByAdmin')}</p>
+                            <FieldHint>{t('policies.setByAdmin')}</FieldHint>
                         </div>
                     </div>
 

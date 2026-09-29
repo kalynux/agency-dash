@@ -279,10 +279,10 @@ export function PoliciesSettings() {
     {/* No section heading: the page header above already names this tab and
         states the same rule, so one here would print it twice. */}
     <Card className={sectionSurfaceClass}>
-      <CardContent className="space-y-8 max-md:px-0">
+      <CardContent className="space-y-6 md:space-y-8 max-md:px-0">
         {apiError && <div role="alert" className="p-3 text-sm bg-red-50 text-red-600 rounded-lg border border-red-200">{apiError}</div>}
 
-        <form onSubmit={submit} className="space-y-8" noValidate>
+        <form onSubmit={submit} className="space-y-6 md:space-y-8" noValidate>
           <Section
             icon={DollarSign}
             title={t('policies.pricing.title')}

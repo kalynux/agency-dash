@@ -56,7 +56,7 @@ function StepProgress({
     };
 
     return (
-        <div className="w-full flex items-center justify-center px-6 pt-5 pb-4">
+        <div className="w-full flex items-center justify-center px-4 pt-3 pb-2.5 md:px-6 md:pt-5 md:pb-4">
             <div className="flex items-center gap-0 w-full max-w-sm">
                 {STEPS.map(({ step, labelKey }, i) => {
                     const label = tx(t, `layout.steps.${labelKey}`);
@@ -200,7 +200,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey }: OnboardingLayou
                 clip absolutely positioned popovers near its end — the address
                 search's result list — into a little inner scroll box. */}
             <main className="flex-1">
-                <div className="w-full max-w-xl mx-auto px-4 py-6 md:py-10">
+                <div className="w-full max-w-xl mx-auto px-4 py-4 md:py-10">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={stepKey}
@@ -241,7 +241,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey }: OnboardingLayou
                 "ride the keys" no longer holds once it sticks. Same call as
                 `MobileTabBar`, and as vendor-dash's onboarding. */}
             {ctaSlot && !keyboardOpen && (
-                <div className="md:hidden sticky bottom-0 z-20 bg-card border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-shrink-0">
+                <div className="md:hidden sticky bottom-0 z-20 bg-card border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-shrink-0">
                     {ctaSlot}
                 </div>
             )}

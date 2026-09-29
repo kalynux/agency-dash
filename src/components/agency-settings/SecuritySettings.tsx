@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Fingerprint, Loader2, Lock, Shield } from 'lucide-react';
-import { SectionHeading } from '@/components/common/InfoHint';
+import { FieldHint, FieldLabel, InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import { ContactChangeCard } from '@/components/agency-settings/ContactChangeCard';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,42 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getBiometryInfo, type BiometryInfo } from '@/platform/biometrics';
 import { isNative } from '@/platform/env';
 import { openBiometricEnrollmentSettings } from '@/platform/permissions';
+
+/**
+ * `SectionHeading` for a section that has no `short` copy: the description
+ * moves behind an ⓘ beside the title on mobile and stays inline from `md` up.
+ * `max-md:gap-0` closes the grid gap the (then empty) description row would
+ * otherwise still open.
+ */
+function HintedSectionHeading({
+  icon,
+  title,
+  name,
+  description,
+}: {
+  icon: ElementType;
+  title: ReactNode;
+  /** Plain-text title, for the ⓘ's accessible name. */
+  name: string;
+  description: string;
+}) {
+  const { t } = useTranslation('common');
+  return (
+    <SectionHeading
+      icon={icon}
+      className="max-md:gap-0"
+      title={
+        <>
+          {title}
+          <InfoHint className="md:hidden" label={t('form.aboutSection', { title: name })}>
+            {description}
+          </InfoHint>
+        </>
+      }
+      description={<span className="max-md:hidden">{description}</span>}
+    />
+  );
+}
 
 export function SecuritySettings() {
   const { t } = useTranslation('account');
@@ -56,8 +92,9 @@ export function SecuritySettings() {
         description read normally, and only the switch row is muted.
       */}
       <Card className={sectionSurfaceClass}>
-        <SectionHeading
+        <HintedSectionHeading
           icon={Shield}
+          name={t('security.twoFactor.title')}
           title={
             <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
               {t('security.twoFactor.title')}
@@ -75,7 +112,9 @@ export function SecuritySettings() {
           <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-3">
             <div className="min-w-0">
               <p className="font-medium text-muted-foreground">{t('security.twoFactor.enable')}</p>
-              <p className="text-sm text-muted-foreground">
+              {/* On a phone the "Coming soon" badge in the heading is the
+                  sentence that says why; this line only repeats it. */}
+              <p className="text-sm text-muted-foreground max-md:hidden">
                 {t('security.twoFactor.notAvailable')}
               </p>
             </div>
@@ -110,7 +149,7 @@ export function SecuritySettings() {
  * feature lives, not a fault).
  */
 function BiometricUnlockCard() {
-  const { t } = useTranslation('account');
+  const { t } = useTranslation(['account', 'common']);
   const [info, setInfo] = useState<BiometryInfo | null>(null);
   const [enabled, setEnabled] = useState(isBiometricUnlockEnabled);
   const [busy, setBusy] = useState(false);
@@ -167,16 +206,30 @@ function BiometricUnlockCard() {
 
   return (
     <Card className={cn(sectionSurfaceClass, unavailableReason && 'opacity-60')}>
-      <SectionHeading
+      <HintedSectionHeading
         icon={Fingerprint}
         title={t('security.biometric.title')}
+        name={t('security.biometric.title')}
         description={t('security.biometric.description')}
       />
       <CardContent className="max-md:px-0">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="font-medium">{t('security.biometric.enable')}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="flex items-center gap-1.5 font-medium">
+              {t('security.biometric.enable')}
+              {/* Only the neutral how-it-works copy goes behind the ⓘ. An
+                  unavailable reason is a state, and stays inline below. */}
+              {!unavailableReason && (
+                <InfoHint
+                  className="md:hidden"
+                  label={t('common:form.aboutSection', { title: t('security.biometric.enable') })}
+                >
+                  {enabled ? t('security.biometric.enabledHint') : t('security.biometric.disabledHint')}
+                  {enabled && <span className="mt-2 block">{t('security.biometric.signOutNote')}</span>}
+                </InfoHint>
+              )}
+            </p>
+            <p className={cn('text-sm text-muted-foreground', !unavailableReason && 'max-md:hidden')}>
               {unavailableReason ??
                 (enabled
                   ? t('security.biometric.enabledHint')
@@ -204,8 +257,9 @@ function BiometricUnlockCard() {
           </Button>
         )}
 
+        {/* In the row's ⓘ on a phone, beside the enabled hint. */}
         {enabled && (
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs text-muted-foreground max-md:hidden">
             {t('security.biometric.signOutNote')}
           </p>
         )}
@@ -280,9 +334,10 @@ function ChangePasswordCard() {
 
   return (
     <Card className={sectionSurfaceClass}>
-      <SectionHeading
+      <HintedSectionHeading
         icon={Lock}
         title={t('security.password.title')}
+        name={t('security.password.title')}
         description={t('security.password.description')}
       />
       <CardContent className="max-md:px-0">
@@ -305,7 +360,11 @@ function ChangePasswordCard() {
             {errors.oldPassword && <p className="text-xs text-red-500" role="alert">{errors.oldPassword.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-password">{t('security.password.new')}</Label>
+            {/* The rules sit under the whole form on desktop; on a phone they
+                are the new-password field's ⓘ, where they are needed. */}
+            <FieldLabel htmlFor="new-password" hint={t('security.password.rules')}>
+              {t('security.password.new')}
+            </FieldLabel>
             <PasswordInput id="new-password" autoComplete="new-password" {...register('newPassword')} />
             {errors.newPassword && <p className="text-xs text-red-500" role="alert">{errors.newPassword.message}</p>}
           </div>
@@ -314,7 +373,7 @@ function ChangePasswordCard() {
             <PasswordInput id="confirm-password" autoComplete="new-password" {...register('confirmPassword')} />
             {errors.confirmPassword && <p className="text-xs text-red-500" role="alert">{errors.confirmPassword.message}</p>}
           </div>
-          <p className="text-xs text-muted-foreground">{t('security.password.rules')}</p>
+          <FieldHint>{t('security.password.rules')}</FieldHint>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={isSubmitting} className="gap-2">
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

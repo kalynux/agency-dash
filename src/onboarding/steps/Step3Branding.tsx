@@ -8,6 +8,7 @@ import { OnboardingLayout, selectTriggerClass } from '@/onboarding/OnboardingLay
 import { brandingSchema, type BrandingFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
+import { FieldHint, InfoHint } from '@/components/common/InfoHint';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
@@ -17,16 +18,21 @@ import { TIMEZONES } from '@/lib/timezones';
 // A bordered card with a tinted title band from `md` up. On a phone the section
 // sits flat on the page, the band is a plain title row, and the form's
 // `max-md:divide-y` draws the rule between sections.
-const SECTION_CLASS = 'max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden';
+const SECTION_CLASS = 'max-md:py-4 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:border-border md:overflow-hidden';
 const SECTION_BAND_CLASS = 'flex items-center gap-2 max-md:pb-3 md:px-4 md:py-2.5 md:bg-muted/60';
 const SECTION_BODY_CLASS = 'md:p-4 md:bg-card';
 
+/** `hint` is inline from `md` up and behind an ⓘ on a phone; the error shows at every width. */
 function FieldRow({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
+    const { t } = useTranslation('common');
     return (
         <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</label>
+            <div className="flex items-center gap-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</label>
+                {hint && <InfoHint className="md:hidden" label={t('form.aboutSection', { title: label })}>{hint}</InfoHint>}
+            </div>
             {children}
-            {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+            {hint && !error && <FieldHint>{hint}</FieldHint>}
             {error && <p className="text-xs text-destructive mt-1" role="alert">{error}</p>}
         </div>
     );
@@ -121,7 +127,7 @@ export function Step3Branding() {
                 </div>
             }
         >
-            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-3 md:pb-4 border-b border-border/60">
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><ImageIcon className="w-4 h-4 text-primary" /></div>
@@ -131,7 +137,7 @@ export function Step3Branding() {
                         <SkipForward className="w-3 h-3" /> {t('actions.optional')}
                     </span>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('branding.description')}</p>
+                <p className="text-sm text-muted-foreground max-md:line-clamp-2">{t('branding.description')}</p>
             </div>
 
             {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
@@ -139,7 +145,7 @@ export function Step3Branding() {
             {/* Cards from `md` up. On a phone each section sits flat on the page
                 and a rule between them does the grouping; the sections must stay
                 DIRECT children of the form for `divide-y` / `first:` / `last:`. */}
-            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="md:px-6 pt-5 pb-6 max-md:divide-y md:space-y-4" noValidate>
+            <form id="step3-branding-form" onSubmit={handleSubmit(handleSave)} className="md:px-6 pt-4 md:pt-5 pb-6 max-md:divide-y md:space-y-4" noValidate>
                 <div className={SECTION_CLASS}>
                     <div className={SECTION_BAND_CLASS}>
                         <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -152,7 +158,7 @@ export function Step3Branding() {
                                 label={previewUrl ? t('branding.changeLogo') : t('branding.addLogo')}
                                 acceptedTypes={['image']}
                                 onSelect={(media) => { setLogo(media); setLogoCleared(false); }}
-                                className="h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border bg-muted"
+                                className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-xl border-2 border-dashed border-border bg-muted"
                             >
                                 {previewUrl ? (
                                     <img
@@ -162,15 +168,21 @@ export function Step3Branding() {
                                     />
                                 ) : (
                                     <span className="flex h-full w-full items-center justify-center">
-                                        <ImageIcon className="w-7 h-7 text-muted-foreground" />
+                                        <ImageIcon className="w-6 h-6 md:w-7 md:h-7 text-muted-foreground" />
                                     </span>
                                 )}
                             </MediaPickerTrigger>
                             <div className="min-w-0 space-y-1">
-                                <p className="text-sm font-medium text-foreground">
-                                    {previewUrl ? t('branding.logoSelected') : t('branding.noLogo')}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{t('branding.logoHint')}</p>
+                                {/* The upload hint is inline from `md` up, behind the ⓘ on a phone. */}
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-medium text-foreground">
+                                        {previewUrl ? t('branding.logoSelected') : t('branding.noLogo')}
+                                    </p>
+                                    <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title: t('branding.logoSection') })}>
+                                        {t('branding.logoHint')}
+                                    </InfoHint>
+                                </div>
+                                <p className="max-md:hidden text-xs text-muted-foreground">{t('branding.logoHint')}</p>
                                 {previewUrl && (
                                     <button
                                         type="button"

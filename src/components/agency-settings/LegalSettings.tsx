@@ -37,7 +37,7 @@ export function LegalSettings() {
               doc={doc}
               className="flex min-h-11 items-center gap-3 rounded-md py-2 font-normal text-foreground no-underline hover:text-primary"
             >
-              <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-muted-foreground" />
               <span className="flex-1 font-medium">{t(`legal.${doc}`)}</span>
               <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             </LegalLink>

@@ -26,7 +26,7 @@ import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
-import { InfoHint } from '@/components/common/InfoHint';
+import { FieldHint, FieldLabel, InfoHint } from '@/components/common/InfoHint';
 import { noteSurfaceClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -491,9 +491,9 @@ export function LocationsSettings() {
   if (!magazin || !form) return null;
 
   // No `sectionGroupClass` here: the only two Cards are the coverage section and
-  // the trailing note, and the note keeps its own tinted panel on mobile — a
-  // rule above it as well would be one separator too many, and the group's
-  // `pt-6` would out-specify the note's own padding.
+  // the trailing note, and the note is desktop-only (on a phone its sentence is
+  // an ⓘ beside the locked country) — a rule above it as well would be one
+  // separator too many, and the group's `pt-6` would out-specify its padding.
   return (
     <div className="space-y-6">
       {saveError && (
@@ -506,12 +506,17 @@ export function LocationsSettings() {
       {/* No section heading: the page header above already names this tab and
           carries the same sentence. */}
       <Card className={sectionSurfaceClass}>
-        <CardContent className="space-y-6 max-md:px-0">
+        <CardContent className="space-y-5 max-md:px-0 md:space-y-6">
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <Label>{t('locations.coverageLabel')}</Label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <FieldLabel hint={t('locations.coverageHint')}>{t('locations.coverageLabel')}</FieldLabel>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Lock className="w-3 h-3" /> {country ?? t('common:values.notAvailable')}
+                {/* On a phone the trailing country note is hidden; its sentence
+                    lives here, beside the locked country it explains. */}
+                <InfoHint className="md:hidden" align="end">
+                  {t('locations.countryNote')}
+                </InfoHint>
               </span>
             </div>
             <RegionPicker
@@ -523,14 +528,15 @@ export function LocationsSettings() {
             {fieldErrors.coverage && (
               <p className="mt-2 text-xs text-destructive">{fieldErrors.coverage}</p>
             )}
-            <p className="mt-2 text-xs text-muted-foreground">{t('locations.coverageHint')}</p>
+            <FieldHint className="mt-2">{t('locations.coverageHint')}</FieldHint>
           </div>
 
           <Separator />
 
           {/* ─── HQ addresses ───────────────────────────────────────────── */}
           <div>
-            <div className="mb-1 flex items-center justify-between">
+            {/* `mb-3` on a phone: the hint line below that spaces it on desktop is hidden. */}
+            <div className="mb-3 flex items-center justify-between gap-2 md:mb-1">
               <Label className="flex items-center gap-1.5">
                 {t('locations.addressesLabel')}
                 <InfoHint className="md:hidden" label={t('locations.addressesAboutLabel')}>
@@ -556,7 +562,7 @@ export function LocationsSettings() {
               {form.addresses.map((entry, index) => (
                 <div
                   key={entry.uid}
-                  className="space-y-3 max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-lg md:border md:p-4"
+                  className="space-y-4 max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:space-y-3 md:rounded-lg md:border md:p-4"
                 >
                   <AddressRowHeading
                     index={index}
@@ -644,7 +650,7 @@ export function LocationsSettings() {
                       entry.geo && (entry.city || entry.region) && (
                         <p className="text-xs text-muted-foreground">
                           {t('locations.regionOptional')}: {entry.region || t('locations.regionNotNamed')} | {t('locations.cityOptional')}: {entry.city || t('locations.cityNotNamed')}
-                          <span className="ms-1 opacity-70">{t('locations.fromMapResult')}</span>
+                          <span className="ms-1 opacity-70 max-md:hidden">{t('locations.fromMapResult')}</span>
                         </p>
                       )
                     )}
@@ -653,10 +659,15 @@ export function LocationsSettings() {
 
 
                   {entry.geo && (!entry.city || !entry.region) && (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3">
                       {!entry.city && (
                         <div className="space-y-1.5">
-                          <Label htmlFor={`hq-city-${entry.uid}`}>{t('locations.cityOptional')}</Label>
+                          <FieldLabel
+                            htmlFor={`hq-city-${entry.uid}`}
+                            hint={t('locations.cityNotNamed')}
+                          >
+                            {t('locations.cityOptional')}
+                          </FieldLabel>
                           <Input
                             id={`hq-city-${entry.uid}`}
                             value={entry.city}
@@ -664,14 +675,17 @@ export function LocationsSettings() {
                             placeholder={t('locations.cityPlaceholder')}
                             onChange={(e) => patchEntry(index, { city: e.target.value })}
                           />
-                          <p className="text-xs text-muted-foreground">{t('locations.cityNotNamed')}</p>
+                          <FieldHint>{t('locations.cityNotNamed')}</FieldHint>
                         </div>
                       )}
                       {!entry.region && (
                         <div className="space-y-1.5">
-                          <Label htmlFor={`hq-region-${entry.uid}`}>
+                          <FieldLabel
+                            htmlFor={`hq-region-${entry.uid}`}
+                            hint={t('locations.regionNotNamed')}
+                          >
                             {t('locations.regionOptional')}
-                          </Label>
+                          </FieldLabel>
                           <Input
                             id={`hq-region-${entry.uid}`}
                             value={entry.region}
@@ -679,15 +693,13 @@ export function LocationsSettings() {
                             placeholder={t('locations.regionPlaceholder')}
                             onChange={(e) => patchEntry(index, { region: e.target.value })}
                           />
-                          <p className="text-xs text-muted-foreground">
-                            {t('locations.regionNotNamed')}
-                          </p>
+                          <FieldHint>{t('locations.regionNotNamed')}</FieldHint>
                         </div>
                       )}
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor={`hq-phone-${entry.uid}`}>
                         {t('locations.supportPhone')} <span className="text-destructive">*</span>
@@ -734,8 +746,10 @@ export function LocationsSettings() {
         </CardContent>
       </Card>
 
-      <Card className={noteSurfaceClass}>
-        <CardContent className="flex items-start gap-2 p-4 text-sm text-muted-foreground max-md:p-3 max-md:text-xs">
+      {/* Desktop only: on a phone this sentence sits behind the ⓘ beside the
+          locked country at the top, instead of a tinted panel of prose. */}
+      <Card className={cn(noteSurfaceClass, 'max-md:hidden')}>
+        <CardContent className="flex items-start gap-2 p-4 text-sm text-muted-foreground">
           <Info className="mt-0.5 w-4 h-4 shrink-0" />
           <p>{t('locations.countryNote')}</p>
         </CardContent>

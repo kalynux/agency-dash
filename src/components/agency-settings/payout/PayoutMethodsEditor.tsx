@@ -97,7 +97,7 @@ export function PayoutMethodsEditor({ value, onChange }: PayoutMethodsEditorProp
   return (
     <div className="space-y-3">
       {value.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed p-4 text-center md:p-6 text-sm text-muted-foreground">
           {t('payout.empty')}
         </p>
       ) : (

@@ -47,7 +47,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
-import { SectionHeading } from '@/components/common/InfoHint';
+import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import {
   compactCardContentClass,
   noteSurfaceClass,
@@ -264,7 +264,9 @@ export function MagazinSettings() {
           read as stray text at the top of the page rather than as a block. */}
       <Card className={noteSurfaceClass}>
         <CardContent
-          className={cn(compactCardContentClass, 'flex flex-col gap-4 sm:flex-row sm:items-center')}
+          // Side by side at every width: stacked, a 64px logo over one line of
+          // name doubled the hero's height on a phone for no extra information.
+          className={cn(compactCardContentClass, 'flex items-center gap-3 sm:gap-4')}
         >
           {/* The logo box itself is the click target — it opens the media library.
               64px keeps it a comfortable target while letting the hero stand only
@@ -308,7 +310,7 @@ export function MagazinSettings() {
           <div className="min-w-0 flex-1 space-y-0.5">
             <h2 className="truncate text-lg font-bold leading-tight sm:text-xl">{previewName}</h2>
             <p className="text-sm text-muted-foreground max-md:hidden">{t('store.heroDescription')}</p>
-            <p className="text-xs text-muted-foreground">{t('store.heroHint')}</p>
+            <p className="text-xs text-muted-foreground max-md:hidden">{t('store.heroHint')}</p>
           </div>
         </CardContent>
       </Card>
@@ -386,7 +388,7 @@ export function MagazinSettings() {
               short={t('store.support.short')}
             />
             <CardContent className="max-md:px-0">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="magazin-email">{t('store.support.email')}</Label>
                   <IconInput
@@ -430,32 +432,48 @@ export function MagazinSettings() {
         {/* Side rail */}
         <div className={cn(sectionGroupClass, sectionRuleClass)}>
           {/* Profile vs. Store explainer */}
+          {/* Two paragraphs of orientation, not something to act on: on a phone
+              they sit behind the heading's ⓘ, on desktop inline as before. */}
           <Card className={sectionSurfaceClass}>
-            <SectionHeading icon={Info} title={t('store.explainer.title')} />
-            <CardContent className="space-y-3 text-sm text-muted-foreground max-md:px-0">
-              <p>
-                <Trans
-                  ns="settings"
-                  i18nKey="store.explainer.line1"
-                  components={{ strong: <span className="font-medium text-foreground" /> }}
-                />
-              </p>
-              <p className="flex items-start gap-2">
-                <UserCog className="mt-0.5 w-4 h-4 shrink-0" />
-                <span>
-                  <Trans
-                    ns="settings"
-                    i18nKey="store.explainer.line2"
-                    components={{ strong: <span className="font-medium text-foreground" /> }}
-                  />
-                </span>
-              </p>
+            <SectionHeading
+              icon={Info}
+              title={
+                <>
+                  {t('store.explainer.title')}
+                  <InfoHint
+                    className="md:hidden"
+                    label={t('common:form.aboutSection', { title: t('store.explainer.title') })}
+                  >
+                    <ExplainerBody />
+                  </InfoHint>
+                </>
+              }
+            />
+            <CardContent className="text-sm text-muted-foreground max-md:hidden">
+              <ExplainerBody />
             </CardContent>
           </Card>
 
           {/* Read-only details */}
           <Card className={sectionSurfaceClass}>
-            <SectionHeading title={t('store.details.title')} description={t('store.details.description')} />
+            {/* No `short` key for this one, so the description goes behind an ⓘ
+                on mobile instead — the two dated rows name themselves. */}
+            <SectionHeading
+              title={
+                <>
+                  {t('store.details.title')}
+                  <InfoHint
+                    className="md:hidden"
+                    label={t('common:form.aboutSection', { title: t('store.details.title') })}
+                  >
+                    {t('store.details.description')}
+                  </InfoHint>
+                </>
+              }
+              description={<span className="max-md:hidden">{t('store.details.description')}</span>}
+              // The emptied description row would otherwise still open the gap.
+              className="max-md:gap-0"
+            />
             <CardContent className="space-y-4 max-md:px-0">
               <DetailRow icon={CalendarDays} label={t('store.details.lastUpdated')}>
                 <span className="text-sm">{formatDate(magazin.updatedAt)}</span>
@@ -487,6 +505,31 @@ function IconInput({ icon: Icon, className, ...props }: ComponentProps<typeof In
     <div className="relative">
       <Icon className="pointer-events-none absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
       <Input className={cn('ps-9', className)} {...props} />
+    </div>
+  );
+}
+
+/** The "business vs. personal" explainer — inline on desktop, in the ⓘ on mobile. */
+function ExplainerBody() {
+  return (
+    <div className="space-y-3">
+      <p>
+        <Trans
+          ns="settings"
+          i18nKey="store.explainer.line1"
+          components={{ strong: <span className="font-medium text-foreground" /> }}
+        />
+      </p>
+      <p className="flex items-start gap-2">
+        <UserCog className="mt-0.5 w-4 h-4 shrink-0" />
+        <span>
+          <Trans
+            ns="settings"
+            i18nKey="store.explainer.line2"
+            components={{ strong: <span className="font-medium text-foreground" /> }}
+          />
+        </span>
+      </p>
     </div>
   );
 }

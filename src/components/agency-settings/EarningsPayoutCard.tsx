@@ -310,7 +310,7 @@ function LatestPayoutRow({ payout }: { payout: EarningsPayoutRequest }) {
   const view = STATUS_VIEW[readPayoutStatus(payout.status)];
 
   return (
-    <div className="rounded-lg border p-4 flex items-start justify-between gap-3 flex-wrap">
+    <div className="rounded-lg border p-3 md:p-4 flex items-start justify-between gap-3 flex-wrap">
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Badge variant="outline" className={cn(view.className)}>

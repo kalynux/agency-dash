@@ -23,6 +23,8 @@ import {
 } from '@/services/kyc.service';
 import { nativeMediaAvailable } from '@/platform/media';
 import { UploadSourceSheet } from '@/components/common/UploadSourceSheet';
+import { InfoHint } from '@/components/common/InfoHint';
+import { cn } from '@/lib/utils';
 import { KycDocumentRow } from './KycDocumentRow';
 import type { KycDocumentRef, KycDocumentSlot } from '@/types/kyc.types';
 
@@ -54,7 +56,7 @@ export function KycDocumentSlotCard({
   onUpload,
   onDelete,
 }: KycDocumentSlotCardProps) {
-  const { t } = useTranslation('account');
+  const { t } = useTranslation(['account', 'common']);
   const inputRef = useRef<HTMLInputElement>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -99,13 +101,22 @@ export function KycDocumentSlotCard({
   };
 
   const uploadLabel = single && files.length > 0 ? t('verification.slots.replace') : t('verification.slots.add');
+  const title = t(`verification.slots.${slot}.title` as never) as string;
+  const description = t(`verification.slots.${slot}.description` as never) as string;
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
+    <div className="space-y-3 rounded-lg border p-3 md:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-medium">
-            {t(`verification.slots.${slot}.title` as never)}
+            {title}
+            {/* What the slot wants, and why a conditional one is (not) asked
+                for: inline on desktop, one tap away on a phone. The badge
+                beside it already says Required / Optional at every width. */}
+            <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title })}>
+              {description}
+              {conditionNote && <span className="mt-2 block">{conditionNote}</span>}
+            </InfoHint>
             {required ? (
               <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400">
                 {t('verification.checklist.required')}
@@ -116,10 +127,10 @@ export function KycDocumentSlotCard({
               </Badge>
             )}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {t(`verification.slots.${slot}.description` as never)}
-          </p>
-          {conditionNote && <p className="mt-1 text-xs text-muted-foreground">{conditionNote}</p>}
+          <p className="mt-0.5 text-xs text-muted-foreground max-md:hidden">{description}</p>
+          {conditionNote && (
+            <p className="mt-1 text-xs text-muted-foreground max-md:hidden">{conditionNote}</p>
+          )}
         </div>
 
         {!locked && (
@@ -149,13 +160,15 @@ export function KycDocumentSlotCard({
           ))}
         </div>
       ) : (
-        <p className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+        <p className="rounded-md border border-dashed px-3 py-3 text-center text-xs text-muted-foreground md:py-4">
           {t('verification.slots.empty')}
         </p>
       )}
 
+      {/* "Full" explains a disabled button, so it stays at every width; the
+          running count is desktop-only detail. */}
       {!single && (
-        <p className="text-xs text-muted-foreground">
+        <p className={cn('text-xs text-muted-foreground', !full && 'max-md:hidden')}>
           {full
             ? t('verification.slots.full', { max: multiSlotMax })
             : t('verification.slots.remaining', { count: room, max: multiSlotMax })}

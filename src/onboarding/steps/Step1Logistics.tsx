@@ -9,6 +9,7 @@ import { buildLogisticsSchema, type LogisticsFormValues, type HeadquartersAddres
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { FieldHint, InfoHint } from '@/components/common/InfoHint';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApiError } from '@/types/api';
@@ -36,19 +37,28 @@ const EMPTY_HQ = {
     geo: null,
 } as unknown as HeadquartersAddressFormValues;
 
-function FieldRow({ label, htmlFor, required, optional, error, children }: { label: string; htmlFor?: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode }) {
+/**
+ * `hint` is neutral help: inline under the input from `md` up, behind an ⓘ
+ * beside the label on a phone — the same split as `FieldLabel`/`FieldHint`.
+ * The error stays visible at every width.
+ */
+function FieldRow({ label, htmlFor, required, optional, hint, error, children }: { label: string; htmlFor?: string; required?: boolean; optional?: boolean; hint?: string; error?: string; children: React.ReactNode }) {
     const { t } = useTranslation('common');
     return (
         <div className="space-y-1.5">
-            <label htmlFor={htmlFor} className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {label}{required && <span className="text-destructive ms-0.5">*</span>}
-                {optional && (
-                    <span className="text-muted-foreground normal-case font-normal ms-1">
-                        ({t('form.optional').toLowerCase()})
-                    </span>
-                )}
-            </label>
+            <div className="flex items-center gap-1.5">
+                <label htmlFor={htmlFor} className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {label}{required && <span className="text-destructive ms-0.5">*</span>}
+                    {optional && (
+                        <span className="text-muted-foreground normal-case font-normal ms-1">
+                            ({t('form.optional').toLowerCase()})
+                        </span>
+                    )}
+                </label>
+                {hint && <InfoHint className="md:hidden" label={t('form.aboutSection', { title: label })}>{hint}</InfoHint>}
+            </div>
             {children}
+            {hint && <FieldHint className="text-[11px]">{hint}</FieldHint>}
             {error && <p id={htmlFor && `${htmlFor}-error`} className="text-xs text-destructive mt-1" role="alert">{error}</p>}
         </div>
     );
@@ -161,21 +171,24 @@ export function Step1Logistics() {
                 </div>
             }
         >
-            <div className="md:px-6 md:pt-6 pb-4 border-b border-border/60">
+            <div className="md:px-6 md:pt-6 pb-3 md:pb-4 border-b border-border/60">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Globe className="w-4 h-4 text-primary" /></div>
                     <h1 className="text-lg font-bold text-foreground">{t('logistics.title')}</h1>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('logistics.description')}</p>
+                <p className="text-sm text-muted-foreground max-md:line-clamp-2">{t('logistics.description')}</p>
             </div>
 
             {apiError && <div role="alert" className="mt-4 p-3 md:mx-6 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/30">{apiError}</div>}
 
-            <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="md:px-6 pt-5 pb-6 space-y-6" noValidate>
-                {/* Coverage Regions */}
+            <form id="step1-logistics-form" onSubmit={handleSubmit(onSubmit)} className="md:px-6 pt-4 md:pt-5 pb-6 space-y-5 md:space-y-6" noValidate>
+                {/* Coverage Regions — the hint is inline from `md` up, behind the ⓘ on a phone. */}
                 <section>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('logistics.coverageTitle')} <span className="text-destructive">*</span></p>
-                    <p className="text-xs text-muted-foreground mb-3">{t('logistics.coverageHint')}</p>
+                    <div className="flex items-center gap-1.5 mb-2 md:mb-1">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('logistics.coverageTitle')} <span className="text-destructive">*</span></p>
+                        <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title: t('logistics.coverageTitle') })}>{t('logistics.coverageHint')}</InfoHint>
+                    </div>
+                    <p className="max-md:hidden text-xs text-muted-foreground mb-3">{t('logistics.coverageHint')}</p>
                     <div role="group" aria-label={t('logistics.coverageGroupLabel')} className="grid grid-cols-2 gap-2">
                         {regions.map(({ key, label }) => {
                             const isChecked = (selectedAreas ?? []).includes(key);
@@ -195,13 +208,16 @@ export function Step1Logistics() {
 
                 {/* HQ Addresses */}
                 <section className="border-t border-border/60 pt-5">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-destructive">*</span></p>
+                    <div className="flex items-center justify-between mb-3 md:mb-1">
+                        <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-destructive">*</span></p>
+                            <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title: t('logistics.headquarters') })}>{t('logistics.addressesHint')}</InfoHint>
+                        </div>
                         <Button type="button" variant="ghost" size="sm" onClick={() => append({ ...EMPTY_HQ })} className="h-7 text-xs gap-1 text-primary hover:text-primary/80">
                             <Plus className="w-3 h-3" /> {t('logistics.addAddress')}
                         </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-4">{t('logistics.addressesHint')}</p>
+                    <p className="max-md:hidden text-xs text-muted-foreground mb-4">{t('logistics.addressesHint')}</p>
                     {errors.headquarters_addresses && !Array.isArray(errors.headquarters_addresses) && (
                         <p className="text-xs text-destructive mb-3" role="alert">{errors.headquarters_addresses.message}</p>
                     )}
@@ -261,7 +277,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
     // parent's `max-md:divide-y` separates it from the next one.
     return (
         <div className={cn(
-            'max-md:py-5 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:overflow-hidden',
+            'max-md:py-4 max-md:first:pt-0 max-md:last:pb-0 md:rounded-xl md:border-2 md:overflow-hidden',
             isPrimary ? 'md:border-primary/25' : 'md:border-border',
         )}>
             <div className={cn(
@@ -284,7 +300,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
             </div>
 
             <div className="space-y-4 md:p-4 md:bg-card">
-                <FieldRow label={t('logistics.findLocation')} required error={addrErrors?.geo?.message}>
+                <FieldRow label={t('logistics.findLocation')} required hint={t('logistics.pinHint')} error={addrErrors?.geo?.message}>
                     <Controller control={control} name={`headquarters_addresses.${index}.geo`} render={({ field }) => (
                         <AddressSearchInput
                             value={field.value ?? null}
@@ -295,7 +311,6 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                             onClear={() => field.onChange(null)}
                         />
                     )} />
-                    <p className="text-[11px] text-muted-foreground">{t('logistics.pinHint')}</p>
                 </FieldRow>
 
                 <FieldRow label={t('logistics.label')} required error={addrErrors?.label?.message}>
@@ -320,20 +335,18 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                 {/* City / region are geo-derived. They only become inputs when the
                     provider returned neither — the backend still requires both. */}
                 {geo && !city && (
-                    <FieldRow label={t('logistics.city')} optional error={addrErrors?.city?.message}>
+                    <FieldRow label={t('logistics.city')} optional hint={t('logistics.cityNotNamed')} error={addrErrors?.city?.message}>
                         <IconInput icon={MapPin} type="text" placeholder={t('logistics.cityPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.city}
                             {...register(`headquarters_addresses.${index}.city`)} />
-                        <p className="text-[11px] text-muted-foreground">{t('logistics.cityNotNamed')}</p>
                     </FieldRow>
                 )}
 
                 {geo && !region && (
-                    <FieldRow label={t('logistics.region')} optional error={addrErrors?.region?.message}>
+                    <FieldRow label={t('logistics.region')} optional hint={t('logistics.regionNotNamed')} error={addrErrors?.region?.message}>
                         <IconInput icon={MapPin} type="text" placeholder={t('logistics.regionPlaceholder')} maxLength={100}
                             hasError={!!addrErrors?.region}
                             {...register(`headquarters_addresses.${index}.region`)} />
-                        <p className="text-[11px] text-muted-foreground">{t('logistics.regionNotNamed')}</p>
                     </FieldRow>
                 )}
 

@@ -172,7 +172,7 @@ export function KycDocumentRow({ doc, onDelete, deleting }: KycDocumentRowProps)
 
       {state.kind === 'ready' && (
         <div className="border-t p-3">
-          <img src={state.url} alt={name} className="max-h-80 w-full rounded-md object-contain" />
+          <img src={state.url} alt={name} className="max-h-56 w-full rounded-md object-contain md:max-h-80" />
         </div>
       )}
 

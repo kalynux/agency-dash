@@ -33,7 +33,7 @@ import { LoadingState, ErrorState } from '@/components/common/state-views';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
 import { MediaPickerTrigger } from '@/components/common/MediaPickerTrigger';
 import { QuotaBlockedBadge } from '@/components/common/QuotaBlockedMedia';
-import { SectionHeading } from '@/components/common/InfoHint';
+import { FieldHint, FieldLabel, SectionHeading } from '@/components/common/InfoHint';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 // import { Badge } from '@/components/ui/badge'; // with the commented-out KycBadge below
@@ -220,6 +220,17 @@ export function ProfileSettings() {
   const avatarUrl = form.avatar ? resolveFileUrl(form.avatar) : null;
   const displayName = form.displayName || t('profile.fallbackName');
   const languageDirty = form.language !== normalizeLanguage(profile.preferredLanguage);
+  const languageHint = languageDirty
+    ? t('profile.localization.languagePreviewHint')
+    : t('profile.localization.languageHint');
+  const phoneUnverified = !!profile.phone && !profile.phoneVerified;
+  const securityLink = (
+    <Link to="/dashboard/account/security" className="underline">
+      {t('profile.identity.securityLink')}
+    </Link>
+  );
+  const emailHint = <>{t('profile.identity.emailLocked')} {securityLink}</>;
+  const phoneHint = <>{t('profile.identity.phoneLocked')} {securityLink}</>;
 
   return (
     <div className={sectionGroupClass}>
@@ -238,7 +249,7 @@ export function ProfileSettings() {
         />
         <CardContent className="space-y-6 max-md:px-0">
           {/* Avatar — the picture itself opens the media library. */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
             <div className="relative shrink-0">
               <MediaPickerTrigger
                 label={t('common:media.changePhoto')}
@@ -246,7 +257,7 @@ export function ProfileSettings() {
                 onSelect={(media) => set('avatar', media)}
                 className="rounded-full ring-2 ring-border"
               >
-                <Avatar className="w-24 h-24">
+                <Avatar className="w-16 h-16 md:w-24 md:h-24">
                   {avatarBlocked ? (
                     // Deliberately not the initials circle: that reads as "this
                     // agency has no avatar", which is a different and wrong
@@ -277,20 +288,22 @@ export function ProfileSettings() {
                 </button>
               )}
             </div>
-            <div className="space-y-1">
-              <p className="font-medium">{displayName}</p>
-              <p className="text-sm text-muted-foreground">{profile.email ?? '—'}</p>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="min-w-0 space-y-1">
+              <p className="truncate font-medium">{displayName}</p>
+              <p className="truncate text-sm text-muted-foreground">{profile.email ?? '—'}</p>
+              {/* Two lines of explanation beside a 64px avatar on a phone is
+                  most of the block; the picture already says "tap to change". */}
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground max-md:hidden">
                 <StoreIcon className="w-3 h-3" />
                 {t('profile.identity.storeHint')}
               </p>
-              <p className="pt-1 text-xs text-muted-foreground">{t('profile.identity.avatarHint')}</p>
+              <p className="pt-1 text-xs text-muted-foreground max-md:hidden">{t('profile.identity.avatarHint')}</p>
             </div>
           </div>
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
             <div className="space-y-2">
               <Label htmlFor="agency-displayname">{t('profile.identity.displayName')}</Label>
               <Input
@@ -304,22 +317,21 @@ export function ProfileSettings() {
               {nameError && <p className="text-xs text-destructive">{nameError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">{t('profile.identity.email')}</Label>
+              <FieldLabel htmlFor="email" hint={emailHint}>
+                {t('profile.identity.email')}
+              </FieldLabel>
               <div className="relative">
                 <Input id="email" type="email" value={profile.email ?? ''} readOnly disabled />
                 {profile.emailVerified && (
                   <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t('profile.identity.emailLocked')}{' '}
-                <Link to="/dashboard/account/security" className="underline">
-                  {t('profile.identity.securityLink')}
-                </Link>
-              </p>
+              <FieldHint>{emailHint}</FieldHint>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">{t('profile.identity.phone')}</Label>
+              <FieldLabel htmlFor="phone" hint={phoneUnverified ? undefined : phoneHint}>
+                {t('profile.identity.phone')}
+              </FieldLabel>
               <div className="relative">
                 <Input
                   id="phone"
@@ -338,7 +350,8 @@ export function ProfileSettings() {
                   `phoneVerified` — it holds no messaging connection, which was
                   the only proof there was. So an unverified number is now worth
                   saying out loud, with the one screen that can fix it. */}
-              {profile.phone && !profile.phoneVerified ? (
+              {phoneUnverified ? (
+                // A state to act on, not help — visible at every width.
                 <p className="text-xs text-warning">
                   {t('profile.identity.phoneUnverified')}{' '}
                   <Link to="/dashboard/account/security" className="underline">
@@ -346,12 +359,7 @@ export function ProfileSettings() {
                   </Link>
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  {t('profile.identity.phoneLocked')}{' '}
-                  <Link to="/dashboard/account/security" className="underline">
-                    {t('profile.identity.securityLink')}
-                  </Link>
-                </p>
+                <FieldHint>{phoneHint}</FieldHint>
               )}
             </div>
           </div>
@@ -367,22 +375,22 @@ export function ProfileSettings() {
           short={t('profile.localization.short')}
         />
         <CardContent className="max-md:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4">
             <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 text-muted-foreground">
-                <Lock className="w-3 h-3" /> {t('profile.localization.country')}
-              </Label>
+              <FieldLabel hint={t('profile.localization.countryLocked')}>
+                <Lock className="w-3 h-3 text-muted-foreground" /> {t('profile.localization.country')}
+              </FieldLabel>
               <Input
                 value={profile.country ?? t('common:values.notAvailable')}
                 disabled
                 readOnly
                 aria-label={t('profile.localization.countryAria')}
               />
-              <p className="text-xs text-muted-foreground">{t('profile.localization.countryLocked')}</p>
+              <FieldHint>{t('profile.localization.countryLocked')}</FieldHint>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="agency-timezone" className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> {t('profile.localization.timezone')}
+              <Label htmlFor="agency-timezone" className="flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-muted-foreground" /> {t('profile.localization.timezone')}
               </Label>
               <Select value={form.timezone} onValueChange={(v) => set('timezone', v)}>
                 <SelectTrigger id="agency-timezone">
@@ -398,7 +406,9 @@ export function ProfileSettings() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="agency-language">{t('profile.localization.language')}</Label>
+              <FieldLabel htmlFor="agency-language" hint={languageHint}>
+                {t('profile.localization.language')}
+              </FieldLabel>
               <Select value={form.language} onValueChange={(v) => pickLanguage(v as Language)}>
                 <SelectTrigger id="agency-language">
                   <SelectValue placeholder={t('profile.localization.languagePlaceholder')} />
@@ -413,11 +423,7 @@ export function ProfileSettings() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {languageDirty
-                  ? t('profile.localization.languagePreviewHint')
-                  : t('profile.localization.languageHint')}
-              </p>
+              <FieldHint>{languageHint}</FieldHint>
             </div>
           </div>
         </CardContent>

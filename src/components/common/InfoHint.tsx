@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 /**
@@ -120,6 +121,53 @@ export function SectionHeading({
       {short && <CardDescription className="md:hidden">{short}</CardDescription>}
     </CardHeader>
   );
+}
+
+/**
+ * A form field's label, with its helper text behind an ⓘ on mobile.
+ *
+ * The field-level half of `SectionHeading`'s bargain. A settings form on a
+ * phone that carries a sentence under every input reads as a page of prose
+ * with a few boxes in it; the label plus an ⓘ keeps the explanation one tap
+ * away. Pair with {@link FieldHint} carrying the same text, which renders it
+ * inline on desktop — where there is room — and nowhere on mobile.
+ *
+ * Only for *neutral* help. A warning, an error or a state the user has to act
+ * on ("this number is not verified") stays visible at every width.
+ */
+export function FieldLabel({
+  htmlFor,
+  hint,
+  children,
+  className,
+}: {
+  htmlFor?: string;
+  /** Mobile-only ⓘ content. Omit for a plain label. */
+  hint?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  const { t } = useTranslation('common');
+  return (
+    <div className={cn('flex min-h-5 items-center gap-1.5', className)}>
+      <Label htmlFor={htmlFor} className="leading-snug">
+        {children}
+      </Label>
+      {hint && (
+        <InfoHint
+          className="md:hidden"
+          label={typeof children === 'string' ? t('form.aboutSection', { title: children }) : undefined}
+        >
+          {hint}
+        </InfoHint>
+      )}
+    </div>
+  );
+}
+
+/** The desktop half of {@link FieldLabel}: inline helper text, hidden below `md`. */
+export function FieldHint({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn('max-md:hidden text-xs text-muted-foreground', className)}>{children}</p>;
 }
 
 /**
