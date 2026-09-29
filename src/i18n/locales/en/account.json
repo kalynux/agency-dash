@@ -423,5 +423,12 @@
     "body": "Verify your phone number to finish activating it — we send a six-digit code on WhatsApp and it takes a minute. You can keep using the dashboard in the meantime.",
     "bodyPhoneVerified": "Your phone is verified but the account has not been activated. Contact support if this does not clear shortly.",
     "cta": "Verify my phone"
+  },
+  "agentContract": {
+    "title": "You don't have an agent under contract yet",
+    "body": "Shipments are delivered by your agents. Find one in the directory and send them a contract request.",
+    "bodyPending": "A contract request is still waiting on an answer. Nobody can deliver for you until one is accepted.",
+    "cta": "Find an agent",
+    "ctaPending": "View requests"
   }
 }

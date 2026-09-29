@@ -40,7 +40,9 @@ export function ActivationNotice() {
   if (!awaitingActivation) return null;
 
   return (
-    <Card className="border-gold-400/50 bg-gold-50/70 dark:border-gold-500/25 dark:bg-gold-500/10">
+    // `py-0`: the Card's own `py-6` stacks on the content's `p-4` and left a
+    // tall empty band above and below a two-line banner.
+    <Card className="py-0 border-gold-400/50 bg-gold-50/70 dark:border-gold-500/25 dark:bg-gold-500/10">
       <CardContent className="flex flex-wrap items-start gap-3 p-4">
         <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-gold-700 dark:text-gold-400" />
         <div className="min-w-0 flex-1 space-y-1">

@@ -423,5 +423,12 @@
     "body": "Vérifiez votre numéro de téléphone pour terminer son activation — nous envoyons un code à six chiffres sur WhatsApp, cela prend une minute. Vous pouvez continuer à utiliser le tableau de bord entre-temps.",
     "bodyPhoneVerified": "Votre téléphone est vérifié mais le compte n'a pas été activé. Contactez le support si cela ne se règle pas rapidement.",
     "cta": "Vérifier mon téléphone"
+  },
+  "agentContract": {
+    "title": "Vous n'avez encore aucun agent sous contrat",
+    "body": "Les livraisons sont assurées par vos agents. Trouvez-en un dans l'annuaire et envoyez-lui une demande de contrat.",
+    "bodyPending": "Une demande de contrat attend encore une réponse. Personne ne peut livrer pour vous tant qu'elle n'est pas acceptée.",
+    "cta": "Trouver un agent",
+    "ctaPending": "Voir les demandes"
   }
 }

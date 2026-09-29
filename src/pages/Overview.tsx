@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShipmentStatusBadge } from '@/components/shipments/ShipmentStatusBadge';
 import { ActivationNotice } from '@/components/common/ActivationNotice';
+import { AgentContractNotice } from '@/components/common/AgentContractNotice';
 import { useEarnings } from '@/hooks/useEarnings';
 import { useResource } from '@/hooks/useResource';
 import { useShipments } from '@/store/shipments.store';
@@ -167,6 +168,8 @@ export function Overview() {
           all, which outranks any figure below it. Renders nothing for an agency
           that is already active — which is every agency after its first minute. */}
       <ActivationNotice />
+      {/* Until one agent is under contract nothing below can move. */}
+      <AgentContractNotice />
 
       {/* Metrics — one filled hero (money), three supporting counts. 2×2 on phones. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
