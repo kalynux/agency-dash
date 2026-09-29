@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import { KycDocumentRow } from './KycDocumentRow';
 import type { KycDocumentRef, KycDocumentSlot } from '@/types/kyc.types';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export interface KycDocumentSlotCardProps {
@@ -105,26 +104,24 @@ export function KycDocumentSlotCard({
   const description = t(`verification.slots.${slot}.description` as never) as string;
 
   return (
-    <div className="space-y-3 rounded-lg border p-3 md:p-4">
+    <div className="space-y-3 md:rounded-lg md:border md:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-medium">
             {title}
             {/* What the slot wants, and why a conditional one is (not) asked
-                for: inline on desktop, one tap away on a phone. The badge
-                beside it already says Required / Optional at every width. */}
+                for: inline on desktop, one tap away on a phone. Required is
+                the norm, so only an optional slot is marked — "(optional)"
+                after the title, like every other form, instead of a pill on
+                nearly every slot. */}
             <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title })}>
               {description}
               {conditionNote && <span className="mt-2 block">{conditionNote}</span>}
             </InfoHint>
-            {required ? (
-              <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400">
-                {t('verification.checklist.required')}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-muted-foreground">
-                {t('verification.checklist.optional')}
-              </Badge>
+            {!required && (
+              <span className="font-normal lowercase text-muted-foreground">
+                ({t('verification.checklist.optional')})
+              </span>
             )}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground max-md:hidden">{description}</p>

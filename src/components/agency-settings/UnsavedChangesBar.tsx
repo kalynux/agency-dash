@@ -62,8 +62,10 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
         </span>
-        <p className="min-w-0 flex-1 truncate text-xs font-medium md:flex-none md:text-sm">
-          {t('states.unsavedChanges')}
+        <p className="min-w-0 flex-1 truncate text-sm font-medium md:flex-none">
+          {/* The full label truncated to "Modifications n…" on a phone. */}
+          <span className="md:hidden">{t('states.unsavedShort')}</span>
+          <span className="max-md:hidden">{t('states.unsavedChanges')}</span>
         </p>
         <div className="flex flex-shrink-0 items-center gap-1 md:gap-1.5">
           <Button
@@ -83,7 +85,8 @@ export function UnsavedChangesBar({ visible, saving, onDiscard, onSave }: Unsave
             onClick={onSave}
             disabled={saving}
           >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {/* No icon on a phone unless saving — the room goes to the label. */}
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 max-md:hidden" />}
             {/* "Save changes" costs ~50px the 360px pill can't spare. */}
             <span className="md:hidden">{t('actions.save')}</span>
             <span className="max-md:hidden">{t('actions.saveChanges')}</span>

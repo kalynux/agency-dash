@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building, Info, Lock, Plus, Trash2 } from 'lucide-react';
+import { Info, Lock, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useResource } from '@/hooks/useResource';
@@ -103,6 +103,12 @@ function emptyEntry(): HqFormEntry {
     original: null,
     pristine: false,
   };
+}
+
+/** A row nobody has typed into or pinned yet. */
+function isBlankEntry(entry: HqFormEntry): boolean {
+  return !entry.geo && [entry.label, entry.address_description, entry.phone, entry.email, entry.region, entry.city]
+    .every((v) => v.trim() === '');
 }
 
 function toForm(magazin: AgencyMagazin): FormState {
@@ -277,16 +283,13 @@ function AddressRowHeading({
     // From `md` up, negative margins pull the band out to the card's own `p-4`
     // edges. On a phone there is no card, so it is a plain title row.
     <div className="flex items-center justify-between gap-2 md:-mx-4 md:-mt-4 md:rounded-t-lg md:border-b md:bg-muted/40 md:px-4 md:py-2.5">
-      <span className="flex min-w-0 items-center gap-2">
-        <Building className="w-4 h-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold leading-tight">{name || role}</span>
-          {name && (
-            <span className="block truncate text-[11px] leading-tight text-muted-foreground">
-              {role}
-            </span>
-          )}
-        </span>
+      <span className="min-w-0">
+        <span className="block truncate text-base font-semibold leading-tight md:text-sm">{name || role}</span>
+        {name && (
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            {role}
+          </span>
+        )}
       </span>
       {onRemove && (
         <button
@@ -416,8 +419,11 @@ export function LocationsSettings() {
   const dirty = useMemo(() => {
     if (!magazin || !form) return false;
     if (!sameCoverage(form.coverageAreas, magazin.coverageAreas ?? [])) return true;
-    if (form.addresses.length !== (magazin.headquartersAddresses ?? []).length) return true;
-    return form.addresses.some((entry) => !entry.pristine);
+    // With nothing stored, `toForm` seeds one blank row so there is a form to
+    // fill. That row is not an edit — counting it showed the save bar on load.
+    const entries = form.addresses.filter((entry) => entry.original || !isBlankEntry(entry));
+    if (entries.length !== (magazin.headquartersAddresses ?? []).length) return true;
+    return entries.some((entry) => !entry.pristine);
   }, [magazin, form]);
 
   const handleDiscard = useCallback(() => {
@@ -543,9 +549,6 @@ export function LocationsSettings() {
                   {t('locations.addressesHint')}
                 </InfoHint>
               </Label>
-              <Button type="button" variant="outline" size="sm" onClick={addAddress} className="gap-1">
-                <Plus className="w-3.5 h-3.5" /> {t('locations.addAddress')}
-              </Button>
             </div>
             <p className="mb-3 text-xs text-muted-foreground max-md:hidden">
               {t('locations.addressesHint')}
@@ -574,12 +577,6 @@ export function LocationsSettings() {
 
                   {/* Address search — fills everything below and pins the coordinates */}
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5">
-                      {/* {t('locations.findAddress')} */}
-                      <InfoHint className="md:hidden" label={t('locations.findAddressAboutLabel')}>
-                        {t('locations.findAddressHint')}
-                      </InfoHint>
-                    </Label>
                     <AddressSearchInput
                       value={entry.geo}
                       country={geoBias}
@@ -593,8 +590,11 @@ export function LocationsSettings() {
                     ) : entry.geo ? null : entry.original ? (
                       <p className="text-xs text-amber-600">{t('locations.legacyNoPin')}</p>
                     ) : (
-                      <p className="text-xs text-muted-foreground max-md:hidden">
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
                         {t('locations.pinRequired')}
+                        <InfoHint className="md:hidden" label={t('locations.findAddressAboutLabel')}>
+                          {t('locations.findAddressHint')}
+                        </InfoHint>
                       </p>
                     )}
                   </div>
@@ -742,6 +742,15 @@ export function LocationsSettings() {
                 </div>
               ))}
             </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addAddress}
+              className="mt-4 h-11 w-full gap-1.5 border-dashed"
+            >
+              <Plus className="size-4" /> {t('locations.addAddress')}
+            </Button>
           </div>
         </CardContent>
       </Card>

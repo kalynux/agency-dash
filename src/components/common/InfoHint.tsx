@@ -76,15 +76,22 @@ export function InfoHint({
  * explain it ("Regions you serve", not "The regions you serve and your
  * headquarters addresses"). Without `short`, the description renders as-is at
  * every width.
+ *
+ * On a phone the `short` line itself is no longer printed (2026-09-29, the same
+ * rule as the vendor dashboard): a subtitle under every heading restated the
+ * title and was most of what made these forms read as a wall of text. `short`
+ * still decides that the description moves behind the ⓘ there. `icon` is
+ * accepted for existing call sites but not drawn — an icon beside every
+ * heading read as decoration.
  */
 export function SectionHeading({
-  icon: Icon,
   title,
   description,
   short,
   action,
   className,
 }: {
+  /** @deprecated Not drawn — see above. */
   icon?: ElementType;
   title: ReactNode;
   description?: ReactNode;
@@ -98,7 +105,6 @@ export function SectionHeading({
     <CardHeader className={cn('max-md:px-0', className)}>
       <div className="flex items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2">
-          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
           {title}
           {description && short && (
             <InfoHint
@@ -118,7 +124,6 @@ export function SectionHeading({
       {description && (
         <CardDescription className={cn(short && 'max-md:hidden')}>{description}</CardDescription>
       )}
-      {short && <CardDescription className="md:hidden">{short}</CardDescription>}
     </CardHeader>
   );
 }

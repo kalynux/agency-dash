@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
-  Clock,
   Globe,
-  Lock,
   Store as StoreIcon,
   X,
 } from 'lucide-react';
@@ -378,7 +376,7 @@ export function ProfileSettings() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4">
             <div className="space-y-2">
               <FieldLabel hint={t('profile.localization.countryLocked')}>
-                <Lock className="w-3 h-3 text-muted-foreground" /> {t('profile.localization.country')}
+                {t('profile.localization.country')}
               </FieldLabel>
               <Input
                 value={profile.country ?? t('common:values.notAvailable')}
@@ -390,7 +388,7 @@ export function ProfileSettings() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="agency-timezone" className="flex items-center gap-1.5">
-                <Clock className="w-3 h-3 text-muted-foreground" /> {t('profile.localization.timezone')}
+                {t('profile.localization.timezone')}
               </Label>
               <Select value={form.timezone} onValueChange={(v) => set('timezone', v)}>
                 <SelectTrigger id="agency-timezone">

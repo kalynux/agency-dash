@@ -12,7 +12,6 @@ import {
   X,
   Store as StoreIcon,
   Mail,
-  CalendarDays,
   LifeBuoy,
   Info,
   UserCog,
@@ -45,7 +44,6 @@ import { QuotaBlockedBadge } from '@/components/common/QuotaBlockedMedia';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import {
@@ -474,12 +472,11 @@ export function MagazinSettings() {
               // The emptied description row would otherwise still open the gap.
               className="max-md:gap-0"
             />
-            <CardContent className="space-y-4 max-md:px-0">
-              <DetailRow icon={CalendarDays} label={t('store.details.lastUpdated')}>
+            <CardContent className="divide-y max-md:px-0">
+              <DetailRow label={t('store.details.lastUpdated')}>
                 <span className="text-sm">{formatDate(magazin.updatedAt)}</span>
               </DetailRow>
-              <Separator />
-              <DetailRow icon={CalendarDays} label={t('store.details.created')}>
+              <DetailRow label={t('store.details.created')}>
                 <span className="text-sm">{formatDate(magazin.createdAt)}</span>
               </DetailRow>
             </CardContent>
@@ -539,22 +536,18 @@ function FieldError({ id, message }: { id?: string; message?: string }) {
   return <p id={id} className="text-xs text-destructive">{message}</p>;
 }
 
-/** Labeled read-only row in the "Details" card. */
+/** Read-only "label … value" row in the "Details" card. */
 function DetailRow({
-  icon: Icon,
   label,
   children,
 }: {
-  icon: LucideIcon;
   label: string;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <Icon className="w-3 h-3" /> {label}
-      </p>
-      {children}
+    <div className="flex min-h-11 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="min-w-0 text-end">{children}</div>
     </div>
   );
 }

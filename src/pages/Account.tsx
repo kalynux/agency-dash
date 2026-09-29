@@ -1,3 +1,5 @@
+import { PHONE_FIELDS } from '@/components/agency-settings/phoneFields';
+import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -46,7 +48,7 @@ export function Account() {
       tabs={VALID_TABS}
       active={activeTab}
       toPath={(next) => `/dashboard/account/${next}`}
-      className="space-y-6 animate-fade-in"
+      className={cn('space-y-6 animate-fade-in', PHONE_FIELDS)}
     >
       {/* The crumb names the parent menu; the copy under it belongs to the tab
           you are actually on, not to "Account" as a whole. */}

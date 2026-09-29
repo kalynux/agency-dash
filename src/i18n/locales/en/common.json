@@ -64,6 +64,7 @@
     "saved": "Saved",
     "savedChanges": "Your changes have been saved.",
     "unsavedChanges": "You have unsaved changes",
+    "unsavedShort": "Not saved",
     "processing": "Working on it…"
   },
   "filters": {

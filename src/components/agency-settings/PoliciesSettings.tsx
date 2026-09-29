@@ -3,16 +3,16 @@ import { useForm, Controller, type DefaultValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { DollarSign, RotateCcw, AlertTriangle, Banknote, FileText, ShieldAlert, X } from 'lucide-react';
+import { FileText, ShieldAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { MediaPicker } from '@/components/features/MediaPicker';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChoiceChips } from '@/components/ui/choice-chips';
+import { UnitInput } from '@/components/ui/unit-input';
 import { Separator } from '@/components/ui/separator';
 import { InfoHint } from '@/components/common/InfoHint';
 import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBar';
@@ -39,6 +39,9 @@ import { cn } from '@/lib/utils';
  *
  * Unlike the rest of this mobile pass, these show at every width: the
  * information is new, so hiding it on desktop would put it out of reach there.
+ *
+ * The three free-text notes fields have none (2026-09-29): their placeholder
+ * already shows what goes there, and an ⓘ that says "notes" is noise.
  */
 const POLICY_FIELD_HINTS: Record<string, string> = {
   // Storage-based — you hold the stock
@@ -60,7 +63,6 @@ const POLICY_FIELD_HINTS: Record<string, string> = {
   'pricing.additional_fees.failed_delivery_fee': 'failedDeliveryFee',
   'pricing.additional_fees.rto_fee': 'rtoFee',
   'pricing.additional_fees.peak_season_surcharge': 'peakSeasonSurcharge',
-  'pricing.notes': 'pricingNotes',
 
   // Cash on delivery
   'cod.enabled': 'codEnabled',
@@ -70,12 +72,10 @@ const POLICY_FIELD_HINTS: Record<string, string> = {
   'returns.payer': 'returnsPayer',
   'returns.handling_fee': 'returnsHandlingFee',
   'returns.return_window_days': 'returnsWindowDays',
-  'returns.notes': 'returnsNotes',
 
   // Damage
   'damage.claim_deadline_days': 'damageClaimDeadline',
   'damage.max_refund_per_item': 'damageMaxRefund',
-  'damage.notes': 'damageNotes',
 };
 
 /** A field label with its ⓘ, wired to {@link POLICY_FIELD_HINTS} by form path. */
@@ -114,26 +114,39 @@ function ToggleLabel({ name, children }: { name: string; children: React.ReactNo
   );
 }
 
+/** A money field — "XAF" written inside the box, not in the label. */
+function MoneyInput(props: Omit<React.ComponentProps<typeof UnitInput>, 'unit'>) {
+  const { t } = useTranslation('settings');
+  return <UnitInput type="number" inputMode="decimal" min={0} unit={t('policies.unitCurrency')} {...props} />;
+}
+
+/** A day count — "days" written inside the box. */
+function DaysInput(props: Omit<React.ComponentProps<typeof UnitInput>, 'unit'>) {
+  const { t } = useTranslation('settings');
+  return <UnitInput type="number" inputMode="numeric" min={0} unit={t('policies.unitDays')} {...props} />;
+}
+
 function Section({
-  icon: Icon,
   title,
   description,
   short,
   children,
 }: {
-  icon: React.ElementType;
   title: string;
   description?: string;
-  /** Mobile stand-in for `description`; the full text moves behind the ⓘ. */
+  /**
+   * Moves `description` behind the ⓘ on a phone. The short line itself is no
+   * longer printed there (same rule as the vendor dashboard: a subtitle under
+   * every heading was most of what made this form read as prose).
+   */
   short?: string;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation('settings');
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-muted-foreground" />
-        <h4 className="font-medium">{title}</h4>
+      <div className="flex items-center gap-1.5">
+        <h4 className="text-base font-semibold">{title}</h4>
         {description && short && (
           <InfoHint className="md:hidden" label={t('policies.aboutSection', { title })}>
             {description}
@@ -145,7 +158,6 @@ function Section({
           {description}
         </p>
       )}
-      {short && <p className="text-sm text-muted-foreground -mt-2 md:hidden">{short}</p>}
       {children}
     </div>
   );
@@ -284,7 +296,6 @@ export function PoliciesSettings() {
 
         <form onSubmit={submit} className="space-y-6 md:space-y-8" noValidate>
           <Section
-            icon={DollarSign}
             title={t('policies.pricing.title')}
             description={t('policies.pricing.description')}
             short={t('policies.pricing.short')}
@@ -304,26 +315,26 @@ export function PoliciesSettings() {
                     <FieldLabel name="pricing.storage_based.monthly_storage_fee_per_sku">
                       {t('policies.pricing.monthlyStorageFee')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.storage_based.monthly_storage_fee_per_sku')} />
+                    <MoneyInput {...register('pricing.storage_based.monthly_storage_fee_per_sku')} />
                     {pe?.storage_based?.monthly_storage_fee_per_sku && <p className="text-xs text-red-500">{pe.storage_based.monthly_storage_fee_per_sku.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.pick_pack_fee_per_order">
                       {t('policies.pricing.pickPackFee')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.storage_based.pick_pack_fee_per_order')} />
+                    <MoneyInput {...register('pricing.storage_based.pick_pack_fee_per_order')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.local_delivery_fee">
                       {t('policies.pricing.localDeliveryFee')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.storage_based.local_delivery_fee')} />
+                    <MoneyInput {...register('pricing.storage_based.local_delivery_fee')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.storage_based.out_of_region_delivery_fee">
                       {t('policies.pricing.outOfRegionDeliveryFee')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.storage_based.out_of_region_delivery_fee')} />
+                    <MoneyInput {...register('pricing.storage_based.out_of_region_delivery_fee')} />
                   </div>
                 </div>
               )}
@@ -346,19 +357,19 @@ export function PoliciesSettings() {
                     <FieldLabel name="pricing.pickup_based.base_rate_first_kg">
                       {t('policies.pricing.baseRateFirstKg')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.pickup_based.base_rate_first_kg')} />
+                    <MoneyInput {...register('pricing.pickup_based.base_rate_first_kg')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.pickup_based.additional_per_kg">
                       {t('policies.pricing.additionalPerKg')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.pickup_based.additional_per_kg')} />
+                    <MoneyInput {...register('pricing.pickup_based.additional_per_kg')} />
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel name="pricing.pickup_based.out_of_region_surcharge">
                       {t('policies.pricing.outOfRegionSurcharge')}
                     </FieldLabel>
-                    <Input type="number" min={0} {...register('pricing.pickup_based.out_of_region_surcharge')} />
+                    <MoneyInput {...register('pricing.pickup_based.out_of_region_surcharge')} />
                   </div>
                 </div>
               )}
@@ -377,20 +388,29 @@ export function PoliciesSettings() {
                     {t('policies.pricing.codFeeType')}
                   </FieldLabel>
                   <Controller control={control} name="pricing.additional_fees.cod_handling_fee.type" render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger><SelectValue placeholder={t('policies.pricing.codFeeTypePlaceholder')} /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">{t('policies.pricing.codFeeTypePercentage')}</SelectItem>
-                        <SelectItem value="fixed">{t('policies.pricing.codFeeTypeFixed')}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ChoiceChips
+                      label={t('policies.pricing.codFeeType')}
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={[
+                        { value: 'percentage', label: t('policies.pricing.codFeeTypePercentage') },
+                        { value: 'fixed', label: t('policies.pricing.codFeeTypeFixed') },
+                      ]}
+                    />
                   )} />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.cod_handling_fee.value">
                     {t('policies.pricing.codFeeValue')}
                   </FieldLabel>
-                  <Input type="number" min={0} placeholder={t('policies.pricing.codFeeValuePlaceholder')} {...register('pricing.additional_fees.cod_handling_fee.value')} />
+                  <UnitInput
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    unit={values.pricing?.additional_fees?.cod_handling_fee?.type === 'fixed' ? t('policies.unitCurrency') : '%'}
+                    placeholder={t('policies.pricing.codFeeValuePlaceholder')}
+                    {...register('pricing.additional_fees.cod_handling_fee.value')}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -398,19 +418,19 @@ export function PoliciesSettings() {
                   <FieldLabel name="pricing.additional_fees.failed_delivery_fee">
                     {t('policies.pricing.failedDeliveryFee')}
                   </FieldLabel>
-                  <Input type="number" min={0} {...register('pricing.additional_fees.failed_delivery_fee')} />
+                  <MoneyInput {...register('pricing.additional_fees.failed_delivery_fee')} />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.rto_fee">
                     {t('policies.pricing.rtoFee')}
                   </FieldLabel>
-                  <Input type="number" min={0} {...register('pricing.additional_fees.rto_fee')} />
+                  <MoneyInput {...register('pricing.additional_fees.rto_fee')} />
                 </div>
                 <div className="space-y-1.5">
                   <FieldLabel name="pricing.additional_fees.peak_season_surcharge">
                     {t('policies.pricing.peakSeasonSurcharge')}
                   </FieldLabel>
-                  <Input type="number" min={0} placeholder="0" {...register('pricing.additional_fees.peak_season_surcharge')} />
+                  <MoneyInput placeholder="0" {...register('pricing.additional_fees.peak_season_surcharge')} />
                 </div>
               </div>
             </div>
@@ -424,7 +444,6 @@ export function PoliciesSettings() {
           <Separator />
 
           <Section
-            icon={Banknote}
             title={t('policies.cod.title')}
             description={t('policies.cod.description')}
             short={t('policies.cod.short')}
@@ -463,7 +482,7 @@ export function PoliciesSettings() {
             {codEnabled && (
               <div className="space-y-1.5">
                 <FieldLabel name="cod.max_order_amount">{t('policies.cod.maxAmount')}</FieldLabel>
-                <Input type="number" min={0} placeholder={t('policies.cod.maxAmountPlaceholder')} {...register('cod.max_order_amount')} />
+                <MoneyInput placeholder={t('policies.cod.maxAmountPlaceholder')} {...register('cod.max_order_amount')} />
                 {errors.cod?.max_order_amount && <p className="text-xs text-red-500">{errors.cod.max_order_amount.message}</p>}
               </div>
             )}
@@ -471,29 +490,31 @@ export function PoliciesSettings() {
 
           <Separator />
 
-          <Section icon={RotateCcw} title={t('policies.returns.title')}>
+          <Section title={t('policies.returns.title')}>
             <div className="space-y-1.5">
               <FieldLabel name="returns.payer">{t('policies.returns.payer')}</FieldLabel>
               <Controller control={control} name="returns.payer" render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t('policies.returns.payerPlaceholder')} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vendor">{t('policies.returns.payerVendor')}</SelectItem>
-                    <SelectItem value="agency">{t('policies.returns.payerAgency')}</SelectItem>
-                    <SelectItem value="customer">{t('policies.returns.payerCustomer')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ChoiceChips
+                  label={t('policies.returns.payer')}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: 'vendor', label: t('policies.returns.payerVendor') },
+                    { value: 'agency', label: t('policies.returns.payerAgency') },
+                    { value: 'customer', label: t('policies.returns.payerCustomer') },
+                  ]}
+                />
               )} />
               {re?.payer && <p className="text-xs text-red-500">{re.payer.message}</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <FieldLabel name="returns.handling_fee">{t('policies.returns.handlingFee')}</FieldLabel>
-                <Input type="number" min={0} {...register('returns.handling_fee')} />
+                <MoneyInput {...register('returns.handling_fee')} />
               </div>
               <div className="space-y-1.5">
                 <FieldLabel name="returns.return_window_days">{t('policies.returns.windowDays')}</FieldLabel>
-                <Input type="number" min={0} placeholder="7" {...register('returns.return_window_days')} />
+                <DaysInput placeholder="7" {...register('returns.return_window_days')} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -504,15 +525,15 @@ export function PoliciesSettings() {
 
           <Separator />
 
-          <Section icon={AlertTriangle} title={t('policies.damage.title')}>
+          <Section title={t('policies.damage.title')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <FieldLabel name="damage.claim_deadline_days">{t('policies.damage.claimDeadline')}</FieldLabel>
-                <Input type="number" min={0} placeholder="7" {...register('damage.claim_deadline_days')} />
+                <DaysInput placeholder="7" {...register('damage.claim_deadline_days')} />
               </div>
               <div className="space-y-1.5">
                 <FieldLabel name="damage.max_refund_per_item">{t('policies.damage.maxRefund')}</FieldLabel>
-                <Input type="number" min={0} {...register('damage.max_refund_per_item')} />
+                <MoneyInput {...register('damage.max_refund_per_item')} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -525,7 +546,6 @@ export function PoliciesSettings() {
           <Separator />
 
           <Section
-            icon={FileText}
             title={t('policies.documents.title')}
             description={t('policies.documents.description')}
             short={t('policies.documents.short')}
@@ -533,12 +553,12 @@ export function PoliciesSettings() {
             {documents.length > 0 && (
               <div className="space-y-1">
                 {documents.map((url, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm rounded-md border px-2 py-1">
+                  <div key={i} className="flex min-h-11 items-center gap-2 text-sm rounded-lg border px-3">
                     <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <a href={url} target="_blank" rel="noopener noreferrer" className="truncate flex-1 hover:underline">
                       {url.split('/').pop() ?? t('policies.documents.fallbackName', { number: i + 1 })}
                     </a>
-                    <button type="button" onClick={() => setDocuments((prev) => prev.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                    <button type="button" aria-label={t('common:actions.remove')} onClick={() => setDocuments((prev) => prev.filter((_, idx) => idx !== i))} className="inline-flex h-9 w-9 -me-2 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive">
                       <X className="w-4 h-4" />
                     </button>
                   </div>

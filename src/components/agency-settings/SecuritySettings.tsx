@@ -8,7 +8,6 @@ import { FieldHint, FieldLabel, InfoHint, SectionHeading } from '@/components/co
 import { ContactChangeCard } from '@/components/agency-settings/ContactChangeCard';
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
@@ -95,40 +94,15 @@ export function SecuritySettings() {
         <HintedSectionHeading
           icon={Shield}
           name={t('security.twoFactor.title')}
-          title={
-            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-              {t('security.twoFactor.title')}
-              <Badge
-                variant="secondary"
-                className="border-warning/30 bg-warning/12 font-semibold text-warning"
-              >
-                {t('security.twoFactor.comingSoon')}
-              </Badge>
-            </span>
-          }
+          title={t('security.twoFactor.title')}
           description={t('security.twoFactor.description')}
         />
+        {/* Not built yet — one quiet line (as on the vendor dashboard) rather
+            than a badge, a dashed box and a switch that does nothing. Plain
+            text is also read out by a screen reader, which a disabled switch
+            was skipped for. */}
         <CardContent className="max-md:px-0">
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed bg-muted/30 p-3">
-            <div className="min-w-0">
-              <p className="font-medium text-muted-foreground">{t('security.twoFactor.enable')}</p>
-              {/* On a phone the "Coming soon" badge in the heading is the
-                  sentence that says why; this line only repeats it. */}
-              <p className="text-sm text-muted-foreground max-md:hidden">
-                {t('security.twoFactor.notAvailable')}
-              </p>
-            </div>
-            {/* `aria-disabled` rather than the bare `disabled` it also carries:
-                a disabled control is skipped by a screen reader's form
-                navigation entirely, so the one thing a non-sighted user would
-                learn here — that 2FA exists and is not ready — disappears. */}
-            <Switch
-              disabled
-              aria-disabled="true"
-              aria-label={t('security.twoFactor.enableAria')}
-              className="shrink-0"
-            />
-          </div>
+          <p className="text-sm text-muted-foreground">{t('security.twoFactor.comingSoon')}</p>
         </CardContent>
       </Card>
     </div>

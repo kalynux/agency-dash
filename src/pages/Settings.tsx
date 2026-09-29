@@ -1,3 +1,5 @@
+import { PHONE_FIELDS } from '@/components/agency-settings/phoneFields';
+import { cn } from '@/lib/utils';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PoliciesSettings } from '@/components/agency-settings/PoliciesSettings';
@@ -22,7 +24,7 @@ export function Settings() {
       tabs={VALID_TABS}
       active={activeTab}
       toPath={(next) => `/dashboard/settings/${next}`}
-      className="space-y-6 animate-fade-in"
+      className={cn('space-y-6 animate-fade-in', PHONE_FIELDS)}
     >
       <SubPageHeader
         path={`/dashboard/settings/${activeTab}`}

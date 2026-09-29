@@ -200,7 +200,7 @@
       "action": "Submit for verification",
       "resubmit": "Submit again",
       "saveFirst": "Save your changes before submitting.",
-      "legalNotice": "By creating an account, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+      "legalNotice": "By submitting, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
       "outstanding_one": "{{count}} thing the reviewers ask for is still missing. You can submit anyway.",
       "outstanding_other": "{{count}} things the reviewers ask for are still missing. You can submit anyway.",
       "succeeded": "Sent for review",

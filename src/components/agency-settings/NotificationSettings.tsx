@@ -1,24 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Bell,
-  Mail,
-  Loader2,
-  Lock,
-  Smartphone,
-  Truck,
-  Handshake,
-  UserCheck,
-  Wallet,
-  Banknote,
-  CalendarClock,
-  HardDrive,
-  Boxes,
-  CheckCircle2,
-  ShieldCheck,
-  ShieldAlert,
-  type LucideIcon,
-} from 'lucide-react';
+import { Bell, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
@@ -40,7 +22,6 @@ import type {
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,7 +47,8 @@ const WhatsappIcon = ({ className }: { className?: string }) => (
 type ChannelMeta = {
   value: NotificationChannel;
   Icon: (props: { className?: string }) => React.JSX.Element;
-  iconWrap: string;
+  /** Brand colour for the bare icon. */
+  iconColor: string;
   verifyKey: 'emailVerified' | 'telegramVerified' | 'whatsappVerified';
   /** Whether the link can be removed in-app (email can't be un-verified). */
   unlinkable: boolean;
@@ -78,21 +60,21 @@ const SECONDARY_CHANNELS: ChannelMeta[] = [
   {
     value: 'telegram',
     Icon: TelegramIcon,
-    iconWrap: 'bg-[#0088cc]/10 text-[#0088cc]',
+    iconColor: 'text-[#0088cc]',
     verifyKey: 'telegramVerified',
     unlinkable: true,
   },
   {
     value: 'email',
     Icon: ({ className }) => <Mail className={className} />,
-    iconWrap: 'bg-primary/10 text-primary',
+    iconColor: 'text-muted-foreground',
     verifyKey: 'emailVerified',
     unlinkable: false,
   },
   {
     value: 'whatsapp',
     Icon: WhatsappIcon,
-    iconWrap: 'bg-[#25D366]/10 text-[#25D366]',
+    iconColor: 'text-[#25D366]',
     verifyKey: 'whatsappVerified',
     unlinkable: true,
   },
@@ -128,7 +110,6 @@ type EventMeta = {
   key: NotificationEventKey;
   /** True when this event has an extra warning under its description. */
   hasCaveat?: boolean;
-  Icon: LucideIcon;
 };
 
 /**
@@ -137,19 +118,19 @@ type EventMeta = {
  * key, so a new event needs one entry here and three strings per locale.
  */
 const EVENTS: EventMeta[] = [
-  { key: 'shipmentAssigned', Icon: Truck },
-  { key: 'connectionUpdated', Icon: Handshake },
-  { key: 'contractUpdated', hasCaveat: true, Icon: UserCheck },
-  { key: 'payoutUpdates', Icon: Wallet },
-  { key: 'codDepositUpdates', hasCaveat: true, Icon: Banknote },
-  { key: 'planUpdates', Icon: CalendarClock },
+  { key: 'shipmentAssigned' },
+  { key: 'connectionUpdated' },
+  { key: 'contractUpdated', hasCaveat: true },
+  { key: 'payoutUpdates' },
+  { key: 'codDepositUpdates', hasCaveat: true },
+  { key: 'planUpdates' },
   // Deliberately adjacent to `storageAlert`, and deliberately first: the two
   // share the word "storage" and nothing else — one is the media-file quota, the
   // other is physical goods on our shelves. Sitting side by side is what makes
   // the labels get read against each other instead of one being switched off in
   // mistake for the other.
-  { key: 'stockRequestUpdates', hasCaveat: true, Icon: Boxes },
-  { key: 'storageAlert', Icon: HardDrive },
+  { key: 'stockRequestUpdates', hasCaveat: true },
+  { key: 'storageAlert' },
 ];
 
 // Language names are always written in their own language, never translated.
@@ -383,40 +364,25 @@ export function NotificationSettings() {
     <>
     <Card className={sectionSurfaceClass}>
       <CardContent className="space-y-6 md:space-y-8 max-md:px-0">
-        {/* Delivery channel */}
-        <div className="space-y-3 md:space-y-4">
-          <div>
-            <h4 className="flex items-center gap-2 font-medium">
-              {t('notifications.channels.title')}
-              <InfoHint className="md:hidden" label={t('notifications.channels.aboutLabel')}>
-                {t('notifications.channels.description')}
-              </InfoHint>
-            </h4>
-            <p className="text-sm text-muted-foreground max-md:hidden">
-              {t('notifications.channels.description')}
-            </p>
-            <p className="text-sm text-muted-foreground md:hidden">
-              {t('notifications.channels.short')}
-            </p>
-          </div>
+        {/* Delivery channel — plain rows, not a stack of cards with badges
+            (same treatment as the vendor dashboard): one icon, the name, one
+            status line, one action. */}
+        <div className="space-y-2">
+          <h4 className="flex items-center gap-1.5 text-base font-semibold">
+            {t('notifications.channels.title')}
+            <InfoHint label={t('notifications.channels.aboutLabel')}>
+              <span className="block">{t('notifications.channels.description')}</span>
+              <span className="mt-2 block">{t('notifications.channels.inAppHint')}</span>
+            </InfoHint>
+          </h4>
 
-          <div className="space-y-3" role="radiogroup" aria-label={t('notifications.channels.groupLabel')}>
+          <div className="divide-y" role="radiogroup" aria-label={t('notifications.channels.groupLabel')}>
             {/* In-app — always on, locked */}
-            <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 border rounded-lg bg-muted/30">
-              <div className="p-1.5 md:p-2 rounded-full flex-shrink-0 bg-primary/10 text-primary">
-                <Bell className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
+            <div className="flex min-h-14 items-center gap-3 py-3">
+              <Bell className="size-5 flex-shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium">{t('notifications.channels.inApp')}</p>
-                  <Badge variant="secondary" className="gap-1 text-xs">
-                    <Lock className="w-3 h-3" /> {t('notifications.channels.alwaysOn')}
-                  </Badge>
-                </div>
-                {/* The "Always on" badge already says it on a phone. */}
-                <p className="text-sm text-muted-foreground max-md:hidden">
-                  {t('notifications.channels.inAppHint')}
-                </p>
+                <p className="text-sm font-medium">{t('notifications.channels.inApp')}</p>
+                <p className="text-sm text-muted-foreground">{t('notifications.channels.alwaysOn')}</p>
               </div>
               <span
                 className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
@@ -432,17 +398,14 @@ export function NotificationSettings() {
               const selected = channel === c.value;
               const busy = unlinking === c.value;
               const channelLabel = tx(t, `notifications.channels.${c.value}`);
+              const status = !verified
+                ? t('notifications.channels.notConnected')
+                : c.value === 'email' && agencyEmail
+                  ? agencyEmail
+                  : t('notifications.channels.connected');
               return (
-                <div
-                  key={c.value}
-                  className={cn(
-                    'flex items-start gap-3 p-3 md:p-4 border rounded-lg transition-colors',
-                    selected && 'border-primary ring-1 ring-primary',
-                    !verified && 'bg-muted/20',
-                  )}
-                >
-                  {/* The whole icon + text block is the radio: the dot moved to the
-                      corner, so the hit area has to be the card, not the dot. */}
+                <div key={c.value} className="flex min-h-14 items-center gap-3 py-3 last:pb-0">
+                  {/* Icon + text is the radio once the channel is connected. */}
                   <button
                     type="button"
                     role="radio"
@@ -451,82 +414,50 @@ export function NotificationSettings() {
                     disabled={!verified}
                     onClick={() => selectChannel(c.value)}
                     className={cn(
-                      'flex min-w-0 flex-1 items-start gap-3 md:gap-4 rounded-md text-start',
+                      'flex min-w-0 flex-1 items-center gap-3 rounded-md text-start',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      verified ? 'cursor-pointer' : 'cursor-not-allowed',
+                      verified ? 'cursor-pointer' : 'cursor-default',
                     )}
                   >
-                    <span className={cn('p-1.5 md:p-2 rounded-full flex-shrink-0', c.iconWrap)}>
-                      <c.Icon className="w-4 h-4 md:w-5 md:h-5" />
-                    </span>
-
+                    <c.Icon className={cn('size-5 flex-shrink-0', c.iconColor)} />
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{channelLabel}</span>
-                        {verified ? (
-                          <Badge variant="secondary" className="gap-1 text-xs text-emerald-600">
-                            <ShieldCheck className="w-3 h-3" /> {t('notifications.channels.connected')}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
-                            <ShieldAlert className="w-3 h-3" /> {t('notifications.channels.notConnected')}
-                          </Badge>
-                        )}
-                      </span>
-                      {/* The address is data and stays. The other three lines
-                          restate what the badge, the Connect button and the
-                          radio dot already show, so a phone drops them. */}
-                      {c.value === 'email' && verified && agencyEmail ? (
-                        <span className="block text-sm text-muted-foreground truncate">{agencyEmail}</span>
-                      ) : !verified ? (
-                        <span className="block text-sm text-muted-foreground max-md:hidden">
-                          {t('notifications.channels.connectHint')}
-                        </span>
-                      ) : selected ? (
-                        <span className="block text-sm text-muted-foreground max-md:hidden">
-                          {t('notifications.channels.selectedHint')}
-                        </span>
-                      ) : (
-                        <span className="block text-sm text-muted-foreground max-md:hidden">
-                          {t('notifications.channels.tapToUse')}
-                        </span>
-                      )}
+                      <span className="block text-sm font-medium">{channelLabel}</span>
+                      <span className="block truncate text-sm text-muted-foreground">{status}</span>
                     </span>
                   </button>
 
-                  {/* Active indicator (top right) over the connect/disconnect action */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full border transition-colors',
-                        selected ? 'border-primary' : 'border-input',
-                        !verified && 'opacity-50',
+                  {!verified ? (
+                    <Button variant="outline" size="sm" className="flex-shrink-0" onClick={() => setSetupChannel(c.value)}>
+                      {t('notifications.channels.connect')}
+                    </Button>
+                  ) : (
+                    <>
+                      {c.unlinkable && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-shrink-0 px-2 text-muted-foreground hover:text-destructive"
+                          disabled={busy}
+                          onClick={() => handleUnlink(c.value)}
+                        >
+                          {busy ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            t('notifications.channels.disconnect')
+                          )}
+                        </Button>
                       )}
-                    >
-                      {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
-                    </span>
-
-                    {!verified ? (
-                      <Button variant="outline" size="sm" onClick={() => setSetupChannel(c.value)}>
-                        {t('notifications.channels.connect')}
-                      </Button>
-                    ) : c.unlinkable ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-destructive"
-                        disabled={busy}
-                        onClick={() => handleUnlink(c.value)}
-                      >
-                        {busy ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          t('notifications.channels.disconnect')
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border transition-colors',
+                          selected ? 'border-primary' : 'border-input',
                         )}
-                      </Button>
-                    ) : null}
-                  </div>
+                      >
+                        {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                      </span>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -535,59 +466,23 @@ export function NotificationSettings() {
 
         <Separator />
 
-        {/* Language */}
-        {/* <div className="space-y-3">
-          <div>
-            <h4 className="font-medium flex items-center gap-2">
-              <Languages className="w-4 h-4 text-muted-foreground" />
-              {t('notifications.language.title')}
-            </h4>
-            <p className="text-sm text-muted-foreground">{t('notifications.language.description')}</p>
-          </div>
-          <Select value={language} onValueChange={(v) => setLanguage(v as PreferredLanguage)}>
-            <SelectTrigger className="w-full sm:w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map((l) => (
-                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator /> */}
-
-        {/* Push */}
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-medium flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-muted-foreground" /> {t('notifications.push.title')}
+        {/* Push — one plain row */}
+        <div className="space-y-2">
+          <h4 className="flex items-center gap-1.5 text-base font-semibold">
+            {t('notifications.push.title')}
+            {pushIdle && (
+              <InfoHint label={t('common:form.aboutSection', { title: t('notifications.push.title') })}>
+                {t('notifications.push.idle')}
+              </InfoHint>
+            )}
           </h4>
-          <div className="flex items-center justify-between p-3 md:p-4 border rounded-lg bg-card gap-3 md:gap-4">
-            <div className="flex items-center gap-3 md:gap-4 min-w-0">
-              <div className="p-1.5 md:p-2 bg-primary/10 rounded-full flex-shrink-0">
-                <Smartphone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-medium">
-                  {t('notifications.push.thisDevice')}
-                  {/* The `idle` line is the only one that is a pitch rather
-                      than a state, so it is the only one a phone tucks away. */}
-                  {pushIdle && (
-                    <InfoHint
-                      className="md:hidden"
-                      label={t('common:form.aboutSection', { title: t('notifications.push.title') })}
-                    >
-                      {t('notifications.push.idle')}
-                    </InfoHint>
-                  )}
-                </p>
-                <p
-                  className={cn(
-                    'text-sm text-muted-foreground',
-                    pushIdle && 'max-md:hidden',
-                  )}
-                >
+          <div className="flex min-h-14 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t('notifications.push.thisDevice')}</p>
+              {/* The `idle` line is a pitch rather than a state, so it lives
+                  behind the ⓘ above; the other states are shown. */}
+              {!pushIdle || push.status === 'registered' ? (
+                <p className="text-sm text-muted-foreground">
                   {push.status === 'registered'
                     ? t('notifications.push.enabled')
                     : push.status === 'unsupported' ||
@@ -596,10 +491,10 @@ export function NotificationSettings() {
                       ? tx(t, `notifications.push.${push.status}`)
                       : t('notifications.push.idle')}
                 </p>
-              </div>
+              ) : null}
             </div>
             {push.status === 'registered' ? (
-              <Button variant="outline" size="sm" disabled={push.isBusy} onClick={push.disable}>
+              <Button variant="outline" size="sm" className="flex-shrink-0" disabled={push.isBusy} onClick={push.disable}>
                 {push.isBusy ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -610,6 +505,7 @@ export function NotificationSettings() {
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-shrink-0"
                 disabled={push.isBusy || push.status === 'unsupported' || push.status === 'unconfigured' || push.status === 'denied'}
                 onClick={push.enable}
               >
@@ -625,42 +521,31 @@ export function NotificationSettings() {
 
         <Separator />
 
-        {/* Events */}
-        <div className="space-y-3 md:space-y-4">
-          <div>
-            <h4 className="flex items-center gap-2 font-medium">
-              {t('notifications.events.title')}
-              <InfoHint
-                className="md:hidden"
-                label={t('common:form.aboutSection', { title: t('notifications.events.title') })}
-              >
-                {t('notifications.events.description')}
-              </InfoHint>
-            </h4>
-            <p className="text-sm text-muted-foreground max-md:hidden">{t('notifications.events.description')}</p>
-          </div>
-          <div className="space-y-1">
+        {/* Events — no icon tiles; an ⓘ only on the rows that carry a caveat
+            (something that changes what the switch does), the rest say what
+            they are. */}
+        <div className="space-y-2">
+          <h4 className="flex items-center gap-1.5 text-base font-semibold">
+            {t('notifications.events.title')}
+            <InfoHint label={t('common:form.aboutSection', { title: t('notifications.events.title') })}>
+              {t('notifications.events.description')}
+            </InfoHint>
+          </h4>
+          <div className="divide-y">
             {EVENTS.map((e) => {
               const label = tx(t, `notifications.events.${e.key}`);
               return (
-                <div key={e.key} className="flex items-center justify-between gap-4 py-2.5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-1.5 md:p-2 rounded-lg bg-muted text-muted-foreground flex-shrink-0">
-                      <e.Icon className="w-4 h-4" />
-                    </div>
-                    {/* One line per event: the explanation lives behind the ⓘ, so six
-                        events stay scannable instead of filling the viewport. */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-medium truncate">{label}</p>
+                <div key={e.key} className="flex min-h-12 items-center justify-between gap-4 py-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{label}</p>
+                    {e.hasCaveat && (
                       <InfoHint label={t('notifications.events.aboutLabel', { event: label })}>
                         {tx(t, `notifications.events.${e.key}Description`)}
-                        {e.hasCaveat && (
-                          <span className="mt-2 block text-amber-600">
-                            {tx(t, `notifications.events.${e.key}Caveat`)}
-                          </span>
-                        )}
+                        <span className="mt-2 block text-amber-600">
+                          {tx(t, `notifications.events.${e.key}Caveat`)}
+                        </span>
                       </InfoHint>
-                    </div>
+                    )}
                   </div>
                   <Switch
                     checked={events[e.key]}

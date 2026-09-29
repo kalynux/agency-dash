@@ -30,15 +30,14 @@ export function LegalSettings() {
         short={t('legal.short')}
       />
       <CardContent className="space-y-1 max-md:px-0">
-        {ROWS.map(({ doc, icon: Icon }, index) => (
+        {ROWS.map(({ doc }, index) => (
           <div key={doc}>
             {index > 0 && <Separator className="my-1" />}
             <LegalLink
               doc={doc}
               className="flex min-h-11 items-center gap-3 rounded-md py-2 font-normal text-foreground no-underline hover:text-primary"
             >
-              <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-muted-foreground" />
-              <span className="flex-1 font-medium">{t(`legal.${doc}`)}</span>
+              <span className="flex-1 text-sm font-medium">{t(`legal.${doc}`)}</span>
               <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             </LegalLink>
           </div>

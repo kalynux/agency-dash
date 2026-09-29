@@ -61,6 +61,7 @@
     "saved": "Guardado",
     "savedChanges": "Se han guardado tus cambios.",
     "unsavedChanges": "Cambios sin guardar",
+    "unsavedShort": "Sin guardar",
     "processing": "Procesando…"
   },
   "filters": {

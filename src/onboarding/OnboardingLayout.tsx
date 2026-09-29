@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogOut, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PHONE_FIELDS } from '@/components/agency-settings/phoneFields';
 import { tx } from '@/i18n/tx';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
@@ -215,7 +216,7 @@ export function OnboardingLayout({ children, ctaSlot, stepKey }: OnboardingLayou
                                 what paid for it — so there the step sits straight
                                 on the page, and the steps drop their `px-6` below
                                 `md` to match. */}
-                            <div className="md:bg-card md:rounded-2xl md:border md:border-border md:shadow-sm md:overflow-hidden">
+                            <div className={cn('md:bg-card md:rounded-2xl md:border md:border-border md:shadow-sm md:overflow-hidden', PHONE_FIELDS)}>
                                 {children}
                             </div>
                         </motion.div>

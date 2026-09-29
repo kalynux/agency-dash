@@ -677,11 +677,13 @@ function ChecklistRow({ item }: { item: KycChecklistItem }) {
         <span className={cn(item.met && 'text-muted-foreground')}>
           {t(`verification.checklist.items.${item.key}` as never)}
         </span>
-        <span className="ms-2 text-xs text-muted-foreground">
-          {item.required
-            ? t('verification.checklist.required')
-            : t('verification.checklist.optional')}
-        </span>
+        {/* Only the exception is marked — the amber icon already flags a
+            required item that is still missing. */}
+        {!item.required && (
+          <span className="ms-1.5 text-xs lowercase text-muted-foreground">
+            ({t('verification.checklist.optional')})
+          </span>
+        )}
         {/* Where to edit it, not whether it is done — behind an ⓘ on a phone. */}
         {item.editedElsewhere && (
           <>
