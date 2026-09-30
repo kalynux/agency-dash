@@ -136,6 +136,21 @@
   }
 }
 
+/* Popovers that become bottom sheets below `md` (components/ui/mobile-sheet.tsx).
+   Radix does not position the content element itself: it wraps it in a
+   `[data-radix-popper-content-wrapper]` carrying an inline `transform:
+   translate(x, y)` — plus `will-change: transform` at 1.5x density and up, i.e.
+   every phone. Either makes the wrapper the containing block for `position:
+   fixed` descendants, so the sheet's `fixed inset-x-0 bottom-0` would resolve
+   against a 0x0 box parked at the trigger. Undoing both puts the containing
+   block back on the viewport. */
+@media not all and (min-width: 768px) {
+  [data-radix-popper-content-wrapper]:has(> [data-mobile-sheet]) {
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

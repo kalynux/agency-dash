@@ -14,9 +14,9 @@
 
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Ban, Clock3, MapPinOff, Package, Store, Warehouse } from 'lucide-react';
+import { Ban, ChevronRight, Clock3, MapPinOff, Package, Store, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { CatalogStockCell, StockLevelCell, StockSourceBadge } from '@/components/inventory/StockLevels';
+import { CatalogStockCell, StockLevelCell } from '@/components/inventory/StockLevels';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import { describeDepot, isSuspended } from '@/types/inventory.types';
@@ -42,7 +42,7 @@ export function ProductCell({ item }: { item: InventoryListItem }) {
         </div>
       )}
       <div className="min-w-0">
-        <div className="max-w-[16rem] truncate font-medium" title={item.productTitle ?? undefined}>
+        <div className="max-w-[14rem] truncate font-medium" title={item.productTitle ?? undefined}>
           {item.productTitle ?? (
             <span className="italic text-muted-foreground">{t('table.unnamedProduct')}</span>
           )}
@@ -78,7 +78,7 @@ export function DepotCell({ item }: { item: InventoryListItem }) {
     <span className="flex min-w-0 items-start gap-2">
       <Warehouse className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
       <span className="min-w-0">
-        <span className="block max-w-[12rem] truncate text-sm" title={name}>
+        <span className="block max-w-[10rem] truncate text-sm" title={name}>
           {name}
         </span>
         {item.location.isPrimary && (
@@ -94,7 +94,7 @@ export function VendorCell({ item }: { item: InventoryListItem }) {
   return (
     <div className="flex items-start gap-2">
       <Store className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-      <div className="flex min-w-0 max-w-[12rem] items-center gap-1 text-sm font-medium">
+      <div className="flex min-w-0 max-w-[10rem] items-center gap-1 text-sm font-medium">
         <span className="truncate" title={item.vendor.businessName ?? undefined}>
           {item.vendor.businessName ?? (
             <span className="italic text-muted-foreground">{t('table.unnamedVendor')}</span>
@@ -170,29 +170,45 @@ export function InventoryTableRow({
       className="cursor-pointer border-b transition-colors hover:bg-muted/50"
       onClick={() => onOpen(item.id)}
     >
-      <td className="p-4">
+      <td className="px-4 py-3">
         <ProductCell item={item} />
         <RowBadges item={item} className="mt-1.5" />
       </td>
-      <td className="p-4">
+      <td className="px-4 py-3">
         <VendorCell item={item} />
       </td>
       {/* Which of OUR depots holds it — the column this screen exists for. */}
-      <td className="p-4">
+      <td className="px-4 py-3">
         <DepotCell item={item} />
       </td>
       {/* The two quantities, deliberately in two columns. */}
-      <td className="p-4">
+      <td className="px-4 py-3">
         <CatalogStockCell item={item} />
       </td>
-      <td className="p-4">
+      <td className="px-4 py-3">
         <StockLevelCell item={item} />
       </td>
     </tr>
   );
 }
 
-/** Mobile card. */
+/**
+ * Mobile card — designed for the phone first, not a table row folded up.
+ *
+ * Three bands, read top to bottom in the order the questions come:
+ *
+ *   1. WHAT is it — picture, a two-line name, variant and SKU, and any state
+ *      that needs attention (suspended, a change awaiting you).
+ *   2. HOW MANY — the two quantities side by side in one panel, each under its
+ *      own label and never merged.
+ *   3. WHOSE and WHERE — vendor and depot, one line each, so a long business
+ *      name or depot label truncates within the screen instead of pushing the
+ *      card (and the whole page) sideways.
+ *
+ * No "Agreed to store" badge here: on a phone it competed with the name for the
+ * top line, and the "Not counted" figure in band 2 already says the same thing.
+ * The detail sheet still carries it.
+ */
 export function InventoryCard({
   item,
   onOpen,
@@ -201,38 +217,112 @@ export function InventoryCard({
   onOpen: (id: string) => void;
 }) {
   const { t } = useTranslation('inventory');
+  const subline = [item.variantTitle, item.sku].filter(Boolean);
+
   return (
     <div
-      className="cursor-pointer p-4 transition-colors hover:bg-muted/50 active:bg-muted/50"
+      role="button"
+      tabIndex={0}
+      className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-muted/40 active:bg-muted/60 focus-visible:bg-muted/50 focus-visible:outline-none md:rounded-xl md:border"
       onClick={() => onOpen(item.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(item.id);
+        }
+      }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <ProductCell item={item} />
-        <StockSourceBadge source={item.source} className="flex-shrink-0" />
+      {/* 1 — identity */}
+      <div className="flex items-start gap-3">
+        <ProductThumb item={item} className="h-12 w-12" />
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[15px] font-medium leading-snug">
+            {item.productTitle ?? (
+              <span className="italic text-muted-foreground">{t('table.unnamedProduct')}</span>
+            )}
+          </p>
+          {subline.length > 0 && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {item.variantTitle}
+              {item.variantTitle && item.sku && <span className="mx-1">·</span>}
+              {item.sku && <span className="font-mono">{item.sku}</span>}
+            </p>
+          )}
+          <RowBadges item={item} className="mt-1.5" />
+        </div>
+        <ChevronRight
+          aria-hidden
+          className="mt-3 h-4 w-4 flex-shrink-0 text-muted-foreground/60 rtl:-scale-x-100"
+        />
       </div>
 
-      <RowBadges item={item} className="mt-2" />
+      {/* 2 — the two quantities */}
+      <div className="mt-3 grid grid-cols-2 divide-x rounded-lg bg-muted/50 py-2 rtl:divide-x-reverse">
+        <div className="min-w-0 px-3">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {t('table.agreed')}
+          </p>
+          <CatalogStockCell item={item} className="mt-0.5" />
+        </div>
+        <div className="min-w-0 px-3">
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {t('table.counted')}
+          </p>
+          <StockLevelCell item={item} className="mt-0.5" />
+        </div>
+      </div>
 
-      <div className="mt-2 flex items-center gap-2 text-sm">
-        <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+      {/* 3 — whose, and where */}
+      <div className="mt-2.5 space-y-1 text-xs text-muted-foreground">
+        <p className="flex min-w-0 items-center gap-1.5">
           <Store className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="truncate">{item.vendor.businessName ?? t('table.unnamedVendor')}</span>
-          <VerifiedBadge verified={item.vendor.verified} className="-ms-0.5" />
-        </span>
-        <span className="flex-shrink-0 text-muted-foreground">·</span>
-        <DepotCell item={item} />
+          <span className="truncate">
+            {item.vendor.businessName ?? (
+              <span className="italic">{t('table.unnamedVendor')}</span>
+            )}
+          </span>
+          <VerifiedBadge verified={item.vendor.verified} className="-ms-0.5 flex-shrink-0" />
+        </p>
+        {item.location ? (
+          <p className="flex min-w-0 items-center gap-1.5">
+            <Warehouse className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="truncate">
+              {describeDepot(item.location) ?? t('table.unnamedLocation')}
+            </span>
+            {item.location.isPrimary && (
+              <span className="flex-shrink-0 rounded bg-muted px-1.5 py-px text-[10px] font-medium">
+                {t('table.primaryDepot')}
+              </span>
+            )}
+          </p>
+        ) : (
+          // A deleted depot is a problem to fix, so it keeps its warning colour.
+          <p className="flex items-center gap-1.5 font-medium text-amber-600 dark:text-amber-400">
+            <MapPinOff className="h-3.5 w-3.5 flex-shrink-0" />
+            {t('table.unassignedLocation')}
+          </p>
+        )}
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-1">
-        <div>
-          <p className="text-xs text-muted-foreground">{t('table.agreed')}</p>
-          <CatalogStockCell item={item} />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{t('table.counted')}</p>
-          <StockLevelCell item={item} />
-        </div>
-      </div>
+/** The row's picture, or the placeholder a picture-less SKU gets. */
+function ProductThumb({ item, className }: { item: InventoryListItem; className?: string }) {
+  return item.image?.url ? (
+    <img
+      src={item.image.url}
+      alt=""
+      className={cn('flex-shrink-0 rounded-lg border object-cover', className)}
+    />
+  ) : (
+    <div
+      className={cn(
+        'flex flex-shrink-0 items-center justify-center rounded-lg border bg-muted',
+        className,
+      )}
+    >
+      <Package className="h-5 w-5 text-muted-foreground" />
     </div>
   );
 }

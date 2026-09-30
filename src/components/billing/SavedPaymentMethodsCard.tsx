@@ -19,7 +19,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PaymentMethodMark } from '@/components/common/PaymentBrandLogo';
-import type { SavedPaymentMethod } from '@/types/payment-method.types';
+import { methodTypeOf, type SavedPaymentMethod } from '@/types/payment-method.types';
+import { getErrorCode } from '@/lib/errors';
 import {
   fetchPaymentMethods,
   setDefaultPaymentMethod,
@@ -34,15 +35,11 @@ const MAX_METHODS = 10;
 /**
  * Saved payment methods.
  *
- * Read-only inside the native shell (CAPACITOR-PLAN.md → Phase 5, decision D4).
- * The list, the default badge, "set as default" and "remove" all stay: those
- * manage an instrument that already exists, and being unable to delete a card
- * from the device in your hand would be a worse app, not a safer one.
- *
- * Adding one does not stay. A card form in an app that cannot complete a
- * purchase is a question a store reviewer will ask, and the only answer is
- * "so you can pay on the web" — which is the answer the notice gives directly,
- * without collecting a card number first.
+ * Mobile-money wallets, described by network (api-doc/agency/payment-methods.md).
+ * Saving is wallets-only on every platform since 2026-09-30. Older rows still
+ * list in the new shape and can be defaulted and deleted: a card saved before
+ * then reads `provider: 'CARD'`, and a row saved under a payment company's name
+ * reads `provider: null` (unknown network).
  */
 export function SavedPaymentMethodsCard() {
   const { t } = useTranslation(['billing', 'common']);
@@ -74,9 +71,11 @@ export function SavedPaymentMethodsCard() {
     setPendingDefaultId(id);
     try {
       await setDefaultPaymentMethod(id);
-      setMethods((prev) => prev.map((m) => ({ ...m, is_default: m.id === id })));
+      setMethods((prev) => prev.map((m) => ({ ...m, isDefault: m.id === id })));
     } catch (err) {
       toast.error(billingErrorMessage(err, t('methods.setDefaultFailed')));
+      // Removed elsewhere already: show the list as it is now.
+      if (getErrorCode(err) === 'PAYMENT_METHOD_NOT_FOUND') void load();
     } finally {
       setPendingDefaultId(null);
     }
@@ -84,7 +83,7 @@ export function SavedPaymentMethodsCard() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    const wasDefault = deleteTarget.is_default;
+    const wasDefault = deleteTarget.isDefault;
     setDeleting(true);
     try {
       await deletePaymentMethod(deleteTarget.id);
@@ -97,6 +96,8 @@ export function SavedPaymentMethodsCard() {
       }
     } catch (err) {
       toast.error(billingErrorMessage(err, t('methods.removeFailed')));
+      // Removed elsewhere already: show the list as it is now.
+      if (getErrorCode(err) === 'PAYMENT_METHOD_NOT_FOUND') void load();
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -147,11 +148,16 @@ export function SavedPaymentMethodsCard() {
           <ul className="divide-y">
             {methods.map((m) => (
               <li key={m.id} className="flex min-h-14 items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                <PaymentMethodMark brand={m.brand} methodType={m.method_type} />
+                {/* The mark keys on the network (`MTN` resolves to its logo); a
+                    card or an unknown-network row draws its kind's icon. */}
+                <PaymentMethodMark
+                  brand={m.provider === 'CARD' ? null : m.provider}
+                  methodType={methodTypeOf(m.kind)}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="truncate font-medium">{m.display_label}</span>
-                    {m.is_default && (
+                    <span className="truncate font-medium">{m.label}</span>
+                    {m.isDefault && (
                       <Badge variant="secondary" className="gap-1">
                         <Star className="h-3 w-3 fill-current" aria-hidden="true" />
                         {t('methods.default')}
@@ -159,18 +165,16 @@ export function SavedPaymentMethodsCard() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {methodTypeLabel(m.method_type)}
-                    {m.method_type === 'card' && m.exp_month && m.exp_year
-                      ? ` · ${t('methods.expires', {
-                          month: String(m.exp_month).padStart(2, '0'),
-                          year: String(m.exp_year).slice(-2),
-                        })}`
-                      : ''}
+                    {methodTypeLabel(methodTypeOf(m.kind))}
+                    {/* The number, masked by the server — the full one is never returned. */}
+                    {m.maskedPhone && <span dir="ltr"> · {m.maskedPhone}</span>}
+                    {/* An older row whose network is unknown can't pre-fill a payment. */}
+                    {m.provider === null && ` · ${t('methods.unknownNetwork')}`}
                   </p>
                 </div>
                 {/* Both actions clear the 44px touch minimum; only the label folds away. */}
                 <div className="flex shrink-0 items-center gap-0.5">
-                  {!m.is_default && (
+                  {!m.isDefault && (
                     <Button
                       variant="ghost"
                       className="h-11 gap-1.5 px-2.5 max-sm:w-11 max-sm:px-0"
@@ -205,11 +209,12 @@ export function SavedPaymentMethodsCard() {
         open={addOpen}
         onOpenChange={setAddOpen}
         forceDefault={methods.length === 0}
+        existing={methods}
         onAdded={(created) => {
           // A new default clears the previous one locally; first method is always default.
           setMethods((prev) =>
-            created.is_default
-              ? [created, ...prev.map((m) => ({ ...m, is_default: false }))]
+            created.isDefault
+              ? [created, ...prev.map((m) => ({ ...m, isDefault: false }))]
               : [...prev, created],
           );
         }}
@@ -220,7 +225,7 @@ export function SavedPaymentMethodsCard() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('methods.removeTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('methods.removeDescription', { label: deleteTarget?.display_label ?? '' })}
+              {t('methods.removeDescription', { label: deleteTarget?.label ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

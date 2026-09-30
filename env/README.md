@@ -65,10 +65,11 @@ Two optional features need something the frontend can't self-supply:
    `window.wiMallGetPushToken(): Promise<string|null>` provider (the FCM token).
    Not env-driven and not bundled here; push shows "not configured" until wired.
 
-`.env.production` additionally carries three **`NEEDS INFRA INPUT`** blocks that
+`.env.production` additionally carries two **`NEEDS INFRA INPUT`** blocks that
 no one has supplied yet, and which the `wi-mall.com` cutover does not answer:
-geo-tracker's production host (Live Tracking stays dark without it), the live
-Stripe publishable key, and the production Firebase messaging config.
+geo-tracker's production host (Live Tracking stays dark without it) and the
+production Firebase messaging config. There is no Stripe key to supply any more:
+since 2026-09-30 it comes from the server, on `GET /api/payments/options`.
 
 ## Usage
 

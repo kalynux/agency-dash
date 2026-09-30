@@ -142,7 +142,7 @@
   "methods": {
     "title": "Moyens de paiement",
     "aboutLabel": "À propos des moyens de paiement enregistrés",
-    "description": "Les moyens enregistrés pré-remplissent le paiement. Nous ne stockons jamais le numéro complet de carte ni le CVV.",
+    "description": "Les portefeuilles enregistrés préremplissent le paiement. Seuls les quatre derniers chiffres d'un numéro sont affichés.",
     "descriptionShort": "Pré-remplir le paiement",
     "atLimit": "Vous pouvez enregistrer jusqu'à {{count}} moyens de paiement.",
     "loadFailed": "Impossible de charger les moyens de paiement.",
@@ -150,7 +150,6 @@
     "default": "Par défaut",
     "setDefault": "Définir par défaut",
     "setDefaultFailed": "Impossible de modifier le moyen par défaut.",
-    "expires": "Expire {{month}}/{{year}}",
     "remove": "Supprimer ce moyen de paiement",
     "removed": "Moyen de paiement supprimé",
     "removeFailed": "Impossible de supprimer ce moyen de paiement.",
@@ -164,21 +163,23 @@
     },
     "add": {
       "title": "Ajouter un moyen de paiement",
-      "description": "Enregistrez un moyen de paiement pour accélérer le paiement. Nous ne stockons jamais le numéro complet de carte ni le CVV.",
+      "description": "Enregistrez un portefeuille mobile money pour payer plus vite.",
       "phone": "Numéro mobile money",
       "operator": "Opérateur",
-      "holderNameMobile": "Nom du titulaire (facultatif)",
-      "holderNameMobilePlaceholder": "Titulaire du compte",
-      "holderNameCard": "Nom du titulaire de la carte",
-      "holderNameCardPlaceholder": "Nom figurant sur la carte",
-      "cardDetails": "Informations de carte",
       "setAsDefault": "Définir par défaut",
       "setAsDefaultHint": "Présélectionné lors du paiement.",
       "submit": "Enregistrer",
       "added": "Moyen de paiement ajouté",
-      "channel": "Moyen de paiement",
-      "secureNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs."
-    }
+      "label": "Nom (facultatif)",
+      "labelPlaceholder": "ex. Portefeuille du bureau",
+      "labelHint": "Laissez vide : nous le nommerons d’après le réseau et les quatre derniers chiffres.",
+      "labelInvalid": "Utilisez 1 à {{max}} caractères, ou laissez vide.",
+      "phoneInvalid": "Saisissez le numéro au format international, ex. +237 6 70 12 44 17.",
+      "mismatch": "Ce numéro est sur {{detected}}. Choisissez {{detected}}, ou saisissez un numéro {{provider}}.",
+      "switchTo": "Passer à {{name}}",
+      "duplicate": "Votre numéro {{name}} se terminant par {{last4}} est déjà enregistré."
+    },
+    "unknownNetwork": "réseau inconnu"
   },
   "settings": {
     "title": "Rappels d'expiration",
@@ -239,8 +240,6 @@
     "timeoutTitle": "Traitement en cours",
     "timeoutDescription": "Nous n'avons pas pu confirmer le paiement à temps. Si vous l'avez finalisé, votre solde sera mis à jour sous peu — consultez votre historique.",
     "startOver": "Recommencer",
-    "processedBy": "Traité par",
-    "stripeNote": "Les informations de carte vont directement à Stripe — elles ne passent jamais par nos serveurs.",
     "otpTitle": "Saisissez votre code de confirmation",
     "otpPrompt": "Votre opérateur a envoyé un code par SMS au {{phone}}.",
     "otpLabel": "Code de confirmation",
@@ -250,14 +249,25 @@
     "otpInvalid_one": "Ce code est incorrect. Il vous reste {{count}} essai.",
     "otpInvalid_other": "Ce code est incorrect. Il vous reste {{count}} essais.",
     "otpNoTriesLeft": "Ce code est incorrect, et c’était le dernier essai. Relancez un nouveau paiement.",
-    "otpAttemptsExceeded": "Trop de codes incorrects : ce paiement a été annulé. Rien n’a été débité — vous pouvez en relancer un."
+    "otpAttemptsExceeded": "Trop de codes incorrects : ce paiement a été annulé. Rien n’a été débité — vous pouvez en relancer un.",
+    "loadingOptions": "Chargement des moyens de paiement…",
+    "optionsLoadFailed": "Impossible de charger les moyens de paiement. Vérifiez votre connexion et réessayez.",
+    "unavailableTitle": "Le paiement en ligne est indisponible pour le moment",
+    "unavailableDescription": "Revenez un peu plus tard.",
+    "mayRequireOtp": "Votre opérateur peut vous envoyer un code par SMS au lieu d'une demande de confirmation.",
+    "cardSecureTitle": "Paiement par carte sécurisé",
+    "cardSecureNote": "Les données de carte vont directement au processeur de cartes — elles ne passent jamais par nos serveurs.",
+    "providerSwitchedOff": "Ce moyen de paiement vient d'être désactivé. La liste a été mise à jour — choisissez-en un autre.",
+    "redirectPrompt": "Terminez le paiement sur la page de paiement, puis revenez ici.",
+    "openPaymentPage": "Ouvrir la page de paiement",
+    "savedNumberHint": "Saisissez le numéro se terminant par {{last4}}."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",
     "MYCOOLPAY": "MyCoolPay",
     "STRIPE": "Carte",
-    "mobileMoneyDescription": "Mobile money — débité en XAF",
-    "cardDescription": "Visa, Mastercard et plus — débité en USD"
+    "CAMPAY": "Campay",
+    "FLUTTERWAVE": "Flutterwave"
   },
   "card": {
     "type": "Type de carte",
@@ -279,14 +289,12 @@
   "channels": {
     "card": {
       "name": "Paiement par carte",
-      "description": "Sécurisé par Stripe"
+      "description": "Visa, Mastercard et plus"
     },
     "mobileMoney": {
       "name": "Mobile Money",
       "description": "Validez sur votre téléphone"
     },
-    "poweredBy": "Assuré par {{provider}}",
-    "processedBy": "Traité par",
     "operatorPlaceholder": "Choisir un opérateur",
     "comingSoon": "Bientôt",
     "comingSoonHint": "Airtel Money et Wave arrivent bientôt — choisissez un autre opérateur pour l'instant."

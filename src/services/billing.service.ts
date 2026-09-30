@@ -1,5 +1,8 @@
 import { api } from './api';
+import { PAYMENT_PROVIDERS } from '@/types/billing.types';
 import type {
+  PaymentOptionsResponse,
+  PaymentProviderOption,
   PricingPlan,
   CurrentPlanData,
   CreditPack,
@@ -75,10 +78,32 @@ export async function updateBillingSettings(
   return res.data;
 }
 
-// ─── Gateway-agnostic payment flows ─────────────────────────────────────────────
+// ─── What can be paid with ──────────────────────────────────────────────────────
+//
+// `GET /payments/options` — public, `no-store`, standard envelope. Called every
+// time the payment dialog opens: an administrator can switch a provider off, or
+// move to another aggregator, at any moment and with no release. An empty list
+// is a valid answer (online payment is off), not an error.
+// See api-doc/payments/routing.md § `GET /api/payments/options`.
+
+export async function fetchPaymentOptions(): Promise<PaymentProviderOption[]> {
+  const res = await api.get<PaymentOptionsResponse>('/payments/options');
+  return (res.data?.providers ?? []).filter(
+    (o) =>
+      // A provider this build has no screen for is left out rather than offered
+      // half-working; the server keeps the catalogue order, so the filter does too.
+      PAYMENT_PROVIDERS.includes(o.provider) &&
+      // The server promises a CARD entry always carries its key; without one
+      // there is no card form to mount, so it would not be payable here.
+      (o.kind !== 'CARD' || !!o.publishableKey),
+  );
+}
+
+// ─── Payment flows ──────────────────────────────────────────────────────────────
 // Both top-up and plan purchase share an identical initiate→poll-verify lifecycle.
 // These wrappers normalize the two endpoints to a single { id, status, instructions }
-// shape so PaymentDialog can drive either without knowing which it is.
+// shape so PaymentDialog can drive either without knowing which it is. Each takes
+// `{ provider, channel }` and never a `gateway`: the aggregator is the server's call.
 
 export async function initiateTopup(payload: TopupInitPayload): Promise<PaymentInitResult> {
   const res = await api.post<TopupInitResponse>(`${BASE}/credits/topups`, payload);
@@ -105,7 +130,7 @@ export async function verifyPlanPurchase(id: string): Promise<{ status: PaymentS
   return { status: res.data.purchase.status };
 }
 
-// ─── One-time code (My-CoolPay Orange Money) ────────────────────────────────────
+// ─── One-time code ──────────────────────────────────────────────────────────────
 //
 // Relay the SMS code for a payment that answered `instructions.requiresOtp`.
 // Owner-scoped and authenticated, sitting beside the `/verify` above — NOT

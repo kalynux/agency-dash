@@ -3,7 +3,6 @@
 // feed merges plan purchases, credit top-ups/ledger movements and delivery-fee
 // earnings into one normalized, paginated history.
 
-import type { PaymentGateway } from './billing.types';
 
 /** Top-level grouping for a transaction. `payout` rows are your payout requests (since 2026-09-27). */
 export type TransactionCategory = 'plan' | 'credit' | 'earning' | 'payout';
@@ -74,8 +73,11 @@ export interface Transaction {
   /** Credits granted (top-up) or the magnitude of a credit move. */
   credits?: number;
   description: string;
-  /** Present for billing rows. */
-  gateway?: PaymentGateway;
+  /**
+   * Present for billing rows: which aggregator carried the money. A label only —
+   * never branch on it, and expect values this build has never seen.
+   */
+  gateway?: string;
   source?: TransactionSource;
   createdAt: string;
 }

@@ -258,7 +258,7 @@ export function InventoryDetailSheet({
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t('movements.sectionTitle')}
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 [&>button]:max-md:h-10">
               <Button
                 size="sm"
                 variant={detail.source === 'derived' ? 'default' : 'outline'}
@@ -383,19 +383,20 @@ export function InventoryDetailSheet({
       </div>
 
       {/* Sticky footer — the one place to go from a row to the work it drives. */}
-      <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-t px-5 py-4">
-        <Button asChild size="sm" variant="outline" className="gap-1.5">
+      {/* On a phone: two equal thumb-sized halves, lifted clear of the gesture bar. */}
+      <div className="grid flex-shrink-0 grid-cols-2 gap-2 border-t px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 md:flex md:flex-wrap md:items-center md:py-4">
+        <Button asChild size="sm" variant="outline" className="gap-1.5 max-md:h-10 max-md:min-w-0">
           <Link
             to={`/dashboard/shipments?q=${encodeURIComponent(detail.sku ?? detail.productTitle ?? '')}`}
           >
             <MapPin className="h-3.5 w-3.5" />
-            {t('detail.viewShipments')}
+            <span className="truncate">{t('detail.viewShipments')}</span>
           </Link>
         </Button>
-        <Button asChild size="sm" variant="ghost" className="gap-1.5">
+        <Button asChild size="sm" variant="ghost" className="gap-1.5 max-md:h-10 max-md:min-w-0">
           <Link to="/dashboard/vendors/connections">
             <Store className="h-3.5 w-3.5" />
-            {t('detail.viewVendor')}
+            <span className="truncate">{t('detail.viewVendor')}</span>
           </Link>
         </Button>
       </div>
@@ -443,7 +444,7 @@ export function InventoryDetailSheet({
           // A bottom sheet with `h-auto` gives the flex body no bounded height to
           // scroll within, so the header/footer would not pin. Both sides get a
           // definite height for the same reason.
-          isMobile ? 'h-[90vh] rounded-t-2xl' : 'w-full sm:max-w-md',
+          isMobile ? 'h-[90dvh] rounded-t-2xl' : 'w-full sm:max-w-md',
         )}
       >
         {isMobile && (

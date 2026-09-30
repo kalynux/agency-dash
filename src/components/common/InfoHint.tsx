@@ -18,47 +18,71 @@ import { cn } from '@/lib/utils';
  * The icon is `Info`, not `AlertCircle`: the exclamation circle already means
  * "something is wrong" everywhere else in the dashboard (`state-views`,
  * `BillingTab`, `Overview`), and help is not an error.
+ *
+ * ON A PHONE IT IS A BOTTOM SHEET (`asSheet`, the same as the vendor dashboard):
+ * a 20rem popup hanging off a 14px icon is a footnote, and the text behind an ⓘ
+ * is usually the whole explanation of a figure. There it gets body-copy size and
+ * the optional `title` as its heading, so the sheet says what it is about.
+ *
+ * Safe inside a tappable row or card: presses on the trigger and inside the
+ * sheet stop at the wrapper. React bubbles events from a portal through the
+ * component tree, so without it, reading a hint would also open the row.
  */
 export function InfoHint({
   children,
   label,
+  title,
   align = 'start',
   className,
 }: {
   children: ReactNode;
   /** Accessible name for the trigger. Override when "more information" is vague. */
   label?: string;
+  /** Heading for the explanation — what the ⓘ is about. */
+  title?: ReactNode;
   align?: 'start' | 'center' | 'end';
   className?: string;
 }) {
   const { t } = useTranslation('common');
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={label ?? t('form.moreInformation')}
-          // 32px hit area on a 24px footprint: the negative margin keeps the
-          // icon from opening a gap in the label's rhythm while still clearing
-          // the touch-target minimum.
-          className={cn(
-            'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
-            'text-muted-foreground transition-colors hover:text-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            className,
-          )}
+    <span
+      className="contents"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={label ?? t('form.moreInformation')}
+            // 32px hit area on a 24px footprint: the negative margin keeps the
+            // icon from opening a gap in the label's rhythm while still clearing
+            // the touch-target minimum.
+            className={cn(
+              'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
+              'text-muted-foreground transition-colors hover:text-foreground',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              className,
+            )}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          asSheet
+          align={align}
+          collisionPadding={12}
+          className="w-[min(20rem,calc(100vw-2rem))] p-3"
         >
-          <Info className="h-3.5 w-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align={align}
-        collisionPadding={12}
-        className="w-[min(20rem,calc(100vw-2rem))] p-3 text-xs leading-relaxed text-muted-foreground"
-      >
-        {children}
-      </PopoverContent>
-    </Popover>
+          <div className="text-xs leading-relaxed text-muted-foreground max-md:px-5 max-md:pb-5 max-md:pt-2 max-md:text-sm max-md:text-foreground/80">
+            {title && (
+              <p className="mb-1 font-medium text-foreground max-md:mb-2 max-md:text-base">{title}</p>
+            )}
+            {children}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </span>
   );
 }
 

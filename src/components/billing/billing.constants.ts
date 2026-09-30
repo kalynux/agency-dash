@@ -3,7 +3,7 @@
 import { formatNumber } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { txStatic } from '@/i18n/tx';
-import type { PaymentGateway, SubscriberPlanStatus } from '@/types/billing.types';
+import type { PaymentOptionKind, SubscriberPlanStatus } from '@/types/billing.types';
 import type { PaymentMethodType } from '@/types/payment-method.types';
 
 // Re-export the generic formatters so billing components have a single import surface.
@@ -21,75 +21,30 @@ export const PAYMENT_POLL_INTERVAL_MS = 4000;
 /** Give up polling after this long (mobile money can take a couple of minutes). */
 export const PAYMENT_POLL_TIMEOUT_MS = 3 * 60 * 1000;
 
-// ─── Mobile-money operators ──────────────────────────────────────────────────────
-// The operator roster and its logos live in `lib/payment-brands` — one registry
-// shared with checkout, the saved-methods list and payout setup.
+// ─── Providers, not aggregators ──────────────────────────────────────────────────
+// The agency picks what it pays *with* (MTN, Orange, a card); the server picks
+// the company that moves the money, and an administrator can switch it with no
+// release. So nothing here names an aggregator — the choices come from
+// `GET /payments/options` (see `usePaymentOptions`), and the operator logos from
+// `lib/payment-brands`. See api-doc/FRONTEND-CHANGELOG-payment-providers.md.
 
-/** Gateway used for mobile-money charges (default operator gateway). */
-export const MOBILE_MONEY_GATEWAY: PaymentGateway = 'NOTCHPAY';
-export const CARD_GATEWAY: PaymentGateway = 'STRIPE';
-
-// ─── Gateway catalog (drives the gateway-first checkout chips) ───────────────────
-// Each gateway maps to the method type it collects: mobile-money gateways need a
-// phone + operator; the card gateway (Stripe) tokenises a card. The Stripe chip is
-// only shown when a publishable key is configured (see PaymentDialog).
-
-export interface GatewayMeta {
-  value: PaymentGateway;
-  /** `billing:` key, resolved at render — this table is module-scope data. */
-  labelKey: string;
-  /** Which channel fields this gateway collects. */
-  methodType: Extract<PaymentMethodType, 'card' | 'mobile_money'>;
-  /** `billing:` key for the short helper line shown under the chip row. */
-  descriptionKey: string;
-  /** Currency the agency is actually charged in (mobile money: XAF, card: USD). */
-  chargeCurrency: 'XAF' | 'USD';
-}
-
-export const GATEWAYS: GatewayMeta[] = [
-  { value: 'NOTCHPAY', labelKey: 'billing:gateways.NOTCHPAY', methodType: 'mobile_money', descriptionKey: 'billing:gateways.mobileMoneyDescription', chargeCurrency: 'XAF' },
-  { value: 'MYCOOLPAY', labelKey: 'billing:gateways.MYCOOLPAY', methodType: 'mobile_money', descriptionKey: 'billing:gateways.mobileMoneyDescription', chargeCurrency: 'XAF' },
-  { value: 'STRIPE', labelKey: 'billing:gateways.STRIPE', methodType: 'card', descriptionKey: 'billing:gateways.cardDescription', chargeCurrency: 'USD' },
-];
+/** Currency each kind of charge lands in: mobile money in XAF, cards in USD. */
+export const CHARGE_CURRENCY: Record<PaymentOptionKind, string> = {
+  MOBILE_MONEY: 'XAF',
+  CARD: 'USD',
+};
 
 /**
- * Whether My-CoolPay's Orange Money one-time-code step can actually complete.
+ * A stored row's `gateway` — which aggregator carried that money — as a label.
  *
- * `true` since 2026-09-13. It was `false` for exactly one reason: that flow
- * answers `instructions.requiresOtp` with no USSD code, and the only documented
- * place to relay the code was `POST /payments/:transactionId/authorize` — which
- * resolves its argument against `PaymentTransaction` rows that a billing purchase
- * deliberately never creates, so it answered `404`. The payment was reachable and
- * could not be finished, for vendors and agents as well as agencies.
- *
- * The backend fixed it by adding the step to the **owner-scoped billing** routes
- * instead of widening the payments one — `POST /agency/credits/topups/:id/authorize`
- * and `POST /agency/plan-purchases/:id/authorize`, beside the `/verify` already
- * polled here. Widening the payments route would have opened an anonymous money
- * endpoint: it is unauthenticated because an order's payment link is shareable,
- * and a billing top-up has no such story. api-doc/agency/billing.md carries the
- * correction, dated.
- *
- * Kept as a named flag rather than deleted: it is the one switch that takes the
- * gateway back out if its OTP flow misbehaves in production.
+ * Informational only: never branch on it. Names live in the locale files, not
+ * here, and a value with no entry (a newly added aggregator) prints as sent
+ * rather than breaking the row.
  */
-export const MYCOOLPAY_BILLING_OTP_ROUTABLE = true;
-
-/**
- * The processors that can actually collect a mobile-money charge for billing.
- *
- * Filtered rather than removed from {@link GATEWAYS}: `gatewayLabel` still has
- * to name My-CoolPay on a historical transaction that was paid through it.
- */
-export const MOBILE_MONEY_GATEWAYS: GatewayMeta[] = GATEWAYS.filter(
-  (g) =>
-    g.methodType === 'mobile_money' &&
-    (g.value !== 'MYCOOLPAY' || MYCOOLPAY_BILLING_OTP_ROUTABLE),
-);
-
-export function gatewayLabel(gateway: PaymentGateway): string {
-  const meta = GATEWAYS.find((g) => g.value === gateway);
-  return meta ? txStatic(meta.labelKey) : gateway;
+export function gatewayLabel(gateway: string): string {
+  const key = `billing:gateways.${gateway.toUpperCase()}`;
+  const label = txStatic(key);
+  return label === key ? gateway : label;
 }
 
 // ─── Saved payment-method display ────────────────────────────────────────────────
@@ -98,24 +53,6 @@ export function methodTypeLabel(type: PaymentMethodType): string {
   const key = `billing:methods.types.${type}`;
   const label = txStatic(key);
   return label === key ? type : label;
-}
-
-// Payment providers are brands — not translated.
-const PROVIDER_LABELS: Record<string, string> = {
-  stripe: 'Stripe',
-  notchpay: 'NotchPay',
-  mycoolpay: 'MyCoolPay',
-  mtn_momo: 'MTN MoMo',
-  orange_money: 'Orange Money',
-};
-
-export function providerLabel(provider: string): string {
-  return PROVIDER_LABELS[provider.toLowerCase()] ?? provider;
-}
-
-/** Provider/operator string for the gateway used to tokenise a mobile-money method. */
-export function gatewayProvider(gateway: PaymentGateway): string {
-  return gateway.toLowerCase();
 }
 
 // ─── Plan tier accents ────────────────────────────────────────────────────────

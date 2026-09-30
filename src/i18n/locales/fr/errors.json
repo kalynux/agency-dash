@@ -298,7 +298,7 @@
     "CUSTOMER_ADDRESS_NOT_FOUND": "Cette adresse client est introuvable.",
     "CUSTOMER_PAYMENT_METHOD_NOT_FOUND": "Ce moyen de paiement client est introuvable.",
     "PAYMENT_METHOD_NOT_FOUND": "Ce moyen de paiement est introuvable.",
-    "PAYMENT_METHOD_LIMIT_REACHED": "Vous pouvez enregistrer au maximum 10 moyens de paiement.",
+    "PAYMENT_METHOD_LIMIT_REACHED": "Vous pouvez enregistrer jusqu'à 10 moyens de paiement. Supprimez-en un d'abord.",
     "USER_NOT_FOUND": "Cet utilisateur est introuvable.",
     "USER_INVALID_PASSWORD": "Le mot de passe actuel est incorrect.",
     "STORE_NOT_FOUND": "Cette boutique est introuvable.",
@@ -594,6 +594,15 @@
     "NOTCHPAY_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu.",
     "MYCOOLPAY_REQUEST_FAILED": "Le prestataire de paiement n'a pas pu traiter cette demande. Réessayez sous peu.",
     "MYCOOLPAY_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu.",
+    "PAYMENT_PROVIDER_PHONE_MISMATCH": "Ce numéro appartient à un autre réseau que celui choisi. Choisissez le bon réseau, ou saisissez un autre numéro.",
+    "PAYMENT_PROVIDER_UNAVAILABLE": "Ce moyen de paiement vient d'être désactivé. Choisissez-en un autre.",
+    "PAYMENT_PROVIDER_REQUIRED": "Choisissez un moyen de paiement, puis réessayez.",
+    "PAYMENT_GATEWAY_NOT_CONFIGURED": "Le paiement en ligne n'est pas configuré de notre côté pour le moment. Réessayez plus tard, ou contactez le support.",
+    "PAYMENT_PAYER_NUMBER_REQUIRED": "Saisissez le numéro mobile money à débiter.",
+    "PAYMENT_SETTINGS_INVALID": "Ces réglages de paiement enfreignent une règle : ils n'ont pas été enregistrés.",
+    "PAYMENT_SETTINGS_VERSION_CONFLICT": "Les réglages de paiement ont changé pendant votre modification. Rechargez et réessayez.",
+    "CAMPAY_REQUEST_FAILED": "Le prestataire de paiement n'a pas pu traiter cette demande. Réessayez sous peu.",
+    "CAMPAY_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu.",
     "CONNECTION_CODE_INVALID": "Ce code n'est pas correct. Vérifiez votre saisie ou demandez-en un nouveau au bot.",
     "CONNECTION_CODE_EXPIRED": "Ce code a expiré. Envoyez à nouveau /connect au bot pour en obtenir un autre.",
     "CONNECTION_CODE_ATTEMPTS_EXCEEDED": "Trop de tentatives. Patientez quelques minutes, puis demandez un nouveau code au bot.",
@@ -661,6 +670,10 @@
     "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": {
       "some": "Le pool d'espèces de ce livreur n'a pas assez de place. Le maximum que vous pouvez fixer est {{headroom}}. Pour plus, demandez au livreur : il a peut-être choisi de porter moins que ce que permet son forfait.",
       "none": "Le pool d'espèces de ce livreur n'a plus de place pour vous. Il reste à 0 tant que son identité n'est pas vérifiée, et ses autres agences en détiennent peut-être déjà la totalité, à moins qu'il n'ait choisi d'en porter moins."
+    },
+    "PAYMENT_PROVIDER_PHONE_MISMATCH": {
+      "MTN": "Ce numéro est sur MTN. Choisissez MTN Mobile Money, ou saisissez un numéro du réseau choisi.",
+      "ORANGE": "Ce numéro est sur Orange. Choisissez Orange Money, ou saisissez un numéro du réseau choisi."
     }
   },
   "categories": {

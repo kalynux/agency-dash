@@ -23,7 +23,7 @@ import type {
   PricingPlan,
   CreditPack,
   PaymentChannel,
-  PaymentGateway,
+  PaymentProvider,
   PaymentInitResult,
   PaymentStatus,
   PaymentAuthorizeResult,
@@ -55,7 +55,7 @@ interface PaymentRequest {
   currency: string;
   successLabel: string;
   paymentKind: StripeResumeKind;
-  initiate: (gateway: PaymentGateway, channel: PaymentChannel) => Promise<PaymentInitResult>;
+  initiate: (provider: PaymentProvider, channel: PaymentChannel) => Promise<PaymentInitResult>;
   verify: (id: string) => Promise<{ status: PaymentStatus }>;
   authorize: (id: string, code: string) => Promise<PaymentAuthorizeResult>;
 }
@@ -185,7 +185,7 @@ export function BillingTab() {
       currency: plan.currency,
       successLabel: t('checkout.planPurchased'),
       paymentKind: 'plan',
-      initiate: (gateway, channel) => initiatePlanPurchase(plan._id, { gateway, channel }),
+      initiate: (provider, channel) => initiatePlanPurchase(plan._id, { provider, channel }),
       verify: verifyPlanPurchase,
       authorize: authorizePlanPurchase,
     });
@@ -200,7 +200,7 @@ export function BillingTab() {
       currency: pack.currency,
       successLabel: t('checkout.creditsAdded'),
       paymentKind: 'topup',
-      initiate: (gateway, channel) => initiateTopup({ packCode: pack.code, gateway, channel }),
+      initiate: (provider, channel) => initiateTopup({ packCode: pack.code, provider, channel }),
       verify: verifyTopup,
       authorize: authorizeTopup,
     });

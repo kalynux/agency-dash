@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Info, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { InfoHint } from '@/components/common/InfoHint';
 import {
   FilterOptionGroup,
   FilterSection,
@@ -169,18 +170,31 @@ export function StockTab() {
   const rangeEnd = (meta.page - 1) * meta.limit + items.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Phase 1: the COUNTED numbers are derived, not counted. Say so once, at
           the top, rather than letting every zero on the screen be read as a stock
           level. The agreed quantity beside them is real, which is why the banner
-          names which one it is talking about. */}
+          names which one it is talking about.
+          On a phone the six-line body was the first thing on the screen and
+          pushed the list itself below the fold — there the banner is its one-line
+          title, and the body opens from the ⓘ. */}
       {countsAreDerived && (
-        <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200">
-          <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <p>
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-200 md:p-3">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 max-md:hidden" />
+          <p className="min-w-0 flex-1">
             <span className="font-medium">{t('derived.bannerTitle')}</span>{' '}
-            <span className="text-sky-800 dark:text-sky-300">{t('derived.bannerBody')}</span>
+            <span className="text-sky-800 max-md:hidden dark:text-sky-300">
+              {t('derived.bannerBody')}
+            </span>
           </p>
+          <InfoHint
+            className="text-sky-700 hover:text-sky-900 md:hidden dark:text-sky-300"
+            align="end"
+            label={t('derived.bannerTitle')}
+            title={t('derived.bannerTitle')}
+          >
+            {t('derived.bannerBody')}
+          </InfoHint>
         </div>
       )}
 
@@ -219,11 +233,29 @@ export function StockTab() {
       <Card className={listSurfaceClass}>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-3 p-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
+            <>
+              <div className="hidden space-y-3 p-4 xl:block">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                ))}
+              </div>
+              {/* The shape of the card that will replace it, so nothing jumps. */}
+              <div className="divide-y md:grid md:grid-cols-2 md:gap-3 md:divide-y-0 md:p-3 xl:hidden">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-3 px-4 py-3.5 md:rounded-xl md:border">
+                    <div className="flex gap-3">
+                      <div className="h-12 w-12 animate-pulse rounded-lg bg-muted" />
+                      <div className="flex-1 space-y-2 pt-1">
+                        <div className="h-3.5 w-4/5 animate-pulse rounded bg-muted" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                      </div>
+                    </div>
+                    <div className="h-12 animate-pulse rounded-lg bg-muted" />
+                    <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : loadError ? (
             <div className="p-8 text-center">
               <p className="mb-4 text-muted-foreground">{loadError}</p>
@@ -263,18 +295,19 @@ export function StockTab() {
             </div>
           ) : (
             <>
-              {/* Desktop / tablet: table */}
-              <div className="hidden overflow-x-auto md:block">
+              {/* Desktop: table. Only from `xl` — below that, with the sidebar
+                  open, five columns do not fit and the last one was cut off. */}
+              <div className="hidden overflow-x-auto xl:block">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="p-4 text-start text-sm font-medium">{t('table.product')}</th>
-                      <th className="p-4 text-start text-sm font-medium">{t('table.vendor')}</th>
-                      <th className="p-4 text-start text-sm font-medium">{t('table.location')}</th>
+                      <th className="px-4 py-3 text-start text-sm font-medium">{t('table.product')}</th>
+                      <th className="px-4 py-3 text-start text-sm font-medium">{t('table.vendor')}</th>
+                      <th className="px-4 py-3 text-start text-sm font-medium">{t('table.location')}</th>
                       {/* Two columns, two headings. Merging them would undo the
                           one distinction this screen has to keep straight. */}
-                      <th className="p-4 text-start text-sm font-medium">{t('table.agreed')}</th>
-                      <th className="p-4 text-start text-sm font-medium">{t('table.counted')}</th>
+                      <th className="px-4 py-3 text-start text-sm font-medium">{t('table.agreed')}</th>
+                      <th className="px-4 py-3 text-start text-sm font-medium">{t('table.counted')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -285,8 +318,9 @@ export function StockTab() {
                 </table>
               </div>
 
-              {/* Mobile: cards */}
-              <div className="divide-y md:hidden">
+              {/* Phone: a flush list of cards. Tablet: the same cards, framed,
+                  two to a row. */}
+              <div className="divide-y md:grid md:grid-cols-2 md:gap-3 md:divide-y-0 md:p-3 xl:hidden">
                 {items.map((item) => (
                   <InventoryCard key={item.id} item={item} onOpen={openDetail} />
                 ))}
@@ -295,8 +329,8 @@ export function StockTab() {
           )}
 
           {!isLoading && !loadError && (
-            <div className="flex items-center justify-between gap-2 border-t p-4">
-              <p className="text-xs text-muted-foreground sm:text-sm">
+            <div className="flex items-center justify-between gap-2 border-t px-4 py-3 md:p-4">
+              <p className="min-w-0 text-xs text-muted-foreground sm:text-sm">
                 {t('common:pagination.showingRange', {
                   from: rangeStart,
                   to: rangeEnd,

@@ -68,6 +68,13 @@ const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMes
       ? { key: 'CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM.some', context: { headroom: formatNumber(d.headroom) } }
       : { key: 'CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM.none' };
   },
+  // `detected` is the network the number's prefix belongs to — `MTN` or
+  // `ORANGE`, the only two the server's prefix table knows — so the sentence can
+  // say which one to pick. See api-doc/FRONTEND-CHANGELOG-payment-providers.md § 4.
+  PAYMENT_PROVIDER_PHONE_MISMATCH: (d) =>
+    d.detected === 'MTN' || d.detected === 'ORANGE'
+      ? { key: `PAYMENT_PROVIDER_PHONE_MISMATCH.${d.detected}` }
+      : undefined,
 };
 
 function detailedMessage(err: ApiError): DetailedMessage | undefined {

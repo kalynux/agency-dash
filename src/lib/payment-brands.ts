@@ -55,10 +55,10 @@ export interface PaymentBrand {
    */
   logoSize?: { width: number; height: number };
   /**
-   * The `phoneOperator` the payments gateway is charged with. `null` means the
-   * brand is real but the gateway has no enum member for it yet — the backend
-   * accepts only MTN/ORANGE/MOOV (payment.validators.ts), so those brands are
-   * shown but not selectable anywhere a charge is initiated.
+   * The charge `provider` this brand is. `null` means the brand is real but the
+   * platform has no provider for it — the catalogue is MTN/ORANGE/MOOV/CARD
+   * (api-doc/payments/routing.md). Whether a provider is payable *right now* is
+   * not recorded here: `GET /payments/options` answers that.
    */
   operator?: PhoneOperator | null;
   /**
@@ -170,9 +170,9 @@ const ALL_BRANDS: readonly PaymentBrand[] = [...CARD_BRANDS, ...MOBILE_MONEY_BRA
  * Resolve whatever a record calls its brand to a registry entry.
  *
  * The same operator arrives spelled several ways depending on where it was
- * written: `SavedPaymentMethod.brand` holds the gateway's own casing (`visa`,
- * `MTN`), a payout row holds the full marketing name (`MTN Mobile Money`), and
- * Stripe reports networks lowercased. Match on the id, the operator, and the
+ * written: a saved method's `provider` is the network code (`MTN`), a payout
+ * row holds the full marketing name (`MTN Mobile Money`), and a payout card's
+ * brand is lowercased (`visa`). Match on the id, the operator, and the
  * payout string, then fall back to a substring so `mtn_momo` still lands on MTN.
  * Returns `null` for a brand we have no logo for — callers draw a generic mark.
  */
@@ -195,7 +195,7 @@ export function resolveBrand(raw: string | null | undefined): PaymentBrand | nul
   return ALL_BRANDS.find((b) => value.includes(b.id) || value.includes(b.shortName.toLowerCase())) ?? null;
 }
 
-/** The brand backing a gateway operator enum member. */
+/** The brand backing a mobile-money charge provider. */
 export function brandForOperator(operator: PhoneOperator): PaymentBrand | undefined {
   return MOBILE_MONEY_BRANDS.find((b) => b.operator === operator);
 }

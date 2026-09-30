@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Ban, Loader2, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/common/InfoHint';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -154,8 +155,15 @@ export function SuspensionPanel({
         </div>
       ) : (
         <div className="rounded-lg border p-3">
-          <p className="text-sm">{t('suspension.onSale')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('suspension.suspendHint')}</p>
+          <p className="flex items-center gap-1.5 text-sm">
+            {t('suspension.onSale')}
+            <InfoHint className="md:hidden" title={t('suspension.title')}>
+              {t('suspension.suspendHint')}
+            </InfoHint>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground max-md:hidden">
+            {t('suspension.suspendHint')}
+          </p>
           <Button
             size="sm"
             variant="outline"

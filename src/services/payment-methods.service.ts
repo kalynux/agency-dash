@@ -23,7 +23,11 @@ export async function fetchDefaultPaymentMethod(): Promise<SavedPaymentMethod | 
   return res.data;
 }
 
-/** Save a new tokenized method. Returns the created method (without gateway ids). */
+/**
+ * Save a mobile-money wallet: `{ provider, phoneNumber, label?, isDefault? }`.
+ * Refused: a card, any old-shape key (`400`), a number on another network than
+ * `provider` (`422 PAYMENT_PROVIDER_PHONE_MISMATCH`), an 11th method (`409`).
+ */
 export async function addPaymentMethod(
   payload: AddPaymentMethodPayload,
 ): Promise<SavedPaymentMethod> {

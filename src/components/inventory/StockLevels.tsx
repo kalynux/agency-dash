@@ -26,9 +26,10 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Boxes, HelpCircle, Infinity as InfinityIcon, Lock, PackageCheck } from 'lucide-react';
+import { Boxes, Infinity as InfinityIcon, Lock, PackageCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoHint } from '@/components/common/InfoHint';
 import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { InventoryDetail, InventoryListItem } from '@/types/inventory.types';
@@ -78,24 +79,20 @@ export function StockLevelCell({
   const { t } = useTranslation('inventory');
 
   if (item.source === 'derived') {
+    // Not a tooltip: a hover tooltip never opens from a tap, and a phone or a
+    // tablet is where this list is read most. The ⓘ opens a sheet there.
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className={cn(
-              'inline-flex cursor-help items-center gap-1.5 text-sm text-muted-foreground',
-              className,
-            )}
-          >
-            <HelpCircle className="h-3.5 w-3.5 flex-shrink-0" />
-            {t('derived.notCounted')}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-[18rem] space-y-1">
-          <p className="font-medium">{t('derived.tooltipTitle')}</p>
-          <p>{t('derived.tooltipBody')}</p>
-        </TooltipContent>
-      </Tooltip>
+      <span
+        className={cn(
+          'inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground',
+          className,
+        )}
+      >
+        {t('derived.notCounted')}
+        <InfoHint title={t('derived.tooltipTitle')} label={t('derived.tooltipTitle')}>
+          {t('derived.tooltipBody')}
+        </InfoHint>
+      </span>
     );
   }
 
@@ -214,7 +211,16 @@ export function CatalogStockSection({
       <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">{t('catalogStock.label')}</p>
+            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              {t('catalogStock.label')}
+              <InfoHint
+                className="md:hidden"
+                label={t('catalogStock.title')}
+                title={t('catalogStock.title')}
+              >
+                {t('catalogStock.caption')}
+              </InfoHint>
+            </p>
             {isInfinite ? (
               <p className="mt-1 inline-flex items-center gap-1.5 text-lg font-bold text-amber-600 dark:text-amber-400">
                 <InfinityIcon className="h-4 w-4 flex-shrink-0" />
@@ -225,7 +231,10 @@ export function CatalogStockSection({
                 {quantity == null ? '—' : formatNumber(quantity)}
               </p>
             )}
-            <p className="mt-1 text-xs text-muted-foreground">{t('catalogStock.caption')}</p>
+            {/* Three lines of prose under the figure on a phone; behind the ⓘ there. */}
+            <p className="mt-1 text-xs text-muted-foreground max-md:hidden">
+              {t('catalogStock.caption')}
+            </p>
           </div>
         </div>
 
@@ -317,8 +326,15 @@ export function StockLevelSection({ detail }: { detail: InventoryDetail }) {
 
       {detail.source === 'derived' ? (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="text-sm font-medium">{t('derived.tooltipTitle')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('derived.detailBody')}</p>
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            {t('derived.tooltipTitle')}
+            <InfoHint className="md:hidden" title={t('derived.tooltipTitle')}>
+              {t('derived.detailBody')}
+            </InfoHint>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground max-md:hidden">
+            {t('derived.detailBody')}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

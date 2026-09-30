@@ -298,7 +298,7 @@
     "CUSTOMER_ADDRESS_NOT_FOUND": "That customer address could not be found.",
     "CUSTOMER_PAYMENT_METHOD_NOT_FOUND": "That customer payment method could not be found.",
     "PAYMENT_METHOD_NOT_FOUND": "That payment method could not be found.",
-    "PAYMENT_METHOD_LIMIT_REACHED": "You can save at most 10 payment methods.",
+    "PAYMENT_METHOD_LIMIT_REACHED": "You can save up to 10 payment methods. Remove one first.",
     "USER_NOT_FOUND": "That user could not be found.",
     "USER_INVALID_PASSWORD": "Current password is incorrect.",
     "STORE_NOT_FOUND": "That store could not be found.",
@@ -594,6 +594,15 @@
     "NOTCHPAY_UNREACHABLE": "The payment provider is unreachable. Try again shortly.",
     "MYCOOLPAY_REQUEST_FAILED": "The payment provider could not process this right now. Try again shortly.",
     "MYCOOLPAY_UNREACHABLE": "The payment provider is unreachable. Try again shortly.",
+    "PAYMENT_PROVIDER_PHONE_MISMATCH": "That number is on a different network from the one you chose. Pick the matching network, or enter another number.",
+    "PAYMENT_PROVIDER_UNAVAILABLE": "That payment option was just switched off. Choose another one.",
+    "PAYMENT_PROVIDER_REQUIRED": "Choose how you want to pay, then try again.",
+    "PAYMENT_GATEWAY_NOT_CONFIGURED": "Online payment isn't set up on our side right now. Try again later, or contact support.",
+    "PAYMENT_PAYER_NUMBER_REQUIRED": "Enter the mobile money number to charge.",
+    "PAYMENT_SETTINGS_INVALID": "Those payment settings break a rule, so they were not saved.",
+    "PAYMENT_SETTINGS_VERSION_CONFLICT": "The payment settings changed while you were editing. Reload and try again.",
+    "CAMPAY_REQUEST_FAILED": "The payment provider could not process this right now. Try again shortly.",
+    "CAMPAY_UNREACHABLE": "The payment provider is unreachable. Try again shortly.",
     "CONNECTION_CODE_INVALID": "That code isn't right. Check what you typed, or ask the bot for a new one.",
     "CONNECTION_CODE_EXPIRED": "That code has expired. Send /connect to the bot again for a fresh one.",
     "CONNECTION_CODE_ATTEMPTS_EXCEEDED": "Too many attempts. Wait a few minutes, then ask the bot for a new code.",
@@ -661,6 +670,10 @@
     "CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM": {
       "some": "That's more than this agent's COD pool has room for. The most you can set is {{headroom}}. For more, ask the agent: they may have chosen to carry less than their plan allows.",
       "none": "This agent's COD pool has no room left for you. It stays at 0 until they're verified, and their other agencies may already hold all of it, or they chose to carry less."
+    },
+    "PAYMENT_PROVIDER_PHONE_MISMATCH": {
+      "MTN": "This number is on MTN. Choose MTN Mobile Money, or enter a number on the network you picked.",
+      "ORANGE": "This number is on Orange. Choose Orange Money, or enter a number on the network you picked."
     }
   },
   "categories": {

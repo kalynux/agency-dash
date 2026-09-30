@@ -17,6 +17,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Ruler, Wallet } from 'lucide-react';
+import { InfoHint } from '@/components/common/InfoHint';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { describeDimensions, describeVolume } from '@/types/inventory.types';
 import type { InventoryStorageFee } from '@/types/inventory.types';
@@ -26,8 +27,16 @@ export function StorageFeePanel({ fee }: { fee: InventoryStorageFee }) {
 
   return (
     <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {t('storageFee.title')}
+        {/* The "not billed" and size captions are neutral help: inline on
+            desktop, one sheet behind this ⓘ on a phone. */}
+        {fee.storageBasedEnabled && (
+          <InfoHint className="md:hidden" title={t('storageFee.title')}>
+            <span className="block">{t('storageFee.notBilledCaption')}</span>
+            {fee.size && <span className="mt-2 block">{t('storageFee.sizeCaption')}</span>}
+          </InfoHint>
+        )}
       </h3>
 
       {/* Not a rate of zero — an agency that does not warehouse at all. Showing
@@ -56,7 +65,7 @@ export function StorageFeePanel({ fee }: { fee: InventoryStorageFee }) {
             </div>
           </div>
 
-          <p className="mt-2 border-t pt-2 text-xs text-muted-foreground">
+          <p className="mt-2 border-t pt-2 text-xs text-muted-foreground max-md:hidden">
             {t('storageFee.notBilledCaption')}
           </p>
 
@@ -97,7 +106,9 @@ function SizeLine({ size }: { size: InventoryStorageFee['size'] }) {
         />
         <SizeRow label={t('storageFee.sizeSource')} value={t(`storageFee.sources.${size.source}`)} />
       </dl>
-      <p className="mt-1.5 text-xs text-muted-foreground/80">{t('storageFee.sizeCaption')}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground/80 max-md:hidden">
+        {t('storageFee.sizeCaption')}
+      </p>
     </div>
   );
 }

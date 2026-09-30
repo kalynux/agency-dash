@@ -2,8 +2,8 @@
 // Loads Stripe's hosted script (https://js.stripe.com/v3) on demand and returns a
 // configured Stripe instance. We use the hosted script directly (rather than the
 // @stripe/stripe-js npm package) so the card data never touches our bundle — the
-// recommended PCI-friendly approach. If no publishable key is configured, card
-// payments are unavailable and the UI falls back to mobile money only.
+// recommended PCI-friendly approach. The publishable key comes from the server
+// (`GET /payments/options`); with no `CARD` entry there, no card form is offered.
 
 // Minimal typing for the bits of the Stripe.js global we use. The full SDK has
 // far richer types; we keep this narrow and local to avoid a dependency.
@@ -89,11 +89,7 @@ declare global {
   }
 }
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
 const STRIPE_JS_URL = 'https://js.stripe.com/v3';
-
-/** Whether Stripe card payments are configured (publishable key present). */
-export const isStripeConfigured = Boolean(PUBLISHABLE_KEY);
 
 let scriptPromise: Promise<StripeConstructor> | null = null;
 
@@ -122,13 +118,22 @@ function loadScript(): Promise<StripeConstructor> {
   return scriptPromise;
 }
 
-let stripeInstance: StripeInstance | null = null;
+const instances = new Map<string, StripeInstance>();
 
-/** Lazily load Stripe.js and return a configured instance (memoised). */
-export async function getStripe(): Promise<StripeInstance | null> {
-  if (!PUBLISHABLE_KEY) return null;
-  if (stripeInstance) return stripeInstance;
+/**
+ * Lazily load Stripe.js and return an instance for `publishableKey` (memoised
+ * per key).
+ *
+ * The key is the `CARD` entry's `publishableKey` from `GET /payments/options`,
+ * never one baked into the build: the server decides whether cards are on and
+ * which account takes them, and can change both without a release.
+ */
+export async function getStripe(publishableKey: string): Promise<StripeInstance | null> {
+  if (!publishableKey) return null;
+  const cached = instances.get(publishableKey);
+  if (cached) return cached;
   const Stripe = await loadScript();
-  stripeInstance = Stripe(PUBLISHABLE_KEY);
-  return stripeInstance;
+  const instance = Stripe(publishableKey);
+  instances.set(publishableKey, instance);
+  return instance;
 }

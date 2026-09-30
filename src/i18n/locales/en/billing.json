@@ -142,7 +142,7 @@
   "methods": {
     "title": "Payment methods",
     "aboutLabel": "About saved payment methods",
-    "description": "Saved methods pre-fill checkout. We never store full card numbers or CVV.",
+    "description": "Saved wallets pre-fill checkout. We only ever show the last four digits of a number.",
     "descriptionShort": "Pre-fill checkout",
     "atLimit": "You can save up to {{count}} methods.",
     "loadFailed": "Failed to load payment methods.",
@@ -150,7 +150,6 @@
     "default": "Default",
     "setDefault": "Set default",
     "setDefaultFailed": "Could not update the default.",
-    "expires": "Expires {{month}}/{{year}}",
     "remove": "Remove payment method",
     "removed": "Payment method removed",
     "removeFailed": "Could not remove the method.",
@@ -164,21 +163,23 @@
     },
     "add": {
       "title": "Add payment method",
-      "description": "Save a method to speed up checkout. We never store full card numbers or CVV.",
+      "description": "Save a mobile money wallet to speed up checkout.",
       "phone": "Mobile money number",
       "operator": "Provider",
-      "holderNameMobile": "Account holder name (optional)",
-      "holderNameMobilePlaceholder": "Account holder",
-      "holderNameCard": "Card holder name",
-      "holderNameCardPlaceholder": "Name on card",
-      "cardDetails": "Card details",
       "setAsDefault": "Set as default",
       "setAsDefaultHint": "Pre-selected at checkout.",
       "submit": "Save method",
       "added": "Payment method added",
-      "channel": "Payment method",
-      "secureNote": "Card details go straight to Stripe — they never touch our servers."
-    }
+      "label": "Name (optional)",
+      "labelPlaceholder": "e.g. Office wallet",
+      "labelHint": "Leave it blank and we'll name it after the network and the last four digits.",
+      "labelInvalid": "Use 1 to {{max}} characters, or leave it blank.",
+      "phoneInvalid": "Enter the number in international format, e.g. +237 6 70 12 44 17.",
+      "mismatch": "This number is on {{detected}}. Choose {{detected}}, or enter a number on {{provider}}.",
+      "switchTo": "Switch to {{name}}",
+      "duplicate": "Your {{name}} number ending {{last4}} is already saved."
+    },
+    "unknownNetwork": "network unknown"
   },
   "settings": {
     "title": "Expiry reminders",
@@ -239,8 +240,6 @@
     "timeoutTitle": "Still processing",
     "timeoutDescription": "We couldn't confirm the payment in time. If you completed it, your balance will update shortly — check your history.",
     "startOver": "Start over",
-    "processedBy": "Processed by",
-    "stripeNote": "Card details go straight to Stripe — they never touch our servers.",
     "otpTitle": "Enter your confirmation code",
     "otpPrompt": "Your provider sent a code by text message to {{phone}}.",
     "otpLabel": "Confirmation code",
@@ -250,14 +249,25 @@
     "otpInvalid_one": "That code is incorrect. You have {{count}} try left.",
     "otpInvalid_other": "That code is incorrect. You have {{count}} tries left.",
     "otpNoTriesLeft": "That code is incorrect, and it was the last try. Start a new payment.",
-    "otpAttemptsExceeded": "Too many incorrect codes, so this payment was cancelled. Nothing was charged — you can start a new one."
+    "otpAttemptsExceeded": "Too many incorrect codes, so this payment was cancelled. Nothing was charged — you can start a new one.",
+    "loadingOptions": "Loading payment options…",
+    "optionsLoadFailed": "We couldn't load the payment options. Check your connection and try again.",
+    "unavailableTitle": "Online payment is unavailable right now",
+    "unavailableDescription": "Please come back a little later.",
+    "mayRequireOtp": "Your provider may text you a confirmation code instead of a prompt.",
+    "cardSecureTitle": "Secure card payment",
+    "cardSecureNote": "Card details go straight to the card processor — they never touch our servers.",
+    "providerSwitchedOff": "That payment option was just switched off. The list has been updated — choose another.",
+    "redirectPrompt": "Finish paying on the payment page, then come back here.",
+    "openPaymentPage": "Open payment page",
+    "savedNumberHint": "Enter the number ending {{last4}}."
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",
     "MYCOOLPAY": "MyCoolPay",
     "STRIPE": "Card",
-    "mobileMoneyDescription": "Mobile money — charged in XAF",
-    "cardDescription": "Visa, Mastercard & more — charged in USD"
+    "CAMPAY": "Campay",
+    "FLUTTERWAVE": "Flutterwave"
   },
   "card": {
     "type": "Card type",
@@ -279,14 +289,12 @@
   "channels": {
     "card": {
       "name": "Card payment",
-      "description": "Secured by Stripe"
+      "description": "Visa, Mastercard & more"
     },
     "mobileMoney": {
       "name": "Mobile Money",
       "description": "Approve on your phone"
     },
-    "poweredBy": "Powered by {{provider}}",
-    "processedBy": "Processed by",
     "operatorPlaceholder": "Choose an operator",
     "comingSoon": "Soon",
     "comingSoonHint": "Airtel Money and Wave are coming soon — pick another operator for now."
