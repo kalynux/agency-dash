@@ -1,38 +1,12 @@
 # Live Tracking WebSocket
 
-**Verified against source on 2026-09-08** (backend counterpart: `geo-tracker/api-doc/`) — endpoint,
-all three token sources and their precedence, every frame shape, the three `permission_revoked`
-reasons and all nine error-frame codes, against `geo-tracker/internal/modules/tracking/` and
-`internal/platform/apperror/codes.go`. One defect fixed: the token precedence was listed in reverse.
-
-> ### For the agency dashboard — read this box first
->
-> **This is the only source of movement on your map.** Everything else — which agents,
-> which shipments, which pins — comes from jovi-mall
-> ([`agency/live-tracking.md`](../agency/live-tracking.md)). This socket carries positions
-> and nothing else.
->
-> As an **agency** you are a *viewer*. You send exactly two of the five inbound frame kinds:
-> `subscribe` and `unsubscribe`. The other three (`location_update`, `device_state`,
-> `app_state`) are the **agent app's**; sending one from here is answered with
-> `error` / `TRACKING_AGENT_IDENTITY_MISMATCH`.
->
-> 🔴 **The one thing that changed and can make your UI lie:** `permission_revoked.reason`
-> is now **a closed set of three**, where it used to be the single literal
-> `shipment_completed` for all three outcomes. Only `shipment_completed` licenses a
-> delivery-outcome message. See [the table below](#permission_revoked), and
-> [`../MIGRATION-2026-08.md`](../MIGRATION-2026-08.md) § 2.
->
-> **Verified against source 2026-08-24** (PLAN-3). Every frame kind, payload field and
-> revoke reason on this page was read off:
-> `geo-tracker/internal/modules/tracking/domain/entity.go:84-187` (outbound kinds,
-> `LocationBroadcast`, `RevokedPayload`, the three `RevokeReason*` constants,
-> `AckPayload`, `ErrorPayload`),
-> `…/delivery/ws/message.go:15-90` (the five inbound kinds and their payloads),
-> `…/delivery/ws/handler.go:117-380` (handshake, token transports, dispatch, error paths)
-> and `…/delivery/ws/connection.go:16-22` (keepalive, frame cap, buffer).
-> Two corrections are recorded in
-> [§ Where this document is wrong](#where-this-document-is-wrong) at the foot.
+**Verified against source on 2026-09-08** — endpoint, all three token sources and their
+precedence, every inbound and outbound frame shape, the three `permission_revoked` reasons,
+all nine error-frame codes and the keepalive/frame-size numbers, against
+`geo-tracker/internal/modules/tracking/` (`module.go`, `delivery/ws/handler.go`,
+`delivery/ws/message.go`, `delivery/ws/connection.go`, `domain/entity.go`) and
+`internal/platform/apperror/codes.go`. One defect fixed: the token precedence was listed
+in reverse.
 
 The real-time channel: agents publish their position here, and authorized
 viewers (admin / agency / customer) receive it.
@@ -49,7 +23,7 @@ no sessions — they watch, they are not tracked.
 >
 > A **tracking session is one shipment's** tracking lifecycle. It is opened by
 > jovi-mall reporting the shipment active, and closed only by jovi-mall reporting
-> it terminal (see webhooks.md (`backend/geo-tracker/api-doc/webhooks.md` — backend-to-backend, HMAC; not mirrored here)). This socket only *binds* to
+> it terminal (see [webhooks.md](./webhooks.md)). This socket only *binds* to
 > sessions that already exist.
 >
 > - **Connecting** resumes whatever deliveries are already in flight
@@ -264,7 +238,8 @@ waits for the socket.
 > **rejected**: the device state is not mutated, no session changes, and you get
 >
 > ```json
-> { "type": "error", "payload": { "message": "tracking cannot be disabled while you have an active shipment" } }
+> { "type": "error", "payload": { "code": "TRACKING_ALLOW_LOCKED",
+>                                 "message": "tracking cannot be disabled while you have an active shipment" } }
 > ```
 >
 > jovi-mall only dispatches to agents who have granted Tracking Allow, so allowing
@@ -367,84 +342,25 @@ never infer a delivery outcome from a `permission_revoked` frame without reading
 
 #### `error`
 ```json
-{ "type": "error", "payload": { "code": "TRACKING_NOT_AUTHORIZED",
-                                "message": "not authorized" } }
+{ "type": "error", "payload": { "code": "TRACKING_NOT_AUTHORIZED", "message": "not authorized" } }
 ```
 Errors are frame-level, not fatal: the connection stays open.
 
-**`code` is declared `omitempty` but is populated at every send site**, so in practice it is
-always present — `handler.go`'s `sendError` takes the code as a required argument and there is
-no path that emits an error frame without one (`handler.go:438-446`). Branch on `code`, not on
-`message`; the message is free text and two of the codes below have carried the same one.
-
-The eleven codes an **agency viewer** can actually receive, and what each means for the map:
-
-| `code` | When | What the dashboard should do |
-|---|---|---|
-| `TRACKING_NOT_AUTHORIZED` | your `subscribe` was refused for that agent | Do not retry blind — refetch `GET /api/agency/tracking/board`. Usually the shipment ended between the board load and the subscribe. |
-| `WS_MESSAGE_INVALID` | the frame was not parseable, or `agentId` was empty | Client bug. Fix the frame; retrying identical bytes cannot succeed. |
-| `WS_UNKNOWN_MESSAGE_TYPE` | `type` is not one of the five | Client bug. |
-| `WS_RATE_LIMITED` | over 20 inbound frames/s on this connection (burst 40) | Slow down. **The frame was dropped and the socket is still open.** See [rate-limits.md](./rate-limits.md). |
-| `TRACKING_AGENT_IDENTITY_MISMATCH` | you sent `location_update`, `device_state` or `app_state` | Those are agent-only. An agency dashboard must never send them. |
-| `LOCATION_COORDINATE_INVALID` · `LOCATION_JUMP_IMPLAUSIBLE` · `LOCATION_STORE_UNAVAILABLE` · `TRACKING_ALLOW_LOCKED` | — | **Agent-app only.** An agency connection cannot produce these; they are listed so a shared client library's exhaustive `switch` is complete. |
-
-Error frames are **best-effort and throttled** to roughly one per five seconds per connection
-(`handler.go:92`, `errorFrames = ratelimit.New(0.2, 2, …)`). The outbound buffer holds 32
-frames and drops when full, so a client must never require an error frame per rejected
-message. Full code table: [errors/README.md](./errors/README.md).
+> ⚠ **Branch on `code`, never on `message`.** `code` is declared `omitempty` in the Go struct
+> (`tracking/domain/entity.go:186`) but `sendError` takes it as a **required positional argument**
+> and sets it on **every** frame — all 18 call sites supply one, and there is no path that emits an
+> error frame without it. This example omitted the field until 2026-09-06 (DOC-PROGRAM F-40), which
+> mattered because `message` is free text that two codes have shared:
+> `LOCATION_COORDINATE_INVALID` means *do not resend* and `LOCATION_STORE_UNAVAILABLE` means
+> *retry* — opposite instructions the message alone cannot separate. That is why the field exists.
+>
+> The frame codes are `WS_MESSAGE_INVALID`, `WS_UNKNOWN_MESSAGE_TYPE`, `WS_RATE_LIMITED`,
+> `TRACKING_NOT_AUTHORIZED`, `TRACKING_ALLOW_LOCKED`, `TRACKING_AGENT_IDENTITY_MISMATCH`,
+> `LOCATION_COORDINATE_INVALID`, `LOCATION_JUMP_IMPLAUSIBLE` and `LOCATION_STORE_UNAVAILABLE`.
+> Treat an unknown one as non-fatal and keep the socket open.
 
 ## Keepalive
 
 The server pings every ~54s and expects a pong; a client silent for 60s is
 disconnected. Frames are capped at 64 KiB. A client that stops draining its
 socket has frames dropped rather than stalling other subscribers.
-
-Exact values, from `connection.go:16-22`:
-
-| Constant | Value | Meaning |
-|---|---|---|
-| `pingInterval` | **54 s** (`pongWait × 9 / 10`) | server → client ping cadence |
-| `pongWait` | **60 s** | read deadline; a client silent this long is disconnected |
-| `writeWait` | **10 s** | per-frame write deadline |
-| `maxMessageSize` | **64 KiB** (`1 << 16`) | inbound frame cap |
-| `sendBuffer` | **32 frames** | per-connection outbound queue; **drops when full** |
-
-A browser `WebSocket` answers pings in the platform layer, so no client code is needed for the
-keepalive. What *does* need client code is the reconnect — see the box below.
-
----
-
-## Reconnect strategy for this dashboard
-
-Three separate reasons to reconnect, and they are not interchangeable.
-
-1. **Token age.** The access token is checked **at the handshake and never again on a timer**,
-   but `RevokeForAgent` forwards *that same stale token* back to jovi-mall when a revocation
-   fires. Past the 15-minute access TTL the re-check fails and you are dropped with
-   `authorization_expired`. **Reconnect on a cadence shorter than 15 minutes** — the cheapest
-   correct implementation is to reconnect whenever the main API refreshes its session.
-2. **Transport loss.** Exponential backoff from ~1 s to a ~30 s ceiling, with jitter. On
-   reconnect you must **re-send every `subscribe`** — subscriptions live on the connection, and
-   so does any `destination` you supplied.
-3. **`permission_revoked`.** Do **not** reconnect on this. It is an answer, not a failure.
-   Branch on `reason` (table above) and refetch the board.
-
-A reconnect on the agent's side resumes the **same** tracking session — same `sessionId`, same
-trail, same history — so an agency watching a flapping agent sees the marker pause and resume,
-never a new delivery.
-
----
-
-## Where this document is wrong
-
-Two corrections found by reading the source on 2026-08-24. Both are in the **backend's own**
-copy of this file (`geo-tracker/api-doc/tracking-websocket.md`) and are filed in
-`backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`.
-
-| # | The claim | The source |
-|---|---|---|
-| 1 | The `error` frame example shows `{ "message": … }` with no `code`, and the field is documented only in `errors/README.md`. | `code` is set at **every** call site (`handler.go:438-446`); it is never absent in practice. Corrected above. |
-| 2 | `errors/README.md`'s status table lists **`409`** as a live status on `/ws/track` and "session", described as new in Phase 16. | `http.StatusConflict` **appears nowhere in the geo-tracker codebase**. `TRACKING_ALLOW_LOCKED` is emitted only as a WebSocket error frame (`handler.go:312`) exactly as it was before Phase 16. A `409` branch against this service is dead code. |
-
-Neither affects an agency dashboard's behaviour, and neither is a reason to distrust the rest
-of the page: every frame kind, payload field and revoke reason was checked and matched.

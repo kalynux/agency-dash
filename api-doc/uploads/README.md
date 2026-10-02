@@ -8,6 +8,15 @@ parameter and error code below, against `jovi-mall/src/api/routes/file-upload.ro
 `src/core/storage/storage-trees.ts`,
 `src/modules/catalog/read-models/file-detail.resolver.ts` and `src/api/index.ts`.
 
+⚠ **CHANGED 2026-09-08 (session S9) — all four `/api/files/*` responses gained `url` and
+`access`.** Both upload routes, `GET /files` and `GET /files/:id`. It is an **additive** change:
+every field these endpoints returned before is still there, in the same place, so no client had to
+change. What it reverses is the advice this page used to give — *"do not build a display URL out of
+the upload response, and do not expect one there"* — which was a true description of a gap, not a
+design rule. The proposal and its four decisions are
+[PROPOSAL-file-url-on-read.md](./PROPOSAL-file-url-on-read.md); two malformed JSON examples were
+repaired in the same pass.
+
 The `/api/files` surface is **shared by every authenticated role** (customer, vendor, agency, agent),
 with per-role size limits. Uploaded files are referenced elsewhere by their returned `id`
 (product images, vendor/agency branding, KYC documents, ticket attachments, etc.).
@@ -16,10 +25,10 @@ with per-role size limits. Uploaded files are referenced elsewhere by their retu
 - **Auth**: Required on every route (`requireAuth`) — cookie or `Bearer`.
 - **Permissions**: **no role guard at all.** Any authenticated role reaches every route on this
   router; ownership is enforced per record inside the handlers.
-- **Response envelope**: standard `{ success, data, meta?, message? }` — see [../README.md](../README.md).
+- **Response envelope**: standard `{ success, data, meta?, message? }` — see [../README.md](../README.md#the-response-envelope-read-this-first).
 
 > This is the role-neutral contract. Vendor-specific storage/quota details are in
-> ../vendor/storage.md (`backend/jovi-mall/api-doc/vendor/storage.md` — not mirrored in this repository) and ../vendor/file-management.md (`backend/jovi-mall/api-doc/vendor/file-management.md` — not mirrored in this repository).
+> [../vendor/storage.md](../vendor/storage.md) and [../vendor/file-management.md](../vendor/file-management.md).
 
 ## Endpoints
 
@@ -41,7 +50,7 @@ only two `requireRole(['admin'])` routes and Phase 5 Part B moved them to
 `/api/internal/admin/files`, behind the internal service token — a surface no dashboard session can
 reach. **A "permanently delete" button wired to `DELETE /api/files/:id/permanent` gets a 404.**
 Soft-delete is the only delete a dashboard can perform. See
-`backend/jovi-mall/api-doc/admin/internal-service-api.md` (not mirrored in this repository).
+[../admin/internal-service-api.md](../admin/internal-service-api.md).
 
 ---
 
@@ -235,6 +244,11 @@ through to an unscoped listing.
 }
 ```
 
+⚠ **This is the endpoint a media library calls, and since 2026-09-08 every row carries `url` and
+`access`.** A library is a *list* screen, so this — not `GET /files/:id` — is where thumbnails come
+from. Branch on `access`; `url` is `null` for two of its three values. See
+[`FileDetail` vs the file record](#filedetail-vs-the-file-record).
+
 ⚠ **Pagination lives inside `data`, not in `meta`.** This is one of the few list endpoints on the
 platform that does not use the house `meta` envelope. Read `data.pagination`.
 
@@ -302,8 +316,8 @@ Plan caps by role and tier: [../billing-plans-across-roles.md](../billing-plans-
 
 ## GET `/files/:id` · PATCH `/files/:id` · DELETE `/files/:id`
 
-**GET** — the file record, plus a `usage` object saying where it is referenced, so a UI can show what
-would break before offering a delete:
+**GET** — the file record (`url` and `access` included), plus a `usage` object saying where it is
+referenced, so a UI can show what would break before offering a delete:
 
 ```json
 {
@@ -330,6 +344,11 @@ would break before offering a delete:
   }
 }
 ```
+
+⚠ **`usage` is unaffected by the 2026-09-08 addition and stays exactly where it was.** It answers
+a different question — *what breaks if I delete this?* — and has no overlap with rendering. That the
+two can coexist is a consequence of the record gaining fields rather than being replaced by a
+`FileDetail`, which has nowhere to put it.
 
 `references[]` is the shape to build against — one entry per live reference, with a human-readable
 `label`, covering **every** entity type (product, variant, digital asset, ticket, vendor, store,
@@ -359,18 +378,28 @@ existing file you do not own tells you so.
 
 ## `FileDetail` vs the file record
 
-These are two different shapes, and mixing them up is the most common mistake on this surface.
+These are two different shapes. Since 2026-09-08 they **overlap** rather than being disjoint —
+the record is a strict superset of the detail — so the old mistake ("the record has no URL") is
+gone and a new one is possible: assuming they are the same object.
 
 - **The file record** is what `/api/files/*` returns: `{ id, key, url, access, provider, mimeType,
   size, checksum?, originalName?, ownerType?, ownerId?, orphanedAt, quotaBlockedAt, createdAt,
-  updatedAt, deletedAt, purgeAt }`. Since 2026-09-08 **`url` and `access` are computed onto it**
-  by the same resolver as below; everything else is stored. It is a strict SUPERSET of a
-  `FileDetail`, not equal to one — it keeps ten more fields, including the `createdAt` /
-  `updatedAt` that `GET /files` sorts on.
+  updatedAt, deletedAt, purgeAt }`. **`url` and `access` are computed** — by the same resolver
+  below — and everything else is stored.
 - **`FileDetail`** is what every *other* entity returns when it references a file — a vendor avatar, a
   store logo or banner, product images, a delivery proof:
   `{ id, key, url, access, mimeType, size, originalName? }`. It is built in exactly one place on the
   platform, and that is the only place a URL is ever computed.
+
+⚠ **A record is NOT a `FileDetail`, even though it now carries both of its computed fields.** It
+keeps ten more — `provider`, `checksum`, the owner fields, the timestamps and the soft-delete
+marks. Do not pass a record where a `FileDetail` is expected on a write, and do not expect
+`createdAt` on a `FileDetail`.
+
+> **Why the record gained the fields rather than becoming a `FileDetail`.** `GET /files` sorts on
+> `createdAt` and `updatedAt` (see `sortBy` below), and a `FileDetail` carries neither — replacing
+> the shape would have let you sort by upload date and never display it. Adding is also a strict
+> superset, so nothing that read these endpoints before needed changing.
 
 ```json
 {
@@ -451,7 +480,7 @@ tag will not carry the header.
   the owner's `usedBytes` all survive; blocking is what the owner gets *instead* of losing data. It
   is written only by the plan-quota sweep — oldest files survive, newest are blocked first — and
   lifted in the reverse order. See
-  `backend/jovi-mall/api-doc/FRONTEND-CHANGELOG-plan-quota.md` (not mirrored in this repository).
+  [../FRONTEND-CHANGELOG-plan-quota.md](../FRONTEND-CHANGELOG-plan-quota.md).
 - Files are **soft-deleted**; a daily cleanup worker performs detach → delete → alert. A file
   uploaded and never attached becomes an orphan and is eventually swept — **attach the `id` in the
   same session you uploaded it**, not a day later.
@@ -460,6 +489,8 @@ tag will not carry the header.
   an unauthorised or non-existent id fails the whole request with nothing persisted.
 
 ## Related
-- ../vendor/storage.md (`backend/jovi-mall/api-doc/vendor/storage.md` — not mirrored in this repository) · ../vendor/file-management.md (`backend/jovi-mall/api-doc/vendor/file-management.md` — not mirrored in this repository)
+- [PROPOSAL-file-url-on-read.md](./PROPOSAL-file-url-on-read.md) — why the four endpoints gained
+  `url`/`access`, and the four decisions behind the shape
+- [../vendor/storage.md](../vendor/storage.md) · [../vendor/file-management.md](../vendor/file-management.md)
 - [../errors/README.md](../errors/README.md) · [../billing-plans-across-roles.md](../billing-plans-across-roles.md)
 - [../auth/README.md](../auth/README.md)

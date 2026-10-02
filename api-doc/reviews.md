@@ -1,16 +1,20 @@
 # Reviews & ratings
 
-**Verified against source on 2026-09-08** — the route census across the four surfaces, and the
-two corrections now carried in § 2 (the eligibility endpoint's `404 REVIEW_SUBJECT_NOT_FOUND`
-branch, and the six `.strict()` query schemas), against
-`jovi-mall/src/modules/reviews/routes/*.ts`,
-`src/modules/reviews/domain/services/review-eligibility.service.ts` and
-`src/modules/reviews/validators/review.validator.ts`. **Both corrections were missing from this
-copy** and are the kind a client hits on its first request.
+**Verified against source on 2026-09-07** — every claim on this page was checked against
+`jovi-mall/src/`, including the whole inherited defect list that `vendor-dash` carried for it
+(DOC-PROGRAM § 24–28). Corrections are marked inline with ⚠ and a source citation.
+
+**Verified against source on 2026-09-08** (a re-check of the 2026-09-07 pass above) — the ten-route census (three authoring routes each
+on `/customer`, `/vendor`, `/agency`, the one public read, four moderation routes), the
+prose-holds-it moderation rule (`domain/review-targets.ts` `initialStatusOf`, called at
+`services/review.service.ts:121`), the `.strict()` bodies and the `rating` integer 1–5 with
+`title` ≤ 120 / `body` ≤ 2000 (`validators/review.validator.ts:23-27`), and the public
+`meta.rating`-or-`null` shape (`controllers/public-review.controller.ts:44-62`). No corrections
+were needed.
 
 > **Cross-role.** One module, two subjects, three author roles, four HTTP surfaces.
 > Built 2026-08-21 (Phase 6 · 6.E.4). Moderation lives in wi-admin —
-> admin/reviews.md (`backend/jovi-mall/api-doc/./admin/reviews.md` — not mirrored in this repository).
+> [admin/reviews.md](./admin/reviews.md).
 
 This document is at the `api-doc/` root rather than in a role folder because a review is
 the same object whoever writes it, and splitting it four ways would be four copies of one
@@ -58,8 +62,8 @@ That is the part that matters for reviews, and it is unchanged. What *did* chang
 /api/customer/orders/:orderId/shipments` no longer withholds the agent outright. It publishes
 a **partial name and photo, never a phone number**, and only while that agent is physically
 carrying the parcel — see
-ADR-A06 (`backend/docs/ADR-A06-AGENT-IDENTITY-DISCLOSURE.md` — not mirrored in this repository) and
-customer/orders.md (`backend/jovi-mall/api-doc/customer/orders.md #who-is-carrying-it--agent` — not mirrored in this repository). A reviewer may now
+[ADR-A06](../docs/ADR-A06-AGENT-IDENTITY-DISCLOSURE.md) and
+[customer/orders.md](./customer/orders.md#who-is-carrying-it--agent). A reviewer may now
 recognise who delivered to them; they still cannot aim a review at anybody.
 
 ⚠ **An agency's review moves the agent's aggregate and never its own.** An agency rating
@@ -111,7 +115,7 @@ so one copy table serves both. Present on `/customer`, `/vendor` and `/agency`.
 >
 > So a client must handle **both** shapes: `200 { eligible: false, reason }` for every
 > *business* refusal, and `404 REVIEW_SUBJECT_NOT_FOUND` for "no such subject, or not yours".
-> This page implied the first was the only outcome until 2026-09-08.
+> This page implied the first was the only outcome until 2026-09-07.
 >
 > ⚠ **Both query schemas are `.strict()`** (`reviews/validators`, six schemas, all strict), so an
 > **unknown query parameter is a `400 VALIDATION_ERROR`** — not ignored. A client appending its
@@ -227,7 +231,7 @@ max-age=300` like the rest of `/api/public`.
 
 ### Moderation — `/api/internal/admin/reviews`
 
-wi-admin only, behind the service token. See admin/reviews.md (`backend/jovi-mall/api-doc/./admin/reviews.md` — not mirrored in this repository).
+wi-admin only, behind the service token. See [admin/reviews.md](./admin/reviews.md).
 
 ---
 

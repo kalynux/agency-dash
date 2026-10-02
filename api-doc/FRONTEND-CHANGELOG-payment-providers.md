@@ -365,18 +365,16 @@ every locale it ships.
 
 ## 9. Checklist
 
-- [x] Payment screen calls `GET /api/payments/options` (standard envelope) and renders from `data.providers`
-- [x] Empty `providers` → "online payment unavailable", no pay button
-- [x] Every charge sends `provider` + the listed `fields`; no `gateway`, no `phoneOperator`, no `cardToken`
-- [x] Card: Stripe.js loaded with the `CARD` entry's `publishableKey`; build-time key removed
-- [x] `instructions.requiresOtp` → authorize route, **whatever `/options` said**; `redirectUrl` → open it
-- [x] `422 PAYMENT_PROVIDER_PHONE_MISMATCH` → network message from `details.detected`, form kept
-- [x] `422 PAYMENT_PROVIDER_UNAVAILABLE` → re-render from `details.offered`
-- [x] Read types: `gateway` is `string` (unknown values render), `provider` is nullable
-- [x] Saved wallets: `provider` read as `MTN`/`ORANGE`/`MOOV`/`CARD`/`null`; only a listed mobile provider is pre-selected
-- [x] Save sends `{ provider, phoneNumber, label?, isDefault? }`; no old key; no card tab
-- [x] Save handles `400 VALIDATION_ERROR`, `422 PAYMENT_PROVIDER_PHONE_MISMATCH`, `409 PAYMENT_METHOD_LIMIT_REACHED`
-- [x] Saved-method types use `kind`, `label`, `maskedPhone`, `last4`, `isDefault`, `createdAt`, `updatedAt`
-- [x] Docs and `error-codes.ts` re-copied (§ 8); new codes translated
-
-> **Agency dashboard, 2026-09-30:** all ticked. Card payment is built and driven by `/options` but not live (no `CARD` entry today); `redirectUrl` is offered as a link while the verify poll runs. Saving is wallets-only; twins are refused client-side on `provider` + `last4`. New copy is in `en` and `fr`; `ar` / `es` / `pt` ship no `billing` namespace and fall back to `en`.
+- [ ] Payment screen calls `GET /api/payments/options` (standard envelope) and renders from `data.providers`
+- [ ] Empty `providers` → "online payment unavailable", no pay button
+- [ ] Every charge sends `provider` + the listed `fields`; no `gateway`, no `phoneOperator`, no `cardToken`
+- [ ] Card: Stripe.js loaded with the `CARD` entry's `publishableKey`; build-time key removed
+- [ ] `instructions.requiresOtp` → authorize route, **whatever `/options` said**; `redirectUrl` → open it
+- [ ] `422 PAYMENT_PROVIDER_PHONE_MISMATCH` → network message from `details.detected`, form kept
+- [ ] `422 PAYMENT_PROVIDER_UNAVAILABLE` → re-render from `details.offered`
+- [ ] Read types: `gateway` is `string` (unknown values render), `provider` is nullable
+- [ ] Saved wallets: `provider` read as `MTN`/`ORANGE`/`MOOV`/`CARD`/`null`; only a listed mobile provider is pre-selected
+- [ ] Save sends `{ provider, phoneNumber, label?, isDefault? }`; no old key; no card tab
+- [ ] Save handles `400 VALIDATION_ERROR`, `422 PAYMENT_PROVIDER_PHONE_MISMATCH`, `409 PAYMENT_METHOD_LIMIT_REACHED`
+- [ ] Saved-method types use `kind`, `label`, `maskedPhone`, `last4`, `isDefault`, `createdAt`, `updatedAt`
+- [ ] Docs and `error-codes.ts` re-copied (§ 8); new codes translated

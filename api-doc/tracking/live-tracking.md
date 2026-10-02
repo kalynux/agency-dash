@@ -1,9 +1,13 @@
 # Live Tracking
 
-**Verified against source on 2026-09-08** — the five per-role visibility rules, the five
-`TRACKABLE_SHIPMENT_STATUSES` and the three `permission_revoked` reasons, against
-`jovi-mall/src/modules/tracking-integration/services/visible-agents.service.ts:25-31,100-111` and
-`geo-tracker/internal/modules/tracking/domain/entity.go:149-164`. No corrections were needed.
+**Verified against source on 2026-09-08** — both routes under `/api/tracking`, the five per-role
+visibility rules, the five trackable statuses, the response shape, the three `permission_revoked`
+reasons and the outbox→dispatcher mechanism (2 s drain, batch 50, 10 attempts), against
+`jovi-mall/src/modules/tracking-integration/` (`routes/tracking.routes.ts`,
+`controllers/tracking.controller.ts`, `services/visible-agents.service.ts`,
+`config/tracking-integration.config.ts`, `workers/tracking-dispatch.worker.ts`) and, for the
+frame contract, `geo-tracker/internal/modules/tracking/domain/entity.go`. No factual errors were
+found; one gap filled — `POST /api/tracking/agent-state` shares this mount and was unlisted.
 
 Live agent tracking is served by a **separate service** — `geo-tracker`
 ("Project B", Go) — not by this backend. This backend remains the source of
@@ -109,6 +113,22 @@ the result. Frontends have no reason to call it directly.
 
 ---
 
+## POST /api/tracking/agent-state
+
+The other half of this seam, and the **inbound** direction: geo-tracker POSTs an
+agent's tracking-state change here. **Not for frontends** — it is guarded by
+`requireServiceToken` (`INTERNAL_SERVICE_TOKEN`), not by a user session, and it is
+declared *before* this router's `requireAuth` for exactly that reason.
+
+It always answers `200`, reporting the outcome in the body as `applied`,
+`ignored_stale` or `unknown_agent`. Full contract:
+[`geo-tracker/api-doc/tracking-notifications.md`](../../../geo-tracker/api-doc/tracking-notifications.md).
+
+Named here because these are the **only two routes** under `/api/tracking`, and a
+reader who found just one would reasonably conclude the mount had only one.
+
+---
+
 ## Configuration
 
 | Env var | Purpose |
@@ -119,18 +139,19 @@ the result. Frontends have no reason to call it directly.
 
 ## How the event push works
 
-> **Corrected 2026-08-24 (PLAN-3).** Step 2 below described the *previous*
-> architecture — an in-memory event bus whose subscriber wrote the outbox row after the
-> transaction had already committed. It no longer works that way, and the difference is the
-> whole of the old "the outbox is not transactional" defect. See
-> [§ Where this document is wrong](#where-this-document-is-wrong).
-
 1. A shipment status changes (`ShipmentService`) or COD cash is recorded
-   (`CashCollectionService`).
-2. **Inside that same Mongo transaction**, `TrackingOutboxEmitter` writes a row to the
-   **`tracking_outbox`** collection, passing the transaction's `ClientSession`. The row
-   commits with the state change or not at all, so there is no window in which the
-   shipment moved and the revocation was lost.
+   (`CashCollectionService`), **inside a Mongo transaction**.
+2. **Inside that same transaction**, `TrackingOutboxEmitter` writes a row to the
+   **`tracking_outbox`** collection, passing the transaction's `ClientSession`. The row commits
+   with the state change or not at all, so a crash cannot lose a pending revocation.
+
+   > ⚠ **Corrected 2026-09-06** (DOC-PROGRAM F-42). This step used to say *"`tracking-integration`'s
+   > subscriber writes a row"* — that subscriber (`TrackingEventSubscriber`) was **deleted** at plan
+   > step 3.A.1 and the event bus is no longer on this path at all. The durability claim was true of
+   > a mechanism the sentence did not name: the bus cannot carry a Mongo session, and
+   > `EventBus.publish` swallows handler errors, so a failed enqueue through it was silent. A domain
+   > event *is* still published for in-process consumers (customer notifications, assignment) — it
+   > simply no longer reaches the outbox.
 3. `TrackingDispatchWorker` drains the outbox every ~2s and POSTs each event to
    geo-tracker's `/webhooks/node`, HMAC-SHA256 signed, retrying with a bounded
    attempt count before parking the row as `failed`.
@@ -139,56 +160,3 @@ the result. Frontends have no reason to call it directly.
 Emitting on *every* status transition is safe: geo-tracker only drops watchers
 who fail a fresh authorization check, so non-terminal transitions simply keep
 caches fresh.
-
-Each event carries three verdicts, computed in jovi-mall because geo-tracker holds no
-shipment model:
-
-| Verdict | Scope | Effect in geo-tracker |
-|---|---|---|
-| `shipmentTrackable` | **this** shipment | opens / closes **that shipment's** tracking session |
-| `shipmentTerminal` | **this** shipment | closes its session with an outcome stamped (`delivered` · `returned` · `failed`) |
-| `agentHasActiveShipment` | the agent, aggregate | a backstop that can close **every** session but open none — it names no shipment |
-
----
-
-## Where this document is wrong
-
-Found by reading the source on 2026-08-24 and filed in
-`backend/FRONTEND-SYNC/03-FINDINGS-REGISTER.md`. The correction is applied above; this
-section records what the un-corrected text said, because the same claim is still live in two
-other places you may read.
-
-🔴 **"The outbox is not transactional" is no longer true, and two documents still say it is.**
-
-`backend/CLAUDE.md` § *Cross-service defects to be aware of* lists as defect 1, under the
-heading "Real, verified, and **not yet fixed**":
-
-> *"jovi-mall emits after the transaction commits, fire-and-forget; the subscriber enqueues
-> asynchronously. A crash between commit and enqueue loses the event permanently, despite the
-> outbox model's docstring promising crash-durability."*
-
-**Source says otherwise, at every one of the nine call sites.**
-`TrackingOutboxRepository.enqueue` takes a `ClientSession`
-(`src/modules/tracking-integration/repositories/tracking-outbox.repository.ts:60`) and
-`TrackingOutboxEmitter`'s four methods forward it
-(`…/services/tracking-outbox.emitter.ts:55,91,134,185`). Every caller passes it, inside the
-transaction that made the change:
-
-| Call site | |
-|---|---|
-| `shipments/shipment.service.ts` | `:1324` · `:1605` · `:1774` · `:1879` · `:2092` |
-| `cod/services/cash-collection.service.ts` | `:345` · `:487` |
-| `shipment-assignment/domain/services/shipment-assignment.service.ts` | `:526` |
-| `agents/domain/services/agent-tracking-policy.service.ts` | `:183` |
-
-The emitter's own docstring names the old route as the defect it exists to close, and the
-repository's docstring records the Mongoose trap that made it subtle (`create` reads
-`{ session }` only when its first argument is an **array** — `create(doc, { session })`
-silently writes outside the transaction and produces an outbox that *looks* transactional).
-
-**What this changes for a dashboard.** The old defect meant "a tracking session can fail to
-open for a genuinely active shipment, so treat *no session* as possible". That specific cause
-is gone. `session` remains an *optional* parameter for callers that have no transaction — the
-reconcile sweep is one — so a missing session is still not impossible; it is just no longer
-the expected outcome of an ordinary crash. Keep the map's degradation path; stop treating it
-as the normal case.

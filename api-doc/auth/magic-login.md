@@ -12,7 +12,7 @@ link `POST /auth/forgot-password` sends by email and WhatsApp. See
 
 > **This page is the endpoint-level contract.** If you are building the storefront and want the
 > customer's flow end to end — where registration happens, what to deep-link, what page you owe,
-> and what not to build — start at **customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)**.
+> and what not to build — start at **[customer-auth.md](./customer-auth.md)**.
 
 ---
 
@@ -212,7 +212,7 @@ Returned as the reply text, so the user is always told something:
 > away — that is bot-side work landing with the n8n integration, and `LOGIN_REFUSALS.no_account`
 > changes with it. **Nothing on the frontend depends on it**: the reply is relayed verbatim by
 > the automation layer and no `/auth/magic/*` response shape is involved. See
-> customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md #1-registration--send-them-to-the-bot` — not mirrored in this repository).
+> [customer-auth.md](./customer-auth.md#1-registration--send-them-to-the-bot).
 >
 > The other three rows are stable. `not_customer` in particular is a rule, not a gap — **a
 > customer role is never auto-provisioned onto a business account**, whatever registration does
@@ -246,7 +246,7 @@ disclosed to anybody, including them**. Three consequences:
 
 - **A customer account is created in the bot, on first contact.** The storefront calls no
   registration endpoint and shows no signup form — it deep-links the person into WhatsApp or
-  Telegram. See customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md #1-registration--send-them-to-the-bot` — not mirrored in this repository).
+  Telegram. See [customer-auth.md](./customer-auth.md#1-registration--send-them-to-the-bot).
 - **`POST /auth/register` no longer requires `password` for `role: "customer"`**, and **ignores
   one if sent**. Accepting a caller-supplied password would create accounts whose password
   somebody else chose and knows. Every other role still requires it, unchanged. The endpoint
@@ -443,7 +443,7 @@ works, but the one-tap path is gone.
 
 ## Related
 
-- **customer-auth.md (`backend/jovi-mall/api-doc/auth/customer-auth.md` — not mirrored in this repository)** — the customer's flow end to end: where registration
+- **[customer-auth.md](./customer-auth.md)** — the customer's flow end to end: where registration
   happens, what to deep-link, the page you owe, and what not to build
 - [README.md](./README.md) — the rest of the auth surface
 - [../connections/README.md](../connections/README.md) — `/connect`, the other bot-minted code

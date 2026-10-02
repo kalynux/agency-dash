@@ -1,11 +1,13 @@
 # Frontend changelog — Phase 2 and Phase 3 (geo-tracker)
 
-**Verified against source on 2026-09-08** — the behavioural claims re-checked against
-`geo-tracker/internal/` and, for the 90-day session cap, `jovi-mall/src/core/auth/token.issuer.ts:47-49`.
-No corrections were needed.
+**Verified against source on 2026-09-08** — the three `permission_revoked` reasons, the optional
+`subscribe.shipmentId`, the destination-resolution order, the `ETA_MIN_INTERVAL` throttle, the
+`/webhooks/*` rate-limit exemption and the `JWT_SECRET` fail-closed change, against
+`geo-tracker/internal/modules/tracking/`, `internal/platform/middleware/ratelimit.go` and
+`internal/platform/config/config.go`. No corrections were needed.
 
 Everything Phases **2** (Deployability) and **3** (Cross-service correctness) of
-`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` (`backend/PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md` — not mirrored in this repository)
+[`PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md`](../../PRODUCTION-READINESS/10-IMPLEMENTATION-PLAN.md)
 changed for a client of **this** service.
 
 - **Written:** 2026-08-21 · **Phase 2:** 2026-08-18 → 08-19 · **Phase 3:** 2026-08-19
@@ -14,7 +16,7 @@ changed for a client of **this** service.
   *vendor dashboard* have no tracking surface; the **admin dashboard** still has no data door
   into this service at all (see § 7).
 - **The jovi-mall half of the same phases:**
-  [`jovi-mall/api-doc/FRONTEND-CHANGELOG-phase-2-3.md`](../FRONTEND-CHANGELOG-phase-2-3.md)
+  [`jovi-mall/api-doc/FRONTEND-CHANGELOG-phase-2-3.md`](../../jovi-mall/api-doc/FRONTEND-CHANGELOG-phase-2-3.md)
 
 ---
 
@@ -62,7 +64,7 @@ the arrival of the frame. A screen that reads "your parcel has been delivered" o
 their access token aged out.
 
 Detail: [tracking-websocket.md](./tracking-websocket.md) ·
-`jovi-mall/api-doc/tracking/live-tracking.md` (`backend/jovi-mall/api-doc/tracking/live-tracking.md` — not mirrored in this repository)
+[`jovi-mall/api-doc/tracking/live-tracking.md`](../../jovi-mall/api-doc/tracking/live-tracking.md)
 
 ---
 

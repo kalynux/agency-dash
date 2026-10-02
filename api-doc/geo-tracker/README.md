@@ -1,30 +1,15 @@
 # geo-tracker API Documentation
 
-**Verified against source on 2026-09-08** — the `PORT` default, the five per-role visibility rules
-and the five `TRACKABLE_SHIPMENT_STATUSES` against `geo-tracker/internal/platform/config/config.go`
-and `jovi-mall/src/.../visible-agents.service.ts:25-31,101-109`.
+**Verified against source on 2026-09-08** — the `PORT` default, the root-mount claim, the
+document index, the five per-role visibility rules and the five `TRACKABLE_SHIPMENT_STATUSES`,
+against `geo-tracker/internal/platform/config/config.go`, every module's `routes.go`, and
+`jovi-mall/src/modules/tracking-integration/services/visible-agents.service.ts:25-31,101-109`.
+One gap filled: the authentication table named only two of the three token sources and did not
+warn that the cookie authenticates but does not authorize on the HTTP routes.
 
-> ### Reading this from the agency dashboard
->
-> This is the **second** of the two backends this app talks to, on its own origin with **no
-> `/api` prefix** (`VITE_GEO_TRACKER_URL`, default `http://localhost:8090`). The token is the
-> same jovi-mall access token. Start at [../README.md § 1](../README.md) for the split.
->
-> **All 22 routes were read from source on 2026-08-24** (this service has no route dumper) and
-> are listed with their auth in [../ROUTE-MAP.md § 3](../ROUTE-MAP.md). **16 are callable by
-> this dashboard; 6 are backend-to-backend.**
->
-> **Three of this service's documents are deliberately not mirrored here** —
-> `webhooks.md`, `agent-action-audit.md` and `service-data-door.md`. All three are
-> backend-to-backend surfaces authenticated by a shared HMAC secret or a wi-admin service
-> token, so nothing in a browser bundle can call them, and documenting them as available
-> surface invites somebody to try. The links to them below are printed as plain backend paths
-> rather than links, for that reason. Read them in `backend/geo-tracker/api-doc/` if you need
-> the mechanism — the tracking-session lifecycle in particular is *driven* by
-> `POST /webhooks/node`, so it is worth understanding even though you cannot call it.
->
-> Two corrections were made to this page: the agency's trackable-status list (below) and the
-> pre-Phase-16 error example in [routing.md](./routing.md).
+**Updated 2026-09-08 (session S9).** That last point was a **bug in this service, not in this
+page**, and it is now **fixed** — the cookie authenticates *and* authorizes on the HTTP routes.
+The table below is corrected accordingly.
 
 This is the contract for **geo-tracker** ("Project B") — the live GPS tracking
 / WebSocket service for jovi-mall delivery agents. It is the only source of
@@ -48,9 +33,9 @@ the root (`/ws/track`, `/healthz`, not `/api/...`).
 - [routing.md](./routing.md) — route, distance-matrix, geocode, reverse-geocode, ETA (provider-agnostic)
 - [locations.md](./locations.md) — read an agent's last-known position over HTTP
 - [gps-persistence.md](./gps-persistence.md) — how GPS is stored: live position (Redis) vs. the temporary, downsampled checkpoint trail (Postgres), retention, partitioning, and cleanup
-- service-data-door.md (`backend/geo-tracker/api-doc/service-data-door.md` — wi-admin service token; not mirrored here) — **`/internal/*`, the SECOND authorization path.** Four reads for a **service caller** (wi-admin) rather than a viewer, gated by a configured scope set. Not a general integration surface, and inert unless `GEO_TRACKER_ADMIN_TOKEN` is set
-- webhooks.md (`backend/geo-tracker/api-doc/webhooks.md` — backend-to-backend, HMAC; not mirrored here) — inbound lifecycle events from jovi-mall (HMAC-authenticated)
-- agent-action-audit.md (`backend/geo-tracker/api-doc/agent-action-audit.md` — backend-to-backend, HMAC; not mirrored here) — inbound agent shipment-action events, recorded as an immutable spatial audit with captured GPS
+- [service-data-door.md](./service-data-door.md) — **`/internal/*`, the SECOND authorization path.** Four reads for a **service caller** (wi-admin) rather than a viewer, gated by a configured scope set. Not a general integration surface, and inert unless `GEO_TRACKER_ADMIN_TOKEN` is set
+- [webhooks.md](./webhooks.md) — inbound lifecycle events from jovi-mall (HMAC-authenticated)
+- [agent-action-audit.md](./agent-action-audit.md) — inbound agent shipment-action events, recorded as an immutable spatial audit with captured GPS
 - [tracking-notifications.md](./tracking-notifications.md) — outbound tracking-state notifications to jovi-mall (geo-tracker → Project A)
 - [health.md](./health.md) — liveness/readiness probes and `/metrics`
 - [errors/README.md](./errors/README.md) — error response shape
@@ -70,8 +55,8 @@ below is the viewer path, and it governs everything except `/internal/*`:
 The second exists because a wi-admin administrator holds no jovi-mall `users`
 row, so the first cannot resolve them at all. It is a separate module, separate
 middleware and a separate path namespace on purpose — see
-service-data-door.md (`backend/geo-tracker/api-doc/service-data-door.md` — wi-admin service token; not mirrored here), and
-`admin/docs/ADR-020` (`backend/admin/docs/ADR-020-ADMIN-DATA-DOOR.md` — not mirrored in this repository) for the
+[service-data-door.md](./service-data-door.md), and
+[`admin/docs/ADR-020`](../../admin/docs/ADR-020-ADMIN-DATA-DOOR.md) for the
 decision. Nothing below applies to it: it has no viewer, no role, and no
 per-agent visibility resolution.
 
@@ -81,25 +66,26 @@ Who may see an agent's live location, on the **viewer** path:
 |---|---|
 | **admin** | every agent, always |
 | **agent** | only himself |
-| **agency** | agents on its currently approved + active shipments — **`assigned`, `handing_over`, `picked_up`, `in_transit`, `agent_delivered`**, *and* the shipment must have an agent bound to it |
+| **agency** | agents on its currently approved + active shipments (`assigned`, **`handing_over`**, `picked_up`, `in_transit`, `agent_delivered`) **and** whose `agent_id` is not null |
 | **customer** | agents on their active orders |
 | **vendor** | nothing — rejected at connect with `403` |
-
-> **Corrected 2026-08-24 (PLAN-3).** The backend's own copy of this table listed **four**
-> statuses for an agency and omitted **`handing_over`**. `TRACKABLE_SHIPMENT_STATUSES` has five
-> members (`jovi-mall/src/modules/tracking-integration/services/visible-agents.service.ts:25-31`),
-> and its docstring says so explicitly: a picked-up parcel being reassigned is still on the road,
-> and the replacement agent is tracked from the moment they accept. jovi-mall's own
-> `tracking/live-tracking.md` has the correct five; this mirror of it was one status behind.
->
-> The `agent_id != null` clause is part of the rule too, not an optimisation
-> (`…:46-52`): a shipment out on an unaccepted offer is trackable *in status* and has nobody to
-> track. Full table of the three disagreeing status subsets:
-> [../agency/shipments.md § status subsets](../agency/shipments.md#status-subsets).
 
 This is computed by jovi-mall (`GET /api/tracking/visible-agents`), which
 geo-tracker calls **as the caller**, forwarding their access token. Clients
 never call that endpoint directly for tracking purposes.
+
+> ⚠ **This list was FOUR statuses until 2026-09-06 and is FIVE** (DOC-PROGRAM F-41).
+> `TRACKABLE_SHIPMENT_STATUSES` (`jovi-mall/src/modules/tracking-integration/services/visible-agents.service.ts:25-31`)
+> has always included **`handing_over`** — a picked-up parcel being reassigned is tracked again the
+> moment its replacement agent accepts. An agency board filtered by the old four-status list drops
+> every reassigned-post-pickup delivery from the live map: precisely the deliveries most in need of
+> watching. jovi-mall's own `api-doc/tracking/live-tracking.md` listed all five correctly, so this
+> mirror was the stale half.
+>
+> The `agent_id: { $ne: null }` clause is **part of the rule, not an optimisation** — a shipment
+> offered but not yet accepted is trackable in status only; there is nobody bound to it to track.
+> geo-tracker never enumerates these statuses itself: it consumes the trackable *verdict*, which is
+> why adding `handing_over` needed no Go change.
 
 ### Access ends the moment a shipment finishes
 
@@ -117,10 +103,47 @@ with the same agent (an agent may work for several agencies at once).
 
 | Mechanism | Used by | How |
 |---|---|---|
-| jovi-mall access token (HS256 JWT) | WebSocket + HTTP routes | `Sec-WebSocket-Protocol: bearer, <token>` on WS; `Authorization: Bearer <token>` on HTTP |
+| jovi-mall access token (HS256 JWT) | WebSocket + HTTP routes | see the token-source table below |
 | HMAC-SHA256 signature | inbound webhooks (`/webhooks/node`, `/webhooks/agent-actions`) | `X-Node-Signature: <hex>` over the raw body |
 | service credential | the data door (`/internal/*`) — wi-admin only | `Authorization: Bearer <GEO_TRACKER_ADMIN_TOKEN>` |
 
 The same token you use against jovi-mall works here — geo-tracker verifies it
 with the shared signing secret. Tokens are short-lived; reconnect with a fresh
 one after refresh.
+
+**Where the access token may come from, per transport.** These differ, and the
+difference bites browser dashboards:
+
+| | `Sec-WebSocket-Protocol: bearer, <token>` | `Authorization: Bearer <token>` | `access_token` cookie |
+|---|:--:|:--:|:--:|
+| `GET /ws/track` | ✅ 1st | ✅ 2nd | ✅ 3rd |
+| HTTP routes (`/tracking/*`, `/locations/*`, `/routing/*`) | — | ✅ 1st | ✅ 2nd |
+| the data door (`/internal/*`) | — | ✅ **only** | ❌ never |
+
+A browser dashboard needs no client-side token handling on either transport: the cookie is
+same-site and rides automatically. Native clients send the header. When both are present the
+header wins, so a client that chooses a token gets the one it chose.
+
+> ### ✅ Fixed 2026-09-08: the cookie now authorizes on the HTTP routes too
+>
+> **This corrects advice that stood on three pages of this document.** They told browser
+> clients to *"always send the header on HTTP"*. That was a **workaround for a bug**, now
+> fixed — not a property of the design. If you implemented it, you can remove it; sending
+> the header does no harm.
+>
+> `/tracking/*` and `/locations/*` forward your token to jovi-mall to resolve what you
+> may see, and they used to re-read it **only from the `Authorization` header**.
+> Cookie-only, that forwarded token was empty and the read answered **`502`** —
+> intermittently, because the resolved permission set is cached by **user id**
+> (`PERMISSION_CACHE_TTL`, default 5 min), so it worked while that cache was warm and
+> then stopped. `RequireAuth` now carries the validated token on the request context, so
+> the forwarded token is by construction the one that authenticated the request. Detail in
+> [locations.md](./locations.md) and [tracking-sessions.md](./tracking-sessions.md).
+>
+> ⚠ **`/routing/*` was never affected** — it authenticates and forwards nothing, so the
+> cookie always worked there. The row above previously flagged it with the other two.
+>
+> ⚠ **The data door (`/internal/*`) has NO cookie fallback and never will**, and that is
+> not the same bug. It authenticates a *service*, not a viewer; a browser holds no service
+> token, and a cookie fallback there would let a browser session reach a surface designed
+> to refuse one. See [service-data-door.md](./service-data-door.md).

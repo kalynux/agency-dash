@@ -1,7 +1,14 @@
 # Notification deep links — the vendor, agency and agent apps
 
-**Verified against source on 2026-09-08** — the three vocabularies (8 vendor · 8 agency · 5
-agent), the five shape rules and the two deliberate absences re-checked by running
+> **⭐ 2026-10-02 — THREE new labels** (COD limits + delivery-fee proposals): agency
+> `cod/limit`, agent `cod` and agent `shipments/{{shipmentId}}`. The vocabularies are now
+> **8 vendor · 9 agency · 8 agent**. Vendor gained no label — its new situations reuse
+> `orders/{{orderId}}`. Per-app translation instructions:
+> [`../FRONTEND-CHANGELOG-cod-fee-notifications.md`](../FRONTEND-CHANGELOG-cod-fee-notifications.md).
+
+**Verified against source on 2026-09-16** — the three vocabularies (then 8 vendor · 8 agency · 6
+agent, the sixth being `earnings`, added with the four `payout.*` situations the agent stack
+never had), the five shape rules and the two deliberate absences re-checked by running
 `npm run test:notification-deeplinks` (13/13, and its last assertion pins this very document);
 the channel defaults against `src/modules/notifications/models/*-notification-preference.model.ts`;
 and the App Links census against the three apps' own `android/app/src/main/AndroidManifest.xml`
@@ -88,7 +95,7 @@ notification with no button, in an app that has not been rebuilt yet.
 
 | `path` | Sent by | Carries |
 |---|---|---|
-| `orders/{{orderId}}` | `order.created`, `order.cancelled`, `payment.received.partial`, `payment.received.full`, `shipment.rejected` | an Order id |
+| `orders/{{orderId}}` | `order.created`, `order.cancelled`, `payment.received.partial`, `payment.received.full`, `shipment.rejected`, ⭐ `shipment.cod_limit_held`, ⭐ `delivery_fee_proposal.received`, ⭐ `delivery_fee_proposal.edited`, ⭐ `delivery_fee_proposal.withdrawn` | an Order id — the order detail is where "dispatch anyway" (force) and fee approve / reject live |
 | `bookings/{{bookingId}}` | `booking.created`, `booking.cancelled` | a Booking id |
 | `products/{{productId}}` | `storage.depot_changed`, `storage.product_suspended`, `storage.product_unsuspended` | a Product id |
 | `agency-connections/{{connectionId}}` | `connection.request_received`, `connection.approved`, `connection.rejected`, `connection.reapproval_needed` | a Connection id |
@@ -111,13 +118,14 @@ saying so — that is correct, and the table above is why.
 
 ## Agency — `agency-dash`
 
-`AGENCY_APP_URL` · 8 labels.
+`AGENCY_APP_URL` · 9 labels.
 
 | `path` | Sent by | Carries |
 |---|---|---|
-| `shipments/{{shipmentId}}` | `shipment.assigned`, `shipment.offer.accepted`, `shipment.assignment.unfilled`, `shipment.agent.{picked_up,delivered,failed,returned}` | a Shipment id |
+| `shipments/{{shipmentId}}` | `shipment.assigned`, `shipment.offer.accepted`, `shipment.assignment.unfilled`, `shipment.agent.{picked_up,delivered,failed,returned}`, ⭐ `shipment.cod_limit.forced`, ⭐ `shipment.assignment.cod_limit_blocked`, ⭐ `delivery_fee_proposal.{approved,rejected,agent_proposed,agent_edited}` | a Shipment id |
+| ⭐ **`cod/limit`** | **`cod.limit.pinned`, `cod.limit.released`** | — (one limit per agency) |
 | `agents/{{contractId}}` | the eight `agent_contract.*` situations | ⚠ a **contract** id, not an agent id |
-| `vendor-connections/{{connectionId}}` | `connection.request_received`, `connection.approved`, `connection.rejected`, `connection.reapproval_needed` | a Connection id |
+| `vendor-connections/{{connectionId}}` | `connection.request_received`, `connection.approved`, `connection.rejected`, `connection.reapproval_needed`, ⭐ `connection.cod_terms_changed` | a Connection id |
 | `cod/deposits/{{depositId}}` | `cod.deposit.declared`, `cod.deposit.direct_to_platform` | an AgentDeposit id |
 | `stock-requests/{{requestId}}` | `storage.stock_request.{received,approved,rejected}` | a StockRequest id |
 | `tickets/{{ticketId}}` | `payout.requested`, `payout.paid`, `payout.rejected` | a Ticket id |
@@ -144,20 +152,43 @@ route would silently capture it.
 
 ## Agent — `agent_app` (Flutter)
 
-`AGENT_APP_URL` · 5 labels.
+`AGENT_APP_URL` · 8 labels.
 
 | `path` | Sent by | Carries |
 |---|---|---|
 | `offers/{{offerId}}` | `shipment.offer.received`, `shipment.offer.reminder`, `shipment.offer.expired` | an Offer id |
+| ⭐ **`shipments/{{shipmentId}}`** | **`delivery_fee_proposal.approved`, `.rejected`, `.edited`** | a Shipment id — one this agent holds |
+| ⭐ **`cod`** | **`cod.pool.pinned`, `cod.pool.released`** | — (one pool per agent) |
 | `cod/deposits/{{depositId}}` | `cod.deposit.recorded`, `cod.deposit.confirmed`, `cod.deposit.rejected` | an AgentDeposit id |
-| `memberships/{{contractId}}` | the eight `agent_contract.*` situations | ⚠ a **contract** id — see below |
+| `memberships/{{contractId}}` | the eight `agent_contract.*` situations, ⭐ `fee_proposals.enabled`, ⭐ `fee_proposals.disabled` | ⚠ a **contract** id — see below |
 | `plans` | `plan.expiring`, `plan.expired` | — |
 | `settings/storage` | `storage.alert` | — |
-| *(no button)* | `shipment.reassigned_away` | — |
+| ⭐ **`earnings`** | **`payout.requested`, `payout.paid`, `payout.rejected`, `payout.transfer_failed`** | — |
+| *(no button)* | `shipment.reassigned_away`, ⭐ `delivery_fee_proposal.withdrawn` | — |
 
-**Your app is the reference implementation of this contract.** `resolveDeepLink` in
-`lib/core/router/deep_links.dart` handles all five, documents them in a table, returns null
-for anything unknown and falls back to the inbox. Nothing to change.
+### ⭐ `earnings` is NEW, and it is the one thing on this page you have to build
+
+You were the reference implementation of this contract and handled all five. There are now
+**six**: add a case for `earnings` that opens the earnings screen.
+
+It carries **no placeholder**, deliberately — an agent has at most one open payout request
+(one per owner, enforced by `409 EARNINGS_PAYOUT_ALREADY_PENDING`), so the summary is
+unambiguous and an id could only ever go stale.
+
+**Why it exists:** until now `agent-notification-event-consumer.ts` subscribed to **no**
+`payout.*` event at all, while the vendor and agency stacks each subscribed to three. An agent
+requested their money and heard nothing — not when it was paid, not when it was rejected, in
+any channel. `FRONTEND-SYNC/BRIEF-payout-agent-app.md` § 2 documented that and told you to
+design the earnings screen around the silence. **The silence is now closed**, so the screen no
+longer has to carry that weight alone — but the button needs somewhere to land.
+
+⚠ **It is `earnings` and not `tickets/{{ticketId}}`**, which is what the vendor and agency apps
+get for the same four situations. Your app has no tickets screen, so that token would be a
+button you cannot translate.
+
+⚠ **`payout.transfer_failed` is the one to read carefully.** It is **not** a rejection and not
+terminal: the money is still held, an administrator will retry or reject, and the agent
+**cannot** request again meanwhile. The copy says so — do not add UI that invites a retry.
 
 ⚠ **`memberships` is the pre-refactor word for a contract**, and it is kept deliberately.
 The backend calls it a contract everywhere else (`AgentAgencyContract`, `contractId`,

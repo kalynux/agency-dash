@@ -1,9 +1,12 @@
 # Tracking-State Notifications (outbound → jovi-mall)
 
-**Verified against source on 2026-09-08** — the trigger rule and the request body field-for-field
-against `geo-tracker/internal/modules/session/provider/node_notifier.go` and
-`domain/lifecycle.go`. **One defect fixed**: `disconnected` is a notified transition and was
-missing from the table — it is the most frequent one there is.
+**Verified against source on 2026-09-08** — the trigger rule, the request body field-for-field,
+the buffer/drop semantics and the receiver's three outcomes, against
+`geo-tracker/internal/modules/session/provider/node_notifier.go`,
+`internal/modules/session/domain/lifecycle.go` and, on the jovi-mall side,
+`src/modules/tracking-integration/{routes/tracking.routes.ts,controllers/tracking.controller.ts,services/agent-state-receiver.service.ts}`.
+One defect fixed: `disconnected` is a notified transition and was missing from the table — it is
+the most frequent one there is.
 
 This is the **geo-tracker → jovi-mall** direction of the tracking contract.
 geo-tracker owns the live tracking lifecycle (see
@@ -11,7 +14,7 @@ geo-tracker owns the live tracking lifecycle (see
 changes in a way jovi-mall should know about, geo-tracker POSTs a notification to
 Project A.
 
-It is the mirror of the inbound webhooks.md (`backend/geo-tracker/api-doc/webhooks.md` — backend-to-backend, HMAC; not mirrored here) (jovi-mall →
+It is the mirror of the inbound [webhooks.md](./webhooks.md) (jovi-mall →
 geo-tracker for revocation): same idea, opposite direction.
 
 ## When a notification is sent
@@ -28,10 +31,12 @@ jovi-mall can rely on this agent's live tracking:
 | any self-transition (`from == to`) | ❌ no change |
 
 > ⚠ **`disconnected` is in that first row, and this table omitted it until
-> 2026-09-08.** `isProblemState` counts it (`session/domain/lifecycle.go:256`) —
-> the session is alive but no GPS is arriving, which is exactly what jovi-mall
-> needs to know. It is also the **most frequent** notification by a wide margin,
-> because every socket drop produces one.
+> 2026-09-08.** `isProblemState` counts it
+> (`session/domain/lifecycle.go:256`) — the session is alive but no GPS is
+> arriving, which is exactly what jovi-mall needs to know. It is also the
+> **most frequent** notification by a wide margin, because every socket drop
+> produces one. A consumer sized for "only real faults" will see far more
+> traffic than this page previously implied.
 
 The rule in one line: a transition is sent when its **destination** is one of the
 five unavailable states, or when it **returns to `online` from** one of them.

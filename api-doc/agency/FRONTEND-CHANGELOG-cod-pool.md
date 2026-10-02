@@ -1,5 +1,7 @@
 # Agency app — agents' COD pools are now automatic
 
+> ⚠ **PARTLY SUPERSEDED 2026-10-02** — the plan **no longer** sets an agent's COD pool. Every verified agent without an administrator pin gets **500 000**, `pool.source` is `"default"` (was `"plan"`) and `pool.planCode` is always `null`. Plan cards must stop advertising `max_cod_pool` as a benefit. Everything else here (KYC gate, "carry less", the admin pin) still holds. See [FRONTEND-CHANGELOG-cod-limits.md](../FRONTEND-CHANGELOG-cod-limits.md).
+
 > **Date:** 2026-09-21 · **Audience:** the agency dashboard / agency app · **Breaking:** no
 >
 > Cross-role summary: [../FRONTEND-CHANGELOG-cod-pool.md](../FRONTEND-CHANGELOG-cod-pool.md)
@@ -17,7 +19,7 @@ is a **slice** of the agent's own **COD pool**, which every agency they serve sh
 | | Before | Since 2026-09-21 |
 |---|---|---|
 | A newly verified agent's pool | `0` until an administrator set it. Every slice you tried to give was refused with `CONTRACT_COD_THRESHOLD_EXCEEDS_HEADROOM` | **Their plan's value, automatically**: Free 500 000 · Plus 1 000 000 · Pro 2 000 000 XAF |
-| An unverified agent's pool | `0` | `0` (unchanged; they can't hold a contract anyway) |
+| An unverified agent's pool | `0` | `0` (unchanged). ⚠ *This row said "they can't hold a contract anyway" — no longer true since 2026-09-27: an unverified agent can hold a contract, its COD slice is accepted but DORMANT, and COD shipments to them are refused `422 AGENT_KYC_NOT_VERIFIED`. See [../FRONTEND-CHANGELOG-verification-no-longer-gates-work.md](../FRONTEND-CHANGELOG-verification-no-longer-gates-work.md)* |
 | Who can lower it | an administrator | the **agent** (`PUT /api/agent/cod/pool`), or an administrator |
 | When it drops (plan downgrade, verification withdrawn) | not applicable | your slice stays as agreed, but no dispatch can use more than the pool |
 

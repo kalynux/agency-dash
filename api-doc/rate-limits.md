@@ -123,6 +123,12 @@ position, and is the client most likely to be on a bad connection retrying.
 inherit `/api/health`'s exemption) and on `req.path` only — a query string can never talk its
 way in. The list is closed; see `src/api/rate-limit/exempt-paths.ts`.
 
+> ⚠ **This said "three" and listed three until 2026-09-06.** `EXEMPT_PATHS`
+> (`exempt-paths.ts:21-76`) holds **six**, and the three that were missing are the entire
+> cross-service half — the reads and the push that carry the geo-tracker pipe. A reader
+> checking whether their new internal route needs an exemption would have concluded the
+> platform did not grant them to service callers, which is the opposite of the policy.
+
 - `/api/health` — and everything under it (`/live`, `/ready`), every method. geo-tracker
   registers `GET /api/health` as a **readiness** checker and treats any status ≥ 300 as an
   error, so a 429 there pulls geo-tracker out of rotation and kills every live WebSocket
@@ -147,12 +153,6 @@ way in. The list is closed; see `src/api/rate-limit/exempt-paths.ts`.
   `/api/tracking`**, because the other route under that mount — `GET /visible-agents` — runs
   behind `requireAuth` and carries a real **user** identity forwarded by geo-tracker. Exempting
   the whole mount would hand any authenticated caller an unlimited DB-touching endpoint.
-
-> ⚠ **Corrected 2026-09-08.** This said "three" and listed three. `EXEMPT_PATHS`
-> (`exempt-paths.ts:21-76`) holds **six**, and the three that were missing are the entire
-> cross-service half — the reads and the push that carry the geo-tracker pipe. A reader
-> checking whether their new internal route needs an exemption would have concluded the
-> platform did not grant them to service callers, which is the opposite of the policy.
 
 ## Behaviour worth relying on
 

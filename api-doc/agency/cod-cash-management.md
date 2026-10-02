@@ -108,7 +108,7 @@ counts a projected amount; it is a planning figure, not a liability.
 | Field | Description |
 |---|---|
 | `liability.balance` | What your agency still owes the platform (falls on confirmed remittances). |
-| `agents[].verified` | The platform's KYC verdict for this agent (`kyc.status === "verified"`) — render a verified badge beside the name. |
+| `agents[].verified` | The platform's KYC verdict for this agent (`kyc.status === "verified"`) — render a verified badge beside the name. Since 2026-09-27 it is also the COD switch: an unverified agent cannot be given COD shipments. |
 | `agents[].cashHeld` | Cash this agent holds **for you** and hasn't deposited yet — their contract's outstanding balance. |
 | `unsettledCollections` | Collected cash not yet covered by a confirmed remittance (what's blocking your COD earnings from releasing). |
 
@@ -127,6 +127,37 @@ balance reaches zero.
 ---
 
 <a name="record-deposit"></a>
+### GET /api/agency/cod/limit
+
+**(2026-10-02)** Your agency's COD cash limit and what you hold against it. The platform lets an
+agency hold at most **1 000 000 XAF** of cash on delivery that has not yet reached the platform,
+unless an administrator set another amount for you.
+
+```json
+{
+  "success": true,
+  "data": {
+    "agencyId": "66a1…",
+    "limit": 1000000,
+    "source": "default",
+    "defaultLimit": 1000000,
+    "exposure": { "inFlight": 420000, "inFlightCount": 6, "collectedUnremitted": 310000, "collectedCount": 4, "total": 730000 },
+    "headroom": 270000,
+    "overLimit": false
+  }
+}
+```
+
+- `exposure.inFlight` — COD shipments you hold (assigned → agent_delivered) whose cash is not
+  collected yet. `exposure.collectedUnremitted` — cash your agents or you collected that has not
+  been remitted to (and confirmed by) the platform. **Remitting is what frees headroom.**
+- `source`: `default` or `override` (an administrator decided). The administrator's reason is
+  not shown here.
+- What it gates: vendors' dispatches to you. A vendor whose auto-dispatch would push you over
+  your limit (or over that vendor's own `maxCashPerAgency`) sees the shipment **held** instead of
+  dispatched; a manual dispatch is refused unless the vendor forces it. You do not receive those
+  shipments until then.
+
 ### POST /api/agency/cod/deposits
 
 **Description**: Record cash physically received from one of your agents. Single-step — recording
@@ -425,6 +456,12 @@ resolves the flag.
   `0` grants no COD headroom at all. A raise can be refused if the agent's pool is already fully
   allocated across their contracts.
 
+  ⚠ **Since 2026-09-27 an unverified agent can be on your roster, but carries no COD.** You may
+  set a slice on their contract (the pool-headroom check is skipped for them); it stays
+  **dormant** and every COD shipment to them is refused `422 AGENT_KYC_NOT_VERIFIED` until an
+  administrator verifies them. Prepaid shipments are unaffected. COD therefore needs **both** your
+  agency verified (checkout) and the agent verified (dispatch).
+
   **Since 2026-09-21 the agent's pool is automatic, and it is also a cap.** An agent's pool is 0
   until their identity is verified, then their plan's value (Free **500 000**, Plus 1 000 000,
   Pro 2 000 000), unless the agent chose to carry less or an administrator set a value. Before this,
@@ -474,7 +511,9 @@ resolves the flag.
 
 - **Trust tiers** — the base threshold is then scaled by the agent's trust score
   (≥80 → full, 50–79 → halved, <50 → blocked: `COD_AGENT_TRUST_TOO_LOW`). An open `cash_shortfall`
-  discrepancy also blocks new COD assignments outright until an admin resolves it.
+  discrepancy also blocks new COD assignments outright until an admin resolves it. Ahead of both
+  (since 2026-09-27), an agent whose KYC is not verified is refused every COD assignment with
+  `AGENT_KYC_NOT_VERIFIED`.
 - **Rolling reserve** — a percentage (default 10%) of your released COD earnings parks in a
   `reserve` balance for 30 days and only releases while you have **no open discrepancies**
   (see [earnings.md](./earnings.md)).

@@ -358,7 +358,8 @@ Creates a new user and a role profile in one step. Sets both auth cookies on suc
   "role": "vendor",
   "email": "john@example.com",
   "business_name": "John's Shop",
-  "agency_name": "Fast Riders"
+  "agency_name": "Fast Riders",
+  "terms_accepted": true
 }
 ```
 
@@ -371,6 +372,7 @@ Creates a new user and a role profile in one step. Sets both auth cookies on suc
 | `email` | string | ❌ | Optional for **every** role, including vendor. Must be unique. Validated and **lowercased** — see [Contact formats](../README.md#contact-formats-phone--email). |
 | `business_name` | string | ❌ | For `vendor`. Falls back to `name`. Stored on the vendor's **Store**, not on the vendor profile — see [`role_entity` Shapes](#role_entity-shapes). |
 | `agency_name` | string | ❌ | For `agency`. Falls back to `name`. Stored on the agency's **Magazin**, not on the agency profile. |
+| `terms_accepted` | boolean | **conditionally** | **Must be `true` for `vendor`, `agency` and `agent`** (vendor/agency since 2026-09-28, agent from agent app 0.1.3 the same day): the person ticked "I agree to the Terms of Service and Privacy Policy". Missing or `false` → `400 VALIDATION_ERROR` with `details.fields[].path = "terms_accepted"`. Not required for `customer` — a bot customer accepts with one button on the last onboarding step, which writes the same record (`role: "customer"`); accepted and recorded here if sent. Stored as `user.terms_acceptances[] = { role, accepted_at }`. |
 
 > **Customer registration**: only `phone`, `name`, and `role: "customer"` are needed — but a
 > storefront should not call this. Customers register in the bot; see
@@ -441,7 +443,7 @@ Sets cookies `access_token` and `refresh_token`.
 | `AUTH_PHONE_TAKEN` | `409` | `phone` already registered |
 | `AUTH_EMAIL_TAKEN` | `409` | `email` already registered |
 | `AUTH_UNSUPPORTED_ROLE` | `400` | A role the service cannot provision |
-| `VALIDATION_ERROR` | `400` | Missing/invalid fields, including a missing `password` on a non-customer role. `details.fields[]` names them |
+| `VALIDATION_ERROR` | `400` | Missing/invalid fields, including a missing `password` on a non-customer role, or `terms_accepted` not `true` for a vendor, agency or agent. `details.fields[]` names them |
 
 ---
 
@@ -870,10 +872,20 @@ Adds a second role to an **already authenticated** user. Sets cookies scoped to 
 | `name` | string | ❌ | For `customer` and `agent` |
 | `business_name` | string | ❌ | For `vendor`. Provisions the Store |
 | `agency_name` | string | ❌ | For `agency`. Provisions the Magazin |
+| `terms_accepted` | boolean | **conditionally** | **Must be `true` when adding `vendor`, `agency` or `agent`**, same rule and same `VALIDATION_ERROR` as [register](#post-authregister). Appends `{ role, accepted_at }` to `user.terms_acceptances` in the same update that adds the role |
 
 > **The new pair does not restart the 90-day clock.** This route sits behind `requireAuth`, so
 > the caller presented a token rather than a credential; `auth_time` is copied from the token
 > they came in with. Same for `auth-me`. See [The 90-day absolute cap](#the-90-day-absolute-cap).
+
+> **An account with no email can add any role, `vendor` included.** The new role profile copies
+> the account's email and phone as they are, and no role profile requires an email — so an
+> agent, agency or customer who signed up by phone gets a profile with no email. **Until
+> 2026-09-21 `vendor` was the exception**: its profile alone required one, and the request
+> failed with an undocumented `500`. To add an email afterwards, use
+> [`PATCH /api/me/email`](../me/contact-change.md); once confirmed it is written onto every
+> role profile, the vendor's included. Until then `POST /auth/send-email-verification` answers
+> `422 AUTH_EMAIL_MISSING` for that role.
 
 ### Response `201`
 
@@ -1063,14 +1075,16 @@ verdict instead. Vendor and agency expose `kyc_details.status`; an agent exposes
 proves a phone stays exactly where an administrator put it — proving a number cannot lift a
 suspension.
 
-⚠ **Activating an agent does not make them dispatchable.** `status` is only the third of five
-ordered eligibility rules: a platform ban and unverified KYC refuse them before it is consulted,
-and an active contract plus Tracking Allow are required after it. Holding COD cash is likewise
-gated on KYC, never on `status`.
+⚠ **Activating an agent does not make them dispatchable.** `status` is only one of the ordered
+eligibility rules: a platform ban refuses them before it is consulted, and an active contract plus
+Tracking Allow are required after it. Holding COD cash is gated on KYC, never on `status`. (Until
+2026-09-27 unverified KYC was also an eligibility rule; it now refuses **COD shipments only**.)
 
-**What being unverified actually costs**, as of this change: **cash**. An agency that no
-administrator has verified cannot carry cash-on-delivery orders, and an unverified owner's payout
-can be capped (see [admin/payout-requests.md](../admin/payout-requests.md)). Everything else is
+**What being unverified actually costs**: **COD cash**. An agency that no administrator has
+verified cannot carry cash-on-delivery orders, and (since 2026-09-27) an unverified agent cannot be
+dispatched a COD shipment. An unverified owner's payout is **not** limited — the allowance that
+could cap it (2026-09-15) was deleted 2026-09-27 (see
+[admin/payout-requests.md](../admin/payout-requests.md)). Everything else is
 open by design — the platform's position is that working with an unverified counterparty is a
 business judgement for the vendor or agency to make, not a refusal for the platform to issue.
 
