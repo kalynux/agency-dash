@@ -107,7 +107,8 @@
       "full": "Full",
       "partial": "Partial",
       "store_credit": "Store credit",
-      "exchange_only": "Exchange only"
+      "exchange_only": "Exchange only",
+      "none": "No refund"
     },
     "cancellationPolicy": "Cancellation Policy",
     "cancellableLabel": "Cancellable",
@@ -116,7 +117,12 @@
       "before_shipping": "Before shipping",
       "before_delivery": "Before delivery",
       "anytime": "Anytime",
-      "not_allowed": "Not allowed"
+      "not_allowed": "Not allowed",
+      "within_1_hour": "Within 1 hour of ordering",
+      "within_24_hours": "Within 24 hours of ordering",
+      "before_vendor_confirmation": "Until the vendor confirms the order",
+      "before_service_start": "Before the service starts",
+      "anytime_until_days_before_delivery": "Up to a few days before delivery"
     },
     "support": "Support",
     "availability": "Availability",
@@ -125,7 +131,67 @@
       "business_hours": "Business hours",
       "limited": "Limited"
     },
-    "languages": "Languages"
+    "languages": "Languages",
+    "notSpecified": "Not specified",
+    "policiesTitle": "Policies",
+    "policiesHint": "These are the rules you agree to apply when you deliver for this vendor: the returns you may carry back, the cancellations you may have to stop, and the cash you will collect. If the vendor changes them, the connection pauses until you approve the new version.",
+    "noPolicies": "This vendor hasn't published any policies yet.",
+    "acceptsReturns": "Accepts returns",
+    "noReturns": "No returns",
+    "partialRefundValue": "Partial — {{percent}}% of the price",
+    "returnShipping": "Return shipping paid by",
+    "shippingPayers": {
+      "vendor": "The vendor",
+      "customer": "The customer",
+      "customer_reimbursed_if_defect": "The customer — refunded if the item is defective"
+    },
+    "refundProcessing": "Refund processed within",
+    "refundProcessingValue_one": "{{count}} day",
+    "refundProcessingValue_other": "{{count}} days",
+    "inspector": "Returns inspected by",
+    "inspectors": {
+      "admin": "The Wi-Mall team",
+      "vendor": "The vendor",
+      "platform": "Wi-Mall"
+    },
+    "returnConditions": "Return conditions",
+    "cancellable": "Cancellable",
+    "notCancellable": "Not cancellable",
+    "deadlineDaysBefore_one": "Up to {{count}} day before delivery",
+    "deadlineDaysBefore_other": "Up to {{count}} days before delivery",
+    "cancellationFee": "Cancellation fee",
+    "feeValues": {
+      "none": "No fee",
+      "fixed": "{{amount}}",
+      "percentage": "{{percent}}% of the order",
+      "full_non_refundable": "Full price — nothing refunded"
+    },
+    "lateRefund": "After the deadline",
+    "lateRefundValues": {
+      "fixed": "{{amount}} refunded",
+      "percentage": "{{percent}}% refunded",
+      "full_non_refundable": "Nothing refunded"
+    },
+    "codAccepted": "Payment on delivery",
+    "codCap": "Most cash you may hold for them",
+    "noCodCap": "No vendor cap",
+    "hours": "Hours",
+    "channels": "Contact channels",
+    "channelTypes": {
+      "email": "Email",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram"
+    },
+    "requiredInfo": "Customers must provide",
+    "requiredInfos": {
+      "order_number": "Order number",
+      "product_photo_video": "Photo or video of the item",
+      "tracking_number": "Tracking number"
+    },
+    "supportNotes": "Support notes",
+    "documents": "Policy documents",
+    "documentN": "Document {{n}}"
   },
   "codTerms": {
     "title": "Cash on delivery",

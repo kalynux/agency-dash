@@ -47,7 +47,9 @@ import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
-import { ContractTermsFields } from '@/components/agents/ContractTermsFields';
+import { ContractTermsFields, FieldGroup } from '@/components/agents/ContractTermsFields';
+import { ContractOverview } from '@/components/agents/ContractOverview';
+import { InfoHint } from '@/components/common/InfoHint';
 import {
   buildEmploymentPayload,
   buildNegotiablePayload,
@@ -370,11 +372,11 @@ function MembershipBody({
   /**
    * Controlled, not `defaultOpen`: Counter / Propose in the footer and on the
    * proposal panel open this section, so its state has to be reachable from
-   * outside it. Terminal contracts start closed — there is nothing to edit.
+   * outside it. It starts closed — the read-only overview above it is what
+   * most visits are for — except when nobody has stated terms yet, where
+   * there is nothing to read and the agency's offer is the next step.
    */
-  const [termsOpen, setTermsOpen] = useState(
-    () => !HISTORY_MEMBERSHIP_STATUSES.includes(membership.status),
-  );
+  const [termsOpen, setTermsOpen] = useState(() => contractOffer(membership) === 'needs-terms');
 
   // Lazy eligibility / history / settlements
   const [eligibility, setEligibility] = useState<AgentEligibility | null>(null);
@@ -816,8 +818,18 @@ function MembershipBody({
             </div>
           )}
 
+          {/* What was agreed — every term and stamp, in words. The editor
+              further down is for changing them; this is for reading them. */}
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold">
+              {offer === 'settled' ? t('membership.terms.title') : t('membership.terms.titleOnTable')}
+            </h2>
+            <ContractOverview membership={membership} country={country} />
+          </div>
+
           {/* At a glance — contact, vehicle, standing. Email takes the full row
               on a phone; an address does not survive a 160px column. */}
+          <h2 className="pt-1 text-sm font-semibold">{t('membership.overview.agent')}</h2>
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
             <InfoTile
               className="col-span-2 sm:col-span-1"
@@ -875,7 +887,7 @@ function MembershipBody({
                 and so always public, but there is nothing to render without a
                 URL, so the tile is dropped rather than shown broken. */}
             {agent.vehicleInfo?.photo?.url && (
-              <div className="col-span-2 rounded-xl border bg-card p-3 sm:col-span-1">
+              <div className="col-span-2 bg-card px-3 py-2.5 sm:col-span-1">
                 <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   <VehicleIcon className="h-3 w-3" /> {t('membership.tiles.vehiclePhoto')}
                 </p>
@@ -925,8 +937,9 @@ function MembershipBody({
                 <p className="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(cashHeld)}</p>
               </div>
               <div className="text-end">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="flex items-center justify-end gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   {t('membership.cod.cap')}
+                  <InfoHint title={t('membership.cod.cap')}>{t('membership.cod.hint')}</InfoHint>
                 </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
                   {membership.codThreshold > 0 ? (
@@ -959,33 +972,15 @@ function MembershipBody({
               </p>
             )}
 
-            {editable && (
-              <div className="mt-4 space-y-1.5">
-                <Label htmlFor={`cod-${mid}`} className="text-xs text-muted-foreground">
-                  {t('membership.cod.editLabel')}
-                </Label>
-                {/* Seeded with the stored cap, and empty saves `0` — which is
-                    NO COD, not "no cap" like the shipment ceiling above. This is
-                    an edit of the figure on screen, not a box for a delta. */}
-                <Input
-                  id={`cod-${mid}`}
-                  type="number"
-                  min={0}
-                  placeholder={t('membership.cod.placeholder')}
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                />
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {t('membership.cod.hint')}
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* Contract terms — employment, fee split, remittance, value ceiling */}
+          {/* The editor — employment, COD limit, fee split, remittance, value
+              ceiling. Closed by default; the overview above is the reading
+              view. Terminal contracts have nothing left to change. */}
+          {editable && (
           <Section
             icon={ClipboardList}
-            title={offer === 'settled' ? t('membership.terms.title') : t('membership.terms.titleOnTable')}
+            title={t('membership.terms.editTitle')}
             summary={termsSummary || t('membership.terms.summaryFallback')}
             open={termsOpen}
             onOpenChange={setTermsOpen}
@@ -1012,6 +1007,27 @@ function MembershipBody({
                   )}
                 </div>
               )}
+
+              {/* The agency's own figure, saved unilaterally like employment —
+                  so it sits with the other edits and saves from the same footer.
+                  Seeded with the stored cap; empty saves `0`, which is NO COD,
+                  not "no cap" like the shipment ceiling. */}
+              <FieldGroup title={t('membership.cod.cap')} hint={t('membership.cod.hint')}>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`cod-${mid}`} className="text-xs text-muted-foreground">
+                    {t('membership.cod.editLabel')}
+                  </Label>
+                  <Input
+                    id={`cod-${mid}`}
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder={t('membership.cod.placeholder')}
+                    value={threshold}
+                    onChange={(e) => setThreshold(e.target.value)}
+                  />
+                </div>
+              </FieldGroup>
 
               {coverageRepair && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
@@ -1068,6 +1084,7 @@ function MembershipBody({
               )}
             </div>
           </Section>
+          )}
 
           {/* The negotiation trail — every proposal ever raised on this
               contract, not only the open one. Resolved rows carry the terms

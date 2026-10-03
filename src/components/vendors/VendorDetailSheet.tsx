@@ -1,25 +1,106 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarClock, Globe, Headphones, RotateCcw, Shield, ShieldCheck, Store, XCircle,
+  Banknote, ExternalLink, FileText, Headphones, MapPin, RotateCcw, Shield, ShieldCheck, Store, XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { tx } from '@/i18n/tx';
+import { formatCurrency } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
-import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
-import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
+import { InfoHint } from '@/components/common/InfoHint';
+import type {
+  VendorBrowseItemDto,
+  VendorCancellationPolicySummary,
+} from '@/types/vendor-connection.types';
 
-function PolicyRow({ label, value }: { label: string; value: ReactNode }) {
+// ─── Layout primitives ────────────────────────────────────────────────────────
+
+/** One label/value line. */
+function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-2">
-      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
-      <span className="text-xs font-medium text-end">{value}</span>
+    <div className="flex items-start justify-between gap-4 py-2.5">
+      <dt className="shrink-0 text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-end text-sm font-medium break-words">{children}</dd>
     </div>
   );
 }
+
+/** A block of free text the vendor wrote — quoted, full width, never truncated. */
+function Note({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="py-2.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 whitespace-pre-line rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed">
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+/** A titled policy card. `status` is the yes/no headline shown on the title line. */
+function PolicyCard({
+  icon: Icon,
+  title,
+  status,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  status?: { ok: boolean; label: string };
+  children?: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border bg-card">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <h3 className="min-w-0 flex-1 text-sm font-semibold">{title}</h3>
+        {status && (
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
+              status.ok
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                : 'bg-muted text-muted-foreground',
+            )}
+          >
+            {status.label}
+          </span>
+        )}
+      </div>
+      {children && <dl className="divide-y border-t px-4">{children}</dl>}
+    </section>
+  );
+}
+
+function Muted({ children }: { children: ReactNode }) {
+  return <span className="font-normal text-muted-foreground">{children}</span>;
+}
+
+function Chips({ items }: { items: string[] }) {
+  return (
+    <span className="flex flex-wrap justify-end gap-1">
+      {items.map((item) => (
+        <span key={item} className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium">
+          {item}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** An ISO 639-1 code as its name in the reader's language ("fr" → "French"). */
+function languageName(code: string, locale: string): string {
+  try {
+    return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
+// ─── Sheet ────────────────────────────────────────────────────────────────────
 
 export interface VendorDetailSheetProps {
   vendor: VendorBrowseItemDto | null;
@@ -29,42 +110,94 @@ export interface VendorDetailSheetProps {
   footerSlot?: ReactNode;
 }
 
+/**
+ * A vendor's profile and every policy term an agency agrees to by connecting.
+ *
+ * Rewritten 2026-10-03: it showed three or four fields per policy (the browse
+ * DTO carried no more) and scrolled through Radix `ScrollArea`, which never
+ * scrolls on a touch screen — so on a phone the lower policies were simply out
+ * of reach. Now it renders every field the backend sends, in plain words, and
+ * scrolls natively. Fields an older backend omits drop their row rather than
+ * showing a blank.
+ */
 export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: VendorDetailSheetProps) {
-  const { t } = useTranslation(['vendors', 'common']);
+  const { t, i18n } = useTranslation(['vendors', 'common']);
   if (!vendor) return null;
 
   const addr = vendor.primaryAddress;
   const p = vendor.policies;
+  const ret = p?.returnPolicy ?? null;
+  const cancel = p?.cancellationPolicy ?? null;
+  const support = p?.supportPolicy ?? null;
+  const documents = p?.documents ?? [];
+  const cod = vendor.codTerms ?? null;
+  const yes = t('common:values.yes');
+  const no = t('common:values.no');
+  const notSet = <Muted>{t('detail.notSpecified')}</Muted>;
+  const hasAnyPolicy = !!(ret || cancel || support || cod || documents.length > 0);
+
+  const deadlineText = (c: VendorCancellationPolicySummary) => {
+    if (!c.cancellationDeadline) return notSet;
+    if (c.cancellationDeadline === 'anytime_until_days_before_delivery' && c.cancellationDeadlineDays != null) {
+      return t('detail.deadlineDaysBefore', { count: c.cancellationDeadlineDays });
+    }
+    return tx(t, `vendors:detail.deadlines.${c.cancellationDeadline}`);
+  };
+
+  /** A fee or refund rule as one phrase. `kind` picks the wording for the zero/full cases. */
+  const feeText = (type: string | null | undefined, value: number | null | undefined, kind: 'fee' | 'lateRefund') => {
+    if (!type) return notSet;
+    if (type === 'fixed') {
+      return value == null
+        ? notSet
+        : tx(t, `vendors:detail.${kind}Values.fixed`, { amount: formatCurrency(value) });
+    }
+    if (type === 'percentage') {
+      return value == null ? notSet : tx(t, `vendors:detail.${kind}Values.percentage`, { percent: value });
+    }
+    return tx(t, `vendors:detail.${kind}Values.${type}`);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] flex flex-col rounded-t-2xl px-0 pb-0">
-        <div className="mx-auto w-10 h-1 bg-muted rounded-full mt-2 mb-1 flex-shrink-0" />
+      {/* An explicit height, not `max-h`: the native scroller below needs a
+          definite flex size to shrink into (see AgentMembershipDialog). */}
+      <SheetContent side="bottom" className="mx-auto flex h-[88dvh] w-full flex-col gap-0 rounded-t-2xl px-0 pb-0 sm:max-w-2xl sm:border-x">
+        <div className="mx-auto mb-1 mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-muted" />
 
-        <SheetHeader className="px-5 pb-2 flex-shrink-0">
+        <SheetHeader className="flex-shrink-0 px-5 pb-3 pe-12">
           <div className="flex items-start gap-3">
-            <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
               {vendor.logoUrl ? (
-                <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
+                <img src={vendor.logoUrl} alt={vendor.businessName} className="h-full w-full object-cover" />
               ) : (
-                <Store className="w-7 h-7 text-muted-foreground" />
+                <Store className="h-7 w-7 text-muted-foreground" />
               )}
             </div>
-            <div className="flex-1 min-w-0 pt-0.5">
+            <div className="min-w-0 flex-1 pt-0.5 text-start">
               <SheetTitle className="text-base leading-tight">
                 {vendor.displayName ?? vendor.businessName}
                 <VerifiedBadge verified={vendor.kycVerified} className="ms-1" />
               </SheetTitle>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {vendor.displayName && vendor.displayName !== vendor.businessName && (
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{vendor.businessName}</p>
+              )}
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {vendor.kycVerified ? (
-                  <Badge variant="secondary" className="gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800">
-                    <ShieldCheck className="w-3 h-3" />
+                  <Badge variant="secondary" className="gap-1 border-emerald-200 bg-emerald-50 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+                    <ShieldCheck className="h-3 w-3" />
                     {t('detail.kycVerified')}
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="gap-1 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800">
-                    <Shield className="w-3 h-3" />
+                  <Badge variant="secondary" className="gap-1 border-amber-200 bg-amber-50 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                    <Shield className="h-3 w-3" />
                     {t('detail.unverified')}
+                  </Badge>
+                )}
+                {addr && (
+                  <Badge variant="secondary" className="gap-1 text-xs font-medium">
+                    <MapPin className="h-3 w-3" />
+                    {addr.city}
                   </Badge>
                 )}
               </div>
@@ -74,126 +207,178 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
 
         <Separator className="flex-shrink-0" />
 
-        <ScrollArea className="flex-1 overflow-hidden">
-          <div className="px-5 py-4 space-y-5">
+        {/* Native scrolling — Radix ScrollArea does not scroll on touch. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="space-y-4 px-5 py-4">
             {addr && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  {t('detail.address')}
-                </h3>
-                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                  <p className="text-sm font-medium">{addr.city}{addr.state ? `, ${addr.state}` : ''}</p>
-                  <p className="text-xs text-muted-foreground">{addr.addressLine1}</p>
-                </div>
+              <section className="rounded-xl border bg-card px-4 py-3">
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {addr.label || t('detail.address')}
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {addr.city}{addr.state ? `, ${addr.state}` : ''}
+                </p>
+                <p className="text-xs text-muted-foreground">{addr.addressLine1}</p>
               </section>
             )}
 
-            {p?.returnPolicy && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  {t('detail.returnPolicy')}
-                </h3>
-                <div className="rounded-lg border divide-y">
-                  <PolicyRow
-                    label={t('detail.accepted')}
-                    value={
-                      <span className="flex items-center gap-1">
-                        <RotateCcw className="w-3 h-3" />
-                        {p.returnPolicy.returnEligible ? t('common:values.yes') : t('common:values.no')}
-                      </span>
-                    }
-                  />
-                  {p.returnPolicy.returnEligible && (
-                    <>
-                      <PolicyRow
-                        label={t('detail.returnWindow')}
-                        value={t('detail.returnWindowValue', { count: p.returnPolicy.returnWindowDays })}
-                      />
-                      <PolicyRow
-                        label={t('detail.refundType')}
-                        value={tx(t, `vendors:detail.refundTypes.${p.returnPolicy.refundType}`)}
-                      />
-                    </>
-                  )}
-                </div>
-              </section>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold">{t('detail.policiesTitle')}</h2>
+              <InfoHint title={t('detail.policiesTitle')}>{t('detail.policiesHint')}</InfoHint>
+            </div>
+
+            {!hasAnyPolicy && (
+              <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+                {t('detail.noPolicies')}
+              </p>
             )}
 
-            {p?.cancellationPolicy && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  {t('detail.cancellationPolicy')}
-                </h3>
-                <div className="rounded-lg border divide-y">
-                  <PolicyRow
-                    label={t('detail.cancellableLabel')}
-                    value={
-                      <span className="flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        {p.cancellationPolicy.cancellable ? t('common:values.yes') : t('common:values.no')}
-                      </span>
-                    }
-                  />
-                  {p.cancellationPolicy.cancellable && p.cancellationPolicy.cancellationDeadline && (
-                    <PolicyRow
-                      label={t('detail.deadline')}
-                      value={
-                        <span className="flex items-center gap-1">
-                          <CalendarClock className="w-3 h-3" />
-                          {tx(t, `vendors:detail.deadlines.${p.cancellationPolicy.cancellationDeadline}`)}
-                        </span>
-                      }
-                    />
-                  )}
-                </div>
-              </section>
+            {ret && (
+              <PolicyCard
+                icon={RotateCcw}
+                title={t('detail.returnPolicy')}
+                status={{ ok: ret.returnEligible, label: ret.returnEligible ? t('detail.acceptsReturns') : t('detail.noReturns') }}
+              >
+                {ret.returnEligible ? (
+                  <>
+                    <Row label={t('detail.returnWindow')}>
+                      {t('detail.returnWindowValue', { count: ret.returnWindowDays })}
+                    </Row>
+                    <Row label={t('detail.refundType')}>
+                      {ret.refundType === 'partial' && ret.refundPercentage != null
+                        ? t('detail.partialRefundValue', { percent: ret.refundPercentage })
+                        : tx(t, `vendors:detail.refundTypes.${ret.refundType}`)}
+                    </Row>
+                    {ret.returnShippingPayer !== undefined && (
+                      <Row label={t('detail.returnShipping')}>
+                        {ret.returnShippingPayer
+                          ? tx(t, `vendors:detail.shippingPayers.${ret.returnShippingPayer}`)
+                          : notSet}
+                      </Row>
+                    )}
+                    {ret.refundProcessingDays !== undefined && (
+                      <Row label={t('detail.refundProcessing')}>
+                        {ret.refundProcessingDays != null
+                          ? t('detail.refundProcessingValue', { count: ret.refundProcessingDays })
+                          : notSet}
+                      </Row>
+                    )}
+                    {ret.inspector && (
+                      <Row label={t('detail.inspector')}>
+                        {tx(t, `vendors:detail.inspectors.${ret.inspector}`)}
+                      </Row>
+                    )}
+                    {ret.returnConditionNotes && (
+                      <Note label={t('detail.returnConditions')}>{ret.returnConditionNotes}</Note>
+                    )}
+                  </>
+                ) : (
+                  <Row label={t('detail.accepted')}>{no}</Row>
+                )}
+              </PolicyCard>
             )}
 
-            {vendor.codTerms && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  {t('codTerms.title')}
-                </h3>
-                <VendorCodTerms terms={vendor.codTerms} variant="rows" />
-              </section>
+            {cancel && (
+              <PolicyCard
+                icon={XCircle}
+                title={t('detail.cancellationPolicy')}
+                status={{ ok: cancel.cancellable, label: cancel.cancellable ? t('detail.cancellable') : t('detail.notCancellable') }}
+              >
+                {cancel.cancellable ? (
+                  <>
+                    <Row label={t('detail.deadline')}>{deadlineText(cancel)}</Row>
+                    {cancel.cancellationFeeType !== undefined && (
+                      <Row label={t('detail.cancellationFee')}>
+                        {feeText(cancel.cancellationFeeType, cancel.cancellationFeeValue, 'fee')}
+                      </Row>
+                    )}
+                    {cancel.lateCancellationRefundType && (
+                      <Row label={t('detail.lateRefund')}>
+                        {feeText(cancel.lateCancellationRefundType, cancel.lateCancellationRefundValue, 'lateRefund')}
+                      </Row>
+                    )}
+                  </>
+                ) : (
+                  <Row label={t('detail.cancellableLabel')}>{no}</Row>
+                )}
+              </PolicyCard>
             )}
 
-            {p?.supportPolicy && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  {t('detail.support')}
-                </h3>
-                <div className="rounded-lg border divide-y">
-                  <PolicyRow
-                    label={t('detail.availability')}
-                    value={
-                      <span className="flex items-center gap-1">
-                        <Headphones className="w-3 h-3" />
-                        {p.supportPolicy.availability
-                          ? tx(t, `vendors:detail.availabilities.${p.supportPolicy.availability}`)
-                          : t('common:values.notAvailable')}
-                      </span>
-                    }
-                  />
-                  {p.supportPolicy.languages.length > 0 && (
-                    <PolicyRow
-                      label={t('detail.languages')}
-                      value={
-                        <span className="flex items-center gap-1 uppercase">
-                          <Globe className="w-3 h-3" />
-                          {p.supportPolicy.languages.join(', ')}
-                        </span>
-                      }
-                    />
-                  )}
-                </div>
-              </section>
+            {cod && (
+              <PolicyCard
+                icon={Banknote}
+                title={t('codTerms.title')}
+                status={{ ok: cod.codEnabled, label: cod.codEnabled ? yes : no }}
+              >
+                <Row label={t('detail.codAccepted')}>
+                  {cod.codEnabled ? t('codTerms.accepts') : t('codTerms.none')}
+                </Row>
+                {cod.codEnabled && (
+                  <Row label={t('detail.codCap')}>
+                    {typeof cod.maxCashPerAgency === 'number'
+                      ? formatCurrency(cod.maxCashPerAgency)
+                      : <Muted>{t('detail.noCodCap')}</Muted>}
+                  </Row>
+                )}
+              </PolicyCard>
+            )}
+
+            {support && (
+              <PolicyCard icon={Headphones} title={t('detail.support')}>
+                <Row label={t('detail.availability')}>
+                  {support.availability
+                    ? tx(t, `vendors:detail.availabilities.${support.availability}`)
+                    : notSet}
+                </Row>
+                {support.availabilityDescription && (
+                  <Row label={t('detail.hours')}>{support.availabilityDescription}</Row>
+                )}
+                <Row label={t('detail.languages')}>
+                  {support.languages.length > 0
+                    ? <Chips items={support.languages.map((l) => languageName(l, i18n.language))} />
+                    : notSet}
+                </Row>
+                {support.channelTypes && (
+                  <Row label={t('detail.channels')}>
+                    {support.channelTypes.length > 0
+                      ? <Chips items={support.channelTypes.map((c) => tx(t, `vendors:detail.channelTypes.${c}`))} />
+                      : notSet}
+                  </Row>
+                )}
+                {support.requiredInfo && support.requiredInfo.length > 0 && (
+                  <Row label={t('detail.requiredInfo')}>
+                    <Chips items={support.requiredInfo.map((r) => tx(t, `vendors:detail.requiredInfos.${r}`))} />
+                  </Row>
+                )}
+                {support.eligibilityNotes && (
+                  <Note label={t('detail.supportNotes')}>{support.eligibilityNotes}</Note>
+                )}
+              </PolicyCard>
+            )}
+
+            {documents.length > 0 && (
+              <PolicyCard icon={FileText} title={t('detail.documents')}>
+                {documents.map((url, i) => (
+                  <div key={url} className="py-2.5">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-3 text-sm font-medium text-primary hover:underline"
+                    >
+                      {t('detail.documentN', { n: i + 1 })}
+                      <ExternalLink className="h-4 w-4 shrink-0" />
+                    </a>
+                  </div>
+                ))}
+              </PolicyCard>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {footerSlot && (
-          <div className="px-5 py-4 border-t flex-shrink-0">
+          <div className="flex-shrink-0 border-t px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {footerSlot}
           </div>
         )}

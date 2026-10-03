@@ -4,7 +4,6 @@ import { formatNumber } from '@/lib/format';
 import { MapPin, Package, Shield, ShieldCheck, Star, Timer, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { VehicleIcon } from '@/components/agents/VehicleIcon';
@@ -75,7 +74,7 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] flex flex-col rounded-t-2xl px-0 pb-0">
+      <SheetContent side="bottom" className="h-[85dvh] flex flex-col rounded-t-2xl px-0 pb-0">
         <div className="mx-auto w-10 h-1 bg-muted rounded-full mt-2 mb-1 flex-shrink-0" />
 
         <SheetHeader className="px-5 pb-2 flex-shrink-0">
@@ -116,7 +115,10 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
 
         <Separator className="flex-shrink-0" />
 
-        <ScrollArea className="flex-1 overflow-hidden">
+        {/* Native scrolling, not Radix ScrollArea — that one never scrolls on a
+            touch screen (see AgentMembershipDialog), which hid the lower
+            sections on a phone. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="px-5 py-4 space-y-5">
             {agent.homeBase.label && (
               <section>
@@ -204,7 +206,7 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
               <p className="text-xs text-muted-foreground mt-2">{t('detail.privacyNote')}</p>
             </section>
           </div>
-        </ScrollArea>
+        </div>
 
         {footerSlot && <div className="px-5 py-4 border-t flex-shrink-0">{footerSlot}</div>}
       </SheetContent>

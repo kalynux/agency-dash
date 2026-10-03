@@ -20,5 +20,36 @@
         "agent_monthly_salary": "Salario mensual"
       }
     }
+  },
+  "membership": {
+    "terms": {
+      "editTitle": "Cambiar condiciones"
+    },
+    "overview": {
+      "agent": "Agente",
+      "pay": "Pago",
+      "agentEarns": "El agente gana",
+      "shareAmount": "{{percent}} % de cada tarifa de entrega",
+      "flatAmount": "{{amount}} por entrega",
+      "salaryAmount": "{{amount}} al mes",
+      "howOften": "Frecuencia",
+      "handoverDay": "Día de entrega del efectivo",
+      "dayOfMonth": "Día {{day}} del mes",
+      "grace": "Periodo de gracia",
+      "graceValue": "{{hours}} h",
+      "openEnded": "Indefinido",
+      "contract": "Contrato",
+      "origin": "Cómo empezó",
+      "termsVersion": "Versión de las condiciones",
+      "termsVersionValue": "Versión {{version}}",
+      "termsNeverStated": "Aún no hay condiciones",
+      "createdAt": "Creado",
+      "invitedAt": "Oferta enviada",
+      "requestedAt": "El agente solicitó",
+      "approvedAt": "Inicio del contrato",
+      "suspendedAt": "Suspendido",
+      "updatedAt": "Última actualización",
+      "suspensionReason": "Motivo de la suspensión"
+    }
   }
 }

@@ -1,7 +1,13 @@
-import type { ElementType, ReactNode } from 'react';
+import { useState, type ElementType, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -9,20 +15,17 @@ import { cn } from '@/lib/utils';
 /**
  * Tap-to-reveal help text, shown behind an ⓘ beside a label or heading.
  *
- * Built on Popover rather than Tooltip on purpose: `ui/tooltip.tsx` is a plain
- * Radix passthrough that opens on hover and focus only, so it never opens from
- * a tap — and a phone is exactly where this is used most. Popover opens on
- * click, portals out of any clipping ancestor, and handles collision with the
- * viewport edge itself.
- *
  * The icon is `Info`, not `AlertCircle`: the exclamation circle already means
  * "something is wrong" everywhere else in the dashboard (`state-views`,
  * `BillingTab`, `Overview`), and help is not an error.
  *
- * ON A PHONE IT IS A BOTTOM SHEET (`asSheet`, the same as the vendor dashboard):
- * a 20rem popup hanging off a 14px icon is a footnote, and the text behind an ⓘ
- * is usually the whole explanation of a figure. There it gets body-copy size and
- * the optional `title` as its heading, so the sheet says what it is about.
+ * IT IS A BOTTOM SHEET AT EVERY WIDTH (2026-10-03). It used to be a Popover that
+ * only turned into a sheet below `md`, which left tablets and the desktop with a
+ * 20rem footnote hanging off a 14px icon — and the text behind an ⓘ is usually
+ * the whole explanation of a figure. It is a real `Sheet` (a modal Radix
+ * dialog) rather than the styled popover, so it nests cleanly inside the other
+ * sheets and dialogs it lives in, and a press on the dimmed backdrop closes it
+ * the same way it closes every other sheet.
  *
  * Safe inside a tappable row or card: presses on the trigger and inside the
  * sheet stop at the wrapper. React bubbles events from a portal through the
@@ -32,7 +35,6 @@ export function InfoHint({
   children,
   label,
   title,
-  align = 'start',
   className,
 }: {
   children: ReactNode;
@@ -40,48 +42,60 @@ export function InfoHint({
   label?: string;
   /** Heading for the explanation — what the ⓘ is about. */
   title?: ReactNode;
+  /** @deprecated Ignored — a sheet is not anchored to its trigger. */
   align?: 'start' | 'center' | 'end';
   className?: string;
 }) {
   const { t } = useTranslation('common');
+  const [open, setOpen] = useState(false);
   return (
     <span
       className="contents"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={label ?? t('form.moreInformation')}
-            // 32px hit area on a 24px footprint: the negative margin keeps the
-            // icon from opening a gap in the label's rhythm while still clearing
-            // the touch-target minimum.
-            className={cn(
-              'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
-              'text-muted-foreground transition-colors hover:text-foreground',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              className,
-            )}
-          >
-            <Info className="h-3.5 w-3.5" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          asSheet
-          align={align}
-          collisionPadding={12}
-          className="w-[min(20rem,calc(100vw-2rem))] p-3"
+      <button
+        type="button"
+        aria-label={label ?? t('form.moreInformation')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        // 32px hit area on a 24px footprint: the negative margin keeps the
+        // icon from opening a gap in the label's rhythm while still clearing
+        // the touch-target minimum.
+        className={cn(
+          'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
+          'text-muted-foreground transition-colors hover:text-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          className,
+        )}
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        {/* `h-auto` so a two-line hint is a two-line sheet; `sm:max-w-lg` +
+            `mx-auto` keeps it a readable column on a wide screen instead of a
+            strip across the whole monitor. */}
+        <SheetContent
+          side="bottom"
+          className="mx-auto flex h-auto max-h-[75dvh] w-full flex-col gap-0 rounded-t-2xl p-0 sm:max-w-lg sm:border-x"
         >
-          <div className="text-xs leading-relaxed text-muted-foreground max-md:px-5 max-md:pb-5 max-md:pt-2 max-md:text-sm max-md:text-foreground/80">
-            {title && (
-              <p className="mb-1 font-medium text-foreground max-md:mb-2 max-md:text-base">{title}</p>
-            )}
-            {children}
+          <div aria-hidden className="flex shrink-0 justify-center pb-1 pt-2.5">
+            <span className="h-1 w-9 rounded-full bg-muted-foreground/30" />
           </div>
-        </PopoverContent>
-      </Popover>
+          {/* `pe-12` clears the panel's own close button. */}
+          <SheetHeader className="shrink-0 px-5 pb-2 pt-1 pe-12 text-start">
+            <SheetTitle className="text-base">
+              {title ?? label ?? t('form.moreInformation')}
+            </SheetTitle>
+          </SheetHeader>
+          <SheetDescription asChild>
+            <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-sm leading-relaxed text-foreground/80">
+              {children}
+            </div>
+          </SheetDescription>
+        </SheetContent>
+      </Sheet>
     </span>
   );
 }
@@ -133,6 +147,7 @@ export function SectionHeading({
           {description && short && (
             <InfoHint
               className="md:hidden"
+              title={title}
               label={
                 typeof title === 'string'
                   ? t('form.aboutSection', { title })
@@ -185,6 +200,7 @@ export function FieldLabel({
       {hint && (
         <InfoHint
           className="md:hidden"
+          title={children}
           label={typeof children === 'string' ? t('form.aboutSection', { title: children }) : undefined}
         >
           {hint}
@@ -232,7 +248,7 @@ export function BlockHeading({
         <p className="flex items-center gap-1.5 text-sm font-medium">
           {title}
           {hint && (
-            <InfoHint className="md:hidden" label={t('form.aboutSection', { title })}>
+            <InfoHint className="md:hidden" title={title} label={t('form.aboutSection', { title })}>
               {hint}
             </InfoHint>
           )}

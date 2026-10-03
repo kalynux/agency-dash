@@ -4,5 +4,79 @@
     "accepts": "Aceita pagamento na entrega",
     "none": "Sem pagamento na entrega",
     "cap": "Limita a {{amount}} o dinheiro que uma agência pode reter em seu nome"
+  },
+  "detail": {
+    "notSpecified": "Não especificado",
+    "policiesTitle": "Políticas",
+    "policiesHint": "São as regras que aceita aplicar ao entregar para este vendedor: as devoluções que poderá recolher, os cancelamentos que poderá ter de travar e o dinheiro que irá cobrar. Se o vendedor as alterar, a ligação fica em pausa até aprovar a nova versão.",
+    "noPolicies": "Este vendedor ainda não publicou políticas.",
+    "acceptsReturns": "Aceita devoluções",
+    "noReturns": "Sem devoluções",
+    "partialRefundValue": "Parcial — {{percent}}% do preço",
+    "returnShipping": "Portes de devolução pagos por",
+    "shippingPayers": {
+      "vendor": "O vendedor",
+      "customer": "O cliente",
+      "customer_reimbursed_if_defect": "O cliente — reembolsado se o artigo tiver defeito"
+    },
+    "refundProcessing": "Reembolso em",
+    "refundProcessingValue_one": "{{count}} dia",
+    "refundProcessingValue_many": "{{count}} dias",
+    "refundProcessingValue_other": "{{count}} dias",
+    "inspector": "Devoluções inspecionadas por",
+    "inspectors": {
+      "admin": "A equipa Wi-Mall",
+      "vendor": "O vendedor",
+      "platform": "Wi-Mall"
+    },
+    "returnConditions": "Condições de devolução",
+    "cancellable": "Cancelável",
+    "notCancellable": "Não cancelável",
+    "deadlineDaysBefore_one": "Até {{count}} dia antes da entrega",
+    "deadlineDaysBefore_many": "Até {{count}} dias antes da entrega",
+    "deadlineDaysBefore_other": "Até {{count}} dias antes da entrega",
+    "deadlines": {
+      "within_1_hour": "Na primeira hora após a encomenda",
+      "within_24_hours": "Nas 24 horas após a encomenda",
+      "before_vendor_confirmation": "Até o vendedor confirmar a encomenda",
+      "before_service_start": "Antes do início do serviço",
+      "anytime_until_days_before_delivery": "Até alguns dias antes da entrega"
+    },
+    "cancellationFee": "Taxa de cancelamento",
+    "feeValues": {
+      "none": "Sem taxa",
+      "fixed": "{{amount}}",
+      "percentage": "{{percent}}% da encomenda",
+      "full_non_refundable": "Preço total — sem reembolso"
+    },
+    "lateRefund": "Após o prazo",
+    "lateRefundValues": {
+      "fixed": "{{amount}} reembolsados",
+      "percentage": "{{percent}}% reembolsado",
+      "full_non_refundable": "Sem reembolso"
+    },
+    "codAccepted": "Pagamento na entrega",
+    "codCap": "Máximo em dinheiro que pode guardar",
+    "noCodCap": "Sem limite do vendedor",
+    "hours": "Horário",
+    "channels": "Canais de contacto",
+    "channelTypes": {
+      "email": "E-mail",
+      "phone": "Telefone",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram"
+    },
+    "requiredInfo": "O cliente deve fornecer",
+    "requiredInfos": {
+      "order_number": "Número da encomenda",
+      "product_photo_video": "Foto ou vídeo do artigo",
+      "tracking_number": "Número de rastreio"
+    },
+    "supportNotes": "Notas de suporte",
+    "documents": "Documentos da política",
+    "documentN": "Documento {{n}}",
+    "refundTypes": {
+      "none": "Sem reembolso"
+    }
   }
 }

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RegionPicker } from '@/components/common/RegionPicker';
+import { InfoHint } from '@/components/common/InfoHint';
 import {
   EMPLOYMENT_TYPES,
   REMITTANCE_CADENCES,
@@ -30,23 +31,51 @@ import type { EmploymentType, FeeSplitModel, RemittanceCadence } from '@/types/a
  * CONTRACT_TERMS_NOT_NEGOTIABLE`, so both hide it.
  */
 
-export function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A titled group of fields. `hint` is the group's explanation, behind an ⓘ that
+ * opens it in a bottom sheet — these used to be a paragraph under every group,
+ * which turned the editor into a page of prose with a few boxes in it.
+ */
+export function FieldGroup({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+        {hint && <InfoHint title={title}>{hint}</InfoHint>}
+      </p>
       {children}
     </div>
   );
 }
 
-export function FormField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+/** One labelled input. `hint` goes behind an ⓘ beside the label, like {@link FieldGroup}'s. */
+export function FormField({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex min-h-5 items-center gap-1.5">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        {hint && <InfoHint title={label}>{hint}</InfoHint>}
+      </div>
       {children}
-      {hint && <p className="text-[11px] leading-relaxed text-muted-foreground">{hint}</p>}
     </div>
   );
+}
+
+/**
+ * Weekday names in the active language, indexed the way the API counts them
+ * (`0` = Sunday). 2024-01-07 is a Sunday, so day `n` is the 7th plus `n`.
+ */
+function weekdayNames(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'long' });
+  return Array.from({ length: 7 }, (_, day) => fmt.format(new Date(2024, 0, 7 + day)));
 }
 
 export interface ContractTermsFieldsProps {
@@ -114,11 +143,12 @@ export function ContractTermsFields({
     () => splitRegions(form.regions, catalogue),
     [form.regions, catalogue],
   );
+  const weekdays = useMemo(() => weekdayNames(i18n.language), [i18n.language]);
 
   return (
     <div className="space-y-5">
       {includeEmployment && (
-        <FieldGroup title={t('terms.fields.employment')}>
+        <FieldGroup title={t('terms.fields.employment')} hint={t('terms.fields.employmentHint')}>
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label={t('terms.fields.employmentType')}>
               <Select
@@ -149,14 +179,22 @@ export function ContractTermsFields({
               <Input type="date" value={form.empEnd} disabled={disabled} onChange={(e) => onChange('empEnd', e.target.value)} />
             </FormField>
           </div>
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            {t('terms.fields.employmentHint')}
-          </p>
         </FieldGroup>
       )}
 
       {/* Fee split — what this agent is paid per delivery */}
-      <FieldGroup title={t('terms.fields.feeSplit')}>
+      <FieldGroup
+        title={t('terms.fields.feeSplit')}
+        hint={
+          // The per-delivery hint ("the cut comes out of your fee, the platform
+          // pays it") is false for a salary — Wi-Mall pays nothing there.
+          <Trans
+            ns="agents"
+            i18nKey={feeModel === 'monthly_salary' ? 'terms.fields.salaryHint' : 'terms.fields.feeSplitHint'}
+            components={{ strong: <span className="font-medium text-foreground" /> }}
+          />
+        }
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t('terms.fields.model')}>
             <Select
@@ -227,19 +265,10 @@ export function ContractTermsFields({
             />
           </FormField>
         </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {/* The per-delivery hint ("the cut comes out of your fee, the platform
-              pays it") is false for a salary — Wi-Mall pays nothing there. */}
-          <Trans
-            ns="agents"
-            i18nKey={feeModel === 'monthly_salary' ? 'terms.fields.salaryHint' : 'terms.fields.feeSplitHint'}
-            components={{ strong: <span className="font-medium" /> }}
-          />
-        </p>
       </FieldGroup>
 
       {/* Remittance cadence */}
-      <FieldGroup title={t('terms.fields.remittance')}>
+      <FieldGroup title={t('terms.fields.remittance')} hint={t('terms.fields.remittanceHint')}>
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t('terms.fields.cadence')}>
             <Select
@@ -267,33 +296,38 @@ export function ContractTermsFields({
             />
           </FormField>
           {['weekly', 'biweekly'].includes(cadence) && (
-            <FormField label={t('terms.fields.dayOfWeek')} hint={t('terms.fields.dayOfWeekHint')}>
-              <Input
-                type="number"
-                min={0}
-                max={6}
+            // Named days, not a 0–6 box with "0 = Sunday" under it. The value
+            // stays the API's index, so the payload builders are unchanged.
+            <FormField label={t('terms.fields.dayOfWeek')}>
+              <Select
                 value={form.dayOfWeek}
                 disabled={disabled}
-                onChange={(e) => onChange('dayOfWeek', e.target.value)}
-              />
+                onValueChange={(v) => onChange('dayOfWeek', v)}
+              >
+                <SelectTrigger><SelectValue placeholder={t('terms.fields.emptySelect')} /></SelectTrigger>
+                <SelectContent>
+                  {weekdays.map((name, day) => (
+                    <SelectItem key={day} value={String(day)}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
           )}
           {cadence === 'monthly' && (
-            <FormField label={t('terms.fields.dayOfMonth')} hint={t('terms.fields.dayOfMonthHint')}>
+            <FormField label={t('terms.fields.dayOfMonth')}>
               <Input
                 type="number"
                 min={1}
                 max={28}
+                inputMode="numeric"
                 value={form.dayOfMonth}
                 disabled={disabled}
                 onChange={(e) => onChange('dayOfMonth', e.target.value)}
+                placeholder={t('terms.fields.dayOfMonthHint')}
               />
             </FormField>
           )}
         </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {t('terms.fields.remittanceHint')}
-        </p>
       </FieldGroup>
 
       <FieldGroup title={t('terms.fields.coverage')}>

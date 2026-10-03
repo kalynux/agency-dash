@@ -20,5 +20,36 @@
         "agent_monthly_salary": "الراتب الشهري"
       }
     }
+  },
+  "membership": {
+    "terms": {
+      "editTitle": "تعديل الشروط"
+    },
+    "overview": {
+      "agent": "المندوب",
+      "pay": "الأجر",
+      "agentEarns": "يتقاضى المندوب",
+      "shareAmount": "{{percent}}٪ من كل رسوم توصيل",
+      "flatAmount": "{{amount}} لكل توصيلة",
+      "salaryAmount": "{{amount}} شهريًا",
+      "howOften": "الوتيرة",
+      "handoverDay": "يوم تسليم النقود",
+      "dayOfMonth": "اليوم {{day}} من الشهر",
+      "grace": "مهلة السماح",
+      "graceValue": "{{hours}} ساعة",
+      "openEnded": "غير محدد المدة",
+      "contract": "العقد",
+      "origin": "كيف بدأ",
+      "termsVersion": "إصدار الشروط",
+      "termsVersionValue": "الإصدار {{version}}",
+      "termsNeverStated": "لم تُقترح شروط بعد",
+      "createdAt": "تاريخ الإنشاء",
+      "invitedAt": "أُرسل العرض",
+      "requestedAt": "تقدّم المندوب",
+      "approvedAt": "بدء العقد",
+      "suspendedAt": "تاريخ الإيقاف",
+      "updatedAt": "آخر تحديث",
+      "suspensionReason": "سبب الإيقاف"
+    }
   }
 }

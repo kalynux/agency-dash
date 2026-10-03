@@ -11,16 +11,14 @@ import type { VendorCodTerms as VendorCodTermsDto } from '@/types/vendor-connect
  *
  * `null` / missing terms (older responses) render nothing.
  *
- * `chip` matches the policy chips on a vendor card; `rows` is the bordered
- * block of the vendor detail sheet.
+ * Matches the policy chips on a vendor card and a connection row. The detail
+ * sheet renders the same two facts as rows of its own policy card.
  */
 export function VendorCodTerms({
   terms,
-  variant = 'chip',
   className,
 }: {
   terms: VendorCodTermsDto | null | undefined;
-  variant?: 'chip' | 'rows';
   className?: string;
 }) {
   const { t } = useTranslation('vendors');
@@ -31,18 +29,6 @@ export function VendorCodTerms({
     typeof terms.maxCashPerAgency === 'number'
       ? t('codTerms.cap', { amount: formatCurrency(terms.maxCashPerAgency) })
       : null;
-
-  if (variant === 'rows') {
-    return (
-      <div className={cn('rounded-lg border divide-y', className)}>
-        <p className="flex items-center gap-1 py-2 px-3 text-xs font-medium">
-          <Banknote className="w-3 h-3 shrink-0" />
-          {accepts}
-        </p>
-        {cap && <p className="py-2 px-3 text-xs text-muted-foreground">{cap}</p>}
-      </div>
-    );
-  }
 
   return (
     <div className={cn('flex flex-wrap items-center gap-x-1.5 gap-y-0.5', className)}>

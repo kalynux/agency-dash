@@ -59,7 +59,15 @@ function SheetContent({
 }) {
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {/* A press on the backdrop closes the sheet — every sheet, explicitly.
+          Radix's own outside-press detection usually gets there first, but it
+          is a document-level pointer heuristic that a WebView or a nested
+          layer can starve; a click on the scrim itself cannot be missed. A
+          caller that must stay open (a submit in flight) still can: the close
+          goes through its `onOpenChange`, which is where those guards live. */}
+      <SheetPrimitive.Close asChild>
+        <SheetOverlay aria-hidden tabIndex={-1} />
+      </SheetPrimitive.Close>
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(

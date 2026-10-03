@@ -81,26 +81,49 @@ export interface VendorPrimaryAddress {
   state: string | null;
 }
 
+// Since 2026-10-03 the browse DTO carries every structured policy field the
+// vendor set. The added fields are optional here: a response from an older
+// backend lacks them, and the detail sheet simply omits those rows.
+
 export interface VendorReturnPolicySummary {
   returnEligible: boolean;
   returnWindowDays: number;
   refundType: 'full' | 'partial' | 'none';
+  /** `partial` refunds only. */
+  refundPercentage?: number | null;
+  returnShippingPayer?: 'vendor' | 'customer' | 'customer_reimbursed_if_defect' | null;
+  refundProcessingDays?: number | null;
+  returnConditionNotes?: string | null;
+  inspector?: 'admin' | 'vendor' | 'platform' | null;
 }
 
 export interface VendorCancellationPolicySummary {
   cancellable: boolean;
   cancellationDeadline: string | null;
+  /** `anytime_until_days_before_delivery` only. */
+  cancellationDeadlineDays?: number | null;
+  cancellationFeeType?: 'none' | 'fixed' | 'percentage' | 'full_non_refundable' | null;
+  cancellationFeeValue?: number | null;
+  lateCancellationRefundType?: 'fixed' | 'percentage' | 'full_non_refundable' | null;
+  lateCancellationRefundValue?: number | null;
 }
 
 export interface VendorSupportPolicySummary {
   availability: '24_7' | 'business_hours' | 'limited' | null;
+  availabilityDescription?: string | null;
   languages: string[];
+  /** Channel kinds only — the contact values are never sent to an agency. */
+  channelTypes?: string[];
+  requiredInfo?: string[];
+  eligibilityNotes?: string | null;
 }
 
 export interface VendorPolicySummary {
   returnPolicy: VendorReturnPolicySummary | null;
   cancellationPolicy: VendorCancellationPolicySummary | null;
   supportPolicy: VendorSupportPolicySummary | null;
+  /** Up to 2 supporting document URLs for terms the fields above don't cover. */
+  documents?: string[];
 }
 
 /** A vendor listing item annotated with the agency's current connection state (if any). */

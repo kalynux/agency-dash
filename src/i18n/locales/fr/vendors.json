@@ -109,7 +109,8 @@
       "full": "Intégral",
       "partial": "Partiel",
       "store_credit": "Avoir en boutique",
-      "exchange_only": "Échange uniquement"
+      "exchange_only": "Échange uniquement",
+      "none": "Aucun remboursement"
     },
     "cancellationPolicy": "Politique d'annulation",
     "cancellableLabel": "Annulable",
@@ -118,7 +119,12 @@
       "before_shipping": "Avant l'expédition",
       "before_delivery": "Avant la livraison",
       "anytime": "À tout moment",
-      "not_allowed": "Non autorisée"
+      "not_allowed": "Non autorisée",
+      "within_1_hour": "Dans l'heure suivant la commande",
+      "within_24_hours": "Dans les 24 heures suivant la commande",
+      "before_vendor_confirmation": "Jusqu'à la confirmation du vendeur",
+      "before_service_start": "Avant le début du service",
+      "anytime_until_days_before_delivery": "Jusqu'à quelques jours avant la livraison"
     },
     "support": "Assistance",
     "availability": "Disponibilité",
@@ -127,7 +133,69 @@
       "business_hours": "Heures ouvrées",
       "limited": "Limitée"
     },
-    "languages": "Langues"
+    "languages": "Langues",
+    "notSpecified": "Non précisé",
+    "policiesTitle": "Politiques",
+    "policiesHint": "Ce sont les règles que vous vous engagez à appliquer en livrant pour ce vendeur : les retours que vous pourriez rapporter, les annulations que vous pourriez devoir stopper et l'argent que vous encaisserez. Si le vendeur les modifie, la connexion est suspendue jusqu'à ce que vous approuviez la nouvelle version.",
+    "noPolicies": "Ce vendeur n'a encore publié aucune politique.",
+    "acceptsReturns": "Retours acceptés",
+    "noReturns": "Pas de retours",
+    "partialRefundValue": "Partiel — {{percent}} % du prix",
+    "returnShipping": "Frais de retour payés par",
+    "shippingPayers": {
+      "vendor": "Le vendeur",
+      "customer": "Le client",
+      "customer_reimbursed_if_defect": "Le client — remboursé si l'article est défectueux"
+    },
+    "refundProcessing": "Remboursement sous",
+    "refundProcessingValue_one": "{{count}} jour",
+    "refundProcessingValue_many": "{{count}} jours",
+    "refundProcessingValue_other": "{{count}} jours",
+    "inspector": "Retours inspectés par",
+    "inspectors": {
+      "admin": "L'équipe Wi-Mall",
+      "vendor": "Le vendeur",
+      "platform": "Wi-Mall"
+    },
+    "returnConditions": "Conditions de retour",
+    "cancellable": "Annulable",
+    "notCancellable": "Non annulable",
+    "deadlineDaysBefore_one": "Jusqu'à {{count}} jour avant la livraison",
+    "deadlineDaysBefore_many": "Jusqu'à {{count}} jours avant la livraison",
+    "deadlineDaysBefore_other": "Jusqu'à {{count}} jours avant la livraison",
+    "cancellationFee": "Frais d'annulation",
+    "feeValues": {
+      "none": "Aucun frais",
+      "fixed": "{{amount}}",
+      "percentage": "{{percent}} % de la commande",
+      "full_non_refundable": "Prix total — aucun remboursement"
+    },
+    "lateRefund": "Après le délai",
+    "lateRefundValues": {
+      "fixed": "{{amount}} remboursés",
+      "percentage": "{{percent}} % remboursés",
+      "full_non_refundable": "Aucun remboursement"
+    },
+    "codAccepted": "Paiement à la livraison",
+    "codCap": "Montant maximal que vous pouvez détenir",
+    "noCodCap": "Aucun plafond du vendeur",
+    "hours": "Horaires",
+    "channels": "Canaux de contact",
+    "channelTypes": {
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram"
+    },
+    "requiredInfo": "Le client doit fournir",
+    "requiredInfos": {
+      "order_number": "Numéro de commande",
+      "product_photo_video": "Photo ou vidéo de l'article",
+      "tracking_number": "Numéro de suivi"
+    },
+    "supportNotes": "Notes d'assistance",
+    "documents": "Documents de politique",
+    "documentN": "Document {{n}}"
   },
   "codTerms": {
     "title": "Paiement à la livraison",

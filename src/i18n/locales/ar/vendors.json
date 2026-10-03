@@ -4,5 +4,85 @@
     "accepts": "يقبل الدفع عند الاستلام",
     "none": "لا يقبل الدفع عند الاستلام",
     "cap": "يحدّد النقد الذي يمكن لوكالة واحدة الاحتفاظ به لحسابه بـ {{amount}}"
+  },
+  "detail": {
+    "notSpecified": "غير محدد",
+    "policiesTitle": "السياسات",
+    "policiesHint": "هذه هي القواعد التي توافق على تطبيقها عند التوصيل لهذا البائع: المرتجعات التي قد تعيدها، والإلغاءات التي قد تضطر لإيقافها، والنقود التي ستحصّلها. إذا غيّرها البائع، يتوقف الاتصال مؤقتًا حتى توافق على النسخة الجديدة.",
+    "noPolicies": "لم ينشر هذا البائع أي سياسات بعد.",
+    "acceptsReturns": "يقبل المرتجعات",
+    "noReturns": "لا مرتجعات",
+    "partialRefundValue": "جزئي — {{percent}}٪ من السعر",
+    "returnShipping": "يدفع شحن الإرجاع",
+    "shippingPayers": {
+      "vendor": "البائع",
+      "customer": "العميل",
+      "customer_reimbursed_if_defect": "العميل — يُعوَّض إذا كان المنتج معيبًا"
+    },
+    "refundProcessing": "يُعالَج الاسترداد خلال",
+    "refundProcessingValue_zero": "{{count}} يوم",
+    "refundProcessingValue_one": "{{count}} يوم",
+    "refundProcessingValue_two": "{{count}} يوم",
+    "refundProcessingValue_few": "{{count}} يوم",
+    "refundProcessingValue_many": "{{count}} يوم",
+    "refundProcessingValue_other": "{{count}} يوم",
+    "inspector": "يفحص المرتجعات",
+    "inspectors": {
+      "admin": "فريق Wi-Mall",
+      "vendor": "البائع",
+      "platform": "Wi-Mall"
+    },
+    "returnConditions": "شروط الإرجاع",
+    "cancellable": "قابل للإلغاء",
+    "notCancellable": "غير قابل للإلغاء",
+    "deadlineDaysBefore_zero": "حتى {{count}} يوم قبل التوصيل",
+    "deadlineDaysBefore_one": "حتى {{count}} يوم قبل التوصيل",
+    "deadlineDaysBefore_two": "حتى {{count}} يوم قبل التوصيل",
+    "deadlineDaysBefore_few": "حتى {{count}} يوم قبل التوصيل",
+    "deadlineDaysBefore_many": "حتى {{count}} يوم قبل التوصيل",
+    "deadlineDaysBefore_other": "حتى {{count}} يوم قبل التوصيل",
+    "deadlines": {
+      "within_1_hour": "خلال ساعة من الطلب",
+      "within_24_hours": "خلال 24 ساعة من الطلب",
+      "before_vendor_confirmation": "حتى يؤكد البائع الطلب",
+      "before_service_start": "قبل بدء الخدمة",
+      "anytime_until_days_before_delivery": "حتى أيام قليلة قبل التوصيل"
+    },
+    "cancellationFee": "رسوم الإلغاء",
+    "feeValues": {
+      "none": "بدون رسوم",
+      "fixed": "{{amount}}",
+      "percentage": "{{percent}}٪ من الطلب",
+      "full_non_refundable": "السعر كاملًا — بلا استرداد"
+    },
+    "lateRefund": "بعد انتهاء المهلة",
+    "lateRefundValues": {
+      "fixed": "يُسترد {{amount}}",
+      "percentage": "يُسترد {{percent}}٪",
+      "full_non_refundable": "لا استرداد"
+    },
+    "codAccepted": "الدفع عند الاستلام",
+    "codCap": "أقصى مبلغ نقدي يمكنك الاحتفاظ به",
+    "noCodCap": "لا حد من البائع",
+    "hours": "ساعات العمل",
+    "channels": "قنوات التواصل",
+    "channelTypes": {
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "whatsapp": "واتساب",
+      "telegram": "تيليجرام"
+    },
+    "requiredInfo": "على العميل تقديم",
+    "requiredInfos": {
+      "order_number": "رقم الطلب",
+      "product_photo_video": "صورة أو فيديو للمنتج",
+      "tracking_number": "رقم التتبع"
+    },
+    "supportNotes": "ملاحظات الدعم",
+    "documents": "مستندات السياسة",
+    "documentN": "المستند {{n}}",
+    "refundTypes": {
+      "none": "بلا استرداد"
+    }
   }
 }

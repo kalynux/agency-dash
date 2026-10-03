@@ -320,7 +320,8 @@
       "sendCounterProposal": "Envoyer la contre-proposition",
       "proposeToAgent": "Proposer au livreur",
       "sendCounterOffer": "Envoyer la contre-offre",
-      "sendTerms": "Envoyer les conditions"
+      "sendTerms": "Envoyer les conditions",
+      "editTitle": "Modifier les conditions"
     },
     "trail": {
       "title": "Historique des conditions",
@@ -400,6 +401,32 @@
       "remove": "Retirer",
       "reinstate": "Réintégrer",
       "manage": "Gérer"
+    },
+    "overview": {
+      "agent": "Agent",
+      "pay": "Rémunération",
+      "agentEarns": "L'agent perçoit",
+      "shareAmount": "{{percent}} % de chaque frais de livraison",
+      "flatAmount": "{{amount}} par livraison",
+      "salaryAmount": "{{amount}} par mois",
+      "howOften": "Fréquence",
+      "handoverDay": "Jour de remise",
+      "dayOfMonth": "Le {{day}} du mois",
+      "grace": "Délai de grâce",
+      "graceValue": "{{hours}} h",
+      "openEnded": "Durée indéterminée",
+      "contract": "Contrat",
+      "origin": "Origine",
+      "termsVersion": "Version des conditions",
+      "termsVersionValue": "Version {{version}}",
+      "termsNeverStated": "Aucune condition proposée",
+      "createdAt": "Créé le",
+      "invitedAt": "Offre envoyée",
+      "requestedAt": "Candidature de l'agent",
+      "approvedAt": "Début du contrat",
+      "suspendedAt": "Suspendu le",
+      "updatedAt": "Dernière mise à jour",
+      "suspensionReason": "Motif de suspension"
     }
   },
   "historyEvents": {

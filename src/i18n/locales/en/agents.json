@@ -322,7 +322,8 @@
       "sendCounterProposal": "Send counter-proposal",
       "proposeToAgent": "Propose to agent",
       "sendCounterOffer": "Send counter-offer",
-      "sendTerms": "Send terms"
+      "sendTerms": "Send terms",
+      "editTitle": "Change terms"
     },
     "trail": {
       "title": "Terms history",
@@ -402,6 +403,32 @@
       "remove": "Remove",
       "reinstate": "Reinstate",
       "manage": "Manage"
+    },
+    "overview": {
+      "agent": "Agent",
+      "pay": "Pay",
+      "agentEarns": "Agent earns",
+      "shareAmount": "{{percent}}% of each delivery fee",
+      "flatAmount": "{{amount}} per delivery",
+      "salaryAmount": "{{amount}} per month",
+      "howOften": "How often",
+      "handoverDay": "Hand-over day",
+      "dayOfMonth": "Day {{day}} of the month",
+      "grace": "Grace period",
+      "graceValue": "{{hours}} h",
+      "openEnded": "Open-ended",
+      "contract": "Contract",
+      "origin": "How it started",
+      "termsVersion": "Terms version",
+      "termsVersionValue": "Version {{version}}",
+      "termsNeverStated": "No terms stated yet",
+      "createdAt": "Created",
+      "invitedAt": "Offer sent",
+      "requestedAt": "Agent applied",
+      "approvedAt": "Contract started",
+      "suspendedAt": "Suspended",
+      "updatedAt": "Last updated",
+      "suspensionReason": "Suspension reason"
     }
   },
   "_historyEventsComment": "Membership-log event types. Append-only server-side, so an unrecognised token falls back to its humanized form.",
