@@ -83,11 +83,20 @@ function EarningBreakdown({ earning, className }: { earning: AgencyEarning; clas
       <span>{t('money.deliveryFee')}</span>
       <span className="font-numeric text-end">{money(earning.earnedFee)}</span>
 
-      {earning.agentCut > 0 && (
+      {earning.agentCut > 0 ? (
         <>
           <span>{t('money.agentCut')}</span>
           <span className="font-numeric text-end">−{money(earning.agentCut)}</span>
         </>
+      ) : (
+        // A salaried agent's cut is 0 by design — they are paid outside
+        // Wi-Mall — so say so rather than drop the line as if unconfigured.
+        earning.basis === 'contract_salary' && (
+          <>
+            <span>{t('money.agentCut')}</span>
+            <span className="text-end">{t('money.agentSalaried')}</span>
+          </>
+        )
       )}
 
       {earning.codHandlingFee > 0 && (

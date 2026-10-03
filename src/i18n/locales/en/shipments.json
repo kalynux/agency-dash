@@ -72,7 +72,7 @@
     "short": "Reject",
     "title": "Reject shipment",
     "titleWithOrder": "Reject shipment · {{orderNumber}}",
-    "description": "Decline this assignment before pickup. The vendor is notified with your reason so they can reroute it to another agency.",
+    "description": "Decline this delivery before pickup. If an agent has accepted it, they are released, and a fee change still waiting on the vendor is withdrawn. The vendor is notified with your reason so they can reroute it to another agency.",
     "reason": "Reason",
     "reasonPlaceholder": "Select a reason…",
     "message": "Message",
@@ -155,6 +155,20 @@
     "submit": "Reassign",
     "success": "Shipment released and offered to the replacement."
   },
+  "coverageForce": {
+    "title": "This delivery is outside the regions in {{name}}'s contract.",
+    "deliveryRegion": "Delivery region",
+    "coveredRegions": "Contract covers",
+    "unknownRegion": "Not specified",
+    "explainer": "You can still send it to them. The offer will be marked as outside their regions, and they can accept or decline it as usual.",
+    "codNote": "This is a cash-on-delivery shipment: sending anyway also lets it past this agent's cash limit.",
+    "sendAnyway": "Send anyway"
+  },
+  "offerFlags": {
+    "coverageForced": "Outside agent's regions",
+    "adminOverride": "Assigned by Wi-Mall admin: {{reason}}",
+    "codLimitForced": "Sent above the agent's COD limit"
+  },
   "money": {
     "cashToCollect": "Cash to collect",
     "codSnapshotHint": "Cash the agent takes from the customer at the door.",
@@ -187,7 +201,8 @@
     "unavailable": {
       "no_agent": "Your net can't be quoted until an agent accepts — their contracted cut comes out of the delivery fee, so any figure shown now would only drop once somebody takes it.",
       "no_agency_policy": "Your delivery pricing isn't configured, so there's no fee to divide."
-    }
+    },
+    "agentSalaried": "Agent salaried"
   },
   "detail": {
     "srTitle": "Shipment details",
@@ -280,6 +295,99 @@
       "emptyFiltered": "No reviews with this status",
       "emptyFilteredBody": "Clear the filter to see every review you have written.",
       "clearFilter": "Clear the filter"
+    }
+  },
+  "codLimitForce": {
+    "title": "This shipment would take {{name}} past their cash-on-delivery limit.",
+    "currentExposure": "Cash they hold now",
+    "additionalAmount": "This shipment",
+    "effectiveLimit": "Their limit",
+    "sliceBinds": "The limit on your contract with them is what refuses.",
+    "poolBinds": "Their own COD pool is what refuses — it is lower than the limit on your contract.",
+    "explainer": "You can still assign it. The offer will be marked as sent above their limit, and they will hold more cash than the limit allows until they deposit.",
+    "assignAnyway": "Assign anyway"
+  },
+  "bulkAssign": {
+    "selectRow": "Select {{order}}",
+    "selectPage": "Select the shipments on this page that can be offered",
+    "selected": "Selected: {{count}} of {{max}}",
+    "limitReached": "That's the limit: up to {{max}} shipments per batch.",
+    "clear": "Clear",
+    "action": "Assign to agent",
+    "title": "Offer shipments to one agent",
+    "description": "Each shipment becomes its own offer to the agent you pick, checked exactly as if you offered it alone. The agent gets one notification for the whole batch.",
+    "agentLabel": "Agent",
+    "shipmentsLabel": "Shipments",
+    "remove": "Remove {{order}}",
+    "submit_one": "Offer {{count}} shipment",
+    "submit_other": "Offer {{count}} shipments",
+    "atCapacity": "Free slots for {{name}}: {{free}}. Shipments that could be offered: {{requested}}. Nothing was offered. Remove {{excess}}, then send again.",
+    "atCapacityNone": "{{name}} has no free slot right now. Nothing was offered.",
+    "keepFirst": "Keep only the first {{count}}",
+    "summary": "Offered: {{offered}} of {{requested}} · Failed: {{failed}}",
+    "summaryAutoAccepted": "Accepted on the spot: {{count}}",
+    "rowOffered": "Offer sent",
+    "rowAutoAccepted": "Accepted by the agent",
+    "rowFailed": "Not offered",
+    "forceTitle_one": "{{count}} shipment was refused only for this agent's cash limit or contract regions.",
+    "forceTitle_other": "{{count}} shipments were refused only for this agent's cash limit or contract regions.",
+    "forceExplainer": "You can send just those anyway. Each offer will be marked as forced, and the agent can accept or decline it as usual. Shipments already offered are not sent again.",
+    "forceConfirm_one": "Send it anyway",
+    "forceConfirm_other": "Send these {{count}} anyway",
+    "done": "Done"
+  },
+  "deliveryFee": {
+    "title": "Delivery fee",
+    "propose": "Propose a different fee",
+    "proposeAgain": "Propose again",
+    "proposeTitle": "Propose a different delivery fee",
+    "editTitle": "Edit the fee change",
+    "dialogDescription": "For this shipment only. The vendor must approve. Pickup is blocked until they answer.",
+    "currentFee": "Current fee: {{amount}}",
+    "proposedFee": "New fee ({{currency}})",
+    "reason": "Reason",
+    "reasonPlaceholder": "Why does this parcel need a different fee? The vendor sees this.",
+    "send": "Send to the vendor",
+    "saveEdit": "Save changes",
+    "edit": "Edit",
+    "withdraw": "Withdraw",
+    "proposed": "Fee change sent to the vendor.",
+    "edited": "Fee change updated.",
+    "withdrawn": "Fee change withdrawn.",
+    "pickupBlocked": "Waiting for the vendor to answer a fee change — pickup is blocked until they do.",
+    "pickupBlockedShort": "fee pending",
+    "pendingChip": "Fee change pending",
+    "agreedOn": "Agreed with the vendor on {{date}}",
+    "afterRejection": "The vendor rejected the new fee. Propose once more, or decline the delivery so they can pick another agency.",
+    "afterRejectionHandover": "The vendor rejected the new fee. During a handover the delivery can no longer be declined: propose once more, or carry it at the original fee.",
+    "decline": "Decline delivery",
+    "by": {
+      "agency": "You",
+      "agent": "Your agent",
+      "vendor": "The vendor",
+      "system": "Wi-Mall"
+    },
+    "proposedBy": "Proposed by {{who}} · {{date}}",
+    "agencyEdited": "edited by you",
+    "editEntry": "{{who}} changed it on {{date}}: {{before}} → {{after}}",
+    "rejectionNote": "Vendor's note: {{note}}",
+    "withdrawnDeclined": "Withdrawn when you declined the delivery",
+    "withdrawnAgentLeft": "Withdrawn — the agent left the job",
+    "withdrawnBy": "Withdrawn by {{who}}",
+    "status": {
+      "pending": "Waiting for vendor",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "unknown": "Unknown status"
+    },
+    "validation": {
+      "number": "Enter an amount.",
+      "integer": "Enter a whole amount.",
+      "min": "The fee can't be negative.",
+      "sameAsCurrent": "That is already the fee.",
+      "reasonMin": "Give a reason of at least {{min}} characters.",
+      "reasonMax": "Keep the reason under {{max}} characters."
     }
   }
 }

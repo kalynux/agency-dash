@@ -64,7 +64,9 @@
     "locationContact": "Contact du site",
     "phone": "Téléphone",
     "email": "E-mail",
-    "emailPlaceholder": "support@monagence.com"
+    "emailPlaceholder": "support@monagence.com",
+    "regionRefused": "« {{label}} » n'a pas pu être enregistrée : sa région n'est pas reconnue. Choisissez-la sur cette adresse ci-dessous.",
+    "regionRepairAction": "Utiliser cette région et continuer"
   },
   "payout": {
     "title": "Configuration des versements",

@@ -26,6 +26,40 @@ export interface CodSummary {
   unsettledCollections: { count: number; amount: number };
 }
 
+/**
+ * `GET /agency/cod/limit` (2026-10-02) — the agency's COD cash limit and what it
+ * holds against it. XAF minor units. See api-doc/agency/cod-cash-management.md.
+ *
+ * It gates **vendors' dispatches to you**, not your own per-order cap
+ * (`policies.cod`). The administrator's reason for an override is never sent.
+ */
+export type CodLimitSource = 'default' | 'override';
+
+export interface CodLimitExposure {
+  /** COD shipments held (assigned → agent_delivered) whose cash is not collected yet. */
+  inFlight: number;
+  inFlightCount: number;
+  /** Collected by your agents or you, not yet remitted to (and confirmed by) the platform. */
+  collectedUnremitted: number;
+  collectedCount: number;
+  /** `inFlight + collectedUnremitted`. */
+  total: number;
+}
+
+export interface CodLimit {
+  agencyId: string;
+  /** The limit in force. */
+  limit: number;
+  /** `override` = an administrator decided. Typed open so an unknown value renders no badge. */
+  source: CodLimitSource | (string & {});
+  defaultLimit: number;
+  exposure: CodLimitExposure;
+  /** `max(0, limit − total)`. */
+  headroom: number;
+  /** `total > limit` (after a vendor force or a lowered pin). */
+  overLimit: boolean;
+}
+
 export type CodDepositStatus = 'declared' | 'confirmed' | 'rejected';
 /** Who the cash was declared as handed to — `agency` (yours to answer) or `platform` (admin's). */
 export type CodDepositRecipient = 'agency' | 'platform';
@@ -123,6 +157,11 @@ export interface ListDiscrepanciesParams {
 export interface CodSummaryResponse {
   success: true;
   data: CodSummary;
+}
+
+export interface CodLimitResponse {
+  success: true;
+  data: CodLimit;
 }
 
 export interface CodDepositResponse {

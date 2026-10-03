@@ -64,7 +64,9 @@
     "locationContact": "Location Contact",
     "phone": "Phone",
     "email": "Email",
-    "emailPlaceholder": "support@youragency.com"
+    "emailPlaceholder": "support@youragency.com",
+    "regionRefused": "“{{label}}” couldn't be saved: its region isn't recognised. Pick it on that address below.",
+    "regionRepairAction": "Use this region and continue"
   },
   "payout": {
     "title": "Payout Setup",

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Info, RotateCcw, Store, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import { cn } from '@/lib/utils';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
@@ -83,6 +84,8 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
                   )}
                 </div>
               )}
+
+              <VendorCodTerms terms={vendor.codTerms} className={p ? 'mt-1' : 'mt-2'} />
             </div>
           </div>
         </div>

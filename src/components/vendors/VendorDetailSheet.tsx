@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { tx } from '@/i18n/tx';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
 function PolicyRow({ label, value }: { label: string; value: ReactNode }) {
@@ -145,6 +146,15 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
                     />
                   )}
                 </div>
+              </section>
+            )}
+
+            {vendor.codTerms && (
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                  {t('codTerms.title')}
+                </h3>
+                <VendorCodTerms terms={vendor.codTerms} variant="rows" />
               </section>
             )}
 

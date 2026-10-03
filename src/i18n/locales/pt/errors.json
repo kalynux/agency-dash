@@ -21,5 +21,36 @@
       "UNDETECTABLE_TYPE": "tem um tipo de ficheiro não reconhecido",
       "fallback": "foi rejeitado"
     }
+  },
+  "codes": {
+    "DELIVERY_FEE_PROPOSAL_NOT_FOUND": "Essa alteração de taxa já não existe. Recarregue para ver a taxa atual.",
+    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "Já há uma alteração de taxa à espera da resposta do vendedor.",
+    "DELIVERY_FEE_PROPOSAL_NOT_PENDING": "Essa alteração de taxa já foi respondida ou retirada. Recarregue para ver o estado.",
+    "DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED": "A taxa só pode ser alterada antes da recolha.",
+    "DELIVERY_FEE_PROPOSAL_AGENTS_NOT_ALLOWED": "A sua agência não permite que os agentes proponham taxas de entrega.",
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": "Este envio já usou todas as alterações de taxa.",
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": "Essa já é a taxa.",
+    "DELIVERY_FEE_PROPOSAL_VENDOR_NET_NOT_POSITIVE": "Essa taxa é mais do que esta encomenda pode suportar.",
+    "DELIVERY_FEE_PROPOSAL_NOT_YOURS": "Não pode alterar essa proposta de taxa. Recarregue para ver o estado.",
+    "DELIVERY_FEE_PROPOSAL_STALE": "Este envio avançou desde que a alteração de taxa foi proposta. Pode retirá-la.",
+    "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Os ganhos do vendedor nesta encomenda mudaram, por isso a alteração de taxa não pôde ser aplicada. Nada foi alterado.",
+    "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Esta alteração de taxa foi editada entretanto. Recarregue para ver o valor atual.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "À espera de que o vendedor responda a uma alteração de taxa. A recolha está bloqueada até lá.",
+    "COD_VENDOR_NOT_ACCEPTED": "Uma loja desta encomenda não aceita pagamento na entrega.",
+    "COD_AGENCY_LIMIT_EXCEEDED": "Isto levaria a agência acima do seu limite de pagamento na entrega.",
+    "CINETPAY_REQUEST_FAILED": "O fornecedor de pagamentos não conseguiu processar isto agora. Tente novamente em breve.",
+    "CINETPAY_UNREACHABLE": "Não é possível contactar o fornecedor de pagamentos. Tente novamente em breve.",
+    "FAPSHI_REQUEST_FAILED": "O fornecedor de pagamentos não conseguiu processar isto agora. Tente novamente em breve.",
+    "FAPSHI_UNREACHABLE": "Não é possível contactar o fornecedor de pagamentos. Tente novamente em breve.",
+    "SHIPMENT_REJECTION_NOT_ALLOWED": "Esta entrega já não pode ser recusada.",
+    "CONTRACT_FEE_SPLIT_INVALID": "Essa divisão de taxa não tem valor para o seu modelo — indique uma percentagem para uma divisão percentual, uma taxa fixa para uma fixa ou um salário mensal para um agente assalariado."
+  },
+  "detailed": {
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
+      "max": "Este envio já teve as suas {{max}} alterações de taxa — não é possível propor mais."
+    },
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": {
+      "currentFee": "Essa já é a taxa ({{fee}})."
+    }
   }
 }

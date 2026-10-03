@@ -14,7 +14,13 @@ import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { DeliveryProofPanel } from '@/components/shipments/DeliveryProofPanel';
 import { DeliveryReviewPanel } from '@/components/shipments/DeliveryReviewPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
-import { getNextActions, canRejectStatus, isTerminalStatus } from '@/components/shipments/shipment-actions';
+import { DeliveryFeeSection } from '@/components/shipments/DeliveryFeeSection';
+import {
+  getNextActions,
+  canRejectStatus,
+  isTerminalStatus,
+  pickupBlockReason,
+} from '@/components/shipments/shipment-actions';
 import { shipmentsService } from '@/services/shipments.service';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { useAgentsRoster } from '@/store/agents.store';
@@ -83,11 +89,11 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const nextActions = detail ? getNextActions(detail.status) : [];
   const canReject = detail ? canRejectStatus(detail.status) : false;
   const isTerminal = detail ? isTerminalStatus(detail.status) : false;
-  // Under the acceptance workflow, ANY shipment needs an accepted agent before pickup.
-  const pickupBlocked = detail?.status === 'assigned' && !detail.agentId;
+  // Pickup needs an accepted agent, and no fee change waiting on the vendor.
+  const pickupBlock = detail ? pickupBlockReason(detail) : null;
 
   const runStatus = async (status: ShipmentActionableStatus, label: string) => {
-    const result = await actions.updateStatus(detail!.id, status, label);
+    const result = await actions.updateStatus(detail!.id, status, label, refresh);
     if (result) refresh();
   };
   const TitleComp = isMobile ? SheetTitle : DialogTitle;
@@ -209,6 +215,15 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               to send. */}
           <ShipmentMoneySection detail={detail} />
 
+          {/* Renegotiating this shipment's fee with the vendor — before pickup only. */}
+          <DeliveryFeeSection
+            key={"fee-${detail.id}"}
+            detail={detail}
+            agents={agents}
+            onChanged={refresh}
+            onDecline={() => setRejectOpen(true)}
+          />
+
           {/* Vendor & Customer */}
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -276,7 +291,10 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           </section>
 
           {/* Agent assignment (offer / acceptance workflow) */}
-          {!isTerminal && <AssignmentPanel detail={detail} agents={agents} onChanged={refresh} />}
+          {/* Keyed so a local offer / region prompt never carries over to the next shipment. */}
+          {!isTerminal && (
+            <AssignmentPanel key={detail.id} detail={detail} agents={agents} onChanged={refresh} />
+          )}
 
           {/* Tracking number — generated at creation, read-only everywhere. The
               agency acronym prefix is snapshotted then, so renaming your magazin
@@ -360,11 +378,13 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               variant={next.variant === 'destructive' ? 'destructive' : 'default'}
               disabled={
                 actions.pendingKey === `status:${detail.id}` ||
-                (pickupBlocked && next.status === 'picked_up')
+                (pickupBlock !== null && next.status === 'picked_up')
               }
               title={
-                pickupBlocked && next.status === 'picked_up'
-                  ? t('actions.needsAcceptedOffer')
+                pickupBlock !== null && next.status === 'picked_up'
+                  ? pickupBlock === 'fee_pending'
+                    ? t('deliveryFee.pickupBlocked')
+                    : t('actions.needsAcceptedOffer')
                   : undefined
               }
               onClick={() => runStatus(next.status, tx(t, next.labelKey))}
@@ -388,6 +408,10 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
             >
               <Ban className="w-3.5 h-3.5" /> {t('reject.short')}
             </Button>
+          )}
+          {/* A tooltip alone is invisible on touch screens. */}
+          {pickupBlock === 'fee_pending' && nextActions.some((a) => a.status === 'picked_up') && (
+            <p className="basis-full text-xs text-muted-foreground">{t('deliveryFee.pickupBlocked')}</p>
           )}
         </div>
       )}

@@ -228,5 +228,12 @@
     "deleted": "Deleted",
     "copiedToClipboard": "Copied to clipboard",
     "copyFailed": "Couldn't copy to clipboard"
+  },
+  "addressRegion": {
+    "title": "This address doesn't name a region we recognise.",
+    "titleWithPlace": "“{{place}}” isn't one of your country's regions.",
+    "explainer": "Pick the region this address is in. It's saved with the address, and the whole list is sent again.",
+    "pickLabel": "Region",
+    "pickPlaceholder": "Choose the region…"
   }
 }

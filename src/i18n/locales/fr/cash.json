@@ -84,7 +84,25 @@
     "cashHeld": "Espèces détenues",
     "emptyRoster": "Aucun livreur dans votre équipe pour l'instant",
     "emptyFiltered": "Aucun livreur ne correspond à votre recherche ou à vos filtres",
-    "declareRemittance": "Déclarer un reversement"
+    "declareRemittance": "Déclarer un reversement",
+    "limit": {
+      "title": "Plafond d'espèces COD",
+      "loading": "Chargement de votre plafond d'espèces COD…",
+      "loadFailed": "Impossible de charger votre plafond d'espèces COD.",
+      "sourceOverride": "Fixé par Wi-Mall",
+      "sourceDefault": "Plafond standard",
+      "held": "{{total}} détenus sur {{limit}}",
+      "inFlight_one": "En livraison : {{amount}} ({{count}} expédition)",
+      "inFlight_many": "En livraison : {{amount}} ({{count}} expéditions)",
+      "inFlight_other": "En livraison : {{amount}} ({{count}} expéditions)",
+      "collected_one": "Encaissé, pas encore reversé : {{amount}} ({{count}} encaissement)",
+      "collected_many": "Encaissé, pas encore reversé : {{amount}} ({{count}} encaissements)",
+      "collected_other": "Encaissé, pas encore reversé : {{amount}} ({{count}} encaissements)",
+      "overLimit": "Vous détenez plus que votre plafond. Les vendeurs ne peuvent plus vous envoyer de commandes en paiement à la livraison tant que vous n'avez pas reversé.",
+      "headroom": "Vous pouvez encore prendre {{headroom}}",
+      "remitFrees": "Reverser des espèces à Wi-Mall libère de la marge",
+      "explain": "Ce plafond détermine ce que les vendeurs peuvent vous confier : une commande en paiement à la livraison qui vous ferait dépasser ce plafond reste en attente chez le vendeur, et vous ne la recevez pas tant qu'elle n'y entre pas ou que le vendeur ne l'envoie pas quand même. Ce n'est pas le plafond COD par commande de vos politiques, et sa modification ne suspend jamais vos connexions."
+    }
   },
   "deposits": {
     "alertTitle_one": "{{count}} remise en attente de votre réponse",

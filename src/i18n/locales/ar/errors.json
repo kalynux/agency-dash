@@ -21,5 +21,36 @@
       "UNDETECTABLE_TYPE": "نوع الملف غير معروف",
       "fallback": "تم رفضه"
     }
+  },
+  "codes": {
+    "DELIVERY_FEE_PROPOSAL_NOT_FOUND": "تعديل الرسوم هذا لم يعد موجودًا. أعد التحميل لرؤية الرسوم الحالية.",
+    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "هناك تعديل رسوم ينتظر رد البائع بالفعل.",
+    "DELIVERY_FEE_PROPOSAL_NOT_PENDING": "تم الرد على تعديل الرسوم هذا أو سحبه بالفعل. أعد التحميل لمعرفة حالته.",
+    "DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED": "لا يمكن تغيير الرسوم إلا قبل الاستلام.",
+    "DELIVERY_FEE_PROPOSAL_AGENTS_NOT_ALLOWED": "لم تسمح وكالتك للوكلاء باقتراح رسوم التوصيل.",
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": "استنفدت هذه الشحنة كل تعديلات الرسوم المتاحة.",
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": "هذه هي الرسوم الحالية بالفعل.",
+    "DELIVERY_FEE_PROPOSAL_VENDOR_NET_NOT_POSITIVE": "هذه الرسوم أكبر مما يحتمله هذا الطلب.",
+    "DELIVERY_FEE_PROPOSAL_NOT_YOURS": "لا يمكنك تغيير اقتراح الرسوم هذا. أعد التحميل لمعرفة حالته.",
+    "DELIVERY_FEE_PROPOSAL_STALE": "تقدمت هذه الشحنة منذ اقتراح تعديل الرسوم. يمكنك سحبه.",
+    "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "تغيّرت أرباح البائع من هذا الطلب، لذا تعذّر تطبيق تعديل الرسوم. لم يتغيّر شيء.",
+    "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "تم تحرير تعديل الرسوم هذا في الأثناء. أعد التحميل لرؤية المبلغ الحالي.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "في انتظار رد البائع على تعديل في الرسوم. الاستلام محظور حتى يرد.",
+    "COD_VENDOR_NOT_ACCEPTED": "أحد المتاجر في هذا الطلب لا يقبل الدفع عند الاستلام.",
+    "COD_AGENCY_LIMIT_EXCEEDED": "سيؤدي هذا إلى تجاوز الوكالة حدّها للدفع عند الاستلام.",
+    "CINETPAY_REQUEST_FAILED": "تعذّر على مزوّد الدفع معالجة هذا الآن. حاول مجددًا بعد قليل.",
+    "CINETPAY_UNREACHABLE": "تعذّر الوصول إلى مزوّد الدفع. حاول مجددًا بعد قليل.",
+    "FAPSHI_REQUEST_FAILED": "تعذّر على مزوّد الدفع معالجة هذا الآن. حاول مجددًا بعد قليل.",
+    "FAPSHI_UNREACHABLE": "تعذّر الوصول إلى مزوّد الدفع. حاول مجددًا بعد قليل.",
+    "SHIPMENT_REJECTION_NOT_ALLOWED": "لم يعد بالإمكان رفض هذا التوصيل.",
+    "CONTRACT_FEE_SPLIT_INVALID": "تقسيم الرسوم هذا بلا قيمة لنموذجه — حدّد نسبة لتقسيم بالنسبة، أو رسومًا ثابتة لتقسيم ثابت، أو راتبًا شهريًا لوكيل براتب."
+  },
+  "detailed": {
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
+      "max": "حصلت هذه الشحنة على تعديلات الرسوم الـ{{max}} المتاحة — لا يمكن اقتراح المزيد."
+    },
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": {
+      "currentFee": "هذه هي الرسوم الحالية بالفعل ({{fee}})."
+    }
   }
 }

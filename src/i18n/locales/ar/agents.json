@@ -1,0 +1,24 @@
+{
+  "terms": {
+    "feeModels": {
+      "monthly_salary": "راتب شهري"
+    },
+    "summarySalary": "براتب — {{amount}} / شهريًا (تدفعه أنت، خارج Wi-Mall)",
+    "summarySalaryUnset": "براتب — لم يُحدَّد المبلغ",
+    "fields": {
+      "modelSalary": "راتب شهري",
+      "monthlySalary": "الراتب الشهري",
+      "monthlySalaryPlaceholder": "150000",
+      "salaryHint": "أنت من يدفع هذا الراتب <strong>بنفسك، خارج Wi-Mall</strong>. لا تدفع المنصة للمندوب شيئًا عن كل توصيلة، وتحتفظ أنت برسوم التوصيل كاملة. لا تقوم Wi-Mall أبدًا بجدولة الراتب أو تتبّعه أو دفعه — بل تسجّل فقط المبلغ الذي اتفقتما عليه."
+    },
+    "errors": {
+      "salaryNeedsAmount": "يتطلّب الراتب الشهري مبلغًا.",
+      "salaryInvalid": "يجب أن يكون الراتب الشهري مبلغًا صحيحًا لا يقل عن 1."
+    },
+    "paths": {
+      "fee_split": {
+        "agent_monthly_salary": "الراتب الشهري"
+      }
+    }
+  }
+}

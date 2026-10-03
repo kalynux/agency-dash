@@ -1,4 +1,17 @@
-import { Bell, Truck, Wallet, Handshake, UserCheck, Banknote, CalendarClock, HardDrive, Boxes, type LucideIcon } from 'lucide-react';
+import {
+  Bell,
+  Truck,
+  Wallet,
+  Handshake,
+  UserCheck,
+  Banknote,
+  CalendarClock,
+  HardDrive,
+  Boxes,
+  Gauge,
+  Receipt,
+  type LucideIcon,
+} from 'lucide-react';
 import type { AgencyNotificationAction } from '@/types/notification.types';
 
 export interface NotificationVisual {
@@ -7,11 +20,37 @@ export interface NotificationVisual {
   chip: string;
 }
 
+/**
+ * The `codLimitUpdates` types (api-doc/agency/notifications.md § 2026-10-02):
+ * `shipment.cod_limit.forced`, `shipment.assignment.cod_limit_blocked`,
+ * `connection.cod_terms_changed`, `cod.limit.pinned` / `.released`.
+ */
+function isCodLimitType(type: string): boolean {
+  return (
+    type.startsWith('shipment.cod_limit.') ||
+    type === 'shipment.assignment.cod_limit_blocked' ||
+    type === 'connection.cod_terms_changed' ||
+    type.startsWith('cod.limit.')
+  );
+}
+
 /** Map a notification `type` (e.g. "shipment.assigned") to a presentation. */
 export function notificationVisual(type: string): NotificationVisual {
   // Billing/plan events first — `shipment.cap.exceeded` is a plan alert, not a shipment.
   if (type.startsWith('plan') || type === 'shipment.cap.exceeded')
     return { icon: CalendarClock, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };
+  // COD LIMITS (2026-10-02) — the whole `codLimitUpdates` preference reads as one
+  // stream, before the `shipment` / `connection` / `cod` prefixes below would
+  // scatter it across three. The gauge icon is the Cash → Summary limit card's.
+  // `shipment.cod_limit.forced` replaces `shipment.assigned` and
+  // `shipment.assignment.cod_limit_blocked` replaces `.unfilled`, so they must
+  // NOT look like routine shipment traffic.
+  if (isCodLimitType(type))
+    return { icon: Gauge, dot: 'bg-orange-500', chip: 'bg-orange-100 text-orange-600' };
+  // DELIVERY-FEE PROPOSALS (2026-10-02) — a price negotiation with the vendor,
+  // not a delivery update, so not the shipment truck.
+  if (type.startsWith('delivery_fee_proposal'))
+    return { icon: Receipt, dot: 'bg-cyan-500', chip: 'bg-cyan-100 text-cyan-600' };
   // WAREHOUSING, before the media-quota branch below — `storage.*` covers both
   // families and the two mean entirely different things. A stock request is a
   // decision to make, not a quota alarm, so it takes the Inventory nav's own icon
@@ -37,7 +76,7 @@ export function notificationVisual(type: string): NotificationVisual {
 //
 // The backend does not know this app's routes and will never try to. It sends a
 // short LABEL — `shipments/665f…`, `plans` — and we decide which of our screens
-// that means. The vocabulary is a CLOSED SET of eight, written down in
+// that means. The vocabulary is a CLOSED SET of nine, written down in
 // api-doc/notifications/deep-links.md § Agency, and pinned on the backend by
 // `npm run test:notification-deeplinks`.
 //
@@ -55,7 +94,7 @@ export function notificationVisual(type: string): NotificationVisual {
 // backend add one before we ship a case for it — the worst outcome is a
 // notification that does not navigate, in an app that has not been rebuilt yet.
 
-/** The eight labels this dashboard understands. Ids are stripped before lookup. */
+/** The nine labels this dashboard understands. Ids are stripped before lookup. */
 const DEEP_LINK_ROUTES: Record<string, (id: string | null) => string> = {
   // The record screens. Each opens its sheet through the `?open=` convention
   // the stock-request inbox established.
@@ -73,6 +112,12 @@ const DEEP_LINK_ROUTES: Record<string, (id: string | null) => string> = {
   // Idless labels.
   plans: () => '/dashboard/account/billing',
   'settings/storage': () => '/dashboard/media',
+  // `cod.limit.pinned` / `.released` (2026-10-02). There is no /dashboard/cod
+  // route — the limit gauge lives on Cash → Summary. Resolves before the
+  // `cod/deposits` split because the whole path is tried as an idless label
+  // first; without this entry `cod/limit` would split into `cod` + id `limit`
+  // and resolve to nothing.
+  'cod/limit': () => '/dashboard/cash/summary',
 };
 
 /**

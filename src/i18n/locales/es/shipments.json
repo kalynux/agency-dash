@@ -1,0 +1,104 @@
+{
+  "reject": {
+    "description": "Rechaza esta entrega antes de la recogida. Si un agente la había aceptado, queda liberado, y se retira cualquier cambio de tarifa pendiente del vendedor. Se informa al vendedor de tu motivo para que la asigne a otra agencia."
+  },
+  "offerFlags": {
+    "codLimitForced": "Enviada por encima del límite COD del agente"
+  },
+  "money": {
+    "agentSalaried": "Agente asalariado"
+  },
+  "codLimitForce": {
+    "title": "Este envío llevaría a {{name}} por encima de su límite de pago contra entrega.",
+    "currentExposure": "Efectivo que tiene ahora",
+    "additionalAmount": "Este envío",
+    "effectiveLimit": "Su límite",
+    "sliceBinds": "Lo que bloquea es el límite de tu contrato con este agente.",
+    "poolBinds": "Lo que bloquea es su propio fondo COD, que es menor que el límite de tu contrato.",
+    "explainer": "Puedes asignarlo igualmente. La oferta quedará marcada como enviada por encima de su límite, y tendrá más efectivo del permitido hasta que lo deposite.",
+    "assignAnyway": "Asignar igualmente"
+  },
+  "bulkAssign": {
+    "selectRow": "Seleccionar {{order}}",
+    "selectPage": "Seleccionar los envíos de esta página que se pueden ofrecer",
+    "selected": "Seleccionados: {{count}} de {{max}}",
+    "limitReached": "Ese es el máximo: {{max}} envíos por lote.",
+    "clear": "Borrar",
+    "action": "Asignar a un agente",
+    "title": "Ofrecer envíos a un agente",
+    "description": "Cada envío se convierte en su propia oferta al agente que elijas, comprobada exactamente como si la ofrecieras sola. El agente recibe una sola notificación por todo el lote.",
+    "agentLabel": "Agente",
+    "shipmentsLabel": "Envíos",
+    "remove": "Quitar {{order}}",
+    "submit_one": "Ofrecer {{count}} envío",
+    "submit_other": "Ofrecer {{count}} envíos",
+    "atCapacity": "Plazas libres de {{name}}: {{free}}. Envíos que se podían ofrecer: {{requested}}. No se ha ofrecido nada. Quita {{excess}} y vuelve a enviar.",
+    "atCapacityNone": "{{name}} no tiene ninguna plaza libre ahora. No se ha ofrecido nada.",
+    "keepFirst": "Conservar solo los {{count}} primeros",
+    "summary": "Ofrecidos: {{offered}} de {{requested}} · Fallidos: {{failed}}",
+    "summaryAutoAccepted": "Aceptados en el acto: {{count}}",
+    "rowOffered": "Oferta enviada",
+    "rowAutoAccepted": "Aceptado por el agente",
+    "rowFailed": "No ofrecido",
+    "forceTitle_one": "{{count}} envío se rechazó solo por el límite de efectivo o las regiones del contrato de este agente.",
+    "forceTitle_other": "{{count}} envíos se rechazaron solo por el límite de efectivo o las regiones del contrato de este agente.",
+    "forceExplainer": "Puedes enviar solo esos igualmente. Cada oferta quedará marcada como forzada, y el agente podrá aceptarla o rechazarla como siempre. Los envíos ya ofrecidos no se vuelven a enviar.",
+    "forceConfirm_one": "Enviarlo igualmente",
+    "forceConfirm_other": "Enviar estos {{count}} igualmente",
+    "done": "Listo"
+  },
+  "deliveryFee": {
+    "title": "Tarifa de entrega",
+    "propose": "Proponer otra tarifa",
+    "proposeAgain": "Proponer de nuevo",
+    "proposeTitle": "Proponer otra tarifa de entrega",
+    "editTitle": "Editar el cambio de tarifa",
+    "dialogDescription": "Solo para este envío. El vendedor debe aprobarlo. La recogida queda bloqueada hasta que responda.",
+    "currentFee": "Tarifa actual: {{amount}}",
+    "proposedFee": "Nueva tarifa ({{currency}})",
+    "reason": "Motivo",
+    "reasonPlaceholder": "¿Por qué este paquete necesita otra tarifa? El vendedor lo verá.",
+    "send": "Enviar al vendedor",
+    "saveEdit": "Guardar cambios",
+    "edit": "Editar",
+    "withdraw": "Retirar",
+    "proposed": "Cambio de tarifa enviado al vendedor.",
+    "edited": "Cambio de tarifa actualizado.",
+    "withdrawn": "Cambio de tarifa retirado.",
+    "pickupBlocked": "Esperando a que el vendedor responda a un cambio de tarifa: la recogida está bloqueada hasta entonces.",
+    "pickupBlockedShort": "tarifa pendiente",
+    "pendingChip": "Cambio de tarifa pendiente",
+    "agreedOn": "Acordada con el vendedor el {{date}}",
+    "afterRejection": "El vendedor rechazó la nueva tarifa. Propón una vez más, o rechaza la entrega para que elija otra agencia.",
+    "afterRejectionHandover": "El vendedor rechazó la nueva tarifa. Durante un traspaso la entrega ya no se puede rechazar: propón una vez más o hazla con la tarifa original.",
+    "decline": "Rechazar la entrega",
+    "by": {
+      "agency": "Tú",
+      "agent": "Tu agente",
+      "vendor": "El vendedor",
+      "system": "Wi-Mall"
+    },
+    "proposedBy": "Propuesta por {{who}} · {{date}}",
+    "agencyEdited": "editada por ti",
+    "editEntry": "{{who}} la cambió el {{date}}: {{before}} → {{after}}",
+    "rejectionNote": "Nota del vendedor: {{note}}",
+    "withdrawnDeclined": "Retirada al rechazar la entrega",
+    "withdrawnAgentLeft": "Retirada: el agente dejó el trabajo",
+    "withdrawnBy": "Retirada por {{who}}",
+    "status": {
+      "pending": "Esperando al vendedor",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "withdrawn": "Retirada",
+      "unknown": "Estado desconocido"
+    },
+    "validation": {
+      "number": "Introduce un importe.",
+      "integer": "Introduce un importe entero.",
+      "min": "La tarifa no puede ser negativa.",
+      "sameAsCurrent": "Esa ya es la tarifa.",
+      "reasonMin": "Indica un motivo de al menos {{min}} caracteres.",
+      "reasonMax": "El motivo debe tener menos de {{max}} caracteres."
+    }
+  }
+}

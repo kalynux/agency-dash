@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { toSubmittablePhone } from '@/lib/phone';
 import { regionsFor, DEFAULT_COUNTRY, type RegionEntry } from '@/lib/regions';
 import type { GeoAddress } from '@/types/geo.types';
+import { addressRegionRefusal, refusedEntryIndex, withRegion, type AddressRegionRefusal } from '@/lib/addressRegion';
+import { AddressRegionRepair } from '@/components/common/AddressRegionRepair';
 
 /**
  * The agency's operating country, sent with step 1.
@@ -82,6 +84,8 @@ export function Step1Logistics() {
     const { t, i18n } = useTranslation(['onboarding', 'common']);
     const { submitLogistics, isSubmitting, session, drafts, saveDraft } = useOnboarding();
     const [apiError, setApiError] = useState<string | null>(null);
+    // `400 ADDRESS_REGION_INVALID` on the last submit, pinned to the refused card.
+    const [regionRefusal, setRegionRefusal] = useState<{ index: number; refusal: AddressRegionRefusal } | null>(null);
     // Rebuilt on a language switch so validation messages follow the UI.
     const schema = useMemo(() => buildLogisticsSchema(t), [t]);
 
@@ -96,7 +100,7 @@ export function Step1Logistics() {
         [i18n.language],
     );
 
-    const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<LogisticsFormValues>({
+    const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<LogisticsFormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
             coverage_areas: draft?.coverage_areas ?? [],
@@ -114,6 +118,7 @@ export function Step1Logistics() {
 
     const onSubmit = useCallback(async (values: LogisticsFormValues) => {
         setApiError(null);
+        setRegionRefusal(null);
         // Save raw form values BEFORE the API call so they survive navigation.
         // This is the reliable pre-population source (backend response is camelCase).
         saveDraft(1, values);
@@ -149,7 +154,19 @@ export function Step1Logistics() {
             });
             toast.success(t('logistics.saved'));
         } catch (err) {
-            if (err instanceof ApiError) {
+            const refusal = addressRegionRefusal(err, i18n.language);
+            const index = refusal
+                ? refusedEntryIndex(refusal, values.headquarters_addresses.map(a => a.label))
+                : null;
+            if (refusal && index !== null && values.headquarters_addresses[index]?.geo && refusal.allowedRegions.length > 0) {
+                // A new/edited address names no region of the country — the fix
+                // is a pick from the error's own list, shown in that card.
+                setRegionRefusal({ index, refusal });
+                setApiError(t('logistics.regionRefused', {
+                    label: values.headquarters_addresses[index].label.trim()
+                        || (index === 0 ? t('logistics.primaryHeadquarters') : t('logistics.branchAddress', { number: index + 1 })),
+                }));
+            } else if (err instanceof ApiError) {
                 // Field errors are the one place raw server text is allowed through:
                 // they name a specific field and carry no code to resolve.
                 if (err.isConcurrentModification) setApiError(t('errors.concurrent'));
@@ -157,7 +174,17 @@ export function Step1Logistics() {
                 else setApiError(err.isServer ? t('errors.server') : getApiErrorMessage(err));
             }
         }
-    }, [submitLogistics, saveDraft, roleEntity, t]);
+    }, [submitLogistics, saveDraft, roleEntity, t, i18n]);
+
+    /** The documented repair: set that entry's `geo.components.region`, resend the whole list. */
+    const applyRegion = useCallback((index: number, key: string) => {
+        const geo = getValues(`headquarters_addresses.${index}.geo`) as GeoAddress | null;
+        if (!geo) return;
+        const label = regionRefusal?.refusal.allowedRegions.find(r => r.key === key)?.label ?? key;
+        setValue(`headquarters_addresses.${index}.geo`, withRegion(geo, key));
+        setValue(`headquarters_addresses.${index}.region`, label);
+        void handleSubmit(onSubmit)();
+    }, [getValues, setValue, handleSubmit, onSubmit, regionRefusal]);
 
     return (
         <OnboardingLayout stepKey={1}
@@ -213,7 +240,7 @@ export function Step1Logistics() {
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('logistics.headquarters')} <span className="text-destructive">*</span></p>
                             <InfoHint className="md:hidden" label={t('common:form.aboutSection', { title: t('logistics.headquarters') })}>{t('logistics.addressesHint')}</InfoHint>
                         </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => append({ ...EMPTY_HQ })} className="h-7 text-xs gap-1 text-primary hover:text-primary/80">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { append({ ...EMPTY_HQ }); setRegionRefusal(null); }} className="h-7 text-xs gap-1 text-primary hover:text-primary/80">
                             <Plus className="w-3 h-3" /> {t('logistics.addAddress')}
                         </Button>
                     </div>
@@ -228,7 +255,17 @@ export function Step1Logistics() {
                             <HQAddressCard key={field.id} index={index} isPrimary={index === 0}
                                 canRemove={fields.length > 1} control={control} register={register}
                                 watch={watch} setValue={setValue} errors={errors}
-                                onRemove={() => remove(index)} />
+                                // Indices shift on remove, so a pinned prompt would land on the wrong card.
+                                onRemove={() => { remove(index); setRegionRefusal(null); }}
+                                regionRepair={regionRefusal?.index === index ? (
+                                    <AddressRegionRepair
+                                        refusal={regionRefusal.refusal}
+                                        actionLabel={t('logistics.regionRepairAction')}
+                                        pending={isSubmitting}
+                                        onApply={key => applyRegion(index, key)}
+                                    />
+                                ) : null}
+                                onGeoPicked={() => setRegionRefusal(prev => (prev?.index === index ? null : prev))} />
                         ))}
                     </div>
                 </section>
@@ -245,9 +282,12 @@ interface HQAddressCardProps {
     setValue: ReturnType<typeof useForm<LogisticsFormValues>>['setValue'];
     errors: ReturnType<typeof useForm<LogisticsFormValues>>['formState']['errors'];
     onRemove: () => void;
+    /** The `ADDRESS_REGION_INVALID` repair, when this card is the refused entry. */
+    regionRepair: React.ReactNode;
+    onGeoPicked: () => void;
 }
 
-function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, setValue, errors, onRemove }: HQAddressCardProps) {
+function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, setValue, errors, onRemove, regionRepair, onGeoPicked }: HQAddressCardProps) {
     const { t } = useTranslation(['onboarding', 'common']);
     const addrErrors = errors.headquarters_addresses?.[index];
     const geo = watch(`headquarters_addresses.${index}.geo`);
@@ -263,6 +303,7 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
      */
     const applyGeo = (address: GeoAddress) => {
         const opts = { shouldValidate: true } as const;
+        onGeoPicked();
         setValue(`headquarters_addresses.${index}.geo`, address, opts);
         setValue(`headquarters_addresses.${index}.region`, address.components.region?.trim() ?? '', opts);
         setValue(`headquarters_addresses.${index}.city`, address.components.city?.trim() ?? '', opts);
@@ -312,6 +353,8 @@ function HQAddressCard({ index, isPrimary, canRemove, control, register, watch, 
                         />
                     )} />
                 </FieldRow>
+
+                {regionRepair}
 
                 <FieldRow label={t('logistics.label')} required error={addrErrors?.label?.message}>
                     <IconInput icon={Tag} type="text" placeholder={t('logistics.labelPlaceholder')}

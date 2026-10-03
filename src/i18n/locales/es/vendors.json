@@ -1,0 +1,8 @@
+{
+  "codTerms": {
+    "title": "Pago contra entrega",
+    "accepts": "Acepta pago contra entrega",
+    "none": "Sin pago contra entrega",
+    "cap": "Limita a {{amount}} el efectivo que una agencia puede tener en su nombre"
+  }
+}

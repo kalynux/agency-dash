@@ -86,6 +86,27 @@ export function getNextActions(status: ShipmentStatus): ShipmentNextAction[] {
   return NEXT_ACTIONS[status] ?? [];
 }
 
+/**
+ * Why `→ picked_up` would be refused right now, or `null` when it would not.
+ *
+ * - `needs_agent` — under the acceptance workflow an `assigned` shipment needs an
+ *   agent who accepted the offer first.
+ * - `fee_pending` — a delivery-fee proposal waits for the vendor; the server
+ *   answers `409 SHIPMENT_DELIVERY_FEE_PENDING` until they answer or it is
+ *   withdrawn. See api-doc/agency/shipments.md § Delivery-fee proposals.
+ */
+export type PickupBlockReason = 'needs_agent' | 'fee_pending';
+
+export function pickupBlockReason(shipment: {
+  status: ShipmentStatus;
+  agentId: string | null;
+  deliveryFeeProposalPending?: boolean;
+}): PickupBlockReason | null {
+  if (shipment.status === 'assigned' && !shipment.agentId) return 'needs_agent';
+  if (shipment.deliveryFeeProposalPending === true) return 'fee_pending';
+  return null;
+}
+
 /** Rejection is only allowed while the shipment is still `assigned` (pre-pickup). */
 export function canRejectStatus(status: ShipmentStatus): boolean {
   return status === 'assigned';

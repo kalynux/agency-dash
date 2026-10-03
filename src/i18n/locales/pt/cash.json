@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "limit": {
+      "title": "Limite de dinheiro na entrega",
+      "loading": "A carregar o seu limite de dinheiro na entrega…",
+      "loadFailed": "Não foi possível carregar o seu limite de dinheiro na entrega.",
+      "sourceOverride": "Definido pela Wi-Mall",
+      "sourceDefault": "Limite padrão",
+      "held": "{{total}} de {{limit}} em sua posse",
+      "inFlight_one": "Em entregas: {{amount}} ({{count}} envio)",
+      "inFlight_many": "Em entregas: {{amount}} ({{count}} envios)",
+      "inFlight_other": "Em entregas: {{amount}} ({{count}} envios)",
+      "collected_one": "Cobrado, ainda não remetido: {{amount}} ({{count}} cobrança)",
+      "collected_many": "Cobrado, ainda não remetido: {{amount}} ({{count}} cobranças)",
+      "collected_other": "Cobrado, ainda não remetido: {{amount}} ({{count}} cobranças)",
+      "overLimit": "Tem mais dinheiro do que o seu limite. Os vendedores não lhe podem enviar encomendas com pagamento na entrega até que faça a remessa.",
+      "headroom": "Pode assumir mais {{headroom}}",
+      "remitFrees": "Remeter dinheiro à Wi-Mall liberta margem",
+      "explain": "Este limite decide o que os vendedores lhe podem despachar: uma encomenda com pagamento na entrega que o faria ultrapassá-lo fica retida do lado do vendedor, e não a recebe até que caiba ou o vendedor a envie mesmo assim. Não é o teto de pagamento na entrega por encomenda das suas políticas, e uma alteração nele nunca pausa as suas ligações."
+    }
+  }
+}

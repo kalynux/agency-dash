@@ -7,8 +7,11 @@ export interface RunOptions {
   success?: string;
   /** Per-call `code → message` overrides layered over the central registry. */
   errorOverrides?: Record<string, string>;
-  /** Suppress the automatic error toast (caller handles it). */
-  silentError?: boolean;
+  /**
+   * Suppress the automatic error toast (caller handles it). A predicate
+   * suppresses it only for the errors it accepts.
+   */
+  silentError?: boolean | ((err: unknown) => boolean);
   onError?: (err: unknown) => void;
 }
 
@@ -28,7 +31,9 @@ export function useActionRunner() {
         if (opts.success) toast.success(opts.success);
         return result;
       } catch (err) {
-        if (!opts.silentError) toast.error(getApiErrorMessage(err, opts.errorOverrides));
+        const silent =
+          typeof opts.silentError === 'function' ? opts.silentError(err) : opts.silentError;
+        if (!silent) toast.error(getApiErrorMessage(err, opts.errorOverrides));
         opts.onError?.(err);
         return null;
       } finally {

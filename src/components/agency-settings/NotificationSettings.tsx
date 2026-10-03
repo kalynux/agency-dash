@@ -81,7 +81,8 @@ const SECONDARY_CHANNELS: ChannelMeta[] = [
 ];
 
 /**
- * `storageAlert`, `contractUpdated` and `stockRequestUpdates` are newer than some
+ * `storageAlert`, `contractUpdated`, `stockRequestUpdates`, `codLimitUpdates` and
+ * `deliveryFeeProposals` are newer than some
  * deployed backends. Default them to the documented `true` so their switches are
  * never uncontrolled — applied on every read so the dirty-check snapshot and the
  * editable copy always agree.
@@ -91,10 +92,17 @@ const SECONDARY_CHANNELS: ChannelMeta[] = [
  * toggle silently stops saving.
  */
 function withEventDefaults(data: NotificationPreferences): NotificationPreferences {
-  // All three are declared required, so leading literal defaults would be dead
+  // All five are declared required, so leading literal defaults would be dead
   // code to the compiler. Destructure instead: at runtime an older backend omits
   // the keys entirely, and `?? true` is what actually fills them in.
-  const { storageAlert, contractUpdated, stockRequestUpdates, ...rest } = data.preferences;
+  const {
+    storageAlert,
+    contractUpdated,
+    stockRequestUpdates,
+    codLimitUpdates,
+    deliveryFeeProposals,
+    ...rest
+  } = data.preferences;
   return {
     ...data,
     preferences: {
@@ -102,6 +110,9 @@ function withEventDefaults(data: NotificationPreferences): NotificationPreferenc
       storageAlert: storageAlert ?? true,
       contractUpdated: contractUpdated ?? true,
       stockRequestUpdates: stockRequestUpdates ?? true,
+      // 2026-10-02 — a preferences row written before then omits both.
+      codLimitUpdates: codLimitUpdates ?? true,
+      deliveryFeeProposals: deliveryFeeProposals ?? true,
     },
   };
 }
@@ -119,6 +130,11 @@ type EventMeta = {
  */
 const EVENTS: EventMeta[] = [
   { key: 'shipmentAssigned' },
+  // Right after `shipmentAssigned`: a forced COD dispatch and a COD-blocked
+  // auto-assign arrive under THIS switch instead of that one, so the caveat
+  // says so — switching it off loses those hand-offs.
+  { key: 'codLimitUpdates', hasCaveat: true },
+  { key: 'deliveryFeeProposals' },
   { key: 'connectionUpdated' },
   { key: 'contractUpdated', hasCaveat: true },
   { key: 'payoutUpdates' },

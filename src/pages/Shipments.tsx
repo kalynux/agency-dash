@@ -2,7 +2,7 @@ import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Navigation, Package, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Navigation, Package, Store, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -22,8 +22,12 @@ import { ShipmentDetailSheet } from '@/components/shipments/ShipmentDetailSheet'
 import { useOpenParam } from '@/hooks/useOpenParam';
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignStatusChip } from '@/components/shipments/AutoAssignStatusChip';
+import { DeliveryFeePendingChip } from '@/components/shipments/DeliveryFeePendingChip';
+import { BulkAssignDialog } from '@/components/shipments/BulkAssignDialog';
+import { isBulkOfferable } from '@/components/shipments/bulkAssign';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getApiErrorMessage } from '@/lib/errors';
-import { describeAddress } from '@/types/shipment.types';
+import { BULK_ASSIGN_MAX, describeAddress } from '@/types/shipment.types';
 import type { ShipmentListItem, ShipmentListMeta, ShipmentStatus } from '@/types/shipment.types';
 
 /**
@@ -92,6 +96,10 @@ export function Shipments() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { openId, close: clearOpenParam } = useOpenParam();
   const [detailOpen, setDetailOpen] = useState(false);
+  // Shipments picked for a bulk offer, in the order picked (a Map keeps it).
+  // Kept across pages and filters, so a batch can be gathered from several.
+  const [selected, setSelected] = useState<Map<string, ShipmentListItem>>(() => new Map());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -198,6 +206,83 @@ export function Shipments() {
     refetchBadge();
   };
 
+  // A reload can show a selected row no longer offerable (an agent accepted
+  // it meanwhile): drop it, and refresh the rest from the new payload. Not
+  // while the bulk dialog is open — its rows must stay what was sent.
+  useEffect(() => {
+    if (bulkOpen) return;
+    setSelected((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const s of shipments) {
+        if (!next.has(s.id)) continue;
+        changed = true;
+        if (isBulkOfferable(s)) next.set(s.id, s);
+        else next.delete(s.id);
+      }
+      return changed ? next : prev;
+    });
+  }, [shipments, bulkOpen]);
+
+  const atLimit = selected.size >= BULK_ASSIGN_MAX;
+  const offerableOnPage = shipments.filter(isBulkOfferable);
+  const pageAllSelected = offerableOnPage.length > 0 && offerableOnPage.every((s) => selected.has(s.id));
+  const pageSomeSelected = offerableOnPage.some((s) => selected.has(s.id));
+
+  const toggleSelected = (shipment: ShipmentListItem) => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(shipment.id)) next.delete(shipment.id);
+      else if (next.size < BULK_ASSIGN_MAX && isBulkOfferable(shipment)) next.set(shipment.id, shipment);
+      return next;
+    });
+  };
+
+  /** Select this page's offerable rows up to the cap, or clear them when all already are. */
+  const togglePage = () => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (pageAllSelected) {
+        for (const s of offerableOnPage) next.delete(s.id);
+      } else {
+        for (const s of offerableOnPage) {
+          if (next.size >= BULK_ASSIGN_MAX) break;
+          next.set(s.id, s);
+        }
+      }
+      return next;
+    });
+  };
+
+  const removeSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+
+  const keepFirstSelected = (count: number) =>
+    setSelected((prev) => new Map([...prev].slice(0, count)));
+
+  const clearSelected = () => setSelected(new Map());
+
+  /** The row checkbox — only an offerable row gets one. */
+  const renderSelect = (shipment: ShipmentListItem) => {
+    if (!isBulkOfferable(shipment)) return null;
+    const checked = selected.has(shipment.id);
+    const blocked = !checked && atLimit;
+    return (
+      <Checkbox
+        checked={checked}
+        disabled={blocked}
+        onCheckedChange={() => toggleSelected(shipment)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={t('bulkAssign.selectRow', { order: shipment.orderNumber })}
+        title={blocked ? t('bulkAssign.limitReached', { max: BULK_ASSIGN_MAX }) : undefined}
+      />
+    );
+  };
+
   const rangeStart = shipments.length === 0 ? 0 : (meta.page - 1) * meta.limit + 1;
   const rangeEnd = (meta.page - 1) * meta.limit + shipments.length;
 
@@ -295,6 +380,17 @@ export function Shipments() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
+                      <th className="w-10 ps-4 pe-0 py-4">
+                        {offerableOnPage.length > 0 && (
+                          <Checkbox
+                            checked={pageAllSelected ? true : pageSomeSelected ? 'indeterminate' : false}
+                            disabled={!pageAllSelected && atLimit}
+                            onCheckedChange={togglePage}
+                            aria-label={t('bulkAssign.selectPage')}
+                            title={t('bulkAssign.selectPage')}
+                          />
+                        )}
+                      </th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.shipment')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.vendor')}</th>
                       <th className="text-start p-4 text-sm font-medium">{t('table.customer')}</th>
@@ -312,6 +408,9 @@ export function Shipments() {
                         className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => openDetail(shipment.id)}
                       >
+                        <td className="w-10 ps-4 pe-0 py-4" onClick={(e) => e.stopPropagation()}>
+                          {renderSelect(shipment)}
+                        </td>
                         <td className="p-4">
                           <div className="font-medium">{shipment.orderNumber}</div>
                           <div className="text-sm text-muted-foreground">
@@ -369,7 +468,10 @@ export function Shipments() {
                         </td>
                         <td className="p-4 text-sm">{formatDate(shipment.createdAt)}</td>
                         <td className="p-4">
-                          <ShipmentStatusBadge status={shipment.status} />
+                          <div className="flex flex-col items-start gap-1">
+                            <ShipmentStatusBadge status={shipment.status} />
+                            <DeliveryFeePendingChip pending={shipment.deliveryFeeProposalPending} />
+                          </div>
                         </td>
                         <td className="p-4">{renderAgentLink(shipment)}</td>
                         {/* stopPropagation: the row-actions menu + reject dialog render in
@@ -400,9 +502,18 @@ export function Shipments() {
                     {/* Order # → status → actions */}
                     <div className="flex items-center gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
+                        {isBulkOfferable(shipment) && (
+                          <span className="flex flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {renderSelect(shipment)}
+                          </span>
+                        )}
                         <span className="min-w-0 truncate font-medium">{shipment.orderNumber}</span>
                         <span className="flex-shrink-0 text-muted-foreground">·</span>
                         <ShipmentStatusBadge status={shipment.status} className="flex-shrink-0" />
+                        <DeliveryFeePendingChip
+                          pending={shipment.deliveryFeeProposalPending}
+                          className="flex-shrink-0"
+                        />
                       </div>
                       <div className="flex-shrink-0 -me-2" onClick={(e) => e.stopPropagation()}>
                         <ShipmentRowActions
@@ -491,6 +602,40 @@ export function Shipments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk offer bar — up whenever something is selected, pinned to the
+          bottom so it stays in reach while scrolling for more rows. */}
+      {selected.size > 0 && (
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-background p-3 shadow-lg">
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-medium">
+              {t('bulkAssign.selected', { count: selected.size, max: BULK_ASSIGN_MAX })}
+            </p>
+            {atLimit && (
+              <p className="text-xs text-muted-foreground">
+                {t('bulkAssign.limitReached', { max: BULK_ASSIGN_MAX })}
+              </p>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={clearSelected}>
+            {t('bulkAssign.clear')}
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setBulkOpen(true)}>
+            <UserPlus className="w-4 h-4" /> {t('bulkAssign.action')}
+          </Button>
+        </div>
+      )}
+
+      <BulkAssignDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        shipments={[...selected.values()]}
+        agents={agents}
+        onRemove={removeSelected}
+        onKeepFirst={keepFirstSelected}
+        onChanged={handleChanged}
+        onDone={clearSelected}
+      />
 
       <ShipmentDetailSheet
         shipmentId={selectedId}

@@ -11,6 +11,10 @@ import { shipmentsService } from '@/services/shipments.service';
 import { formatCurrency } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ReassignDialog } from '@/components/shipments/ReassignDialog';
+import { CoverageForcePrompt } from '@/components/shipments/CoverageForcePrompt';
+import { OfferOverrideBadges } from '@/components/shipments/OfferOverrideBadges';
+import { CodLimitForcePrompt } from '@/components/shipments/CodLimitForcePrompt';
+import type { CodLimitRefusal, CoverageRefusal } from '@/components/shipments/forceAssign';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import type { AgentSummary } from '@/types/agent.types';
@@ -37,6 +41,13 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
   // no live offer, so this lets us show "offer pending / cancel" right after
   // offering, until the shipment reloads with an accepted agent.
   const [pendingOffer, setPendingOffer] = useState<{ offer: ShipmentOffer; agentId: string | null } | null>(null);
+  // The newest offer this panel created (assign, auto-assign or reassign), kept
+  // past auto-accept so its "forced" / "admin" labels outlive the pending box.
+  const [lastOffer, setLastOffer] = useState<ShipmentOffer | null>(null);
+  // A named agent refused for region; "Send anyway" resends to them with `force`.
+  const [coverageRefused, setCoverageRefused] = useState<{ agentId: string; refusal: CoverageRefusal } | null>(null);
+  // A named agent refused for their COD cash limit; "Assign anyway" resends with `force`.
+  const [codLimitRefused, setCodLimitRefused] = useState<{ agentId: string; refusal: CodLimitRefusal } | null>(null);
   // An auto-assign is a BROADCAST, not one offer: the nearest agent is offered
   // now, the next-nearest every timeout window after that, while earlier offers
   // still stand — first to accept wins. So it reads as "searching", not
@@ -56,6 +67,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
 
   const afterOffer = (result: { offer: ShipmentOffer; autoAccepted: boolean } | null, agentId: string | null) => {
     if (!result) return;
+    setLastOffer(result.offer);
     if (result.autoAccepted) {
       setPendingOffer(null);
     } else {
@@ -64,11 +76,38 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
     onChanged();
   };
 
-  const handleAssign = async () => {
-    if (!agentDraft) return;
-    const result = await assignAgent(detail.id, agentDraft);
-    afterOffer(result, agentDraft);
-    setAgentDraft('');
+  const offerTo = async (agentId: string, force: boolean) => {
+    let refused = false;
+    const result = await assignAgent(detail.id, agentId, {
+      force,
+      onCoverageRefused: (refusal) => {
+        refused = true;
+        setCodLimitRefused(null);
+        setCoverageRefused({ agentId, refusal });
+      },
+      onCodLimitRefused: (refusal) => {
+        refused = true;
+        setCoverageRefused(null);
+        setCodLimitRefused({ agentId, refusal });
+      },
+    });
+    // Keep the agent selected while their region / cash prompt is up.
+    if (!refused) {
+      setCoverageRefused(null);
+      setCodLimitRefused(null);
+      setAgentDraft('');
+    }
+    afterOffer(result, agentId);
+  };
+
+  const handleAssign = () => {
+    if (agentDraft) void offerTo(agentDraft, false);
+  };
+
+  const chooseAgent = (agentId: string) => {
+    setAgentDraft(agentId);
+    setCoverageRefused(null);
+    setCodLimitRefused(null);
   };
 
   const handleAutoAssign = async () => {
@@ -80,6 +119,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
     const result = await cancelOffer(detail.id);
     if (result) {
       setPendingOffer(null);
+      setLastOffer(null);
       onChanged();
     }
   };
@@ -114,6 +154,12 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               })
             : t('assignment.codHint')}
         </p>
+      )}
+
+      {lastOffer && (
+        <div className="mb-2">
+          <OfferOverrideBadges offer={lastOffer} />
+        </div>
       )}
 
       {/* Bound agent + reassign */}
@@ -194,7 +240,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
       {canOffer && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Select value={agentDraft} onValueChange={setAgentDraft}>
+            <Select value={agentDraft} onValueChange={chooseAgent}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder={t('assignment.choosePlaceholder')} />
               </SelectTrigger>
@@ -228,6 +274,25 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
               )}
             </Button>
           </div>
+          {coverageRefused && (
+            <CoverageForcePrompt
+              refusal={coverageRefused.refusal}
+              agentName={nameFor(coverageRefused.agentId)}
+              isCod={detail.paymentMethod === 'cash_on_delivery'}
+              pending={pendingKey === `assign:${detail.id}`}
+              onSendAnyway={() => void offerTo(coverageRefused.agentId, true)}
+              onDismiss={() => setCoverageRefused(null)}
+            />
+          )}
+          {codLimitRefused && (
+            <CodLimitForcePrompt
+              refusal={codLimitRefused.refusal}
+              agentName={nameFor(codLimitRefused.agentId)}
+              pending={pendingKey === `assign:${detail.id}`}
+              onAssignAnyway={() => void offerTo(codLimitRefused.agentId, true)}
+              onDismiss={() => setCodLimitRefused(null)}
+            />
+          )}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -301,7 +366,7 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                     candidates.map((c) => (
                       <button
                         key={c.agentId}
-                        onClick={() => setAgentDraft(c.agentId)}
+                        onClick={() => chooseAgent(c.agentId)}
                         className="w-full text-start rounded-md p-2 hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -377,10 +442,14 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
           shipmentId={detail.id}
           currentAgentId={detail.agentId}
           status={detail.status}
+          isCod={detail.paymentMethod === 'cash_on_delivery'}
           agents={agents}
           open={reassignOpen}
           onOpenChange={setReassignOpen}
-          onReassigned={onChanged}
+          onReassigned={(result) => {
+            setLastOffer(result.offer);
+            onChanged();
+          }}
         />
       )}
     </section>

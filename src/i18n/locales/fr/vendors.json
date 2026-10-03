@@ -128,5 +128,11 @@
       "limited": "Limitée"
     },
     "languages": "Langues"
+  },
+  "codTerms": {
+    "title": "Paiement à la livraison",
+    "accepts": "Accepte le paiement à la livraison",
+    "none": "Pas de paiement à la livraison",
+    "cap": "Plafonne à {{amount}} les espèces qu'une agence peut détenir pour lui"
   }
 }

@@ -1,6 +1,7 @@
 import { api } from './api';
 import type {
   CodSummaryResponse,
+  CodLimitResponse,
   CodDepositResponse,
   ListCodDepositsResponse,
   ListDepositsParams,
@@ -23,6 +24,11 @@ export const codCashService = {
   /** GET /agency/cod/summary — the agency's cash position. */
   getSummary(): Promise<CodSummaryResponse> {
     return api.get<CodSummaryResponse>('/agency/cod/summary');
+  },
+
+  /** GET /agency/cod/limit — the agency's COD cash limit and its exposure against it. */
+  getCodLimit(): Promise<CodLimitResponse> {
+    return api.get<CodLimitResponse>('/agency/cod/limit');
   },
 
   /** POST /agency/cod/deposits — record cash physically received from an agent. */

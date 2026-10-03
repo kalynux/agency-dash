@@ -1,0 +1,24 @@
+{
+  "terms": {
+    "feeModels": {
+      "monthly_salary": "Salario mensual"
+    },
+    "summarySalary": "Asalariado — {{amount}} / mes (lo pagas tú, fuera de Wi-Mall)",
+    "summarySalaryUnset": "Asalariado — importe no definido",
+    "fields": {
+      "modelSalary": "Salario mensual",
+      "monthlySalary": "Salario mensual",
+      "monthlySalaryPlaceholder": "150000",
+      "salaryHint": "Este salario lo pagas <strong>tú mismo, fuera de Wi-Mall</strong>. La plataforma no paga nada al repartidor por entrega y te quedas con toda la tarifa de envío. Wi-Mall nunca programa, controla ni paga el salario: solo registra el importe que ambos acordasteis."
+    },
+    "errors": {
+      "salaryNeedsAmount": "Un salario mensual necesita un importe.",
+      "salaryInvalid": "El salario mensual debe ser un importe entero de al menos 1."
+    },
+    "paths": {
+      "fee_split": {
+        "agent_monthly_salary": "Salario mensual"
+      }
+    }
+  }
+}

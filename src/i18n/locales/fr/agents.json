@@ -466,10 +466,13 @@
     },
     "feeModels": {
       "percentage": "Pourcentage des frais de livraison",
-      "flat": "Forfait par livraison"
+      "flat": "Forfait par livraison",
+      "monthly_salary": "Salaire mensuel"
     },
     "summaryFlat": "{{amount}} forfaitaires",
     "summaryShare": "{{percent}} % de part",
+    "summarySalary": "Salarié — {{amount}} / mois (payé par vous, hors Wi-Mall)",
+    "summarySalaryUnset": "Salarié — montant non défini",
     "fields": {
       "employment": "Emploi",
       "employmentType": "Type",
@@ -482,13 +485,17 @@
       "model": "Modèle",
       "modelPercentage": "Pourcentage",
       "modelFlat": "Forfait",
+      "modelSalary": "Salaire mensuel",
       "flatFee": "Forfait par livraison",
       "flatFeePlaceholder": "1500",
       "sharePercent": "Part du livreur (%)",
       "sharePercentPlaceholder": "40",
+      "monthlySalary": "Salaire mensuel",
+      "monthlySalaryPlaceholder": "150000",
       "currency": "Devise",
       "currencyPlaceholder": "XAF",
       "feeSplitHint": "La part du livreur est prélevée <strong>sur</strong> vos frais de livraison, jamais en plus — le vendeur paie la même chose dans les deux cas. La plateforme la lui verse depuis son propre compte de revenus.",
+      "salaryHint": "Vous versez ce salaire <strong>vous-même, en dehors de Wi-Mall</strong>. La plateforme ne verse rien au livreur par livraison et vous conservez la totalité des frais de livraison. Wi-Mall ne planifie, ne suit ni ne paie jamais ce salaire — il enregistre seulement le montant convenu entre vous.",
       "remittance": "Reversement des espèces",
       "cadence": "Fréquence",
       "graceHours": "Heures de tolérance",
@@ -510,13 +517,16 @@
     "errors": {
       "percentageNeedsShare": "Un partage en pourcentage nécessite une part pour le livreur.",
       "flatNeedsFee": "Un partage forfaitaire nécessite un montant forfaitaire.",
-      "shareOutOfRange": "La part du livreur doit être comprise entre 0 et 100."
+      "shareOutOfRange": "La part du livreur doit être comprise entre 0 et 100.",
+      "salaryNeedsAmount": "Un salaire mensuel nécessite un montant.",
+      "salaryInvalid": "Le salaire mensuel doit être un montant entier d’au moins 1."
     },
     "paths": {
       "fee_split": {
         "model": "Modèle de partage des frais",
         "agent_share_percent": "Part du livreur (%)",
         "agent_flat_fee": "Forfait par livraison",
+        "agent_monthly_salary": "Salaire mensuel",
         "currency": "Devise"
       },
       "remittance_terms": {

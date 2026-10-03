@@ -28,6 +28,7 @@ export function PreferencesSettings() {
     <Card className={sectionSurfaceClass}>
       <CardContent className="space-y-4 max-md:px-0">
         <AutoAssignRow />
+        <AgentFeeProposalsRow />
         <Separator />
         {/* Three short answers → tap buttons under the label (as on the vendor
             dashboard), not a small native dropdown beside it. */}
@@ -109,6 +110,44 @@ function AutoAssignRow() {
         checked={enabled === true}
         disabled={enabled === null || saving}
         onCheckedChange={setEnabled}
+      />
+    </div>
+  );
+}
+
+/**
+ * `agentsCanProposeDeliveryFee`: lets the agent holding a shipment's accepted
+ * offer propose a different delivery fee. The proposal goes straight to the
+ * vendor — the agency sees it and may edit it, but does not approve it first.
+ * Its PATCH carries only this key (the endpoint is partial since 2026-10-02).
+ */
+function AgentFeeProposalsRow() {
+  const { t } = useTranslation(['settings', 'common']);
+  const { agentsCanProposeDeliveryFee, savingAgentFee, setAgentsCanProposeDeliveryFee } =
+    useAutoAssignSetting();
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-1.5">
+          <Label htmlFor="agents-propose-fee" className="text-sm font-medium">
+            {t('preferences.agentFeeProposals')}
+          </Label>
+          <InfoHint
+            className="md:hidden"
+            label={t('common:form.aboutSection', { title: t('preferences.agentFeeProposals') })}
+          >
+            {t('preferences.agentFeeProposalsHint')}
+          </InfoHint>
+        </div>
+        <p className="text-sm text-muted-foreground max-md:hidden">{t('preferences.agentFeeProposalsHint')}</p>
+      </div>
+      <Switch
+        id="agents-propose-fee"
+        className="mt-0.5"
+        checked={agentsCanProposeDeliveryFee === true}
+        disabled={agentsCanProposeDeliveryFee === null || savingAgentFee}
+        onCheckedChange={setAgentsCanProposeDeliveryFee}
       />
     </div>
   );

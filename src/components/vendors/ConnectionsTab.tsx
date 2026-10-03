@@ -14,6 +14,7 @@ import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
 import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
+import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import {
@@ -214,7 +215,12 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
         const idx = prev.findIndex((c) => c.id === dto.id);
         if (idx === -1) return [dto, ...prev];
         const next = [...prev];
-        next[idx] = dto;
+        // A mutation response may not carry `vendorCodTerms` (only `GET /` and
+        // `GET /:id` are documented to) — keep the terms the list already had.
+        next[idx] =
+          dto.vendorCodTerms === undefined
+            ? { ...dto, vendorCodTerms: prev[idx].vendorCodTerms }
+            : dto;
         return next;
       });
       onConnectionChange?.();
@@ -327,6 +333,7 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                       <VerifiedBadge verified={vendor?.kycVerified} />
                     </div>
                     <ConnectionStatusBadge status={connection.status} className="text-[10px] mt-0.5" />
+                    <VendorCodTerms terms={connection.vendorCodTerms} className="mt-1" />
                   </div>
                 </div>
                 <div className="flex-shrink-0">

@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "limit": {
+      "title": "Límite de efectivo contra entrega",
+      "loading": "Cargando tu límite de efectivo contra entrega…",
+      "loadFailed": "No se pudo cargar tu límite de efectivo contra entrega.",
+      "sourceOverride": "Fijado por Wi-Mall",
+      "sourceDefault": "Límite estándar",
+      "held": "{{total}} de {{limit}} en tu poder",
+      "inFlight_one": "En entregas: {{amount}} ({{count}} envío)",
+      "inFlight_many": "En entregas: {{amount}} ({{count}} envíos)",
+      "inFlight_other": "En entregas: {{amount}} ({{count}} envíos)",
+      "collected_one": "Cobrado, aún no remitido: {{amount}} ({{count}} cobro)",
+      "collected_many": "Cobrado, aún no remitido: {{amount}} ({{count}} cobros)",
+      "collected_other": "Cobrado, aún no remitido: {{amount}} ({{count}} cobros)",
+      "overLimit": "Tienes más efectivo que tu límite. Los vendedores no pueden enviarte pedidos con pago contra entrega hasta que remitas.",
+      "headroom": "Puedes asumir {{headroom}} más",
+      "remitFrees": "Remitir efectivo a Wi-Mall libera margen",
+      "explain": "Este límite decide lo que los vendedores pueden despacharte: un pedido con pago contra entrega que te haría superarlo queda retenido del lado del vendedor, y no lo recibes hasta que quepa o el vendedor lo envíe de todos modos. No es el tope de pago contra entrega por pedido de tus políticas, y un cambio en él nunca pausa tus conexiones."
+    }
+  }
+}

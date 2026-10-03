@@ -13,7 +13,12 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
-import { canRejectStatus, getNextActions, type ShipmentNextAction } from '@/components/shipments/shipment-actions';
+import {
+  canRejectStatus,
+  getNextActions,
+  pickupBlockReason,
+  type ShipmentNextAction,
+} from '@/components/shipments/shipment-actions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
@@ -42,13 +47,13 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
 
   const nextActions = getNextActions(shipment.status);
   const canReject = canRejectStatus(shipment.status);
-  // Under the acceptance workflow, pickup needs an agent who has accepted the offer.
-  const pickupBlocked = shipment.status === 'assigned' && !shipment.agentId;
+  // Pickup needs an agent who accepted the offer, and no fee change waiting on the vendor.
+  const pickupBlock = pickupBlockReason(shipment);
   const isBusy = pendingKey === `status:${shipment.id}`;
-  const isBlocked = (action: ShipmentNextAction) => pickupBlocked && action.status === 'picked_up';
+  const isBlocked = (action: ShipmentNextAction) => pickupBlock !== null && action.status === 'picked_up';
 
   const runStatus = async (action: ShipmentNextAction) => {
-    const result = await updateStatus(shipment.id, action.status, tx(t, action.labelKey));
+    const result = await updateStatus(shipment.id, action.status, tx(t, action.labelKey), onChanged);
     if (result) onChanged();
   };
 
@@ -93,7 +98,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                       key={action.status}
                       icon={<action.icon className="w-5 h-5" />}
                       label={tx(t, action.labelKey)}
-                      hint={blocked ? t('actions.needsAgentHint') : undefined}
+                      hint={blocked ? (pickupBlock === 'fee_pending' ? t('deliveryFee.pickupBlocked') : t('actions.needsAgentHint')) : undefined}
                       disabled={blocked}
                       destructive={action.variant === 'destructive'}
                       onClick={() => {
@@ -145,7 +150,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                       {tx(t, action.labelKey)}
                       {blocked && (
                         <span className="ms-auto text-[10px] text-muted-foreground">
-                          {t('actions.needsAgent')}
+                          {pickupBlock === 'fee_pending' ? t('deliveryFee.pickupBlockedShort') : t('actions.needsAgent')}
                         </span>
                       )}
                     </DropdownMenuItem>

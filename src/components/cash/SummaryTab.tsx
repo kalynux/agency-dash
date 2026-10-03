@@ -2,9 +2,11 @@ import { formatCurrency } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Loader2, Wallet, Users, PackageOpen, Send } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Gauge, Loader2, Wallet, Users, PackageOpen, Send } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { withCreateParam } from '@/hooks/useOpenParam';
 import { RecordCard, RecordCardList } from '@/components/common/RecordCard';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
@@ -21,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { codCashService } from '@/services/cod-cash.service';
 import { getApiErrorMessage } from '@/lib/errors';
-import type { CodSummary } from '@/types/cod-cash.types';
+import type { CodLimit, CodSummary } from '@/types/cod-cash.types';
 import { usePageRefresh } from '@/store/pageRefresh.store';
 
 type HoldingFilter = 'all' | 'holding' | 'settled';
@@ -102,7 +104,138 @@ function MiniStat({
   );
 }
 
+/**
+ * The agency's COD cash limit (`GET /agency/cod/limit`) — the only signal it
+ * gets about it: there is no notification when it goes over (brief G-2).
+ *
+ * It loads on its own and fails on its own: a limit that cannot be fetched
+ * shows a one-line retry here and leaves the cash position below untouched.
+ */
+function CodLimitCard() {
+  const { t } = useTranslation(['cash', 'common']);
+  const [limit, setLimit] = useState<CodLimit | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const { data } = await codCashService.getCodLimit();
+      setLimit(data);
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  usePageRefresh(load, isLoading);
+
+  if (!limit) {
+    return (
+      <Card className={compactCardClass}>
+        <CardContent className={cn(compactCardContentClass, 'flex flex-wrap items-center justify-between gap-2')}>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gauge className="h-4 w-4" />}
+            {isLoading ? t('summary.limit.loading') : (loadError ?? t('summary.limit.loadFailed'))}
+          </div>
+          {!isLoading && (
+            <Button size="sm" variant="outline" onClick={load}>{t('common:actions.retry')}</Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { exposure, overLimit } = limit;
+  const percent =
+    limit.limit > 0
+      ? Math.min(100, Math.max(0, (exposure.total / limit.limit) * 100))
+      : exposure.total > 0 ? 100 : 0;
+  const sourceBadge =
+    limit.source === 'override'
+      ? t('summary.limit.sourceOverride')
+      : limit.source === 'default'
+        ? t('summary.limit.sourceDefault')
+        : null;
+
+  return (
+    <Card className={cn(compactCardClass, overLimit && 'border-destructive')}>
+      <CardContent className={cn(compactCardContentClass, 'space-y-3')}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Gauge className={cn('h-4 w-4', overLimit ? 'text-destructive' : 'text-primary')} />
+            {t('summary.limit.title')}
+          </div>
+          {sourceBadge && <Badge variant="secondary">{sourceBadge}</Badge>}
+        </div>
+
+        <div className="space-y-1.5">
+          <p className={cn('text-lg font-semibold leading-tight tabular-nums break-words', overLimit && 'text-destructive')}>
+            {t('summary.limit.held', {
+              total: formatCurrency(exposure.total),
+              limit: formatCurrency(limit.limit),
+            })}
+          </p>
+          <Progress
+            value={percent}
+            aria-label={t('summary.limit.title')}
+            className={overLimit ? 'bg-destructive/20' : undefined}
+            indicatorClassName={overLimit ? 'bg-destructive' : undefined}
+          />
+          <p className="text-xs leading-snug text-muted-foreground tabular-nums">
+            {t('summary.limit.inFlight', {
+              amount: formatCurrency(exposure.inFlight),
+              count: exposure.inFlightCount,
+            })}
+            {' · '}
+            {t('summary.limit.collected', {
+              amount: formatCurrency(exposure.collectedUnremitted),
+              count: exposure.collectedCount,
+            })}
+          </p>
+        </div>
+
+        {overLimit ? (
+          <p className="flex items-start gap-1.5 text-sm font-medium text-destructive">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            {t('summary.limit.overLimit')}
+          </p>
+        ) : (
+          <p className="text-sm">
+            {t('summary.limit.headroom', { headroom: formatCurrency(limit.headroom) })}
+          </p>
+        )}
+
+        <Link
+          to="/dashboard/cash/remittances"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {t('summary.limit.remitFrees')}
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
+        </Link>
+
+        <p className="text-xs leading-snug text-muted-foreground">{t('summary.limit.explain')}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SummaryTab() {
+  return (
+    <div className="space-y-6">
+      <CodLimitCard />
+      <CashPosition />
+    </div>
+  );
+}
+
+function CashPosition() {
   const { t } = useTranslation(['cash', 'common']);
   const [summary, setSummary] = useState<CodSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);

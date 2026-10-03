@@ -22,10 +22,14 @@ import {
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { AgentWorkload } from '@/components/agents/AgentWorkload';
+import { CoverageForcePrompt } from '@/components/shipments/CoverageForcePrompt';
+import { CodLimitForcePrompt } from '@/components/shipments/CodLimitForcePrompt';
+import type { CodLimitRefusal, CoverageRefusal } from '@/components/shipments/forceAssign';
 import type { AgentSummary } from '@/types/agent.types';
 import type {
   ReassignPayload,
   ReassignPickupOverride,
+  ReassignResult,
   ShipmentStatus,
 } from '@/types/shipment.types';
 
@@ -36,16 +40,19 @@ export interface ReassignDialogProps {
   shipmentId: string;
   currentAgentId: string | null;
   status: ShipmentStatus;
+  /** A COD run — the region prompt then says `force` also lifts the cash limit. */
+  isCod: boolean;
   agents: AgentSummary[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReassigned: () => void;
+  onReassigned: (result: ReassignResult) => void;
 }
 
 export function ReassignDialog({
   shipmentId,
   currentAgentId,
   status,
+  isCod,
   agents,
   open,
   onOpenChange,
@@ -57,6 +64,17 @@ export function ReassignDialog({
   const [reason, setReason] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [override, setOverride] = useState<ReassignPickupOverride>({});
+  // The exact payload the region refusal answered, so "Send anyway" resends it
+  // unchanged apart from `force`.
+  const [coverageRefused, setCoverageRefused] = useState<{
+    payload: ReassignPayload;
+    refusal: CoverageRefusal;
+  } | null>(null);
+  // Same, for the agent's COD cash limit — "Assign anyway" resends with `force`.
+  const [codLimitRefused, setCodLimitRefused] = useState<{
+    payload: ReassignPayload;
+    refusal: CodLimitRefusal;
+  } | null>(null);
 
   const agentRequired = POST_PICKUP.includes(status);
   const isPending = pendingKey === `reassign:${shipmentId}`;
@@ -72,6 +90,20 @@ export function ReassignDialog({
     setReason('');
     setAdvancedOpen(false);
     setOverride({});
+    setCoverageRefused(null);
+    setCodLimitRefused(null);
+  };
+
+  const send = async (payload: ReassignPayload) => {
+    const result = await reassign(shipmentId, payload, {
+      onCoverageRefused: (refusal) => setCoverageRefused({ payload, refusal }),
+      onCodLimitRefused: (refusal) => setCodLimitRefused({ payload, refusal }),
+    });
+    if (result) {
+      reset();
+      onOpenChange(false);
+      onReassigned(result);
+    }
   };
 
   const setCoord = (key: 'latitude' | 'longitude', raw: string) => {
@@ -101,12 +133,9 @@ export function ReassignDialog({
       ...(hasOverride ? { pickupLocation: cleanedOverride } : {}),
     };
 
-    const result = await reassign(shipmentId, payload);
-    if (result) {
-      reset();
-      onOpenChange(false);
-      onReassigned();
-    }
+    setCoverageRefused(null);
+    setCodLimitRefused(null);
+    await send(payload);
   };
 
   return (
@@ -135,7 +164,14 @@ export function ReassignDialog({
                 </span>
               )}
             </Label>
-            <Select value={agentId} onValueChange={setAgentId}>
+            <Select
+              value={agentId}
+              onValueChange={(v) => {
+                setAgentId(v);
+                setCoverageRefused(null);
+                setCodLimitRefused(null);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue
                   placeholder={
@@ -213,6 +249,26 @@ export function ReassignDialog({
               <Input placeholder={t('reassignDialog.overrideNote')} value={override.note ?? ''} onChange={(e) => setField('note', e.target.value)} />
             </CollapsibleContent>
           </Collapsible>
+
+          {coverageRefused && (
+            <CoverageForcePrompt
+              refusal={coverageRefused.refusal}
+              agentName={agents.find((a) => a.id === coverageRefused.payload.agentId)?.name ?? null}
+              isCod={isCod}
+              pending={isPending}
+              onSendAnyway={() => void send({ ...coverageRefused.payload, force: true })}
+              onDismiss={() => setCoverageRefused(null)}
+            />
+          )}
+          {codLimitRefused && (
+            <CodLimitForcePrompt
+              refusal={codLimitRefused.refusal}
+              agentName={agents.find((a) => a.id === codLimitRefused.payload.agentId)?.name ?? null}
+              pending={isPending}
+              onAssignAnyway={() => void send({ ...codLimitRefused.payload, force: true })}
+              onDismiss={() => setCodLimitRefused(null)}
+            />
+          )}
         </div>
 
         <DialogFooter>

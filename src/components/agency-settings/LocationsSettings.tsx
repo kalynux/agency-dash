@@ -14,6 +14,13 @@ import { phoneErrorMessage } from '@/lib/validation-schemas';
 import { ApiError } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { getLocationsInUse } from '@/types/magazin.types';
+import {
+  addressRegionRefusal,
+  refusedEntryIndex,
+  withRegion,
+  type AddressRegionRefusal,
+} from '@/lib/addressRegion';
+import { AddressRegionRepair } from '@/components/common/AddressRegionRepair';
 import type {
   AgencyMagazin,
   MagazinHeadquartersAddress,
@@ -307,7 +314,7 @@ function AddressRowHeading({
 }
 
 export function LocationsSettings() {
-  const { t } = useTranslation(['settings', 'common']);
+  const { t, i18n } = useTranslation(['settings', 'common']);
   // The SHARED magazin, not a private fetch. This page used to hold its own
   // copy, so a save updated only itself: the depot pickers in Inventory, the
   // stock dialogs, the verification checklist and the agent dialogs kept the old
@@ -331,6 +338,8 @@ export function LocationsSettings() {
   // still be referenced by assignments, and the pin is what vendors and drivers
   // route to, so both are worth a deliberate click.
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  // `400 ADDRESS_REGION_INVALID` on the last save, pinned to the refused row.
+  const [regionRefusal, setRegionRefusal] = useState<{ uid: string; refusal: AddressRegionRefusal } | null>(null);
 
   // Region labels come out of locations.json in the active language — resolved
   // inside `RegionPicker` now, which is shared with onboarding and the agent
@@ -345,6 +354,7 @@ export function LocationsSettings() {
     if (magazin) {
       setForm(toForm(magazin));
       setFieldErrors({});
+      setRegionRefusal(null);
     }
   }, [magazin]);
 
@@ -376,13 +386,15 @@ export function LocationsSettings() {
    */
   const handleGeoSelect = useCallback((index: number, address: GeoAddress) => {
     const { street, city, region } = address.components;
+    // A new pin is a new answer to the region question — drop that row's prompt.
+    setRegionRefusal((prev) => (prev && form?.addresses[index]?.uid === prev.uid ? null : prev));
     patchEntry(index, {
       geo: address,
       region: region?.trim() ?? '',
       city: city?.trim() ?? '',
       address_description: (street?.trim() || address.formatted_address).slice(0, 200),
     });
-  }, [patchEntry]);
+  }, [patchEntry, form]);
 
   const addAddress = useCallback(() => {
     setForm((prev) => (prev ? { ...prev, addresses: [...prev.addresses, emptyEntry()] } : prev));
@@ -431,13 +443,20 @@ export function LocationsSettings() {
       setForm(toForm(magazin));
       setFieldErrors({});
       setSaveError(null);
+      setRegionRefusal(null);
     }
   }, [magazin]);
 
-  const handleSave = useCallback(async () => {
-    if (!magazin || !form) return;
+  /**
+   * @param override the form to send instead of the rendered one — the region
+   *   repair applies its pick and resends in the same click, before React has
+   *   re-rendered with the new state.
+   */
+  const handleSave = useCallback(async (override?: FormState) => {
+    const current = override ?? form;
+    if (!magazin || !current) return;
 
-    const errors = validate(form, t, phoneCountry);
+    const errors = validate(current, t, phoneCountry);
     if (Object.values(errors).some(Boolean)) {
       setFieldErrors(errors);
       setSaveError(t('common.fixHighlighted'));
@@ -447,18 +466,34 @@ export function LocationsSettings() {
     // Both arrays are a full replace — always send the complete desired value.
     const payload: MagazinUpdatePayload = {
       version: magazin.version,
-      coverage_areas: form.coverageAreas,
-      headquarters_addresses: form.addresses.map((entry) => toAddressPayload(entry, phoneCountry)),
+      coverage_areas: current.coverageAreas,
+      headquarters_addresses: current.addresses.map((entry) => toAddressPayload(entry, phoneCountry)),
     };
 
     setSaving(true);
     setSaveError(null);
+    setRegionRefusal(null);
     try {
       const updated = await magazinService.updateMagazin(payload);
       setData(updated);
       toast.success(t('locations.saved'));
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'MAGAZIN_LOCATION_IN_USE') {
+      const refusal = addressRegionRefusal(err, i18n.language);
+      const refusedIndex = refusal
+        ? refusedEntryIndex(refusal, current.addresses.map((e) => e.label))
+        : null;
+      const refusedEntry = refusedIndex !== null ? current.addresses[refusedIndex] : undefined;
+      if (refusal && refusedEntry?.geo && refusal.allowedRegions.length > 0) {
+        // A new/edited depot names no region of the country. The fix is a pick
+        // from the error's own list, shown in that depot's card — keyed by `uid`
+        // so it stays on the right card if rows are added or removed meanwhile.
+        setRegionRefusal({ uid: refusedEntry.uid, refusal });
+        setSaveError(
+          t('locations.regionRefused', {
+            label: refusedEntry.label.trim() || t('locations.unnamedLocation'),
+          }),
+        );
+      } else if (err instanceof ApiError && err.code === 'MAGAZIN_LOCATION_IN_USE') {
         // A dropped depot still holds vendor stock. Nothing was saved, and
         // retrying can't help — those products have to be re-pointed first — so
         // this stays on screen naming the depots instead of refreshing the form
@@ -490,7 +525,22 @@ export function LocationsSettings() {
     } finally {
       setSaving(false);
     }
-  }, [magazin, form, setData, refetch, t, phoneCountry]);
+  }, [magazin, form, setData, refetch, t, i18n, phoneCountry]);
+
+  /** The documented repair: set the refused entry's `geo.components.region`, resend everything. */
+  const applyRegion = useCallback((uid: string, key: string, label: string) => {
+    if (!form) return;
+    const next: FormState = {
+      ...form,
+      addresses: form.addresses.map((entry) =>
+        entry.uid === uid && entry.geo
+          ? { ...entry, geo: withRegion(entry.geo, key), region: label, pristine: false }
+          : entry,
+      ),
+    };
+    setForm(next);
+    void handleSave(next);
+  }, [form, handleSave]);
 
   if (isLoading && !magazin) return <LoadingState label={t('locations.loading')} />;
   if (error && !magazin) return <ErrorState error={error} onRetry={refetch} />;
@@ -598,6 +648,21 @@ export function LocationsSettings() {
                       </p>
                     )}
                   </div>
+
+                  {regionRefusal?.uid === entry.uid && (
+                    <AddressRegionRepair
+                      refusal={regionRefusal.refusal}
+                      actionLabel={t('locations.regionRepairAction')}
+                      pending={saving}
+                      onApply={(key) =>
+                        applyRegion(
+                          entry.uid,
+                          key,
+                          regionRefusal.refusal.allowedRegions.find((r) => r.key === key)?.label ?? key,
+                        )
+                      }
+                    />
+                  )}
 
                   <div className="space-y-1.5">
                     <Label htmlFor={`hq-label-${entry.uid}`}>
@@ -801,7 +866,7 @@ export function LocationsSettings() {
         visible={dirty || saving}
         saving={saving}
         onDiscard={handleDiscard}
-        onSave={handleSave}
+        onSave={() => void handleSave()}
       />
     </div>
   );

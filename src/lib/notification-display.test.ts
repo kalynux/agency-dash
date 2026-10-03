@@ -11,7 +11,8 @@
  * catch-all to the Overview: not a 404, a silent wrong page.
  */
 import { describe, it, expect } from 'vitest';
-import { resolveDeepLink, notificationHref } from './notification-display';
+import { Bell, Gauge, Receipt, Truck } from 'lucide-react';
+import { resolveDeepLink, notificationHref, notificationVisual } from './notification-display';
 
 const ID = '665f1f77bcf86cd799439011';
 
@@ -95,5 +96,55 @@ describe('notificationHref', () => {
     expect(notificationHref({ label: 'View shipment', path: `shipments/${ID}` })).toBe(
       `/dashboard/shipments?open=${ID}`,
     );
+  });
+});
+
+// 2026-10-02 — the ninth label. `cod.limit.pinned` / `.released` send it.
+describe('cod/limit', () => {
+  it('lands on the Cash → Summary limit gauge', () => {
+    expect(resolveDeepLink('cod/limit')).toBe('/dashboard/cash/summary');
+    expect(resolveDeepLink('/dashboard/cod/limit')).toBe('/dashboard/cash/summary');
+    expect(notificationHref({ label: 'View limit', path: 'cod/limit' })).toBe(
+      '/dashboard/cash/summary',
+    );
+  });
+
+  it('does not disturb the labels that share its prefix or its neighbours', () => {
+    // Same first segment: `limit` must not become a deposit id, and a deposit
+    // id must not be read as an idless label.
+    expect(resolveDeepLink('cod/deposits/x')).toBe('/dashboard/cash/deposits?open=x');
+    expect(resolveDeepLink('shipments/x')).toBe('/dashboard/shipments?open=x');
+    // `cod` alone is not a label.
+    expect(resolveDeepLink('cod')).toBeNull();
+  });
+});
+
+describe('notificationVisual — 2026-10-02 types', () => {
+  it('gives delivery-fee proposals their own icon and colour', () => {
+    for (const type of [
+      'delivery_fee_proposal.approved',
+      'delivery_fee_proposal.rejected',
+      'delivery_fee_proposal.agent_proposed',
+      'delivery_fee_proposal.agent_edited',
+    ]) {
+      const v = notificationVisual(type);
+      expect(v.icon).toBe(Receipt);
+      expect(v.icon).not.toBe(Bell);
+    }
+  });
+
+  it('reads every codLimitUpdates type as one stream, not routine shipment traffic', () => {
+    for (const type of [
+      'shipment.cod_limit.forced',
+      'shipment.assignment.cod_limit_blocked',
+      'connection.cod_terms_changed',
+      'cod.limit.pinned',
+      'cod.limit.released',
+    ]) {
+      expect(notificationVisual(type).icon).toBe(Gauge);
+    }
+    // The types they replace keep the shipment look.
+    expect(notificationVisual('shipment.assigned').icon).toBe(Truck);
+    expect(notificationVisual('shipment.assignment.unfilled').icon).toBe(Truck);
   });
 });

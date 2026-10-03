@@ -469,10 +469,13 @@
     },
     "feeModels": {
       "percentage": "Percentage of the delivery fee",
-      "flat": "Flat fee per delivery"
+      "flat": "Flat fee per delivery",
+      "monthly_salary": "Monthly salary"
     },
     "summaryFlat": "{{amount}} flat",
     "summaryShare": "{{percent}}% share",
+    "summarySalary": "Salaried — {{amount}} / month (paid by you, outside Wi-Mall)",
+    "summarySalaryUnset": "Salaried — amount not set",
     "fields": {
       "employment": "Employment",
       "employmentType": "Type",
@@ -485,13 +488,17 @@
       "model": "Model",
       "modelPercentage": "Percentage",
       "modelFlat": "Flat fee",
+      "modelSalary": "Monthly salary",
       "flatFee": "Flat fee per delivery",
       "flatFeePlaceholder": "1500",
       "sharePercent": "Agent share (%)",
       "sharePercentPlaceholder": "40",
+      "monthlySalary": "Monthly salary",
+      "monthlySalaryPlaceholder": "150000",
       "currency": "Currency",
       "currencyPlaceholder": "XAF",
       "feeSplitHint": "The agent's cut comes <strong>out of</strong> your delivery fee, never on top — the vendor pays the same either way. The platform pays it from the agent's own earnings account.",
+      "salaryHint": "You pay this salary <strong>yourself, outside Wi-Mall</strong>. The platform pays the agent nothing per delivery and you keep the whole delivery fee. Wi-Mall never schedules, tracks or pays the salary — it only records the figure you both agreed.",
       "remittance": "COD remittance",
       "cadence": "Cadence",
       "graceHours": "Grace hours",
@@ -513,7 +520,9 @@
     "errors": {
       "percentageNeedsShare": "A percentage split needs an agent share.",
       "flatNeedsFee": "A flat split needs a flat fee.",
-      "shareOutOfRange": "The agent share must be between 0 and 100."
+      "shareOutOfRange": "The agent share must be between 0 and 100.",
+      "salaryNeedsAmount": "A monthly salary needs an amount.",
+      "salaryInvalid": "The monthly salary must be a whole amount of at least 1."
     },
     "_pathsComment": "Keyed by the API's dotted diff path. Nested to match, because `.` is i18next's nesting separator — a flat \"fee_split.model\" key would never resolve.",
     "paths": {
@@ -521,6 +530,7 @@
         "model": "Fee split model",
         "agent_share_percent": "Agent share (%)",
         "agent_flat_fee": "Flat fee per delivery",
+        "agent_monthly_salary": "Monthly salary",
         "currency": "Currency"
       },
       "remittance_terms": {

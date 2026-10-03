@@ -1,0 +1,104 @@
+{
+  "reject": {
+    "description": "Recuse esta entrega antes da recolha. Se um agente a tinha aceitado, fica libertado, e uma alteração de taxa pendente do vendedor é retirada. O vendedor é informado do seu motivo para a atribuir a outra agência."
+  },
+  "offerFlags": {
+    "codLimitForced": "Enviada acima do limite COD do agente"
+  },
+  "money": {
+    "agentSalaried": "Agente assalariado"
+  },
+  "codLimitForce": {
+    "title": "Este envio levaria {{name}} acima do seu limite de pagamento na entrega.",
+    "currentExposure": "Dinheiro que tem agora",
+    "additionalAmount": "Este envio",
+    "effectiveLimit": "O seu limite",
+    "sliceBinds": "O que bloqueia é o limite do seu contrato com este agente.",
+    "poolBinds": "O que bloqueia é o próprio fundo COD do agente, inferior ao limite do seu contrato.",
+    "explainer": "Pode atribuí-lo mesmo assim. A oferta ficará marcada como enviada acima do limite, e o agente terá mais dinheiro do que o limite permite até o depositar.",
+    "assignAnyway": "Atribuir mesmo assim"
+  },
+  "bulkAssign": {
+    "selectRow": "Selecionar {{order}}",
+    "selectPage": "Selecionar os envios desta página que podem ser oferecidos",
+    "selected": "Selecionados: {{count}} de {{max}}",
+    "limitReached": "Esse é o máximo: {{max}} envios por lote.",
+    "clear": "Limpar",
+    "action": "Atribuir a um agente",
+    "title": "Oferecer envios a um agente",
+    "description": "Cada envio torna-se a sua própria oferta ao agente escolhido, verificada exatamente como se a oferecesse sozinha. O agente recebe uma única notificação para todo o lote.",
+    "agentLabel": "Agente",
+    "shipmentsLabel": "Envios",
+    "remove": "Remover {{order}}",
+    "submit_one": "Oferecer {{count}} envio",
+    "submit_other": "Oferecer {{count}} envios",
+    "atCapacity": "Vagas livres de {{name}}: {{free}}. Envios que podiam ser oferecidos: {{requested}}. Nada foi oferecido. Remova {{excess}} e envie de novo.",
+    "atCapacityNone": "{{name}} não tem nenhuma vaga livre agora. Nada foi oferecido.",
+    "keepFirst": "Manter só os {{count}} primeiros",
+    "summary": "Oferecidos: {{offered}} de {{requested}} · Falhados: {{failed}}",
+    "summaryAutoAccepted": "Aceites de imediato: {{count}}",
+    "rowOffered": "Oferta enviada",
+    "rowAutoAccepted": "Aceite pelo agente",
+    "rowFailed": "Não oferecido",
+    "forceTitle_one": "{{count}} envio foi recusado apenas pelo limite de dinheiro ou pelas regiões do contrato deste agente.",
+    "forceTitle_other": "{{count}} envios foram recusados apenas pelo limite de dinheiro ou pelas regiões do contrato deste agente.",
+    "forceExplainer": "Pode enviar só esses mesmo assim. Cada oferta ficará marcada como forçada, e o agente pode aceitá-la ou recusá-la como habitualmente. Os envios já oferecidos não são reenviados.",
+    "forceConfirm_one": "Enviá-lo mesmo assim",
+    "forceConfirm_other": "Enviar estes {{count}} mesmo assim",
+    "done": "Concluído"
+  },
+  "deliveryFee": {
+    "title": "Taxa de entrega",
+    "propose": "Propor outra taxa",
+    "proposeAgain": "Propor novamente",
+    "proposeTitle": "Propor outra taxa de entrega",
+    "editTitle": "Editar a alteração de taxa",
+    "dialogDescription": "Apenas para este envio. O vendedor tem de aprovar. A recolha fica bloqueada até responder.",
+    "currentFee": "Taxa atual: {{amount}}",
+    "proposedFee": "Nova taxa ({{currency}})",
+    "reason": "Motivo",
+    "reasonPlaceholder": "Porque precisa este volume de outra taxa? O vendedor vê isto.",
+    "send": "Enviar ao vendedor",
+    "saveEdit": "Guardar alterações",
+    "edit": "Editar",
+    "withdraw": "Retirar",
+    "proposed": "Alteração de taxa enviada ao vendedor.",
+    "edited": "Alteração de taxa atualizada.",
+    "withdrawn": "Alteração de taxa retirada.",
+    "pickupBlocked": "À espera de que o vendedor responda a uma alteração de taxa — a recolha está bloqueada até lá.",
+    "pickupBlockedShort": "taxa pendente",
+    "pendingChip": "Alteração de taxa pendente",
+    "agreedOn": "Acordada com o vendedor em {{date}}",
+    "afterRejection": "O vendedor rejeitou a nova taxa. Proponha mais uma vez, ou recuse a entrega para que escolha outra agência.",
+    "afterRejectionHandover": "O vendedor rejeitou a nova taxa. Durante uma passagem a entrega já não pode ser recusada: proponha mais uma vez ou faça-a com a taxa original.",
+    "decline": "Recusar a entrega",
+    "by": {
+      "agency": "Você",
+      "agent": "O seu agente",
+      "vendor": "O vendedor",
+      "system": "Wi-Mall"
+    },
+    "proposedBy": "Proposta por {{who}} · {{date}}",
+    "agencyEdited": "editada por si",
+    "editEntry": "{{who}} alterou-a em {{date}}: {{before}} → {{after}}",
+    "rejectionNote": "Nota do vendedor: {{note}}",
+    "withdrawnDeclined": "Retirada quando recusou a entrega",
+    "withdrawnAgentLeft": "Retirada — o agente deixou o trabalho",
+    "withdrawnBy": "Retirada por {{who}}",
+    "status": {
+      "pending": "À espera do vendedor",
+      "approved": "Aprovada",
+      "rejected": "Rejeitada",
+      "withdrawn": "Retirada",
+      "unknown": "Estado desconhecido"
+    },
+    "validation": {
+      "number": "Introduza um valor.",
+      "integer": "Introduza um valor inteiro.",
+      "min": "A taxa não pode ser negativa.",
+      "sameAsCurrent": "Essa já é a taxa.",
+      "reasonMin": "Indique um motivo com pelo menos {{min}} caracteres.",
+      "reasonMax": "O motivo deve ter menos de {{max}} caracteres."
+    }
+  }
+}

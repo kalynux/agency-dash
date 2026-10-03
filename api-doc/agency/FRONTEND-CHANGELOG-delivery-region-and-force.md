@@ -29,3 +29,12 @@ Deliveries whose region was spelled differently from your contracts (`"Centre Re
 again.
 
 Full reference: [assignment.md → Forcing an offer](./assignment.md).
+
+## Headquarters addresses: region is validated
+
+A **new or edited** headquarters address (onboarding and `PATCH` of the magazin) must name a
+region of your country, directly or by its city, or the save is refused with
+`400 ADDRESS_REGION_INVALID`. `details.index` / `details.label` name the entry and
+`details.allowedRegions` is the picker: set that entry's `geo.components.region` to the picked
+`key` and resend. Unchanged entries still save. The stored `region` is the canonical name
+(`"Centre"`). Reference: [magazin.md](./magazin.md).

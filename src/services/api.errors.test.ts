@@ -11,6 +11,8 @@ import { describe, it, expect } from 'vitest';
 import { classifyAuthError } from './api';
 import { buildApiError } from './http';
 import { ApiError, TERMINAL_AUTH_CODES } from '@/types/api';
+import i18n from '@/i18n';
+import { getApiErrorMessage } from '@/lib/errors';
 
 function err(status: number, code: string): ApiError {
     return new ApiError(status, code, 'test');
@@ -177,5 +179,36 @@ describe('buildApiError', () => {
         expect(e.status).toBe(502);
         expect(e.code).toBe('502');
         expect(e.message).toContain('502');
+    });
+});
+
+// ─── Code → copy (src/lib/errors.ts) ──────────────────────────────────────────
+
+describe('getApiErrorMessage', () => {
+    it.each([
+        ['DELIVERY_FEE_PROPOSAL_ALREADY_PENDING', 409],
+        ['DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED', 422],
+        ['SHIPMENT_DELIVERY_FEE_PENDING', 409],
+    ])('resolves %s to its errors:codes copy, not the server message', (code, status) => {
+        const message = getApiErrorMessage(new ApiError(status, code, 'server copy'));
+        expect(message).toBe(i18n.t(`errors:codes.${code}` as never));
+        expect(message).not.toBe('server copy');
+    });
+
+    it('uses the details-dependent sentence when the documented field is there', () => {
+        const e = new ApiError(422, 'DELIVERY_FEE_PROPOSAL_LIMIT_REACHED', 'x', { used: 2, max: 2 });
+        expect(getApiErrorMessage(e)).toContain('2');
+        expect(getApiErrorMessage(e)).not.toBe(i18n.t('errors:codes.DELIVERY_FEE_PROPOSAL_LIMIT_REACHED'));
+    });
+
+    it("falls back to the code's own copy when details are missing", () => {
+        // An edit with neither fee nor reason carries no `currentFee`.
+        const e = new ApiError(422, 'DELIVERY_FEE_PROPOSAL_NO_CHANGE', 'x');
+        expect(getApiErrorMessage(e)).toBe(i18n.t('errors:codes.DELIVERY_FEE_PROPOSAL_NO_CHANGE'));
+    });
+
+    it('falls back to the category for an unknown code', () => {
+        const e = new ApiError(409, 'SOMETHING_NEW', 'x', undefined, undefined, 'conflict');
+        expect(getApiErrorMessage(e)).toBe(i18n.t('errors:categories.conflict' as never));
     });
 });

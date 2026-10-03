@@ -19,6 +19,10 @@
     "autoAssignOn": "Affectation automatique activée — les nouvelles expéditions partent automatiquement vers vos livreurs.",
     "autoAssignOff": "Affectation automatique désactivée — vous affecterez vous-même les nouvelles expéditions.",
     "autoAssignLoadError": "Impossible de charger le réglage d'affectation automatique.",
+    "agentFeeProposals": "Autoriser mes livreurs à proposer des frais de livraison",
+    "agentFeeProposalsHint": "Lorsque cette option est activée, le livreur qui a accepté une expédition peut demander d'autres frais de livraison pour celle-ci, avant l'enlèvement. Sa proposition part directement au vendeur, qui l'approuve ou la refuse — vous la voyez sur l'expédition et pouvez la modifier tant qu'elle est en attente. Vous pouvez toujours proposer des frais vous-même.",
+    "agentFeeProposalsOn": "Vos livreurs peuvent désormais proposer des frais de livraison.",
+    "agentFeeProposalsOff": "Vous seul pouvez désormais proposer des frais de livraison.",
     "retry": "Réessayer",
     "theme": "Thème",
     "themeHint": "Choisissez votre thème préféré",
@@ -135,7 +139,9 @@
       "streetRequired": "L'adresse est obligatoire.",
       "streetMax": "200 caractères maximum.",
       "email": "Saisissez une adresse e-mail valide."
-    }
+    },
+    "regionRefused": "« {{label}} » n'a pas pu être enregistrée : sa région n'est pas reconnue. Choisissez-la sur cette adresse ci-dessous.",
+    "regionRepairAction": "Utiliser cette région et enregistrer"
   },
   "addressSearch": {
     "placeholder": "Rechercher une rue, un quartier ou une ville…",
@@ -301,6 +307,11 @@
       "aboutLabel": "À propos de « {{event}} »",
       "shipmentAssigned": "Nouvelles expéditions",
       "shipmentAssignedDescription": "Lorsqu'un vendeur adresse une commande à votre agence.",
+      "codLimitUpdates": "Alertes de plafond COD",
+      "codLimitUpdatesDescription": "Lorsqu'un vendeur vous envoie une expédition en paiement à la livraison au-delà d'un plafond, lorsque l'affectation automatique ne trouve que des livreurs au-delà de leur montant COD, lorsqu'un vendeur modifie ses conditions COD, ou lorsque Wi-Mall fixe ou libère votre plafond COD.",
+      "codLimitUpdatesCaveat": "Une expédition envoyée au-delà d'un plafond, et une expédition que l'affectation automatique n'a pas pu placer pour des raisons de COD, arrivent sous cette option — pas sous Nouvelles expéditions. Désactivez-la et vous n'en serez pas prévenu.",
+      "deliveryFeeProposals": "Modifications des frais de livraison",
+      "deliveryFeeProposalsDescription": "Lorsqu'un vendeur approuve ou refuse une modification des frais sur l'une de vos expéditions, ou qu'un de vos livreurs en propose ou en modifie une.",
       "connectionUpdated": "Connexions vendeurs",
       "connectionUpdatedDescription": "Demandes, approbations, refus et invitations à renouveler l'accord de la part des vendeurs.",
       "contractUpdated": "Contrats de livreurs",

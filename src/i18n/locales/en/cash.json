@@ -82,7 +82,23 @@
     "cashHeld": "Cash Held",
     "emptyRoster": "No agents on your roster yet",
     "emptyFiltered": "No agents match your search or filter",
-    "declareRemittance": "Declare a remittance"
+    "declareRemittance": "Declare a remittance",
+    "limit": {
+      "title": "COD cash limit",
+      "loading": "Loading your COD cash limit…",
+      "loadFailed": "Could not load your COD cash limit.",
+      "sourceOverride": "Set by Wi-Mall",
+      "sourceDefault": "Standard limit",
+      "held": "{{total}} of {{limit}} held",
+      "inFlight_one": "In deliveries: {{amount}} ({{count}} shipment)",
+      "inFlight_other": "In deliveries: {{amount}} ({{count}} shipments)",
+      "collected_one": "Collected, not yet remitted: {{amount}} ({{count}} collection)",
+      "collected_other": "Collected, not yet remitted: {{amount}} ({{count}} collections)",
+      "overLimit": "You hold more than your limit. Vendors cannot send you cash-on-delivery orders until you remit.",
+      "headroom": "You can take {{headroom}} more",
+      "remitFrees": "Remitting cash to Wi-Mall frees room",
+      "explain": "This limit decides what vendors can dispatch to you: a cash-on-delivery order that would take you over it is held on the vendor's side, and you don't receive it until it fits or the vendor sends it anyway. It is not the per-order COD cap in your policies, and a change to it never pauses your connections."
+    }
   },
   "deposits": {
     "alertTitle_one": "{{count}} hand-over awaiting your answer",

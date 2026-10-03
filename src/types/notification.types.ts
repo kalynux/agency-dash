@@ -28,12 +28,31 @@ export interface AgencyNotificationAction {
   url?: string;
 }
 
+/**
+ * What a notification is about (api-doc/agency/notifications.md § Events).
+ * `cod_limit` (2026-10-02) carries the agency's own id as `aggregateId`.
+ *
+ * Open-ended on purpose: the backend may add one before this app ships a case
+ * for it, so anything keyed on this must keep a fallback branch.
+ */
+export type AgencyNotificationAggregateType =
+  | 'connection'
+  | 'contract'
+  | 'shipment'
+  | 'payout'
+  | 'deposit'
+  | 'plan'
+  | 'storage'
+  | 'stock_request'
+  | 'cod_limit'
+  | (string & {});
+
 export interface AgencyNotification {
   id: string;
   type: string;
   title: string;
   message: string;
-  aggregateType: string;
+  aggregateType: AgencyNotificationAggregateType;
   aggregateId: string;
   /** Null only when no deep-link base URL is configured server-side. */
   action: AgencyNotificationAction | null;
@@ -119,6 +138,22 @@ export interface NotificationEventPreferences {
    * `storageAlert` above or an agency will switch off the wrong one.
    */
   stockRequestUpdates: boolean;
+  /**
+   * **COD limits** (2026-10-02): `shipment.cod_limit.forced` (a vendor sent a COD
+   * shipment past a limit — replaces `shipment.assigned` for that dispatch),
+   * `shipment.assignment.cod_limit_blocked` (auto-assign found only agents over
+   * their COD amount — replaces `shipment.assignment.unfilled` for that cause),
+   * `connection.cod_terms_changed`, and `cod.limit.pinned` / `.released`.
+   * Default `true`; an older preferences row omits it.
+   */
+  codLimitUpdates: boolean;
+  /**
+   * **Delivery-fee proposals** (2026-10-02): `delivery_fee_proposal.approved` /
+   * `.rejected` (the vendor answered) and `.agent_proposed` / `.agent_edited`
+   * (one of your agents proposed or changed a figure). Default `true`; an older
+   * preferences row omits it.
+   */
+  deliveryFeeProposals: boolean;
 }
 
 export type NotificationEventKey = keyof NotificationEventPreferences;

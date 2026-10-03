@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { formatNumber } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { ApiError, type ErrorCategory } from '@/types/api';
 
 /**
@@ -74,6 +74,17 @@ const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMes
   PAYMENT_PROVIDER_PHONE_MISMATCH: (d) =>
     d.detected === 'MTN' || d.detected === 'ORANGE'
       ? { key: `PAYMENT_PROVIDER_PHONE_MISMATCH.${d.detected}` }
+      : undefined,
+  // `max` is how many non-withdrawn fee changes a shipment may have (two today).
+  // See api-doc/agency/shipments.md § Delivery-fee proposals.
+  DELIVERY_FEE_PROPOSAL_LIMIT_REACHED: (d) =>
+    typeof d.max === 'number'
+      ? { key: 'DELIVERY_FEE_PROPOSAL_LIMIT_REACHED.max', context: { max: formatNumber(d.max) } }
+      : undefined,
+  // `currentFee` is absent on an empty edit; the code's own copy covers that.
+  DELIVERY_FEE_PROPOSAL_NO_CHANGE: (d) =>
+    typeof d.currentFee === 'number'
+      ? { key: 'DELIVERY_FEE_PROPOSAL_NO_CHANGE.currentFee', context: { fee: formatCurrency(d.currentFee) } }
       : undefined,
 };
 

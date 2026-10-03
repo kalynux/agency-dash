@@ -7,12 +7,30 @@ import type {
   ShipmentActionableStatus,
   ShipmentRejectionReason,
   AssignmentResponse,
+  AssignAgentOptions,
+  BulkAssignPayload,
+  BulkAssignResponse,
   AssignmentCandidatesResponse,
   OfferCancelResponse,
   ReassignPayload,
   ReassignResponse,
-  AssignmentSettingsResponse,
 } from '@/types/shipment.types';
+import type {
+  CreateDeliveryFeeProposalPayload,
+  DeliveryFeeProposal,
+  EditDeliveryFeeProposalPayload,
+} from '@/types/delivery-fee-proposal.types';
+
+interface DeliveryFeeProposalResponse {
+  success: true;
+  data: DeliveryFeeProposal;
+  message?: string;
+}
+
+interface DeliveryFeeProposalsResponse {
+  success: true;
+  data: DeliveryFeeProposal[];
+}
 
 function buildQueryString(params: Record<string, unknown>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
@@ -85,9 +103,28 @@ export const shipmentsService = {
    * agency's agents. Under the acceptance workflow this creates a pending offer
    * (unless the agent has auto-accept on); the shipment gains an agent only on
    * acceptance. See agency/assignment.md.
+   *
+   * `force` is sent only when true, so an ordinary offer's body is unchanged.
    */
-  assignAgent(id: string, agentId: string): Promise<AssignmentResponse> {
-    return api.patch<AssignmentResponse>(`/agency/shipments/${id}/assign-agent`, { agentId });
+  assignAgent(id: string, agentId: string, opts: AssignAgentOptions = {}): Promise<AssignmentResponse> {
+    return api.patch<AssignmentResponse>(`/agency/shipments/${id}/assign-agent`, {
+      agentId,
+      ...(opts.force ? { force: true } : {}),
+    });
+  },
+
+  /**
+   * POST /agency/shipments/assign-agent — offer one agent up to 10 shipments at
+   * once. Answers `200` even when some rows fail; read `data.items`. Refused as
+   * a whole (nothing offered) only for the agent — not eligible, not found, or
+   * `422 AGENT_AT_CAPACITY`. See agency/assignment.md → bulk offer.
+   */
+  assignAgentBulk({ agentId, shipmentIds, force }: BulkAssignPayload): Promise<BulkAssignResponse> {
+    return api.post<BulkAssignResponse>('/agency/shipments/assign-agent', {
+      agentId,
+      shipmentIds,
+      ...(force ? { force: true } : {}),
+    });
   },
 
   /**
@@ -116,17 +153,43 @@ export const shipmentsService = {
     return api.post<ReassignResponse>(`/agency/shipments/${id}/reassign`, payload);
   },
 
+  // ── Delivery-fee proposals — agency/shipments.md § Delivery-fee proposals ───
+  // Allowed only while the shipment is `assigned` / `handing_over`; while one is
+  // pending, pickup answers 409 SHIPMENT_DELIVERY_FEE_PENDING.
+
+  /** GET /agency/shipments/:id/delivery-fee-proposals — every proposal, newest first. */
+  listDeliveryFeeProposals(id: string): Promise<DeliveryFeeProposalsResponse> {
+    return api.get<DeliveryFeeProposalsResponse>(`/agency/shipments/${id}/delivery-fee-proposals`);
+  },
+
+  /** POST /agency/shipments/:id/delivery-fee-proposals — ask the vendor for a different fee. */
+  proposeDeliveryFee(id: string, payload: CreateDeliveryFeeProposalPayload): Promise<DeliveryFeeProposalResponse> {
+    return api.post<DeliveryFeeProposalResponse>(`/agency/shipments/${id}/delivery-fee-proposals`, payload);
+  },
+
+  /**
+   * PATCH /agency/shipments/:id/delivery-fee-proposals/:proposalId — edit a
+   * pending proposal, yours or your agent's (editing an agent's makes it yours).
+   */
+  editDeliveryFeeProposal(
+    id: string,
+    proposalId: string,
+    payload: EditDeliveryFeeProposalPayload,
+  ): Promise<DeliveryFeeProposalResponse> {
+    return api.patch<DeliveryFeeProposalResponse>(
+      `/agency/shipments/${id}/delivery-fee-proposals/${proposalId}`,
+      payload,
+    );
+  },
+
+  /** POST /agency/shipments/:id/delivery-fee-proposals/:proposalId/withdraw */
+  withdrawDeliveryFeeProposal(id: string, proposalId: string): Promise<DeliveryFeeProposalResponse> {
+    return api.post<DeliveryFeeProposalResponse>(
+      `/agency/shipments/${id}/delivery-fee-proposals/${proposalId}/withdraw`,
+    );
+  },
+
   // There is no tracking-number endpoint. The platform stamps every shipment
   // with one at creation (`ACR-YYMMDD-HHMMSS-XXXXX`), so it is never absent and
   // never editable — read it off `trackingNumber` on any shipment payload.
-
-  /** GET /agency/assignment-settings — the stored auto-assignment toggle. */
-  getAssignmentSettings(): Promise<AssignmentSettingsResponse> {
-    return api.get<AssignmentSettingsResponse>('/agency/assignment-settings');
-  },
-
-  /** PATCH /agency/assignment-settings — toggle standing auto-assignment participation. */
-  updateAssignmentSettings(autoAssignEnabled: boolean): Promise<AssignmentSettingsResponse> {
-    return api.patch<AssignmentSettingsResponse>('/agency/assignment-settings', { autoAssignEnabled });
-  },
 };

@@ -11,6 +11,7 @@ import {
   employmentTypeLabel,
   parseRegions,
   splitRegions,
+  switchFeeModel,
   type TermsForm,
 } from '@/components/agents/contractTerms';
 import { regionsFor, type RegionEntry } from '@/lib/regions';
@@ -161,16 +162,38 @@ export function ContractTermsFields({
             <Select
               value={form.feeModel}
               disabled={disabled}
-              onValueChange={(v) => onChange('feeModel', v as FeeSplitModel)}
+              onValueChange={(v) => {
+                // Picking a model clears the other models' amounts — they are
+                // never sent beside it (that is a 400), so they must not linger
+                // on screen either.
+                const changes = switchFeeModel(form, v as FeeSplitModel, seed);
+                for (const [key, value] of Object.entries(changes)) {
+                  onChange(key as keyof TermsForm, value as TermsForm[keyof TermsForm]);
+                }
+              }}
             >
               <SelectTrigger><SelectValue placeholder={t('terms.fields.emptySelect')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="percentage">{t('terms.fields.modelPercentage')}</SelectItem>
                 <SelectItem value="flat">{t('terms.fields.modelFlat')}</SelectItem>
+                <SelectItem value="monthly_salary">{t('terms.fields.modelSalary')}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
-          {feeModel === 'flat' ? (
+          {feeModel === 'monthly_salary' ? (
+            <FormField label={t('terms.fields.monthlySalary')}>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={form.monthlySalary}
+                disabled={disabled}
+                onChange={(e) => onChange('monthlySalary', e.target.value)}
+                placeholder={t('terms.fields.monthlySalaryPlaceholder')}
+              />
+            </FormField>
+          ) : feeModel === 'flat' ? (
             <FormField label={t('terms.fields.flatFee')}>
               <Input
                 type="number"
@@ -205,9 +228,11 @@ export function ContractTermsFields({
           </FormField>
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
+          {/* The per-delivery hint ("the cut comes out of your fee, the platform
+              pays it") is false for a salary — Wi-Mall pays nothing there. */}
           <Trans
             ns="agents"
-            i18nKey="terms.fields.feeSplitHint"
+            i18nKey={feeModel === 'monthly_salary' ? 'terms.fields.salaryHint' : 'terms.fields.feeSplitHint'}
             components={{ strong: <span className="font-medium" /> }}
           />
         </p>

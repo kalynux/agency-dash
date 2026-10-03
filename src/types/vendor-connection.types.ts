@@ -29,7 +29,24 @@ export interface ConnectionTerminationInfo {
   note: string | null;
 }
 
+/**
+ * A vendor's COD terms (2026-10-02) — see api-doc/agency/vendor-connections.md
+ * § Vendor COD terms. Not `policies`: a vendor changing them never pauses the
+ * connection.
+ */
+export interface VendorCodTerms {
+  /** `false` — the vendor's customers cannot pay cash on delivery. */
+  codEnabled: boolean;
+  /** Most of this vendor's COD cash one agency may hold un-remitted (XAF minor units); `null` = no vendor cap. */
+  maxCashPerAgency: number | null;
+}
+
 export interface ConnectionDto {
+  /**
+   * Agency side only (`GET /` and `GET /:id`). Optional — responses older than
+   * 2026-10-02, and mutation responses, may omit it.
+   */
+  vendorCodTerms?: VendorCodTerms | null;
   id: string;
   vendorId: string;
   agencyId: string;
@@ -96,6 +113,8 @@ export interface VendorBrowseItemDto {
   primaryAddress: VendorPrimaryAddress | null;
   policies: VendorPolicySummary | null;
   connection: ConnectionSummary | null;
+  /** Optional — responses older than 2026-10-02 lack it. */
+  codTerms?: VendorCodTerms | null;
 }
 
 // ─── Query params ───────────────────────────────────────────────────────────────

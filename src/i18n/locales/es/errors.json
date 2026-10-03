@@ -21,5 +21,36 @@
       "UNDETECTABLE_TYPE": "tiene un tipo de archivo no reconocido",
       "fallback": "se ha rechazado"
     }
+  },
+  "codes": {
+    "DELIVERY_FEE_PROPOSAL_NOT_FOUND": "Ese cambio de tarifa ya no existe. Recarga para ver la tarifa actual.",
+    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "Ya hay un cambio de tarifa esperando la respuesta del vendedor.",
+    "DELIVERY_FEE_PROPOSAL_NOT_PENDING": "Ese cambio de tarifa ya se respondió o se retiró. Recarga para ver su estado.",
+    "DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED": "La tarifa solo se puede cambiar antes de la recogida.",
+    "DELIVERY_FEE_PROPOSAL_AGENTS_NOT_ALLOWED": "Tu agencia no permite que los agentes propongan tarifas de entrega.",
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": "Este envío ya ha usado todos sus cambios de tarifa.",
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": "Esa ya es la tarifa.",
+    "DELIVERY_FEE_PROPOSAL_VENDOR_NET_NOT_POSITIVE": "Esa tarifa es más de lo que este pedido puede soportar.",
+    "DELIVERY_FEE_PROPOSAL_NOT_YOURS": "No puedes cambiar esa propuesta de tarifa. Recarga para ver su estado.",
+    "DELIVERY_FEE_PROPOSAL_STALE": "Este envío ha avanzado desde que se propuso el cambio de tarifa. Puedes retirarlo.",
+    "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Las ganancias del vendedor en este pedido cambiaron, así que no se pudo aplicar el cambio de tarifa. No se ha modificado nada.",
+    "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Este cambio de tarifa se editó mientras tanto. Recarga para ver el importe actual.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "Esperando a que el vendedor responda a un cambio de tarifa. La recogida está bloqueada hasta entonces.",
+    "COD_VENDOR_NOT_ACCEPTED": "Una tienda de este pedido no acepta pago contra entrega.",
+    "COD_AGENCY_LIMIT_EXCEEDED": "Esto llevaría a la agencia por encima de su límite de pago contra entrega.",
+    "CINETPAY_REQUEST_FAILED": "El proveedor de pagos no pudo procesar esto ahora. Inténtalo de nuevo en breve.",
+    "CINETPAY_UNREACHABLE": "No se puede contactar con el proveedor de pagos. Inténtalo de nuevo en breve.",
+    "FAPSHI_REQUEST_FAILED": "El proveedor de pagos no pudo procesar esto ahora. Inténtalo de nuevo en breve.",
+    "FAPSHI_UNREACHABLE": "No se puede contactar con el proveedor de pagos. Inténtalo de nuevo en breve.",
+    "SHIPMENT_REJECTION_NOT_ALLOWED": "Esta entrega ya no se puede rechazar.",
+    "CONTRACT_FEE_SPLIT_INVALID": "Ese reparto de tarifa no tiene valor para su modelo: indica un porcentaje para un reparto porcentual, una tarifa fija para uno fijo o un salario mensual para un agente asalariado."
+  },
+  "detailed": {
+    "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
+      "max": "Este envío ya ha tenido sus {{max}} cambios de tarifa; no se pueden proponer más."
+    },
+    "DELIVERY_FEE_PROPOSAL_NO_CHANGE": {
+      "currentFee": "Esa ya es la tarifa ({{fee}})."
+    }
   }
 }

@@ -19,6 +19,10 @@
     "autoAssignOn": "Auto-assignment enabled — new shipments go to your agents automatically.",
     "autoAssignOff": "Auto-assignment disabled — you'll assign new shipments yourself.",
     "autoAssignLoadError": "Couldn't load the auto-assignment setting.",
+    "agentFeeProposals": "Let my agents propose delivery fees",
+    "agentFeeProposalsHint": "When on, the agent who accepted a shipment may ask for a different delivery fee on it, before pickup. Their proposal goes straight to the vendor, who approves or rejects it — you see it on the shipment and can edit it while it's pending. You can always propose a fee yourself.",
+    "agentFeeProposalsOn": "Your agents can now propose delivery fees.",
+    "agentFeeProposalsOff": "Only you can propose delivery fees now.",
     "retry": "Retry",
     "theme": "Theme",
     "themeHint": "Choose your preferred theme",
@@ -134,7 +138,9 @@
       "streetRequired": "Street address is required.",
       "streetMax": "Max 200 characters.",
       "email": "Enter a valid email address."
-    }
+    },
+    "regionRefused": "“{{label}}” couldn't be saved: its region isn't recognised. Pick it on that address below.",
+    "regionRepairAction": "Use this region and save"
   },
   "addressSearch": {
     "placeholder": "Search a street, area, or city…",
@@ -300,6 +306,11 @@
       "aboutLabel": "About {{event}}",
       "shipmentAssigned": "New shipments",
       "shipmentAssignedDescription": "When a vendor dispatches an order to your agency.",
+      "codLimitUpdates": "COD limit alerts",
+      "codLimitUpdatesDescription": "When a vendor sends you a cash-on-delivery shipment past a limit, when auto-assign finds only agents over their COD amount, when a vendor changes its COD terms, or when Wi-Mall sets or releases your COD limit.",
+      "codLimitUpdatesCaveat": "A shipment sent past a limit, and one auto-assign couldn't place for COD reasons, arrive under this switch — not under New shipments. Turn it off and you won't be told about them.",
+      "deliveryFeeProposals": "Delivery fee changes",
+      "deliveryFeeProposalsDescription": "When a vendor approves or rejects a fee change on one of your shipments, or one of your agents proposes or edits one.",
       "connectionUpdated": "Vendor connections",
       "connectionUpdatedDescription": "Requests, approvals, rejections and reapproval prompts from vendors.",
       "contractUpdated": "Agent contracts",

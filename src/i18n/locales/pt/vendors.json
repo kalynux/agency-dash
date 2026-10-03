@@ -1,0 +1,8 @@
+{
+  "codTerms": {
+    "title": "Pagamento na entrega",
+    "accepts": "Aceita pagamento na entrega",
+    "none": "Sem pagamento na entrega",
+    "cap": "Limita a {{amount}} o dinheiro que uma agência pode reter em seu nome"
+  }
+}

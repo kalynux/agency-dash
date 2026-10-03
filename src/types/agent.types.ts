@@ -69,7 +69,13 @@ export interface AgentEmployment {
 // call. Each group is merged field-by-field server-side, so an omitted key keeps
 // its stored value.
 
-export type FeeSplitModel = 'percentage' | 'flat';
+/**
+ * `monthly_salary` (2026-10-02): the agency pays the agent a fixed salary
+ * OUTSIDE Wi-Mall, the platform pays 0 per delivery and the agency keeps the
+ * whole fee. Readers must still tolerate a value outside this union — a model
+ * added later must not crash a summary.
+ */
+export type FeeSplitModel = 'percentage' | 'flat' | 'monthly_salary';
 
 export type RemittanceCadence =
   | 'per_delivery'
@@ -91,6 +97,15 @@ export interface ContractFeeSplit {
   agentSharePercent: number | null;
   /** Required in effect when `model` is `flat`. Minor units. */
   agentFlatFee: number | null;
+  /**
+   * Required in effect when `model` is `monthly_salary`. Minor units per month,
+   * paid by the agency off-platform — never a platform earning, balance or payout.
+   *
+   * ⚠ Only the amount matching `model` is meaningful: a model-only switch keeps
+   * the other stored values, so a stale `agentSharePercent` can sit beside
+   * `monthly_salary`. Optional on the type because a pre-2026-10 response omits it.
+   */
+  agentMonthlySalary?: number | null;
   /** Always set — defaults to `XAF` server-side. */
   currency: string;
 }
@@ -718,6 +733,13 @@ export interface NegotiableTermsPayload {
     agent_share_percent?: number;
     /** Minor units. */
     agent_flat_fee?: number;
+    /**
+     * Minor units PER MONTH, integer ≥ 1 — `monthly_salary` only. Paid by the
+     * agency off-platform; the platform stores it, never pays it. Sending it
+     * non-null beside another `model` (or a share/fee beside `monthly_salary`)
+     * is a `400`, so the builders send only the amount matching the model.
+     */
+    agent_monthly_salary?: number;
     /** 3-letter code. */
     currency?: string;
   };

@@ -20,8 +20,10 @@ import { readContractTerms } from '@/types/agent.types';
 import { txStatic } from '@/i18n/tx';
 import { regionsFor, type RegionEntry } from '@/lib/regions';
 import { ApiError } from '@/types/api';
+import { formatCurrency } from '@/lib/format';
 import type {
   AgentMembership,
+  ContractFeeSplit,
   EmploymentType,
   FeeSplitModel,
   NegotiableTermsPayload,
@@ -70,6 +72,11 @@ export interface TermsForm {
   feeModel: FeeSplitModel | '';
   sharePercent: string;
   flatFee: string;
+  /**
+   * `monthly_salary` only — minor units per month, entered raw like the flat fee.
+   * The agency pays it off-platform; it is stored only so both sides see it.
+   */
+  monthlySalary: string;
   currency: string;
   cadence: RemittanceCadence | '';
   dayOfWeek: string;
@@ -91,6 +98,48 @@ export interface TermsForm {
 
 function num(value: number | null | undefined): string {
   return value == null ? '' : String(value);
+}
+
+/** The fee-split models in picker order. */
+export const FEE_SPLIT_MODELS: FeeSplitModel[] = ['percentage', 'flat', 'monthly_salary'];
+
+type FeeAmountField = 'sharePercent' | 'flatFee' | 'monthlySalary';
+
+/**
+ * The one form field that carries each model's amount. Every other model's
+ * amount is NOT sent beside it — a body naming a `model` with another model's
+ * amount non-null is a `400`.
+ */
+const AMOUNT_FIELD: Record<FeeSplitModel, FeeAmountField> = {
+  percentage: 'sharePercent',
+  flat: 'flatFee',
+  monthly_salary: 'monthlySalary',
+};
+
+function amountFieldOf(model: string): FeeAmountField | null {
+  return (AMOUNT_FIELD as Record<string, FeeAmountField | undefined>)[model] ?? null;
+}
+
+/** A model token as its label, falling back to the raw token for one we don't know. */
+export function feeModelLabel(model: string): string {
+  const key = `agents:terms.feeModels.${model}`;
+  const translated = txStatic(key);
+  return translated === key ? model : translated;
+}
+
+/**
+ * The form changes that picking `model` implies: the other models' amount
+ * inputs are cleared (they would never be sent, and a hidden value lingering
+ * there is a lie on screen), and the chosen one keeps what was typed — or,
+ * when it is the stored model, gets the stored amount back.
+ */
+export function switchFeeModel(form: TermsForm, model: FeeSplitModel, seed?: TermsForm): Partial<TermsForm> {
+  const keep = AMOUNT_FIELD[model];
+  const changes: Partial<TermsForm> = { feeModel: model };
+  for (const field of Object.values(AMOUNT_FIELD)) {
+    changes[field] = field === keep ? form[field] || seed?.[field] || '' : '';
+  }
+  return changes;
 }
 
 /**
@@ -180,8 +229,12 @@ export function seedTermsForm(membership: AgentMembership): TermsForm {
     empStart: membership.employment.startedAt?.slice(0, 10) ?? '',
     empEnd: membership.employment.endsAt?.slice(0, 10) ?? '',
     feeModel: feeSplit.model,
-    sharePercent: num(feeSplit.agentSharePercent),
-    flatFee: num(feeSplit.agentFlatFee),
+    // Only the amount matching `model` is meaningful: a model-only switch keeps
+    // the other stored values, so a stale share can sit beside `monthly_salary`.
+    // Seeding it would prefill a figure nobody agreed to under that model.
+    sharePercent: feeSplit.model === 'percentage' ? num(feeSplit.agentSharePercent) : '',
+    flatFee: feeSplit.model === 'flat' ? num(feeSplit.agentFlatFee) : '',
+    monthlySalary: feeSplit.model === 'monthly_salary' ? num(feeSplit.agentMonthlySalary) : '',
     currency: feeSplit.currency,
     cadence: remittanceTerms.cadence,
     dayOfWeek: num(remittanceTerms.dayOfWeek),
@@ -206,6 +259,7 @@ export function blankTermsForm(): TermsForm {
     feeModel: 'percentage',
     sharePercent: '',
     flatFee: '',
+    monthlySalary: '',
     currency: 'XAF',
     cadence: 'weekly',
     dayOfWeek: '',
@@ -227,17 +281,30 @@ export function buildEmploymentPayload(form: TermsForm, seed: TermsForm): Update
   return employment;
 }
 
+/** One amount input onto its snake_case body key. */
+function writeAmount(
+  feeSplit: NonNullable<NegotiableTermsPayload['fee_split']>,
+  field: FeeAmountField,
+  value: string,
+): void {
+  const n = Number(value);
+  if (field === 'sharePercent') feeSplit.agent_share_percent = n;
+  else if (field === 'flatFee') feeSplit.agent_flat_fee = n;
+  else feeSplit.agent_monthly_salary = n;
+}
+
 /** Only the negotiated groups the agency actually changed, as the endpoints expect. */
 export function buildNegotiablePayload(form: TermsForm, seed: TermsForm): NegotiableTermsPayload {
   const payload: NegotiableTermsPayload = {};
 
   const feeSplit: NonNullable<NegotiableTermsPayload['fee_split']> = {};
   if (form.feeModel && form.feeModel !== seed.feeModel) feeSplit.model = form.feeModel;
-  if (form.sharePercent !== seed.sharePercent && form.sharePercent !== '') {
-    feeSplit.agent_share_percent = Number(form.sharePercent);
-  }
-  if (form.flatFee !== seed.flatFee && form.flatFee !== '') {
-    feeSplit.agent_flat_fee = Number(form.flatFee);
+  // Only the EFFECTIVE model's amount goes out. Another model's amount beside a
+  // `model` is a `400`, and beside no model it would still be a figure for a
+  // split nobody is on.
+  const field = amountFieldOf(form.feeModel || seed.feeModel);
+  if (field && form[field] !== seed[field] && form[field] !== '') {
+    writeAmount(feeSplit, field, form[field]);
   }
   const currency = form.currency.trim().toUpperCase();
   if (currency && currency !== seed.currency.toUpperCase()) feeSplit.currency = currency;
@@ -285,11 +352,9 @@ export function buildOfferPayload(form: TermsForm): NegotiableTermsPayload {
   const feeSplit = payload.fee_split!;
 
   if (form.feeModel) feeSplit.model = form.feeModel;
-  if (form.feeModel === 'flat') {
-    if (form.flatFee !== '') feeSplit.agent_flat_fee = Number(form.flatFee);
-  } else if (form.sharePercent !== '') {
-    feeSplit.agent_share_percent = Number(form.sharePercent);
-  }
+  // A blank offer pre-selects `percentage`, so an unset model reads as that.
+  const field = amountFieldOf(form.feeModel || 'percentage');
+  if (field && form[field] !== '') writeAmount(feeSplit, field, form[field]);
   const currency = form.currency.trim().toUpperCase();
   if (currency) feeSplit.currency = currency;
 
@@ -328,10 +393,46 @@ export function feeSplitError(form: TermsForm, seed: TermsForm): string | null {
   if (model === 'flat' && !(form.flatFee || seed.flatFee)) {
     return txStatic('agents:terms.errors.flatNeedsFee');
   }
-  if (form.sharePercent !== '' && (Number(form.sharePercent) < 0 || Number(form.sharePercent) > 100)) {
+  if (model === 'monthly_salary') {
+    const salary = form.monthlySalary || seed.monthlySalary;
+    if (!salary) return txStatic('agents:terms.errors.salaryNeedsAmount');
+    // Integer ≥ 1 in minor units — a fraction or a 0 would be refused server-side.
+    if (!Number.isInteger(Number(salary)) || Number(salary) < 1) {
+      return txStatic('agents:terms.errors.salaryInvalid');
+    }
+  }
+  if (
+    model === 'percentage' &&
+    form.sharePercent !== '' &&
+    (Number(form.sharePercent) < 0 || Number(form.sharePercent) > 100)
+  ) {
     return txStatic('agents:terms.errors.shareOutOfRange');
   }
   return null;
+}
+
+/**
+ * A fee split as one line. Reads only the amount matching `model` — a stale
+ * share beside `monthly_salary` is ignored — and an unknown model falls back to
+ * its raw token rather than to some other model's figure.
+ */
+export function summarizeFeeSplit(feeSplit: ContractFeeSplit): string {
+  switch (feeSplit.model) {
+    case 'percentage':
+      return txStatic('agents:terms.summaryShare', { percent: feeSplit.agentSharePercent ?? 0 });
+    case 'flat':
+      return txStatic('agents:terms.summaryFlat', { amount: feeSplit.agentFlatFee ?? 0 });
+    case 'monthly_salary':
+      // Paid by the agency off-platform — worded so it can never read as a
+      // platform earning or payout.
+      return feeSplit.agentMonthlySalary == null
+        ? txStatic('agents:terms.summarySalaryUnset')
+        : txStatic('agents:terms.summarySalary', {
+            amount: formatCurrency(feeSplit.agentMonthlySalary, feeSplit.currency || 'XAF'),
+          });
+    default:
+      return feeSplit.model ? feeModelLabel(String(feeSplit.model)) : '';
+  }
 }
 
 /** One-line summary of a contract's agreed terms, for a collapsed section header. */
@@ -340,9 +441,7 @@ export function summarizeTerms(membership: AgentMembership): string {
     membership.employment.employmentType
       ? employmentTypeLabel(membership.employment.employmentType)
       : '',
-    membership.feeSplit.model === 'flat'
-      ? txStatic('agents:terms.summaryFlat', { amount: membership.feeSplit.agentFlatFee ?? 0 })
-      : txStatic('agents:terms.summaryShare', { percent: membership.feeSplit.agentSharePercent ?? 0 }),
+    summarizeFeeSplit(membership.feeSplit),
     cadenceLabel(membership.remittanceTerms.cadence),
   ]
     .filter(Boolean)
@@ -389,6 +488,7 @@ export function termValueText(path: string, value: unknown, country?: string | n
     return value.join(', ');
   }
   if (path === 'remittance_terms.cadence') return cadenceLabel(String(value));
+  if (path === 'fee_split.model') return feeModelLabel(String(value));
   if (typeof value === 'object') return txStatic('agents:terms.values.mapArea');
   return String(value);
 }

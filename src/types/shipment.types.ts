@@ -1,6 +1,8 @@
 // Agency Shipments — see api-doc/agency/shipments.md
 
 import type { FileRef } from '@/types/file.types';
+import type { DeliveryFeeProposal, ShipmentDeliveryFeeState } from '@/types/delivery-fee-proposal.types';
+import type { ErrorCategory } from '@/types/api';
 
 export type ShipmentStatus =
   | 'pending'
@@ -70,8 +72,16 @@ export interface ShipmentCodInfo {
   collectedAt: string | null;
 }
 
-/** How the agency's cut was derived — the bound agent's contract `fee_split` model. */
-export type AgencyEarningBasis = 'contract_percentage' | 'contract_flat';
+/**
+ * How the agency's cut was derived — the bound agent's contract `fee_split` model.
+ * `contract_salary`: the agent is paid a monthly salary outside Wi-Mall, so
+ * `agentCut` is `0` by design. An unknown value renders like the plain figures.
+ */
+export type AgencyEarningBasis =
+  | 'contract_percentage'
+  | 'contract_flat'
+  | 'contract_salary'
+  | (string & {});
 
 /**
  * Where a paid delivery's money sits now — present only once `estimated` is
@@ -188,7 +198,7 @@ export function describeAddress(address?: AddressDetail | null): string | null {
 }
 
 /** One row from GET /api/agency/shipments. */
-export interface ShipmentListItem {
+export interface ShipmentListItem extends ShipmentDeliveryFeeState {
   id: string;
   orderId: string;
   agencyId: string;
@@ -350,7 +360,7 @@ export interface ShipmentHandover {
 }
 
 /** Full detail from GET /api/agency/shipments/:id. */
-export interface ShipmentDetail {
+export interface ShipmentDetail extends ShipmentDeliveryFeeState {
   id: string;
   orderId: string;
   orderNumber: string;
@@ -379,10 +389,12 @@ export interface ShipmentDetail {
   rejection: ShipmentRejectionInfo | null;
   customerConfirmation: ShipmentCustomerConfirmation | null;
   orderTimeline: ShipmentOrderTimelineEntry[];
+  /** Every fee change on this shipment, newest first. Absent on an older server. */
+  deliveryFeeProposals?: DeliveryFeeProposal[];
 }
 
 /** Slim shipment shape returned by the status/reject/tracking-number mutations. */
-export interface ShipmentMutationResult {
+export interface ShipmentMutationResult extends ShipmentDeliveryFeeState {
   id: string;
   orderId: string;
   agencyId: string;
@@ -400,11 +412,33 @@ export interface ShipmentMutationResult {
 
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 
+/**
+ * Who sent an offer past a refusal that `force: true` waives, and when.
+ * See agency/assignment.md → "Forcing an offer".
+ */
+export interface OfferForce {
+  byUserId: string | null;
+  byRole: 'agency' | 'system' | 'admin';
+  at: string;
+}
+
+/** A Wi-Mall administrator pushed the offer past the eligibility rules. The agency cannot set it. */
+export interface OfferAdminOverride {
+  byName: string;
+  reason: string;
+  at: string;
+}
+
 export interface ShipmentOffer {
   id: string;
   status: OfferStatus;
   expiresAt?: string | null;
   pickupLocation?: HandoverPickup | null;
+  /** Set whenever the agency forced a COD shipment past the agent's cash limit. */
+  codLimitForced?: OfferForce | null;
+  /** Set only when the delivery region actually needed forcing. */
+  coverageForced?: OfferForce | null;
+  adminOverride?: OfferAdminOverride | null;
 }
 
 export interface AssignmentShipmentState {
@@ -423,6 +457,50 @@ export interface AssignmentResult {
 export interface AssignmentResponse {
   success: true;
   data: AssignmentResult;
+  message?: string;
+}
+
+// ─── Bulk offer — agency/assignment.md → POST /api/agency/shipments/assign-agent ──
+
+/** Most shipments one bulk offer may carry; more is a `400`. */
+export const BULK_ASSIGN_MAX = 10;
+
+/** Body of the bulk offer. `force` applies to every shipment in it. */
+export interface BulkAssignPayload {
+  agentId: string;
+  /** 1–{@link BULK_ASSIGN_MAX} ids, no duplicates. */
+  shipmentIds: string[];
+  force?: boolean;
+}
+
+/** A refused row — the same shape as the error envelope, so the code → copy mapping is reused. */
+export interface BulkAssignItemError {
+  code: string;
+  message: string;
+  statusCode: number;
+  category?: ErrorCategory;
+  details?: unknown;
+}
+
+export type BulkAssignItem =
+  | ({ shipmentId: string; ok: true } & AssignmentResult)
+  | { shipmentId: string; ok: false; error: BulkAssignItemError };
+
+/** `200` even when rows fail: one item per id sent, in the order sent. */
+export interface BulkAssignResult {
+  batchId: string;
+  agentId: string;
+  requested: number;
+  offered: number;
+  /** A count here, unlike the per-item boolean. */
+  autoAccepted: number;
+  failed: number;
+  items: BulkAssignItem[];
+}
+
+export interface BulkAssignResponse {
+  success: true;
+  data: BulkAssignResult;
   message?: string;
 }
 
@@ -479,6 +557,17 @@ export interface ReassignPayload {
   agentId?: string;
   reason: string;
   pickupLocation?: ReassignPickupOverride;
+  /** Only meaningful with a named `agentId`; see {@link AssignAgentOptions.force}. */
+  force?: boolean;
+}
+
+export interface AssignAgentOptions {
+  /**
+   * Waives exactly `CONTRACT_COVERAGE_REGION_NOT_COVERED` and
+   * `COD_AGENT_EXPOSURE_EXCEEDED` — both at once, it is one flag. Never the
+   * contract, value-ceiling, KYC, trust or eligibility refusals.
+   */
+  force?: boolean;
 }
 
 export interface ReassignResult {
@@ -493,16 +582,6 @@ export interface ReassignResult {
 export interface ReassignResponse {
   success: true;
   data: ReassignResult;
-  message?: string;
-}
-
-export interface AssignmentSettings {
-  autoAssignEnabled: boolean;
-}
-
-export interface AssignmentSettingsResponse {
-  success: true;
-  data: AssignmentSettings;
   message?: string;
 }
 

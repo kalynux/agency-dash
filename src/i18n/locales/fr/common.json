@@ -251,5 +251,12 @@
     "deleted": "Supprimé",
     "copiedToClipboard": "Copié dans le presse-papiers",
     "copyFailed": "Impossible de copier dans le presse-papiers"
+  },
+  "addressRegion": {
+    "title": "Cette adresse n'indique pas de région reconnue.",
+    "titleWithPlace": "« {{place}} » n'est pas une région de votre pays.",
+    "explainer": "Choisissez la région où se trouve cette adresse. Elle est enregistrée avec l'adresse, et toute la liste est renvoyée.",
+    "pickLabel": "Région",
+    "pickPlaceholder": "Choisir la région…"
   }
 }

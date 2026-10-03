@@ -153,7 +153,7 @@ export const useAuth = () => useContext(LegacyAuthContext);
 // Overview with no explanation — not a 404, a silent wrong page, which is worse,
 // and `replace` destroyed the URL so nothing downstream could recover it.
 //
-// It cannot loop: `resolveDeepLink` only ever returns one of eight routes that
+// It cannot loop: `resolveDeepLink` only ever returns one of nine routes that
 // all match a real `<Route>` above, and an unrecognised path falls back to the
 // index rather than to another translation.
 

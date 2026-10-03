@@ -126,5 +126,11 @@
       "limited": "Limited"
     },
     "languages": "Languages"
+  },
+  "codTerms": {
+    "title": "Cash on delivery",
+    "accepts": "Accepts cash on delivery",
+    "none": "No cash on delivery",
+    "cap": "Caps the cash one agency may hold for them at {{amount}}"
   }
 }

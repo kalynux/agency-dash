@@ -73,7 +73,7 @@
     "short": "Refuser",
     "title": "Refuser l'expédition",
     "titleWithOrder": "Refuser l'expédition · {{orderNumber}}",
-    "description": "Déclinez cette affectation avant l'enlèvement. Le vendeur est prévenu avec votre motif afin de la rediriger vers une autre agence.",
+    "description": "Refusez cette livraison avant le ramassage. Si un agent l'a acceptée, il est libéré, et une modification de frais en attente du vendeur est retirée. Le vendeur est informé de votre motif afin de la confier à une autre agence.",
     "reason": "Motif",
     "reasonPlaceholder": "Choisir un motif…",
     "message": "Message",
@@ -156,6 +156,20 @@
     "submit": "Réaffecter",
     "success": "Expédition libérée et proposée au remplaçant."
   },
+  "coverageForce": {
+    "title": "Cette livraison est hors des régions du contrat de {{name}}.",
+    "deliveryRegion": "Région de livraison",
+    "coveredRegions": "Le contrat couvre",
+    "unknownRegion": "Non précisée",
+    "explainer": "Vous pouvez quand même la lui envoyer. L'offre sera signalée comme hors de ses régions, et il pourra l'accepter ou la refuser comme d'habitude.",
+    "codNote": "Il s'agit d'une expédition contre remboursement : l'envoyer quand même lève aussi le plafond d'espèces de ce livreur.",
+    "sendAnyway": "Envoyer quand même"
+  },
+  "offerFlags": {
+    "coverageForced": "Hors des régions du livreur",
+    "adminOverride": "Affecté par un administrateur Wi-Mall : {{reason}}",
+    "codLimitForced": "Envoyée au-delà de la limite COD de l'agent"
+  },
   "money": {
     "cashToCollect": "Espèces à encaisser",
     "codSnapshotHint": "Les espèces que le livreur encaisse auprès du client à la remise.",
@@ -188,7 +202,8 @@
     "unavailable": {
       "no_agent": "Votre net ne peut être chiffré tant qu'aucun livreur n'a accepté — sa part contractuelle est prélevée sur les frais de livraison, donc tout montant affiché maintenant baisserait dès que quelqu'un prend la course.",
       "no_agency_policy": "Votre tarification de livraison n'est pas configurée : il n'y a donc aucun frais à répartir."
-    }
+    },
+    "agentSalaried": "Agent salarié"
   },
   "detail": {
     "srTitle": "Détail de l'expédition",
@@ -281,6 +296,99 @@
       "emptyFiltered": "Aucune évaluation avec ce statut",
       "emptyFilteredBody": "Effacez le filtre pour voir toutes les évaluations que vous avez écrites.",
       "clearFilter": "Effacer le filtre"
+    }
+  },
+  "codLimitForce": {
+    "title": "Cette expédition ferait dépasser à {{name}} sa limite de paiement à la livraison.",
+    "currentExposure": "Espèces qu'il détient",
+    "additionalAmount": "Cette expédition",
+    "effectiveLimit": "Sa limite",
+    "sliceBinds": "C'est la limite de votre contrat avec lui qui bloque.",
+    "poolBinds": "C'est sa propre réserve COD qui bloque — elle est inférieure à la limite de votre contrat.",
+    "explainer": "Vous pouvez quand même l'assigner. L'offre sera marquée comme envoyée au-delà de sa limite, et il détiendra plus d'espèces que la limite ne le permet jusqu'à son dépôt.",
+    "assignAnyway": "Assigner quand même"
+  },
+  "bulkAssign": {
+    "selectRow": "Sélectionner {{order}}",
+    "selectPage": "Sélectionner les expéditions de cette page qui peuvent être proposées",
+    "selected": "Sélection : {{count}} sur {{max}}",
+    "limitReached": "C'est le maximum : {{max}} expéditions par lot.",
+    "clear": "Effacer",
+    "action": "Proposer à un livreur",
+    "title": "Proposer des expéditions à un livreur",
+    "description": "Chaque expédition devient sa propre offre au livreur choisi, vérifiée exactement comme si vous la proposiez seule. Le livreur reçoit une seule notification pour tout le lot.",
+    "agentLabel": "Livreur",
+    "shipmentsLabel": "Expéditions",
+    "remove": "Retirer {{order}}",
+    "submit_one": "Proposer {{count}} expédition",
+    "submit_other": "Proposer {{count}} expéditions",
+    "atCapacity": "Places libres pour {{name}} : {{free}}. Expéditions qui pouvaient être proposées : {{requested}}. Rien n'a été proposé. Retirez-en {{excess}}, puis renvoyez.",
+    "atCapacityNone": "{{name}} n'a aucune place libre pour le moment. Rien n'a été proposé.",
+    "keepFirst": "Ne garder que les {{count}} premières",
+    "summary": "Proposées : {{offered}} sur {{requested}} · Échecs : {{failed}}",
+    "summaryAutoAccepted": "Acceptées sur-le-champ : {{count}}",
+    "rowOffered": "Offre envoyée",
+    "rowAutoAccepted": "Acceptée par le livreur",
+    "rowFailed": "Non proposée",
+    "forceTitle_one": "{{count}} expédition a été refusée uniquement pour le plafond d'espèces ou les régions du contrat de ce livreur.",
+    "forceTitle_other": "{{count}} expéditions ont été refusées uniquement pour le plafond d'espèces ou les régions du contrat de ce livreur.",
+    "forceExplainer": "Vous pouvez envoyer celles-là quand même. Chaque offre sera marquée comme forcée, et le livreur pourra l'accepter ou la refuser comme d'habitude. Les expéditions déjà proposées ne sont pas renvoyées.",
+    "forceConfirm_one": "L'envoyer quand même",
+    "forceConfirm_other": "Envoyer ces {{count}} quand même",
+    "done": "Terminé"
+  },
+  "deliveryFee": {
+    "title": "Frais de livraison",
+    "propose": "Proposer d’autres frais",
+    "proposeAgain": "Proposer à nouveau",
+    "proposeTitle": "Proposer d’autres frais de livraison",
+    "editTitle": "Modifier la proposition de frais",
+    "dialogDescription": "Pour cette expédition uniquement. Le vendeur doit approuver. Le ramassage est bloqué jusqu’à sa réponse.",
+    "currentFee": "Frais actuels : {{amount}}",
+    "proposedFee": "Nouveaux frais ({{currency}})",
+    "reason": "Motif",
+    "reasonPlaceholder": "Pourquoi ce colis nécessite-t-il d’autres frais ? Le vendeur le verra.",
+    "send": "Envoyer au vendeur",
+    "saveEdit": "Enregistrer",
+    "edit": "Modifier",
+    "withdraw": "Retirer",
+    "proposed": "Modification de frais envoyée au vendeur.",
+    "edited": "Modification de frais mise à jour.",
+    "withdrawn": "Modification de frais retirée.",
+    "pickupBlocked": "En attente de la réponse du vendeur à une modification de frais — le ramassage est bloqué d’ici là.",
+    "pickupBlockedShort": "frais en attente",
+    "pendingChip": "Frais en attente",
+    "agreedOn": "Convenus avec le vendeur le {{date}}",
+    "afterRejection": "Le vendeur a refusé les nouveaux frais. Proposez une dernière fois, ou refusez la livraison pour qu’il choisisse une autre agence.",
+    "afterRejectionHandover": "Le vendeur a refusé les nouveaux frais. Pendant une passation, la livraison ne peut plus être refusée : proposez une dernière fois, ou assurez-la aux frais d’origine.",
+    "decline": "Refuser la livraison",
+    "by": {
+      "agency": "Vous",
+      "agent": "Votre agent",
+      "vendor": "Le vendeur",
+      "system": "Wi-Mall"
+    },
+    "proposedBy": "Proposé par {{who}} · {{date}}",
+    "agencyEdited": "modifié par vous",
+    "editEntry": "{{who}} l’a modifié le {{date}} : {{before}} → {{after}}",
+    "rejectionNote": "Note du vendeur : {{note}}",
+    "withdrawnDeclined": "Retirée quand vous avez refusé la livraison",
+    "withdrawnAgentLeft": "Retirée — l’agent a quitté la course",
+    "withdrawnBy": "Retirée par {{who}}",
+    "status": {
+      "pending": "En attente du vendeur",
+      "approved": "Approuvée",
+      "rejected": "Refusée",
+      "withdrawn": "Retirée",
+      "unknown": "Statut inconnu"
+    },
+    "validation": {
+      "number": "Saisissez un montant.",
+      "integer": "Saisissez un montant entier.",
+      "min": "Les frais ne peuvent pas être négatifs.",
+      "sameAsCurrent": "Ce sont déjà les frais actuels.",
+      "reasonMin": "Indiquez un motif d’au moins {{min}} caractères.",
+      "reasonMax": "Le motif doit faire moins de {{max}} caractères."
     }
   }
 }
