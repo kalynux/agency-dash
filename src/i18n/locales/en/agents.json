@@ -428,7 +428,22 @@
       "approvedAt": "Contract started",
       "suspendedAt": "Suspended",
       "updatedAt": "Last updated",
-      "suspensionReason": "Suspension reason"
+      "suspensionReason": "Suspension reason",
+      "handover": "Cash hand-over",
+      "worksIn": "Works in",
+      "cash": "Cash on delivery",
+      "timeline": "Timeline",
+      "primaryAgency": "Primary agency",
+      "proposedBy": "Terms on the table from",
+      "you": "Your agency",
+      "rejectedAt": "Declined",
+      "withdrawnAt": "Withdrawn",
+      "removedAt": "Ended"
+    },
+    "tabs": {
+      "contract": "Contract",
+      "agent": "Agent",
+      "activity": "Activity"
     }
   },
   "_historyEventsComment": "Membership-log event types. Append-only server-side, so an unrecognised token falls back to its humanized form.",

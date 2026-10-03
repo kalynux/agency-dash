@@ -426,7 +426,22 @@
       "approvedAt": "Début du contrat",
       "suspendedAt": "Suspendu le",
       "updatedAt": "Dernière mise à jour",
-      "suspensionReason": "Motif de suspension"
+      "suspensionReason": "Motif de suspension",
+      "handover": "Remise des espèces",
+      "worksIn": "Zone d'activité",
+      "cash": "Paiement à la livraison",
+      "timeline": "Chronologie",
+      "primaryAgency": "Agence principale",
+      "proposedBy": "Conditions proposées par",
+      "you": "Votre agence",
+      "rejectedAt": "Refusé",
+      "withdrawnAt": "Retiré",
+      "removedAt": "Terminé"
+    },
+    "tabs": {
+      "contract": "Contrat",
+      "agent": "Agent",
+      "activity": "Activité"
     }
   },
   "historyEvents": {

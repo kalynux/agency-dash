@@ -4,14 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveModal } from '@/components/common/ResponsiveModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,64 +127,76 @@ export function DeliveryFeeProposalDialog({
     }
   };
 
+  const formId = `fee-proposal-${shipmentId}`;
+
+  // A centered dialog on desktop, a bottom sheet on a phone. The actions live
+  // in the modal's pinned footer, outside the <form>, so the submit button is
+  // tied back to it with `form=`.
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <DialogHeader>
-            <DialogTitle>{isEdit ? t('deliveryFee.editTitle') : t('deliveryFee.proposeTitle')}</DialogTitle>
-            <DialogDescription>{t('deliveryFee.dialogDescription')}</DialogDescription>
-          </DialogHeader>
+    <ResponsiveModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? t('deliveryFee.editTitle') : t('deliveryFee.proposeTitle')}
+      description={t('deliveryFee.dialogDescription')}
+      desktopClassName="sm:max-w-md"
+      mobileClassName="h-auto max-h-[92dvh]"
+      disableClose={isPending}
+      footer={
+        <>
+          <Button type="button" variant="outline" className="max-md:w-full" onClick={close} disabled={isPending}>
+            {t('common:actions.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            className="max-md:w-full"
+            disabled={isPending || (isEdit && !isDirty)}
+          >
+            {isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isEdit ? (
+              t('deliveryFee.saveEdit')
+            ) : (
+              t('deliveryFee.send')
+            )}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {currentFee !== null && (
+          <p className="text-sm text-muted-foreground">
+            {t('deliveryFee.currentFee', { amount: formatCurrency(currentFee, currency) })}
+          </p>
+        )}
 
-          {currentFee !== null && (
-            <p className="text-sm text-muted-foreground">
-              {t('deliveryFee.currentFee', { amount: formatCurrency(currentFee, currency) })}
-            </p>
-          )}
+        <div className="space-y-1.5">
+          <Label htmlFor="fee-proposed">{t('deliveryFee.proposedFee', { currency })}</Label>
+          <Input
+            id="fee-proposed"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            {...register('proposedFee', { valueAsNumber: true })}
+            aria-invalid={!!errors.proposedFee}
+          />
+          {errors.proposedFee && <p className="text-xs text-destructive">{errors.proposedFee.message}</p>}
+        </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="fee-proposed">{t('deliveryFee.proposedFee', { currency })}</Label>
-            <Input
-              id="fee-proposed"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step={1}
-              {...register('proposedFee', { valueAsNumber: true })}
-              aria-invalid={!!errors.proposedFee}
-            />
-            {errors.proposedFee && <p className="text-xs text-destructive">{errors.proposedFee.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="fee-reason">{t('deliveryFee.reason')}</Label>
-            <Textarea
-              id="fee-reason"
-              rows={3}
-              maxLength={REASON_MAX}
-              placeholder={t('deliveryFee.reasonPlaceholder')}
-              {...register('reason')}
-              aria-invalid={!!errors.reason}
-            />
-            {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={close} disabled={isPending}>
-              {t('common:actions.cancel')}
-            </Button>
-            <Button type="submit" disabled={isPending || (isEdit && !isDirty)}>
-              {isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isEdit ? (
-                t('deliveryFee.saveEdit')
-              ) : (
-                t('deliveryFee.send')
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-1.5">
+          <Label htmlFor="fee-reason">{t('deliveryFee.reason')}</Label>
+          <Textarea
+            id="fee-reason"
+            rows={3}
+            maxLength={REASON_MAX}
+            placeholder={t('deliveryFee.reasonPlaceholder')}
+            {...register('reason')}
+            aria-invalid={!!errors.reason}
+          />
+          {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
+        </div>
+      </form>
+    </ResponsiveModal>
   );
 }

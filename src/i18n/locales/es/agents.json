@@ -49,7 +49,22 @@
       "approvedAt": "Inicio del contrato",
       "suspendedAt": "Suspendido",
       "updatedAt": "Última actualización",
-      "suspensionReason": "Motivo de la suspensión"
+      "suspensionReason": "Motivo de la suspensión",
+      "handover": "Entrega del efectivo",
+      "worksIn": "Zona de trabajo",
+      "cash": "Pago contra entrega",
+      "timeline": "Cronología",
+      "primaryAgency": "Agencia principal",
+      "proposedBy": "Condiciones propuestas por",
+      "you": "Tu agencia",
+      "rejectedAt": "Rechazado",
+      "withdrawnAt": "Retirado",
+      "removedAt": "Finalizado"
+    },
+    "tabs": {
+      "contract": "Contrato",
+      "agent": "Agente",
+      "activity": "Actividad"
     }
   }
 }

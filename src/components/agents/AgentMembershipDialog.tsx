@@ -1,11 +1,13 @@
 import { formatNumber, formatDate as fmtDate } from '@/lib/format';
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
+  Activity,
   Banknote,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  FileText,
   History,
   Loader2,
   Mail,
@@ -35,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   DropdownMenu,
@@ -49,7 +52,6 @@ import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
 import { ContractTermsFields, FieldGroup } from '@/components/agents/ContractTermsFields';
 import { ContractOverview } from '@/components/agents/ContractOverview';
-import { InfoHint } from '@/components/common/InfoHint';
 import {
   buildEmploymentPayload,
   buildNegotiablePayload,
@@ -141,6 +143,8 @@ function contractEnding(
       return null;
   }
 }
+
+type MembershipTab = 'contract' | 'agent' | 'activity';
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
 
@@ -378,6 +382,16 @@ function MembershipBody({
    */
   const [termsOpen, setTermsOpen] = useState(() => contractOffer(membership) === 'needs-terms');
 
+  /**
+   * The sheet is three pages, not one scroll: the contract (what was agreed,
+   * and changing it), the agent (who they are, whether they can take work),
+   * and the activity on the contract (negotiation, cash, history). Mixing them
+   * buried the terms between a contact grid and five collapsibles.
+   */
+  const [tab, setTab] = useState<MembershipTab>('contract');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
   // Lazy eligibility / history / settlements
   const [eligibility, setEligibility] = useState<AgentEligibility | null>(null);
   const [eligLoading, setEligLoading] = useState(false);
@@ -586,6 +600,25 @@ function MembershipBody({
     }
   };
 
+  const changeTab = (next: MembershipTab) => {
+    setTab(next);
+    scrollRef.current?.scrollTo({ top: 0 });
+    // The agent page is mostly "can they take work?", so answer it on arrival
+    // instead of behind one more click.
+    if (next === 'agent') void loadEligibility();
+  };
+
+  /**
+   * Counter / Propose terms, from the footer menu or the proposal panel: the
+   * editor lives on the contract page, possibly below the fold, so bring it
+   * into view rather than opening it somewhere the reader can't see.
+   */
+  const openEditor = () => {
+    setTab('contract');
+    setTermsOpen(true);
+    window.setTimeout(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
   /** Put every editor back to what the server holds. */
   const discardEdits = () => {
     setTerms(termsSeed);
@@ -637,7 +670,7 @@ function MembershipBody({
       key: 'counter',
       label: t('membership.footer.counter'),
       icon: ClipboardList,
-      onSelect: () => setTermsOpen(true),
+      onSelect: openEditor,
     });
   }
   if (offer === 'ours-to-answer' || offer === 'needs-terms') {
@@ -741,7 +774,27 @@ function MembershipBody({
           so it can never scroll on a touch screen. `min-h-0` lets this flex
           child shrink below its content; `overscroll-contain` stops a phone
           flick from scrolling the roster behind the sheet. */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => changeTab(v as MembershipTab)}
+        className="min-h-0 flex-1 gap-0"
+      >
+      {/* Pinned under the header, so switching page never means scrolling
+          back up to find the switch. */}
+      <div className="flex-shrink-0 border-b px-4 py-2 sm:px-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="contract">
+            <FileText /> {t('membership.tabs.contract')}
+          </TabsTrigger>
+          <TabsTrigger value="agent">
+            <User /> {t('membership.tabs.agent')}
+          </TabsTrigger>
+          <TabsTrigger value="activity">
+            <Activity /> {t('membership.tabs.activity')}
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-4 px-4 py-5 sm:px-6">
           {/* A pending two-party change comes first: it is the one thing here
               that is waiting on somebody, and burying it under the terms would
@@ -795,7 +848,7 @@ function MembershipBody({
               }
               // Countering is the terms editor with their figures answered, so
               // it opens the section below rather than being its own form.
-              onCounter={() => setTermsOpen(true)}
+              onCounter={openEditor}
             />
           )}
 
@@ -818,166 +871,27 @@ function MembershipBody({
             </div>
           )}
 
+          <TabsContent value="contract" className="mt-0 space-y-4">
           {/* What was agreed — every term and stamp, in words. The editor
               further down is for changing them; this is for reading them. */}
           <div className="space-y-2">
             <h2 className="text-sm font-semibold">
               {offer === 'settled' ? t('membership.terms.title') : t('membership.terms.titleOnTable')}
             </h2>
-            <ContractOverview membership={membership} country={country} />
-          </div>
-
-          {/* At a glance — contact, vehicle, standing. Email takes the full row
-              on a phone; an address does not survive a 160px column. */}
-          <h2 className="pt-1 text-sm font-semibold">{t('membership.overview.agent')}</h2>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
-            <InfoTile
-              className="col-span-2 sm:col-span-1"
-              icon={Mail}
-              label={t('membership.tiles.email')}
-              value={agent.email ?? t('common:values.notAvailable')}
+            <ContractOverview
+              membership={membership}
+              country={country}
+              agentName={agent.name}
+              agentVerified={agent.verified}
+              cashHeld={cashHeld}
             />
-            <InfoTile
-              icon={Phone}
-              label={t('membership.tiles.phone')}
-              value={agent.phone ?? t('common:values.notAvailable')}
-            />
-            <InfoTile
-              icon={VehicleIcon}
-              label={t('membership.tiles.vehicle')}
-              value={
-                agent.vehicleInfo ? (
-                  <span className="flex flex-col gap-0.5">
-                    <span className="flex items-center gap-1.5">
-                      {formatVehicleType(agent.vehicleInfo.vehicle_type)}
-                      {agent.vehicleInfo.color && (
-                        <>
-                          {/* A swatch only when the token is one we can actually
-                              draw — never a guessed hex. */}
-                          {vehicleColorSwatch(agent.vehicleInfo.color) && (
-                            <span
-                              aria-hidden
-                              className="h-3 w-3 flex-shrink-0 rounded-full border"
-                              style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo.color)! }}
-                            />
-                          )}
-                          <span className="font-normal text-muted-foreground">
-                            {formatVehicleColor(agent.vehicleInfo.color)}
-                          </span>
-                        </>
-                      )}
-                    </span>
-                    {/* The field an agency actually reads off a vehicle in a car
-                        park — typed since forever, never rendered until now. */}
-                    {agent.vehicleInfo.plate_number && (
-                      <span className="font-mono text-xs font-normal text-muted-foreground">
-                        {agent.vehicleInfo.plate_number}
-                      </span>
-                    )}
-                  </span>
-                ) : (
-                  t('common:values.notAvailable')
-                )
-              }
-            />
-            {/* Only the DETAIL endpoint resolves this; the roster list omits the
-                key entirely, so its absence is normal rather than an error. */}
-            {/* `photo.url` is nullable — a file in an authorized storage tree
-                has no public URL. A vehicle photo is a general-intake upload
-                and so always public, but there is nothing to render without a
-                URL, so the tile is dropped rather than shown broken. */}
-            {agent.vehicleInfo?.photo?.url && (
-              <div className="col-span-2 bg-card px-3 py-2.5 sm:col-span-1">
-                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  <VehicleIcon className="h-3 w-3" /> {t('membership.tiles.vehiclePhoto')}
-                </p>
-                <img
-                  src={agent.vehicleInfo.photo.url}
-                  alt={t('membership.tiles.vehiclePhotoAlt')}
-                  className="h-24 w-full rounded-lg border object-cover"
-                />
-              </div>
-            )}
-            <InfoTile
-              icon={Star}
-              label={t('membership.tiles.trustScore')}
-              value={
-                <span className="flex items-center gap-1">
-                  {agent.trustScore}
-                  <span className="font-normal text-muted-foreground">
-                    {t('membership.tiles.trustOutOf')}
-                  </span>
-                </span>
-              }
-            />
-            <InfoTile
-              icon={Package}
-              label={t('membership.tiles.activeJobs')}
-              value={
-                <AgentWorkload
-                  active={agent.activeShipmentCount}
-                  forYou={agent.activeShipmentsForYou}
-                />
-              }
-            />
-            <InfoTile
-              icon={Signal}
-              label={t('membership.tiles.availability')}
-              value={tokenLabel('agents:availability', String(agent.availability))}
-            />
-          </div>
-
-          {/* Cash + COD threshold */}
-          <div className="rounded-xl border bg-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  <Banknote className="h-3 w-3" /> {t('membership.cod.held')}
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(cashHeld)}</p>
-              </div>
-              <div className="text-end">
-                <p className="flex items-center justify-end gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('membership.cod.cap')}
-                  <InfoHint title={t('membership.cod.cap')}>{t('membership.cod.hint')}</InfoHint>
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {membership.codThreshold > 0 ? (
-                    formatNumber(membership.codThreshold)
-                  ) : (
-                    <span className="text-base font-normal text-muted-foreground">
-                      {t('membership.cod.noCod')}
-                    </span>
-                  )}
-                </p>
-                {/* Since 2026-09-27 a limit on an unverified agent is accepted
-                    but DORMANT: every COD shipment to them is refused with
-                    AGENT_KYC_NOT_VERIFIED until an administrator verifies them.
-                    Strict `false` — an absent flag is no claim either way. */}
-                {membership.codThreshold > 0 && agent.verified === false && (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                    {t('membership.cod.dormantUnverified')}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* `0` is not "uncapped": it grants no COD at all, and it is where
-                every contract starts. The assignment candidates list and
-                auto-assign drop such an agent from COD runs without saying why,
-                so this sheet is the one place that can say it. */}
-            {editable && membership.codThreshold === 0 && (
-              <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-                {t('membership.cod.zeroWarning')}
-              </p>
-            )}
-
           </div>
 
           {/* The editor — employment, COD limit, fee split, remittance, value
               ceiling. Closed by default; the overview above is the reading
               view. Terminal contracts have nothing left to change. */}
           {editable && (
+          <div ref={editorRef} className="scroll-mt-4">
           <Section
             icon={ClipboardList}
             title={t('membership.terms.editTitle')}
@@ -1084,8 +998,169 @@ function MembershipBody({
               )}
             </div>
           </Section>
+          </div>
           )}
+          </TabsContent>
 
+          <TabsContent value="agent" className="mt-0 space-y-4">
+          {/* At a glance — contact, vehicle, standing. Email takes the full row
+              on a phone; an address does not survive a 160px column. */}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
+            <InfoTile
+              className="col-span-2 sm:col-span-1"
+              icon={Mail}
+              label={t('membership.tiles.email')}
+              value={agent.email ?? t('common:values.notAvailable')}
+            />
+            <InfoTile
+              icon={Phone}
+              label={t('membership.tiles.phone')}
+              value={agent.phone ?? t('common:values.notAvailable')}
+            />
+            <InfoTile
+              icon={VehicleIcon}
+              label={t('membership.tiles.vehicle')}
+              value={
+                agent.vehicleInfo ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      {formatVehicleType(agent.vehicleInfo.vehicle_type)}
+                      {agent.vehicleInfo.color && (
+                        <>
+                          {/* A swatch only when the token is one we can actually
+                              draw — never a guessed hex. */}
+                          {vehicleColorSwatch(agent.vehicleInfo.color) && (
+                            <span
+                              aria-hidden
+                              className="h-3 w-3 flex-shrink-0 rounded-full border"
+                              style={{ backgroundColor: vehicleColorSwatch(agent.vehicleInfo.color)! }}
+                            />
+                          )}
+                          <span className="font-normal text-muted-foreground">
+                            {formatVehicleColor(agent.vehicleInfo.color)}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                    {/* The field an agency actually reads off a vehicle in a car
+                        park — typed since forever, never rendered until now. */}
+                    {agent.vehicleInfo.plate_number && (
+                      <span className="font-mono text-xs font-normal text-muted-foreground">
+                        {agent.vehicleInfo.plate_number}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  t('common:values.notAvailable')
+                )
+              }
+            />
+            {/* Only the DETAIL endpoint resolves this; the roster list omits the
+                key entirely, so its absence is normal rather than an error. */}
+            {/* `photo.url` is nullable — a file in an authorized storage tree
+                has no public URL. A vehicle photo is a general-intake upload
+                and so always public, but there is nothing to render without a
+                URL, so the tile is dropped rather than shown broken. */}
+            {agent.vehicleInfo?.photo?.url && (
+              <div className="col-span-2 bg-card px-3 py-2.5 sm:col-span-1">
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <VehicleIcon className="h-3 w-3" /> {t('membership.tiles.vehiclePhoto')}
+                </p>
+                <img
+                  src={agent.vehicleInfo.photo.url}
+                  alt={t('membership.tiles.vehiclePhotoAlt')}
+                  className="h-24 w-full rounded-lg border object-cover"
+                />
+              </div>
+            )}
+            <InfoTile
+              icon={Star}
+              label={t('membership.tiles.trustScore')}
+              value={
+                <span className="flex items-center gap-1">
+                  {agent.trustScore}
+                  <span className="font-normal text-muted-foreground">
+                    {t('membership.tiles.trustOutOf')}
+                  </span>
+                </span>
+              }
+            />
+            <InfoTile
+              icon={Package}
+              label={t('membership.tiles.activeJobs')}
+              value={
+                <AgentWorkload
+                  active={agent.activeShipmentCount}
+                  forYou={agent.activeShipmentsForYou}
+                />
+              }
+            />
+            <InfoTile
+              icon={Signal}
+              label={t('membership.tiles.availability')}
+              value={tokenLabel('agents:availability', String(agent.availability))}
+            />
+          </div>
+
+
+          {/* Eligibility — loaded when this tab opens. */}
+          <section className="rounded-xl border bg-card p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              {t('membership.eligibility.title')}
+            </h3>
+            {eligLoading ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('membership.eligibility.checking')}
+              </p>
+            ) : eligibility ? (
+              <div className="space-y-2">
+                <p className="flex flex-wrap items-center gap-1.5 text-sm">
+                  {eligibility.eligible ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />{' '}
+                      {t('membership.eligibility.eligible')}
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 text-destructive" />{' '}
+                      {t('membership.eligibility.notEligible')}
+                    </>
+                  )}
+                  <span className="text-muted-foreground">
+                    {t('membership.eligibility.capacity', {
+                      active: eligibility.activeShipmentCount,
+                      max: eligibility.maxConcurrentShipments,
+                    })}
+                  </span>
+                </p>
+                <div className="space-y-1">
+                  {eligibility.rules.map((rule) => (
+                    <div key={rule.rule} className="flex items-center gap-1.5 text-xs">
+                      {rule.passed ? (
+                        <CheckCircle2 className="h-3 w-3 flex-shrink-0 text-green-500" />
+                      ) : (
+                        <XCircle className="h-3 w-3 flex-shrink-0 text-destructive" />
+                      )}
+                      <span className={rule.passed ? 'text-muted-foreground' : 'text-destructive'}>
+                        {rule.reason
+                          ? t('membership.eligibility.ruleWithReason', {
+                              rule: tokenLabel('agents:membership.eligibility.rules', rule.rule),
+                              reason: tokenLabel('agents:membership.eligibility.reasons', rule.reason),
+                            })
+                          : tokenLabel('agents:membership.eligibility.rules', rule.rule)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('membership.eligibility.loadFailed')}</p>
+            )}
+          </section>
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-0 space-y-4">
           {/* The negotiation trail — every proposal ever raised on this
               contract, not only the open one. Resolved rows carry the terms
               that were actually on the table when they were raised, which is
@@ -1225,63 +1300,6 @@ function MembershipBody({
             )}
           </Section>
 
-          {/* Eligibility */}
-          <Section
-            icon={ShieldCheck}
-            title={t('membership.eligibility.title')}
-            summary={t('membership.eligibility.summary')}
-            onOpen={loadEligibility}
-          >
-            {eligLoading ? (
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('membership.eligibility.checking')}
-              </p>
-            ) : eligibility ? (
-              <div className="space-y-2">
-                <p className="flex flex-wrap items-center gap-1.5 text-sm">
-                  {eligibility.eligible ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />{' '}
-                      {t('membership.eligibility.eligible')}
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 text-destructive" />{' '}
-                      {t('membership.eligibility.notEligible')}
-                    </>
-                  )}
-                  <span className="text-muted-foreground">
-                    {t('membership.eligibility.capacity', {
-                      active: eligibility.activeShipmentCount,
-                      max: eligibility.maxConcurrentShipments,
-                    })}
-                  </span>
-                </p>
-                <div className="space-y-1">
-                  {eligibility.rules.map((rule) => (
-                    <div key={rule.rule} className="flex items-center gap-1.5 text-xs">
-                      {rule.passed ? (
-                        <CheckCircle2 className="h-3 w-3 flex-shrink-0 text-green-500" />
-                      ) : (
-                        <XCircle className="h-3 w-3 flex-shrink-0 text-destructive" />
-                      )}
-                      <span className={rule.passed ? 'text-muted-foreground' : 'text-destructive'}>
-                        {rule.reason
-                          ? t('membership.eligibility.ruleWithReason', {
-                              rule: tokenLabel('agents:membership.eligibility.rules', rule.rule),
-                              reason: tokenLabel('agents:membership.eligibility.reasons', rule.reason),
-                            })
-                          : tokenLabel('agents:membership.eligibility.rules', rule.rule)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('membership.eligibility.loadFailed')}</p>
-            )}
-          </Section>
-
           {/* History */}
           <Section
             icon={History}
@@ -1305,8 +1323,10 @@ function MembershipBody({
               <p className="text-sm text-muted-foreground">{t('membership.history.empty')}</p>
             )}
           </Section>
+          </TabsContent>
         </div>
       </div>
+      </Tabs>
 
       {/* Action footer. The reason box lives here too, so confirming never
           depends on finding a panel buried at the bottom of the scroller. */}
@@ -1458,7 +1478,7 @@ function MembershipBody({
                           approving here is 422 CONTRACT_TERMS_NOT_PROPOSED. Not a
                           fault with the agent: the first offer is ours to make. */}
                       {offer === 'needs-terms' && (
-                        <Button size="sm" onClick={() => setTermsOpen(true)}>
+                        <Button size="sm" onClick={openEditor}>
                           {t('membership.footer.proposeTerms')}
                         </Button>
                       )}

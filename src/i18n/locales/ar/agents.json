@@ -49,7 +49,22 @@
       "approvedAt": "بدء العقد",
       "suspendedAt": "تاريخ الإيقاف",
       "updatedAt": "آخر تحديث",
-      "suspensionReason": "سبب الإيقاف"
+      "suspensionReason": "سبب الإيقاف",
+      "handover": "تسليم النقود",
+      "worksIn": "منطقة العمل",
+      "cash": "الدفع عند الاستلام",
+      "timeline": "التسلسل الزمني",
+      "primaryAgency": "الوكالة الرئيسية",
+      "proposedBy": "الشروط مقترحة من",
+      "you": "وكالتك",
+      "rejectedAt": "مرفوض",
+      "withdrawnAt": "مسحوب",
+      "removedAt": "منتهٍ"
+    },
+    "tabs": {
+      "contract": "العقد",
+      "agent": "المندوب",
+      "activity": "النشاط"
     }
   }
 }
