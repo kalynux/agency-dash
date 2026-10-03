@@ -540,7 +540,7 @@ Contracts: [agency/shipments.md](../agency/shipments.md#delivery-fee-proposals),
 
 | `error.code` | Status | Meaning | `details` |
 |---|---|---|---|
-| `ADDRESS_REGION_INVALID` | 400 | A customer address (saved, edited, or inline at checkout) names no region of its country — not by its region text, not by its city. Show a picker from `allowedRegions` and resend with `geo.components.region` = the picked `key`. See `customer/profile.md` → Region | `{ region, city, countryCode, addressId?, allowedRegions: [{ key, name: { en, fr } }] }` |
+| `ADDRESS_REGION_INVALID` | 400 | A customer address (saved, edited, or inline at checkout), or a NEW/EDITED vendor business address or agency headquarters address, names no region of its country — not by its region text, not by its city. Show a picker from `allowedRegions` and resend with `geo.components.region` = the picked `key`. See `customer/profile.md` → Region | `{ region, city, countryCode, addressId?, index?, label?, allowedRegions: [{ key, name: { en, fr } }] }` — `addressId` for a customer's saved address, `index`/`label` for an entry of a vendor/agency address list |
 | `DELIVERY_AGENCY_NOT_ACTIVE` | 422 | Internal admin only: a shipment was moved to an agency that is not `active`, without `force: true` | `{ agencyId, status }` |
 
 `CONTRACT_COVERAGE_REGION_NOT_COVERED` (above, under contracts) is now **forceable by the agency**:
