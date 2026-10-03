@@ -43,27 +43,33 @@ import { usePageRefresh } from '@/store/pageRefresh.store';
  * phone. See the `max-md:` restack in `AgentCard`.
  */
 const ACTION_BUTTON = 'max-md:h-10 max-md:px-4';
+/** The same actions as the call to action of the profile sheet: full width, filled. */
+const PROMINENT_BUTTON = 'h-12 w-full rounded-xl text-base font-semibold';
 
 function ContractActionSlot({
   agent,
   actions,
   onOffer,
+  prominent = false,
 }: {
   agent: AgentDirectoryItem;
   actions: ReturnType<typeof useAgentActions>;
   onOffer: (agent: AgentDirectoryItem) => void;
+  /** Rendered as the sheet's call to action rather than a row's side button. */
+  prominent?: boolean;
 }) {
   const { t } = useTranslation('agents');
   const contract = agent.contract;
+  const buttonProps = prominent
+    ? ({ size: 'lg', variant: 'default', className: PROMINENT_BUTTON } as const)
+    : ({ size: 'sm', variant: 'outline', className: ACTION_BUTTON } as const);
 
   // No history, or a terminal one — a fresh request creates a NEW contract
   // rather than reviving the old row, so "Offer again" is a plain offer.
   if (!contract || HISTORY_MEMBERSHIP_STATUSES.includes(contract.status)) {
     return (
       <Button
-        size="sm"
-        variant="outline"
-        className={ACTION_BUTTON}
+        {...buttonProps}
         disabled={actions.pendingKey === `request:${agent.id}`}
         onClick={() => onOffer(agent)}
       >
@@ -80,7 +86,7 @@ function ContractActionSlot({
 
   if (contract.status === 'pending') {
     return (
-      <Button asChild size="sm" variant="outline" className={ACTION_BUTTON}>
+      <Button asChild {...buttonProps}>
         <Link to={`/dashboard/agents/${contract.id}`}>{t('browse.reviewOffer')}</Link>
       </Button>
     );
@@ -313,7 +319,7 @@ export function BrowseTab({ onContractChange }: BrowseTabProps) {
         onOpenChange={(open) => { if (!open) setDetailAgent(null); }}
         footerSlot={
           detailAgent && (
-            <ContractActionSlot agent={detailAgent} actions={actions} onOffer={setOfferAgent} />
+            <ContractActionSlot agent={detailAgent} actions={actions} onOffer={setOfferAgent} prominent />
           )
         }
       />
