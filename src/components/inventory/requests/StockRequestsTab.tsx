@@ -41,6 +41,9 @@ import type {
 } from '@/types/stock-request.types';
 
 const PAGE_LIMIT = 20;
+const SEARCH_DEBOUNCE_MS = 350;
+/** The API takes 1–100 characters. */
+const MAX_SEARCH_CHARS = 100;
 
 const EMPTY_META: StockRequestListMeta = { total: 0, page: 1, limit: PAGE_LIMIT, totalPages: 1 };
 
@@ -57,6 +60,9 @@ export function StockRequestsTab() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>('all');
   const [direction, setDirection] = useState<string>('all');
+  // Server-side, over product title and SKU — so it spans every page.
+  const [searchQuery, setSearchQuery] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -77,6 +83,7 @@ export function StockRequestsTab() {
       limit: PAGE_LIMIT,
       ...(status !== 'all' ? { status: status as StockRequestStatus } : {}),
       ...(direction !== 'all' ? { direction: direction as StockRequestDirection } : {}),
+      ...(appliedQuery ? { search: appliedQuery } : {}),
     };
     try {
       const res = await stockRequestsService.list(params);
@@ -87,11 +94,22 @@ export function StockRequestsTab() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, status, direction]);
+  }, [page, status, direction, appliedQuery]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Debounce typing into the query the API runs; a new search starts on page 1.
+  useEffect(() => {
+    const next = searchQuery.trim().slice(0, MAX_SEARCH_CHARS);
+    if (next === appliedQuery) return;
+    const timer = setTimeout(() => {
+      setAppliedQuery(next);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery, appliedQuery]);
 
   usePageRefresh(() => {
     load();
@@ -126,11 +144,18 @@ export function StockRequestsTab() {
   };
 
   const activeFilterCount = (status !== 'all' ? 1 : 0) + (direction !== 'all' ? 1 : 0);
+  const isFiltered = activeFilterCount > 0 || appliedQuery.length > 0;
 
   const resetFilters = () => {
     setStatus('all');
     setDirection('all');
     setPage(1);
+  };
+
+  const clearAll = () => {
+    setSearchQuery('');
+    setAppliedQuery('');
+    resetFilters();
   };
 
   const changeDirection = (value: string) => {
@@ -144,6 +169,10 @@ export function StockRequestsTab() {
   return (
     <div className="space-y-6">
       <SearchFilterBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={t('requests.searchPlaceholder')}
+        searchLabel={t('requests.searchLabel')}
         activeCount={activeFilterCount}
         onReset={resetFilters}
         filterDescription={t('requests.filterDescription')}
@@ -195,13 +224,13 @@ export function StockRequestsTab() {
               <div className="flex flex-col items-center gap-3">
                 <Inbox className="h-12 w-12 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  {activeFilterCount > 0 ? t('requests.emptyNoMatch') : t('requests.empty')}
+                  {isFiltered ? t('requests.emptyNoMatch') : t('requests.empty')}
                 </p>
-                {activeFilterCount === 0 && (
+                {!isFiltered && (
                   <p className="max-w-md text-sm text-muted-foreground">{t('requests.emptyHint')}</p>
                 )}
-                {activeFilterCount > 0 && (
-                  <Button variant="outline" onClick={resetFilters}>
+                {isFiltered && (
+                  <Button variant="outline" onClick={clearAll}>
                     {t('page.clearFilters')}
                   </Button>
                 )}

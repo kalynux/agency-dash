@@ -78,5 +78,55 @@
     "refundTypes": {
       "none": "Sin reembolso"
     }
+  },
+  "connections": {
+    "endedByClosure": "Finalizada: el vendedor cerró su cuenta"
+  },
+  "tabs": {
+    "products": {
+      "description": "Productos físicos que te corresponde entregar: elegidos en el propio producto o heredados porque eres la agencia predeterminada del vendedor",
+      "short": "Productos que entregas"
+    }
+  },
+  "products": {
+    "searchPlaceholder": "Buscar productos…",
+    "searchLabel": "Buscar por título, vendedor o categoría",
+    "filterDescription": "Productos que te corresponde entregar. Lo decide el vendedor; no puedes cambiarlo aquí.",
+    "found_one": "{{count}} producto",
+    "found_many": "{{count}} productos",
+    "found_other": "{{count}} productos",
+    "empty": "Ningún vendedor te ha asignado productos todavía. Aparecen aquí cuando un vendedor te elige para un producto o te hace su agencia predeterminada.",
+    "emptyFiltered": "Ningún producto coincide con tu búsqueda.",
+    "noCategory": "Sin categoría",
+    "categoriesLabel": "Categorías",
+    "filters": {
+      "source": "Por qué es tuyo",
+      "status": "Disponibilidad",
+      "all": "Todos",
+      "sort": "Ordenar por",
+      "vendorPill": "Vendedor: {{name}}",
+      "categoryPill": "Categoría: {{name}}",
+      "remove": "Quitar filtro"
+    },
+    "source": {
+      "own_override": "Asignado en el producto",
+      "vendor_default": "Agencia predeterminada"
+    },
+    "status": {
+      "draft": "Borrador",
+      "active": "A la venta",
+      "archived": "Archivado",
+      "pending_review": "En revisión",
+      "suspended": "Suspendido"
+    },
+    "unnamedVendor": "Vendedor sin nombre",
+    "filterByVendor": "Mostrar solo este vendedor",
+    "filterByCategory": "Mostrar solo esta categoría",
+    "sort": {
+      "newest": "Más recientes",
+      "oldest": "Más antiguos",
+      "titleAsc": "Título A–Z",
+      "titleDesc": "Título Z–A"
+    }
   }
 }

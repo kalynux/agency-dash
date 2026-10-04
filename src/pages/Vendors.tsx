@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useVendorConnections } from '@/store/vendorConnections.store';
 import { ConnectionsTab } from '@/components/vendors/ConnectionsTab';
 import { BrowseTab } from '@/components/vendors/BrowseTab';
+import { ProductsTab } from '@/components/vendors/ProductsTab';
 import { SubPageHeader } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
 
-const VALID_TABS = ['connections', 'browse'] as const;
+const VALID_TABS = ['connections', 'browse', 'products'] as const;
 type VendorsTab = typeof VALID_TABS[number];
 
 export function Vendors() {
@@ -32,6 +33,7 @@ export function Vendors() {
 
       {activeTab === 'connections' && <ConnectionsTab onConnectionChange={refetch} />}
       {activeTab === 'browse' && <BrowseTab onConnectionChange={refetch} />}
+      {activeTab === 'products' && <ProductsTab />}
     </TabSwipeArea>
   );
 }

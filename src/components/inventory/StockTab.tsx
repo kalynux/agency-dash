@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Info, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { InventoryCard, InventoryTableRow } from '@/components/inventory/Invento
 import { InventorySummaryCards } from '@/components/inventory/InventorySummaryCards';
 import { InventoryDetailSheet } from '@/components/inventory/InventoryDetailSheet';
 import { buildDepotOptions } from '@/components/inventory/depot-options';
+import { INVENTORY_OPEN_PARAM } from '@/components/inventory/inventoryLinks';
 import { inventoryService } from '@/services/inventory.service';
 import { useMagazin } from '@/store/magazin.store';
 import { useStockRequests } from '@/store/stockRequests.store';
@@ -72,8 +74,12 @@ export function StockTab() {
   const [appliedQuery, setAppliedQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  // The open row lives in the URL (`?open=<stockLevelId>`), so a stock request's
+  // "Open in inventory" link and a click on a row take exactly the same path —
+  // and the link still works from a cold page load.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const selectedId = searchParams.get(INVENTORY_OPEN_PARAM);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -155,9 +161,19 @@ export function StockTab() {
     setPage(1);
   };
 
+  // Fresh `URLSearchParams` each time: the one the hook hands back is shared
+  // across renders, and mutating it edits state React was never told about.
   const openDetail = (id: string) => {
-    setSelectedId(id);
-    setDetailOpen(true);
+    const params = new URLSearchParams(searchParams);
+    params.set(INVENTORY_OPEN_PARAM, id);
+    setSearchParams(params, { replace: true });
+  };
+
+  const handleDetailOpenChange = (next: boolean) => {
+    if (next) return;
+    const params = new URLSearchParams(searchParams);
+    params.delete(INVENTORY_OPEN_PARAM);
+    setSearchParams(params, { replace: true });
   };
 
   /** A write in the sheet moved stock, a depot or a status — reload both surfaces. */
@@ -200,9 +216,9 @@ export function StockTab() {
 
       <InventorySummaryCards
         summary={summary}
-        depotCount={depots.length}
         storageOffered={storageOffered}
         onShowUnassigned={() => handleLocationChange(UNASSIGNED_LOCATION)}
+        onShowAwaiting={() => navigate('/dashboard/inventory/requests')}
       />
 
       <SearchFilterBar
@@ -370,8 +386,8 @@ export function StockTab() {
 
       <InventoryDetailSheet
         itemId={selectedId}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
+        open={selectedId !== null}
+        onOpenChange={handleDetailOpenChange}
         onMutated={handleMutated}
       />
     </div>

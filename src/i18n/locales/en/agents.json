@@ -267,7 +267,19 @@
     "title": "Offer {{name}} a contract",
     "description": "They can accept these terms, decline, or come back with their own. Nothing starts until they accept.",
     "feeSplitRequired": "A fee split is required — it is what pays the agent.",
-    "send": "Send offer"
+    "send": "Send offer",
+    "kicker": "Contract offer",
+    "recapTitle": "At a glance",
+    "perMonth": "{{amount}} / month",
+    "allRegions": "All regions",
+    "regionCount_one": "{{count}} region",
+    "regionCount_other": "{{count}} regions",
+    "nextTitle": "What happens next",
+    "next": {
+      "send": "You send this offer.",
+      "review": "{{name}} accepts it, declines it or comes back with their own terms.",
+      "live": "The contract starts the moment it is accepted."
+    }
   },
   "membership": {
     "srDescription": "Contract details for {{name}} — COD limit, negotiated terms, settlements and history.",
@@ -279,7 +291,9 @@
       "transferred": "Ended — an admin transferred this agent to another agency",
       "quotedReason": "“{{reason}}”",
       "noReason": "No reason was given.",
-      "newContractHint": "Contracting with this agent again starts a new contract; this one stays as history."
+      "newContractHint": "Contracting with this agent again starts a new contract; this one stays as history.",
+      "agentClosed": "Ended — the agent closed their account",
+      "agentClosedBody": "This agent closed their Wi-Mall agent account, so the contract ended automatically. It cannot be renewed."
     },
     "tiles": {
       "email": "Email",

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { getApiErrorMessage, getErrorCode } from '@/lib/errors';
 import { useActionRunner, type RunOptions } from '@/hooks/useActionRunner';
 import { shipmentsService } from '@/services/shipments.service';
@@ -31,6 +32,10 @@ const STALE_FEE_PROPOSAL_CODES = new Set([
   'DELIVERY_FEE_PROPOSAL_NOT_PENDING',
   'DELIVERY_FEE_PROPOSAL_NOT_YOURS',
   'DELIVERY_FEE_PROPOSAL_NOT_FOUND',
+  // Customer-paid (ADR-A11): the customer already accepted and is paying, or the
+  // edit crossed below the current fee — either way the view is out of date.
+  'DELIVERY_FEE_TOPUP_IN_PROGRESS',
+  'DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED',
 ]);
 
 // All shipment/COD/assignment codes live in the central registry (@/lib/errors).
@@ -191,12 +196,29 @@ export function useShipmentActions() {
     },
   });
 
+  /**
+   * The toast names what actually happened, read off the proposal the server
+   * returned: a customer-paid decrease is already applied (`approver: 'none'`),
+   * a customer-paid increase went to the customer, anything else to the vendor.
+   */
   const proposeDeliveryFee = useCallback(
-    (id: string, payload: CreateDeliveryFeeProposalPayload, onStale?: () => void) =>
-      run(`fee:${id}`, async () => (await shipmentsService.proposeDeliveryFee(id, payload)).data, {
-        success: t('deliveryFee.proposed'),
-        ...staleOnFeeConflict(onStale),
-      }),
+    async (id: string, payload: CreateDeliveryFeeProposalPayload, onStale?: () => void) => {
+      const proposal = await run(
+        `fee:${id}`,
+        async () => (await shipmentsService.proposeDeliveryFee(id, payload)).data,
+        staleOnFeeConflict(onStale),
+      );
+      if (proposal) {
+        toast.success(
+          proposal.approver === 'none' && proposal.status === 'approved'
+            ? t('deliveryFee.appliedNow')
+            : proposal.approver === 'customer'
+              ? t('deliveryFee.proposedToCustomer')
+              : t('deliveryFee.proposed'),
+        );
+      }
+      return proposal;
+    },
     [run, t],
   );
 

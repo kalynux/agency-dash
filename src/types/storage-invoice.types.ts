@@ -52,11 +52,25 @@ export interface StorageInvoiceLine {
   lineTotal: number;
 }
 
+export interface StorageInvoiceVendor {
+  id: string;
+  /** Store name; null when the vendor has no store. */
+  businessName: string | null;
+  displayName: string | null;
+  verified: boolean;
+}
+
 /** A statement as it appears in a list — no lines, which is why `skuCount` exists. */
 export interface StorageInvoice {
   id: string;
   agencyId: string;
   vendorId: string;
+  /**
+   * Who the statement is for. ⚠ Resolved LIVE, unlike everything else here —
+   * a renamed store shows its new name on old statements. Not part of the
+   * issued record, so never render it inside the frozen figures.
+   */
+  vendor: StorageInvoiceVendor;
   /** `YYYY-MM`, a **UTC calendar month**. */
   periodKey: string;
   periodStart: string;

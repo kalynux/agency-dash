@@ -83,16 +83,4 @@ export const stockRequestsService = {
   withdraw(id: string): Promise<StockRequestResponse> {
     return api.post<StockRequestResponse>(`/agency/stock-requests/${id}/withdraw`);
   },
-
-  /**
-   * How many requests are waiting on us, for the nav badge.
-   *
-   * `direction=awaiting_me` is "pending, and the vendor raised it" in one query;
-   * `limit=1` because only `meta.total` is read. This is the cheapest correct
-   * count — counting client-side would need every page.
-   */
-  async countAwaitingMe(): Promise<number> {
-    const res = await stockRequestsService.list({ direction: 'awaiting_me', limit: 1 });
-    return res.meta?.total ?? 0;
-  },
 };

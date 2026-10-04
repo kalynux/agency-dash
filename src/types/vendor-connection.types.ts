@@ -25,8 +25,18 @@ export interface ConnectionWithdrawalInfo {
 export interface ConnectionTerminationInfo {
   terminatedByRole: ConnectionParty;
   terminatedAt: string;
-  reason: 'unilateral' | 'reapproval_declined';
+  /**
+   * `role_closed` (2026-10-04, ADR-A10): the VENDOR closed its account and the
+   * connection ended with it (`connection.ended_by_closure`). Final — the
+   * vendor cannot be asked again.
+   */
+  reason: 'unilateral' | 'reapproval_declined' | 'role_closed';
   note: string | null;
+}
+
+/** True when the connection ended because the vendor closed its account. */
+export function endedByVendorClosure(connection: { status: ConnectionStatus; termination: ConnectionTerminationInfo | null }): boolean {
+  return connection.status === 'terminated' && connection.termination?.reason === 'role_closed';
 }
 
 /**

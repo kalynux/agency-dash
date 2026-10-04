@@ -360,6 +360,21 @@ function nullableCap(t: T) {
     );
 }
 
+/**
+ * `pricing.max_fee_per_shipment`: empty means no ceiling (`null`). The server
+ * refuses `0` — a ceiling of 0 would make every delivery free — so the floor is 1.
+ */
+function nullablePositiveIntCap(t: T) {
+    return z.preprocess(
+        (value) => (value === '' || value === null || value === undefined ? null : Number(value)),
+        z
+            .number(v(t, 'number'))
+            .int(v(t, 'wholeNumber'))
+            .min(1, v(t, 'positive'))
+            .nullable(),
+    );
+}
+
 export function buildPoliciesSchema(t: T) {
     const notes = z.string().max(700, v(t, 'policies.notesTooLong')).optional();
 
@@ -387,6 +402,11 @@ export function buildPoliciesSchema(t: T) {
                 rto_fee: requiredFee(t),
                 peak_season_surcharge: optionalFee(t),
             }),
+            // ⚠ Both must stay in this schema: the PUT/PATCH replaces the whole
+            // `policies` object and zod drops keys it does not know, so a field
+            // missing here would be reset to its default on every save.
+            max_fee_per_shipment: nullablePositiveIntCap(t),
+            accepts_cash_delivery_fee: z.boolean(),
             notes,
         })
         .refine((data) => data.storage_based.enabled || data.pickup_based.enabled, {

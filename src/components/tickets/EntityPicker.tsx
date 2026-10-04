@@ -266,7 +266,7 @@ async function searchEntities(entityType: TicketEntityType, query: string): Prom
       id: p.id,
       kind: 'product' as const,
       title: p.title,
-      subtitle: p.category ?? undefined,
+      subtitle: p.categories?.length ? p.categories.map((c) => c.name).join(' · ') : undefined,
       caption: p.tags?.length ? p.tags.join(', ') : undefined,
       imageUrl: p.firstFileUrl,
     }));

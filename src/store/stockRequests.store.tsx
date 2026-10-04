@@ -7,7 +7,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { stockRequestsService } from '@/services/stock-requests.service';
+import { inventoryService } from '@/services/inventory.service';
 import { toApiError } from '@/hooks/useResource';
 import { ApiError } from '@/types/api';
 
@@ -25,9 +25,10 @@ const POLL_INTERVAL_MS = 60_000;
 
 export interface StockRequestsState {
   /**
-   * Requests the VENDOR raised that are still pending — `direction=awaiting_me`.
-   * Never a total row count: the inbox carries the ones we raised ourselves too,
-   * and badging those would tell the agency to go answer itself.
+   * Requests the VENDOR raised that are still pending — the unfiltered inventory
+   * summary's `awaitingMyDecisionCount`, the one number the API says the badge and
+   * the Stock tab header both read. Never a total: the inbox carries the ones we
+   * raised ourselves too, and badging those would tell the agency to answer itself.
    */
   awaitingCount: number;
   isLoading: boolean;
@@ -49,7 +50,8 @@ export function StockRequestsProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      setAwaitingCount(await stockRequestsService.countAwaitingMe());
+      const { data } = await inventoryService.summary({});
+      setAwaitingCount(data.awaitingMyDecisionCount ?? 0);
     } catch (err) {
       setError(toApiError(err, 'STOCK_REQUESTS_FETCH_FAILED', 'Failed to load stock requests'));
     } finally {

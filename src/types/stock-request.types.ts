@@ -1,4 +1,6 @@
 // Agency Stock Requests — see api-doc/agency/stock-requests.md
+
+import type { FileRef } from '@/types/file.types';
 //
 // WHY THIS EXISTS. `ProductVariant.stock` used to be the vendor's alone. For a
 // product WE warehouse that is the wrong owner: we are the party who can go and
@@ -60,6 +62,31 @@ export interface StockRequestWithdrawal {
   at: string;
 }
 
+// ─── What the request is about (2026-10-04) ───────────────────────────────────
+// Every response — list, detail and the four verbs — names the SKU, so the inbox
+// can say WHICH product moves before anyone approves it. Live, not snapshotted.
+
+export interface StockRequestProduct {
+  title: string | null;
+  variantTitle: string | null;
+  sku: string | null;
+  /** The variant's first image, else the product's. `url` is null unless public. */
+  image: FileRef | null;
+}
+
+export interface StockRequestVendor {
+  id: string;
+  businessName: string | null;
+  verified: boolean;
+}
+
+export interface StockRequestLocation {
+  id: string;
+  label: string | null;
+  city: string | null;
+  isPrimary: boolean;
+}
+
 /**
  * One proposed change to a warehoused SKU's recorded stock.
  *
@@ -72,6 +99,15 @@ export interface StockRequest {
   variantId: string;
   vendorId: string;
   agencyId: string;
+
+  /** What the request is about. Resolved live, so a deleted product reads as `null`s. */
+  product: StockRequestProduct;
+  /** `businessName` is null when the vendor has no store. */
+  vendor: StockRequestVendor;
+  /** Depot of our inventory row. `null` when there is no row, OR its depot was deleted. */
+  location: StockRequestLocation | null;
+  /** Our inventory row for this SKU (`GET /agency/inventory/:id`). `null` when we hold none. */
+  stockLevelId: string | null;
 
   requestedByRole: StockRequestParty;
   requestedAt: string;
@@ -148,6 +184,8 @@ export interface ListStockRequestsParams {
   /** One SKU's whole negotiation history. */
   variantId?: string;
   direction?: StockRequestDirection;
+  /** 1–100 chars, case-insensitive substring over product title and SKU. */
+  search?: string;
 }
 
 export interface StockRequestListMeta {

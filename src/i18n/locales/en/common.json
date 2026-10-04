@@ -116,7 +116,9 @@
     "transaction_one": "transaction",
     "transaction_other": "transactions",
     "vendor_one": "vendor",
-    "vendor_other": "vendors"
+    "vendor_other": "vendors",
+    "product_one": "product",
+    "product_other": "products"
   },
   "pagination": {
     "page": "Page {{page}}",

@@ -74,7 +74,7 @@ export function Header() {
 
   const openNotification = (n: AgencyNotification) => {
     markAsRead(n.id);
-    navigate(notificationHref(n.action));
+    navigate(notificationHref(n.action, n.type));
   };
 
   return (

@@ -8,16 +8,21 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { ArrowUpRight, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import {
   DriftNotice,
   QuantityChange,
+  RequestProductName,
+  RequestProductThumb,
+  RequestWhoseWhere,
   StockRequestStatusBadge,
 } from '@/components/inventory/requests/StockRequestCard';
+import { inventoryRowPath } from '@/components/inventory/inventoryLinks';
 import { StockRequestActions } from '@/components/inventory/requests/StockRequestActions';
 import { stockRequestsService } from '@/services/stock-requests.service';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -105,6 +110,27 @@ export function StockRequestSheet({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="space-y-5 px-5 py-4">
+          {/* Which SKU this is about — read before the numbers. */}
+          <section className="rounded-lg border p-3">
+            <div className="flex items-start gap-3">
+              <RequestProductThumb request={request} className="h-12 w-12" />
+              <div className="min-w-0 flex-1">
+                <RequestProductName request={request} />
+                <RequestWhoseWhere request={request} className="mt-1" />
+              </div>
+            </div>
+            {/* Only when we hold a row for it — otherwise there is nothing to open. */}
+            {request.stockLevelId && (
+              <Link
+                to={inventoryRowPath(request.stockLevelId)}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                {t('requests.openInInventory')}
+                <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" />
+              </Link>
+            )}
+          </section>
+
           {/* The proposal itself. */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

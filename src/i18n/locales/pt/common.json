@@ -106,7 +106,10 @@
     "transaction_one": "transação",
     "transaction_other": "transações",
     "vendor_one": "vendedor",
-    "vendor_other": "vendedores"
+    "vendor_other": "vendedores",
+    "product_one": "produto",
+    "product_many": "produtos",
+    "product_other": "produtos"
   },
   "pagination": {
     "page": "Página {{page}}",

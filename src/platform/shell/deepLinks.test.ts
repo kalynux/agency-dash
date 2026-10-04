@@ -119,6 +119,16 @@ describe('routeFromPushData', () => {
     expect(routeFromPushData({ action_path: 'tickets/7' })).toBe('/dashboard/tickets?open=7');
   });
 
+  it('sends a combined-price request to its own screen when the payload names the type', () => {
+    expect(routeFromPushData({ path: 'shipments/1', type: 'combined_delivery_request.received' })).toBe(
+      '/dashboard/shipments/combined-requests?shipment=1',
+    );
+    // Any other type keeps its button's destination.
+    expect(routeFromPushData({ path: 'shipments/1', type: 'shipment.assigned' })).toBe(
+      '/dashboard/shipments?open=1',
+    );
+  });
+
   it('prefers path over url when both are present', () => {
     expect(routeFromPushData({ path: 'shipments/1', url: 'https://x/dashboard/agents' })).toBe(
       '/dashboard/shipments?open=1',

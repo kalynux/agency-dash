@@ -1,7 +1,7 @@
 {
   "preferences": {
     "agentFeeProposals": "Permitir que mis repartidores propongan tarifas de entrega",
-    "agentFeeProposalsHint": "Si está activado, el repartidor que aceptó un envío puede pedir una tarifa de entrega distinta para ese envío, antes de la recogida. Su propuesta va directamente al vendedor, que la aprueba o la rechaza; tú la ves en el envío y puedes editarla mientras esté pendiente. Tú siempre puedes proponer una tarifa.",
+    "agentFeeProposalsHint": "Si está activado, el repartidor que aceptó un envío puede pedir una tarifa de entrega distinta para ese envío, antes de la recogida. Su propuesta va directamente a quien paga la entrega —el vendedor o el cliente—, que la aprueba o la rechaza; tú la ves en el envío y puedes editarla mientras esté pendiente. Tú siempre puedes proponer una tarifa.",
     "agentFeeProposalsOn": "Tus repartidores ya pueden proponer tarifas de entrega.",
     "agentFeeProposalsOff": "Ahora solo tú puedes proponer tarifas de entrega."
   },
@@ -11,7 +11,7 @@
       "codLimitUpdatesDescription": "Cuando un vendedor te envía un pedido contra entrega por encima de un límite, cuando la asignación automática solo encuentra repartidores por encima de su importe contra entrega, cuando un vendedor cambia sus condiciones de pago contra entrega, o cuando Wi-Mall fija o libera tu límite contra entrega.",
       "codLimitUpdatesCaveat": "Un envío enviado por encima de un límite, y uno que la asignación automática no pudo colocar por motivos de pago contra entrega, llegan con este interruptor, no con Nuevos envíos. Si lo desactivas, no se te avisará de ellos.",
       "deliveryFeeProposals": "Cambios de tarifa de entrega",
-      "deliveryFeeProposalsDescription": "Cuando un vendedor aprueba o rechaza un cambio de tarifa en uno de tus envíos, o uno de tus repartidores propone o edita uno."
+      "deliveryFeeProposalsDescription": "Cuando un vendedor o un cliente responde a un cambio de tarifa en uno de tus envíos, uno de tus repartidores propone o edita uno, o un cliente te pide un precio combinado para varios paquetes."
     }
   }
 }

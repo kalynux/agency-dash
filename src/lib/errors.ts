@@ -86,6 +86,23 @@ const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMes
     typeof d.currentFee === 'number'
       ? { key: 'DELIVERY_FEE_PROPOSAL_NO_CHANGE.currentFee', context: { fee: formatCurrency(d.currentFee) } }
       : undefined,
+  // An edit that would turn a customer-approval increase into a decrease.
+  // `currentFee` is the shipment's fee, i.e. the line the edit crossed.
+  DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED: (d) =>
+    typeof d.currentFee === 'number'
+      ? { key: 'DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED.currentFee', context: { fee: formatCurrency(d.currentFee) } }
+      : undefined,
+  // An answer to a combined-price request. `reason` says which rule refused;
+  // `not_lower` also names the parcel's current fee. See api-doc/errors/README.md
+  // § Combined delivery-price requests.
+  COMBINED_DELIVERY_RESPONSE_INVALID: (d) => {
+    if (d.reason === 'not_lower' && typeof d.currentFee === 'number') {
+      return { key: 'COMBINED_DELIVERY_RESPONSE_INVALID.not_lower', context: { fee: formatCurrency(d.currentFee) } };
+    }
+    return d.reason === 'empty' || d.reason === 'none_applied'
+      ? { key: `COMBINED_DELIVERY_RESPONSE_INVALID.${d.reason}` }
+      : undefined;
+  },
 };
 
 function detailedMessage(err: ApiError): DetailedMessage | undefined {
@@ -164,6 +181,15 @@ export function getRequestId(err: unknown): string | undefined {
 /** True when the error is an auth/permission failure (401/403). */
 export function isAuthError(err: unknown): boolean {
   return err instanceof ApiError && (err.status === 401 || err.status === 403);
+}
+
+/**
+ * The copy for a bare error code that did not arrive as a thrown error — a
+ * per-row `{ shipmentId, code }` in a `200` answer, say. Same catalog as
+ * {@link getApiErrorMessage}; an unknown code gets the generic message.
+ */
+export function getErrorMessageForCode(code: string): string {
+  return hasCode(code) ? translateCode(code) : getGenericErrorMessage();
 }
 
 /** The backend code behind an error, when there is one. */

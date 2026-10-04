@@ -18,11 +18,8 @@ import {
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import {
-  CatalogStockSection,
-  StockLevelSection,
-  StockSourceBadge,
-} from '@/components/inventory/StockLevels';
+import { StockOverviewSection, StockSourceBadge } from '@/components/inventory/StockLevels';
+import { InfoHint } from '@/components/common/InfoHint';
 import { StorageFeePanel } from '@/components/inventory/StorageFeePanel';
 import { SuspensionPanel } from '@/components/inventory/SuspensionPanel';
 import { DepotMoveDialog } from '@/components/inventory/DepotMoveDialog';
@@ -127,52 +124,54 @@ export function InventoryDetailSheet({
   };
 
   /**
-   * The depot this row sits at, with the address resolved live from the magazin
-   * — so an address corrected in Account → Locations shows here immediately.
+   * Whose goods, and which of our buildings holds them — one card, two rows.
+   * The depot's address is resolved live from the magazin, so a correction in
+   * Account → Locations shows here immediately; it is printed as ONE line (the
+   * full formatted address when there is one) rather than three.
    */
-  const renderDepot = (item: InventoryDetail) => {
-    if (!item.location) {
-      // The product names a depot we have since deleted. The goods exist; the
-      // platform no longer knows which building — which is exactly why this is
-      // flagged instead of silently attributed to the primary depot.
-      return (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400">
+  const renderWhereWhose = (item: InventoryDetail) => {
+    const depotName = item.location ? describeDepot(item.location) : null;
+    const address = item.locationAddress?.formattedAddress || describeAddress(item.locationAddress);
+    return (
+      <div className="divide-y rounded-lg border">
+        <div className="flex min-w-0 items-center gap-2 px-3 py-2.5 text-sm">
+          <Store className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+          <span className="min-w-0 truncate font-medium" title={item.vendor.businessName ?? undefined}>
+            {item.vendor.businessName ?? (
+              <span className="italic text-muted-foreground">{t('detail.unnamedVendor')}</span>
+            )}
+          </span>
+          <VerifiedBadge verified={item.vendor.verified} className="-ms-0.5 flex-shrink-0" />
+        </div>
+
+        {item.location ? (
+          <div className="flex min-w-0 items-start gap-2 px-3 py-2.5">
+            <Warehouse className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
+                {depotName ?? (
+                  <span className="italic text-muted-foreground">{t('detail.unnamedLocation')}</span>
+                )}
+                {item.location.isPrimary && (
+                  <span className="ms-1.5 text-xs font-normal text-muted-foreground">
+                    {t('detail.primaryDepot')}
+                  </span>
+                )}
+              </p>
+              {address && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={address}>{address}</p>}
+            </div>
+          </div>
+        ) : (
+          // The product names a depot we have since deleted. The goods exist; the
+          // platform no longer knows which building — so it is flagged, never
+          // silently attributed to the primary depot. Still a warning colour;
+          // the explanation sits behind the ⓘ.
+          <p className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-amber-700 dark:text-amber-400">
             <MapPinOff className="h-3.5 w-3.5 flex-shrink-0" />
             {t('detail.unassignedLocation')}
+            <InfoHint title={t('detail.unassignedLocation')}>{t('detail.unassignedHint')}</InfoHint>
           </p>
-          <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-400/90">
-            {t('detail.unassignedHint')}
-          </p>
-        </div>
-      );
-    }
-
-    const name = describeDepot(item.location);
-    const line = describeAddress(item.locationAddress);
-    return (
-      <div className="rounded-lg border p-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <Warehouse className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              {name ?? (
-                <span className="italic text-muted-foreground">{t('detail.unnamedLocation')}</span>
-              )}
-              {item.location.isPrimary && (
-                <span className="ms-1.5 text-xs font-normal text-muted-foreground">
-                  {t('detail.primaryDepot')}
-                </span>
-              )}
-            </p>
-            {line && <p className="mt-0.5 text-xs text-muted-foreground">{line}</p>}
-            {item.locationAddress?.formattedAddress && (
-              <p className="mt-0.5 text-xs text-muted-foreground/80">
-                {item.locationAddress.formattedAddress}
-              </p>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -235,81 +234,61 @@ export function InventoryDetailSheet({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="space-y-5 px-5 py-4">
-          {/* The AGREED quantity first: it is the figure that is real today, so it
-              must not read as a footnote to the counted section's zeroes. */}
-          <CatalogStockSection
+          {/* FIVE SECTIONS, IN THE ORDER THE QUESTIONS COME: how many (and the
+              verbs that change it), what it bills, whose and where, whether it
+              is on sale, what it looks like. Explanations live behind the ⓘ on
+              each label; what stays on screen is figures, names and buttons. */}
+
+          <StockOverviewSection
             detail={detail}
             onRaiseRequest={() => setRaiseOpen(true)}
             onOpenRequest={(requestId) => {
               onOpenChange(false);
               navigate(`/dashboard/inventory/requests?open=${requestId}`);
             }}
-          />
-
-          <StockLevelSection detail={detail} />
-
-          {/* The four things an operator can say about a shelf.
-              Kept together and directly under the counted figures, because each
-              one exists to change exactly those figures.
-              `count` leads on an uncounted row: recording a receipt is the only
-              way a shelf becomes counted at all, and until it is, this row is
-              invisible to the storage statement and to the order path. */}
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('movements.sectionTitle')}
-            </h3>
+          >
+            {/* The four things an operator can say about a shelf, directly under
+                the figure each one changes. `Receive` leads on an uncounted row:
+                a receipt is the only way a shelf becomes counted at all. */}
+            {/* Two by two: four across a 28rem sheet cut "Receive" to "Recei…". */}
             <div className="grid grid-cols-2 gap-2 [&>button]:max-md:h-10">
               <Button
                 size="sm"
                 variant={detail.source === 'derived' ? 'default' : 'outline'}
-                className="gap-1.5"
+                className="gap-1.5 px-2"
                 onClick={() => setMovementKind('receipt')}
               >
-                <PackagePlus className="h-3.5 w-3.5" />
-                {t('movements.receipt.action')}
+                <PackagePlus className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{t('movements.receipt.action')}</span>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setMovementKind('count')}
-              >
-                <ClipboardCheck className="h-3.5 w-3.5" />
-                {t('movements.count.action')}
+              <Button size="sm" variant="outline" className="gap-1.5 px-2" onClick={() => setMovementKind('count')}>
+                <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{t('movements.count.action')}</span>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setMovementKind('return')}
-              >
-                <PackageMinus className="h-3.5 w-3.5" />
-                {t('movements.return.action')}
+              <Button size="sm" variant="outline" className="gap-1.5 px-2" onClick={() => setMovementKind('return')}>
+                <PackageMinus className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{t('movements.return.action')}</span>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setMovementKind('transfer')}
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" />
-                {t('movements.transfer.action')}
+              <Button size="sm" variant="outline" className="gap-1.5 px-2" onClick={() => setMovementKind('transfer')}>
+                <ArrowLeftRight className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{t('movements.transfer.action')}</span>
               </Button>
             </div>
-          </section>
 
-          {/* Why the shelf and the catalogue disagree — the only surface that
-              can say. Opens on demand; most visits are not about history. */}
-          <MovementLedger stockLevelId={detail.id} />
+            {/* Why the shelf and the catalogue disagree — opens on demand. */}
+            <MovementLedger stockLevelId={detail.id} />
+          </StockOverviewSection>
 
-          <SuspensionPanel detail={detail} onChanged={handleMutated} />
+          {/* What this shelf bills — quoted by the API on the counted figure.
+              Rendered whenever the block exists, so "we do not warehouse at all"
+              is a state the panel can show rather than hide. */}
+          {detail.storageFee && <StorageFeePanel fee={detail.storageFee} />}
 
-          {/* Where it is — the question this screen exists to answer. */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('detail.location')}
+              {t('detail.whereWhose')}
             </h3>
-            {renderDepot(detail)}
+            {renderWhereWhose(detail)}
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setDepotOpen(true)}>
                 <Truck className="h-3.5 w-3.5" />
@@ -324,22 +303,7 @@ export function InventoryDetailSheet({
             </div>
           </section>
 
-          {/* Whose goods these are. Warehousing someone else's stock means the
-              vendor is who you call about it. */}
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('detail.vendor')}
-            </h3>
-            <p className="flex items-center gap-1.5 rounded-lg bg-muted/50 p-3 text-sm font-medium">
-              <Store className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-              <span className="min-w-0 truncate" title={detail.vendor.businessName ?? undefined}>
-                {detail.vendor.businessName ?? (
-                  <span className="italic text-muted-foreground">{t('detail.unnamedVendor')}</span>
-                )}
-              </span>
-              <VerifiedBadge verified={detail.vendor.verified} className="-ms-0.5" />
-            </p>
-          </section>
+          <SuspensionPanel detail={detail} onChanged={handleMutated} />
 
           {/* Every picture of this line, thumbnail first — the fastest way to
               recognise a box on a shelf. */}
@@ -365,13 +329,6 @@ export function InventoryDetailSheet({
               </div>
             </section>
           )}
-
-          {/* What holding this line is worth to us — quoted by the API against
-              the AGREED quantity, not recomputed here from the session's policy
-              blob. Rendered whenever the block exists, so "we do not warehouse at
-              all" is a state the panel can show rather than one it hides behind a
-              falsy rate. */}
-          {detail.storageFee && <StorageFeePanel fee={detail.storageFee} />}
 
           {detail.lastReconciledAt && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

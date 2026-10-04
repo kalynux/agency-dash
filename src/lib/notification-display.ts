@@ -10,6 +10,7 @@ import {
   Boxes,
   Gauge,
   Receipt,
+  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react';
 import type { AgencyNotificationAction } from '@/types/notification.types';
@@ -36,6 +37,11 @@ function isCodLimitType(type: string): boolean {
 
 /** Map a notification `type` (e.g. "shipment.assigned") to a presentation. */
 export function notificationVisual(type: string): NotificationVisual {
+  // ACCOUNT CLOSURE (ADR-A10) — an administrator asked to close this agency
+  // account. Nothing else in the inbox is about the account's existence, so it
+  // gets the destructive red no other stream uses.
+  if (type === 'account.closure_requested')
+    return { icon: ShieldAlert, dot: 'bg-red-500', chip: 'bg-red-100 text-red-600' };
   // Billing/plan events first — `shipment.cap.exceeded` is a plan alert, not a shipment.
   if (type.startsWith('plan') || type === 'shipment.cap.exceeded')
     return { icon: CalendarClock, dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-600' };
@@ -49,7 +55,9 @@ export function notificationVisual(type: string): NotificationVisual {
     return { icon: Gauge, dot: 'bg-orange-500', chip: 'bg-orange-100 text-orange-600' };
   // DELIVERY-FEE PROPOSALS (2026-10-02) — a price negotiation with the vendor,
   // not a delivery update, so not the shipment truck.
-  if (type.startsWith('delivery_fee_proposal'))
+  // `combined_delivery_request.received` (ADR-A11) is the same negotiation, opened
+  // by a customer instead — one stream, one look.
+  if (type.startsWith('delivery_fee_proposal') || type.startsWith('combined_delivery_request'))
     return { icon: Receipt, dot: 'bg-cyan-500', chip: 'bg-cyan-100 text-cyan-600' };
   // WAREHOUSING, before the media-quota branch below — `storage.*` covers both
   // families and the two mean entirely different things. A stock request is a
@@ -76,7 +84,7 @@ export function notificationVisual(type: string): NotificationVisual {
 //
 // The backend does not know this app's routes and will never try to. It sends a
 // short LABEL — `shipments/665f…`, `plans` — and we decide which of our screens
-// that means. The vocabulary is a CLOSED SET of nine, written down in
+// that means. The vocabulary is a CLOSED SET of ten, written down in
 // api-doc/notifications/deep-links.md § Agency, and pinned on the backend by
 // `npm run test:notification-deeplinks`.
 //
@@ -94,7 +102,7 @@ export function notificationVisual(type: string): NotificationVisual {
 // backend add one before we ship a case for it — the worst outcome is a
 // notification that does not navigate, in an app that has not been rebuilt yet.
 
-/** The nine labels this dashboard understands. Ids are stripped before lookup. */
+/** The ten labels this dashboard understands. Ids are stripped before lookup. */
 const DEEP_LINK_ROUTES: Record<string, (id: string | null) => string> = {
   // The record screens. Each opens its sheet through the `?open=` convention
   // the stock-request inbox established.
@@ -112,6 +120,11 @@ const DEEP_LINK_ROUTES: Record<string, (id: string | null) => string> = {
   // Idless labels.
   plans: () => '/dashboard/account/billing',
   'settings/storage': () => '/dashboard/media',
+  // `account.closure_requested` (ADR-A10, 2026-10-04) — an administrator asked
+  // to close this agency account; the screen is where the owner confirms or
+  // declines. Idless: one open request per role. Tried whole before any split,
+  // so it never reads as `account` + id `closure`.
+  'account/closure': () => '/dashboard/account/closure',
   // `cod.limit.pinned` / `.released` (2026-10-02). There is no /dashboard/cod
   // route — the limit gauge lives on Cash → Summary. Resolves before the
   // `cod/deposits` split because the whole path is tried as an idless label
@@ -158,13 +171,40 @@ export function resolveDeepLink(path: string): string | null {
   return null;
 }
 
+/** The screen a customer's combined-price request is answered on. */
+export const COMBINED_REQUESTS_ROUTE = '/dashboard/shipments/combined-requests';
+
+/**
+ * Notification types whose screen is not the one their button names.
+ *
+ * `combined_delivery_request.received` carries the shared `shipments/{firstShipmentId}`
+ * button — the backend's vocabulary has no label for the request itself — but
+ * the request is answered on its own screen, not on one of its parcels. The
+ * parcel id rides along as `?shipment=` so that screen can point at the request
+ * that contains it. Without the type (a push payload that omits it) the button
+ * still opens the parcel, which is a truthful, if indirect, destination.
+ */
+export function routeForNotificationType(
+  type: string | undefined,
+  action: AgencyNotificationAction | null,
+): string | null {
+  if (type !== 'combined_delivery_request.received') return null;
+  const shipment = action?.path ? /(?:^|\/)shipments\/([^/?#]+)/.exec(action.path)?.[1] : undefined;
+  return shipment ? `${COMBINED_REQUESTS_ROUTE}?shipment=${encodeURIComponent(shipment)}` : COMBINED_REQUESTS_ROUTE;
+}
+
 /**
  * Resolve a notification action into an in-app route.
  *
  * Falls back to the inbox, which is always a truthful destination: the
  * notification the user tapped is on it.
+ *
+ * @param type the notification's `type`, for the few whose screen differs from
+ *   their button (see {@link routeForNotificationType}).
  */
-export function notificationHref(action: AgencyNotificationAction | null): string {
+export function notificationHref(action: AgencyNotificationAction | null, type?: string): string {
+  const byType = routeForNotificationType(type, action);
+  if (byType) return byType;
   if (!action?.path) return '/dashboard/notifications';
   return resolveDeepLink(action.path) ?? '/dashboard/notifications';
 }

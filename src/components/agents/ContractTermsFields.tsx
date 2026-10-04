@@ -1,7 +1,18 @@
 import { useMemo, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import {
+  Briefcase,
+  CalendarClock,
+  CalendarDays,
+  Coins,
+  MapPinned,
+  Percent,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { UnitInput } from '@/components/ui/unit-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RegionPicker } from '@/components/common/RegionPicker';
 import { InfoHint } from '@/components/common/InfoHint';
@@ -16,6 +27,7 @@ import {
   type TermsForm,
 } from '@/components/agents/contractTerms';
 import { regionsFor, type RegionEntry } from '@/lib/regions';
+import { cn } from '@/lib/utils';
 import type { EmploymentType, FeeSplitModel, RemittanceCadence } from '@/types/agent.types';
 
 /**
@@ -29,39 +41,60 @@ import type { EmploymentType, FeeSplitModel, RemittanceCadence } from '@/types/a
  * through `PATCH .../employment` at any status. A request has no contract to
  * hang it on and a proposal would be refused with `403
  * CONTRACT_TERMS_NOT_NEGOTIABLE`, so both hide it.
+ *
+ * Every short, closed choice (fee model, cadence, weekday) is a row of tappable
+ * options rather than a Select: on a phone a Select is open → scroll → tap, and
+ * its popup lands on top of the very fields it governs.
  */
 
 /**
- * A titled group of fields. `hint` is the group's explanation, behind an ⓘ that
+ * A titled card of fields. `hint` is the group's explanation, behind an ⓘ that
  * opens it in a bottom sheet — these used to be a paragraph under every group,
  * which turned the editor into a page of prose with a few boxes in it.
  */
 export function FieldGroup({
   title,
   hint,
+  icon: Icon,
   children,
 }: {
   title: string;
   hint?: ReactNode;
+  icon?: LucideIcon;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-3">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
+    <section className="space-y-4 rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
+      <div className="flex items-center gap-2.5">
+        {Icon && (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="size-4" />
+          </span>
+        )}
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {hint && <InfoHint title={title}>{hint}</InfoHint>}
-      </p>
+      </div>
       {children}
-    </div>
+    </section>
   );
 }
 
 /** One labelled input. `hint` goes behind an ⓘ beside the label, like {@link FieldGroup}'s. */
-export function FormField({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+export function FormField({
+  label,
+  hint,
+  className,
+  children,
+}: {
+  label: string;
+  hint?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn('space-y-1.5', className)}>
       <div className="flex min-h-5 items-center gap-1.5">
-        <Label className="text-xs text-muted-foreground">{label}</Label>
+        <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
         {hint && <InfoHint title={label}>{hint}</InfoHint>}
       </div>
       {children}
@@ -70,12 +103,77 @@ export function FormField({ label, hint, children }: { label: string; hint?: Rea
 }
 
 /**
- * Weekday names in the active language, indexed the way the API counts them
- * (`0` = Sunday). 2024-01-07 is a Sunday, so day `n` is the 7th plus `n`.
+ * A single choice as a group of buttons. Unlike `ChoiceChips`, labels may wrap:
+ * "Toutes les deux semaines" in half a phone's width is two lines, not a clip.
  */
-function weekdayNames(locale: string): string[] {
-  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'long' });
-  return Array.from({ length: 7 }, (_, day) => fmt.format(new Date(2024, 0, 7 + day)));
+function OptionButtons<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  className,
+  itemClassName,
+}: {
+  label: string;
+  value: T | '';
+  options: readonly { value: T; label: ReactNode; ariaLabel?: string }[];
+  onChange: (value: T) => void;
+  disabled?: boolean;
+  className?: string;
+  itemClassName?: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className={className}>
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={option.ariaLabel}
+            disabled={disabled}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-center text-sm leading-tight transition-all md:min-h-10',
+              'outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+              'disabled:cursor-not-allowed disabled:opacity-60',
+              selected
+                ? 'border-primary bg-primary/10 font-medium text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary))]'
+                : 'border-input text-muted-foreground hover:bg-accent hover:text-foreground dark:bg-input/30',
+              itemClassName,
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const FEE_MODEL_OPTIONS: { value: FeeSplitModel; icon: LucideIcon; labelKey: string }[] = [
+  { value: 'percentage', icon: Percent, labelKey: 'terms.fields.modelPercentage' },
+  { value: 'flat', icon: Coins, labelKey: 'terms.fields.modelFlat' },
+  { value: 'monthly_salary', icon: CalendarDays, labelKey: 'terms.fields.modelSalary' },
+];
+
+/** One-tap shares for the common case. Typing any other figure still works. */
+const SHARE_PRESETS = [30, 40, 50, 60, 70];
+
+/**
+ * Weekdays in the active language, Monday first, keyed the way the API counts
+ * them (`0` = Sunday). 2024-01-07 is a Sunday, so day `n` is the 7th plus `n`.
+ */
+function weekdayOptions(locale: string): { value: string; label: string; ariaLabel: string }[] {
+  const short = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  const long = new Intl.DateTimeFormat(locale, { weekday: 'long' });
+  return [1, 2, 3, 4, 5, 6, 0].map((day) => {
+    const date = new Date(2024, 0, 7 + day);
+    return { value: String(day), label: short.format(date), ariaLabel: long.format(date) };
+  });
 }
 
 export interface ContractTermsFieldsProps {
@@ -127,6 +225,7 @@ export function ContractTermsFields({
   const { t, i18n } = useTranslation('agents');
   const cadence = form.cadence || seed?.cadence || '';
   const feeModel = form.feeModel || seed?.feeModel || '';
+  const currency = (form.currency || seed?.currency || 'XAF').toUpperCase();
   // The regions on offer. Resolved here rather than inside `RegionPicker` so the
   // same list decides BOTH what is rendered and what counts as a stray value —
   // and so an empty one (a country we hold no regions for) is what selects the
@@ -143,12 +242,47 @@ export function ContractTermsFields({
     () => splitRegions(form.regions, catalogue),
     [form.regions, catalogue],
   );
-  const weekdays = useMemo(() => weekdayNames(i18n.language), [i18n.language]);
+  const weekdays = useMemo(() => weekdayOptions(i18n.language), [i18n.language]);
+
+  const pickFeeModel = (model: FeeSplitModel) => {
+    // Picking a model clears the other models' amounts — they are never sent
+    // beside it (that is a 400), so they must not linger on screen either.
+    const changes = switchFeeModel(form, model, seed);
+    for (const [key, value] of Object.entries(changes)) {
+      onChange(key as keyof TermsForm, value as TermsForm[keyof TermsForm]);
+    }
+  };
+
+  // The one amount input, shaped by the effective model.
+  const amount =
+    feeModel === 'monthly_salary'
+      ? {
+          field: 'monthlySalary' as const,
+          label: t('terms.fields.monthlySalary'),
+          placeholder: t('terms.fields.monthlySalaryPlaceholder'),
+          unit: currency,
+          min: 1,
+        }
+      : feeModel === 'flat'
+        ? {
+            field: 'flatFee' as const,
+            label: t('terms.fields.flatFee'),
+            placeholder: t('terms.fields.flatFeePlaceholder'),
+            unit: currency,
+            min: 0,
+          }
+        : {
+            field: 'sharePercent' as const,
+            label: t('terms.fields.sharePercent'),
+            placeholder: t('terms.fields.sharePercentPlaceholder'),
+            unit: '%',
+            min: 0,
+          };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {includeEmployment && (
-        <FieldGroup title={t('terms.fields.employment')} hint={t('terms.fields.employmentHint')}>
+        <FieldGroup icon={Briefcase} title={t('terms.fields.employment')} hint={t('terms.fields.employmentHint')}>
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label={t('terms.fields.employmentType')}>
               <Select
@@ -184,6 +318,7 @@ export function ContractTermsFields({
 
       {/* Fee split — what this agent is paid per delivery */}
       <FieldGroup
+        icon={Wallet}
         title={t('terms.fields.feeSplit')}
         hint={
           // The per-delivery hint ("the cut comes out of your fee, the platform
@@ -195,66 +330,43 @@ export function ContractTermsFields({
           />
         }
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t('terms.fields.model')}>
-            <Select
-              value={form.feeModel}
+        <OptionButtons
+          label={t('terms.fields.model')}
+          value={feeModel as FeeSplitModel | ''}
+          disabled={disabled}
+          onChange={pickFeeModel}
+          className="grid grid-cols-3 gap-2"
+          itemClassName="min-h-[4.5rem] flex-col gap-1.5 px-2 md:min-h-[4.5rem]"
+          options={FEE_MODEL_OPTIONS.map(({ value, icon: Icon, labelKey }) => ({
+            value,
+            label: (
+              <>
+                <Icon className="size-5" />
+                <span className="text-xs sm:text-sm">{t(labelKey as 'terms.fields.modelPercentage')}</span>
+              </>
+            ),
+          }))}
+        />
+
+        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3">
+          <FormField label={amount.label}>
+            <UnitInput
+              // Keyed on the field so switching model never carries the
+              // browser's half-typed state across to another amount.
+              key={amount.field}
+              type="number"
+              min={amount.min}
+              max={amount.field === 'sharePercent' ? 100 : undefined}
+              step={amount.field === 'monthlySalary' ? 1 : undefined}
+              inputMode={amount.field === 'sharePercent' ? 'decimal' : 'numeric'}
+              unit={amount.unit}
+              value={form[amount.field]}
               disabled={disabled}
-              onValueChange={(v) => {
-                // Picking a model clears the other models' amounts — they are
-                // never sent beside it (that is a 400), so they must not linger
-                // on screen either.
-                const changes = switchFeeModel(form, v as FeeSplitModel, seed);
-                for (const [key, value] of Object.entries(changes)) {
-                  onChange(key as keyof TermsForm, value as TermsForm[keyof TermsForm]);
-                }
-              }}
-            >
-              <SelectTrigger><SelectValue placeholder={t('terms.fields.emptySelect')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percentage">{t('terms.fields.modelPercentage')}</SelectItem>
-                <SelectItem value="flat">{t('terms.fields.modelFlat')}</SelectItem>
-                <SelectItem value="monthly_salary">{t('terms.fields.modelSalary')}</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(e) => onChange(amount.field, e.target.value)}
+              placeholder={amount.placeholder}
+              className="text-lg font-semibold tabular-nums md:text-base"
+            />
           </FormField>
-          {feeModel === 'monthly_salary' ? (
-            <FormField label={t('terms.fields.monthlySalary')}>
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.monthlySalary}
-                disabled={disabled}
-                onChange={(e) => onChange('monthlySalary', e.target.value)}
-                placeholder={t('terms.fields.monthlySalaryPlaceholder')}
-              />
-            </FormField>
-          ) : feeModel === 'flat' ? (
-            <FormField label={t('terms.fields.flatFee')}>
-              <Input
-                type="number"
-                min={0}
-                value={form.flatFee}
-                disabled={disabled}
-                onChange={(e) => onChange('flatFee', e.target.value)}
-                placeholder={t('terms.fields.flatFeePlaceholder')}
-              />
-            </FormField>
-          ) : (
-            <FormField label={t('terms.fields.sharePercent')}>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={form.sharePercent}
-                disabled={disabled}
-                onChange={(e) => onChange('sharePercent', e.target.value)}
-                placeholder={t('terms.fields.sharePercentPlaceholder')}
-              />
-            </FormField>
-          )}
           <FormField label={t('terms.fields.currency')}>
             <Input
               value={form.currency}
@@ -262,57 +374,69 @@ export function ContractTermsFields({
               disabled={disabled}
               onChange={(e) => onChange('currency', e.target.value.toUpperCase())}
               placeholder={t('terms.fields.currencyPlaceholder')}
+              className="text-center font-medium uppercase tracking-wider"
             />
           </FormField>
         </div>
+
+        {amount.field === 'sharePercent' && !disabled && (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('terms.fields.sharePercent')}>
+            {SHARE_PRESETS.map((preset) => {
+              const active = form.sharePercent === String(preset);
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange('sharePercent', String(preset))}
+                  className={cn(
+                    'h-8 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors',
+                    'outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    active
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )}
+                >
+                  {preset} %
+                </button>
+              );
+            })}
+          </div>
+        )}
       </FieldGroup>
 
       {/* Remittance cadence */}
-      <FieldGroup title={t('terms.fields.remittance')} hint={t('terms.fields.remittanceHint')}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t('terms.fields.cadence')}>
-            <Select
-              value={form.cadence}
+      <FieldGroup icon={CalendarClock} title={t('terms.fields.remittance')} hint={t('terms.fields.remittanceHint')}>
+        <FormField label={t('terms.fields.cadence')}>
+          <OptionButtons
+            label={t('terms.fields.cadence')}
+            value={cadence as RemittanceCadence | ''}
+            disabled={disabled}
+            onChange={(v) => onChange('cadence', v)}
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+            options={REMITTANCE_CADENCES.map((value) => ({ value, label: cadenceLabel(value) }))}
+          />
+        </FormField>
+
+        {['weekly', 'biweekly'].includes(cadence) && (
+          // Named days, not a 0–6 box with "0 = Sunday" under it. The value
+          // stays the API's index, so the payload builders are unchanged.
+          <FormField label={t('terms.fields.dayOfWeek')}>
+            <OptionButtons
+              label={t('terms.fields.dayOfWeek')}
+              value={form.dayOfWeek}
               disabled={disabled}
-              onValueChange={(v) => onChange('cadence', v as RemittanceCadence)}
-            >
-              <SelectTrigger><SelectValue placeholder={t('terms.fields.emptySelect')} /></SelectTrigger>
-              <SelectContent>
-                {REMITTANCE_CADENCES.map((value) => (
-                  <SelectItem key={value} value={value}>{cadenceLabel(value)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label={t('terms.fields.graceHours')}>
-            <Input
-              type="number"
-              min={0}
-              max={720}
-              value={form.graceHours}
-              disabled={disabled}
-              onChange={(e) => onChange('graceHours', e.target.value)}
-              placeholder={t('terms.fields.graceHoursPlaceholder')}
+              onChange={(v) => onChange('dayOfWeek', v)}
+              // One row of seven, always — a wrapping row strands Sunday on a
+              // full-width line of its own.
+              className="grid grid-cols-7 gap-1.5"
+              itemClassName="min-w-0 overflow-hidden px-0 text-xs capitalize sm:text-sm"
+              options={weekdays}
             />
           </FormField>
-          {['weekly', 'biweekly'].includes(cadence) && (
-            // Named days, not a 0–6 box with "0 = Sunday" under it. The value
-            // stays the API's index, so the payload builders are unchanged.
-            <FormField label={t('terms.fields.dayOfWeek')}>
-              <Select
-                value={form.dayOfWeek}
-                disabled={disabled}
-                onValueChange={(v) => onChange('dayOfWeek', v)}
-              >
-                <SelectTrigger><SelectValue placeholder={t('terms.fields.emptySelect')} /></SelectTrigger>
-                <SelectContent>
-                  {weekdays.map((name, day) => (
-                    <SelectItem key={day} value={String(day)}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
           {cadence === 'monthly' && (
             <FormField label={t('terms.fields.dayOfMonth')}>
               <Input
@@ -327,10 +451,23 @@ export function ContractTermsFields({
               />
             </FormField>
           )}
+          <FormField label={t('terms.fields.graceHours')}>
+            <UnitInput
+              type="number"
+              min={0}
+              max={720}
+              inputMode="numeric"
+              unit="h"
+              value={form.graceHours}
+              disabled={disabled}
+              onChange={(e) => onChange('graceHours', e.target.value)}
+              placeholder={t('terms.fields.graceHoursPlaceholder')}
+            />
+          </FormField>
         </div>
       </FieldGroup>
 
-      <FieldGroup title={t('terms.fields.coverage')}>
+      <FieldGroup icon={MapPinned} title={t('terms.fields.coverage')}>
         <FormField label={t('terms.fields.regions')} hint={t('terms.fields.regionsHint')}>
           {catalogue.length > 0 ? (
             <RegionPicker
@@ -365,9 +502,11 @@ export function ContractTermsFields({
           )}
         </FormField>
         <FormField label={t('terms.fields.ceiling')} hint={t('terms.fields.ceilingHint')}>
-          <Input
+          <UnitInput
             type="number"
             min={0}
+            inputMode="numeric"
+            unit={currency}
             value={form.ceiling}
             disabled={disabled}
             onChange={(e) => onChange('ceiling', e.target.value)}

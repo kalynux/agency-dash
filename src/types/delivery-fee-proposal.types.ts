@@ -1,7 +1,10 @@
 /**
- * Delivery-fee proposals — a different fee for ONE shipment, which the vendor
- * approves or rejects. See api-doc/agency/shipments.md § Delivery-fee proposals
- * and api-doc/agency/FRONTEND-CHANGELOG-cod-limits-and-delivery-fees.md § 4.
+ * Delivery-fee proposals — a different fee for ONE shipment. Whoever pays the
+ * delivery answers it: the vendor on a shop-paid parcel; on a customer-paid one
+ * a decrease applies at once and an increase waits for the customer. See
+ * api-doc/agency/shipments.md § Delivery-fee proposals,
+ * api-doc/agency/FRONTEND-CHANGELOG-cod-limits-and-delivery-fees.md § 4 and
+ * api-doc/agency/FRONTEND-CHANGELOG-customer-paid-delivery.md § 4.
  */
 
 /** An unknown value renders read-only, never as one of these. */
@@ -10,8 +13,34 @@ export type DeliveryFeeProposalStatus = 'pending' | 'approved' | 'rejected' | 'w
 /** The verbs the API will accept from you on this proposal — render buttons from it, nothing else. */
 export type DeliveryFeeProposalAction = 'withdraw' | 'edit';
 
-/** `system` is an automatic withdrawal (see {@link DeliveryFeeProposal.withdrawalReason}). */
-export type DeliveryFeeProposalActorRole = 'agency' | 'agent' | 'vendor' | 'system';
+/**
+ * `system` is an automatic withdrawal (see {@link DeliveryFeeProposal.withdrawalReason})
+ * or the direct application of a customer-paid decrease; `customer` answered a
+ * customer-paid increase.
+ */
+export type DeliveryFeeProposalActorRole = 'agency' | 'agent' | 'vendor' | 'system' | 'customer';
+
+/**
+ * Who must answer. `vendor` — a shop-paid parcel; `customer` — an increase on a
+ * customer-paid one; `none` — a customer-paid decrease, applied when created.
+ * Absent on an older server, which only had `vendor`.
+ */
+export type DeliveryFeeProposalApprover = 'vendor' | 'customer' | 'none';
+
+/**
+ * `agency` — yours or your agent's; `change_agency` — raised by the platform when
+ * a vendor moved the parcel to you (no verb of yours, and you are paid your price
+ * whatever the answer); `combined_request` — your answer to a customer's
+ * combined-price request.
+ */
+export type DeliveryFeeProposalOrigin = 'agency' | 'change_agency' | 'combined_request';
+
+/** The online top-up an approved customer-paid increase is waiting for. */
+export interface DeliveryFeeTopup {
+  amount: number;
+  status: 'awaiting_payment' | 'paid' | (string & {});
+  paidAt: string | null;
+}
 
 export interface DeliveryFeeProposalActor {
   role: DeliveryFeeProposalActorRole;
@@ -39,6 +68,19 @@ export interface DeliveryFeeProposal {
   orderId: string;
   agencyId: string;
   proposedBy: DeliveryFeeProposalActor;
+  /** Absent on an older server → read as `vendor`. */
+  approver?: DeliveryFeeProposalApprover | (string & {});
+  /** Absent on an older server → read as `agency`. */
+  origin?: DeliveryFeeProposalOrigin | (string & {});
+  direction?: 'increase' | 'decrease' | null;
+  /**
+   * The customer accepted an increase. On an online order the fee only applies —
+   * and pickup only unblocks — once {@link DeliveryFeeProposal.topup} is paid, so
+   * the proposal stays `pending` meanwhile.
+   */
+  customerApproval?: { approvedAt: string; version: number } | null;
+  topup?: DeliveryFeeTopup | null;
+  combinedRequestId?: string | null;
   currency: string;
   /** The fee the shipment carried when this was proposed. */
   feeBefore: number;

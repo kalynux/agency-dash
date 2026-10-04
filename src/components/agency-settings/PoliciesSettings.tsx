@@ -64,6 +64,10 @@ const POLICY_FIELD_HINTS: Record<string, string> = {
   'pricing.additional_fees.rto_fee': 'rtoFee',
   'pricing.additional_fees.peak_season_surcharge': 'peakSeasonSurcharge',
 
+  // Ceiling and cash payment of the delivery fee (ADR-A11)
+  'pricing.max_fee_per_shipment': 'maxFeePerShipment',
+  'pricing.accepts_cash_delivery_fee': 'acceptsCashDeliveryFee',
+
   // Cash on delivery
   'cod.enabled': 'codEnabled',
   'cod.max_order_amount': 'codMaxAmount',
@@ -193,6 +197,10 @@ function toFormValues(existing: AgencyPolicies | null | undefined): DefaultValue
         rto_fee: existing?.pricing?.additional_fees?.rto_fee ?? undefined,
         peak_season_surcharge: existing?.pricing?.additional_fees?.peak_season_surcharge ?? undefined,
       },
+      // Always seeded from what was loaded: the save replaces the whole
+      // `policies` object, so these must go back even when nobody touched them.
+      max_fee_per_shipment: existing?.pricing?.max_fee_per_shipment ?? null,
+      accepts_cash_delivery_fee: existing?.pricing?.accepts_cash_delivery_fee ?? false,
       notes: existing?.pricing?.notes ?? '',
     },
     returns: {
@@ -432,6 +440,38 @@ export function PoliciesSettings() {
                   </FieldLabel>
                   <MoneyInput placeholder="0" {...register('pricing.additional_fees.peak_season_surcharge')} />
                 </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium">{t('policies.pricing.ceilingAndCash')}</p>
+              <div className="space-y-1.5 sm:max-w-xs">
+                <FieldLabel name="pricing.max_fee_per_shipment" htmlFor="policy-max-fee">
+                  {t('policies.pricing.maxFeePerShipment')}
+                </FieldLabel>
+                <MoneyInput
+                  id="policy-max-fee"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  placeholder={t('policies.pricing.maxFeePerShipmentPlaceholder')}
+                  {...register('pricing.max_fee_per_shipment')}
+                />
+                {pe?.max_fee_per_shipment && <p className="text-xs text-red-500">{pe.max_fee_per_shipment.message}</p>}
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <ToggleLabel name="pricing.accepts_cash_delivery_fee">
+                  {t('policies.pricing.acceptsCashDeliveryFee')}
+                </ToggleLabel>
+                <Controller control={control} name="pricing.accepts_cash_delivery_fee" render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    aria-label={t('policies.pricing.acceptsCashDeliveryFee')}
+                  />
+                )} />
               </div>
             </div>
 

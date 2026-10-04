@@ -42,6 +42,8 @@ import { getApiErrorMessage } from '@/lib/errors';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { canAct, type StorageInvoiceDetail } from '@/types/storage-invoice.types';
+import { StatementVendor } from '@/components/inventory/statements/statementDisplay';
+import { formatPeriod } from '@/components/inventory/statements/statementPeriod';
 
 type PendingAction = 'settle' | 'void' | null;
 
@@ -141,8 +143,11 @@ export function StorageStatementSheet({
     <>
       <div className="flex-shrink-0 px-5 pb-2 pe-12 pt-2">
         <SheetTitle className="text-base">
-          {t('statements.detailTitle', { period: detail.periodKey })}
+          {t('statements.detailTitle', { period: formatPeriod(detail.periodKey) })}
         </SheetTitle>
+        {/* Live, unlike everything below it — so it sits up here with the
+            heading, not among the frozen figures. */}
+        <StatementVendor vendor={detail.vendor} className="mt-1 text-sm" />
         <p className="mt-1 text-xs text-muted-foreground">
           {t('statements.issued', { date: formatDate(detail.issuedAt) })}
           {detail.settledAt && ` · ${t('statements.settledOn', { date: formatDate(detail.settledAt) })}`}

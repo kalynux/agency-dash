@@ -430,5 +430,129 @@
     "bodyPending": "Une demande de contrat attend encore une réponse. Personne ne peut livrer pour vous tant qu'elle n'est pas acceptée.",
     "cta": "Trouver un agent",
     "ctaPending": "Voir les demandes"
+  },
+  "closure": {
+    "title": "Fermer le compte agence",
+    "description": "Un administrateur a demandé la fermeture de ce compte agence. Consultez la demande et répondez-y.",
+    "request": {
+      "title": "Un administrateur a demandé la fermeture de ce compte agence",
+      "requestedAt": "Demandé le {{date}}",
+      "reasonLabel": "Motif indiqué",
+      "expiresAt": "Répondez avant le {{date}} ({{relative}}). Sans réponse, la demande expire et rien ne change.",
+      "notPending": "Il n’est plus possible de répondre à cette demande."
+    },
+    "effects": {
+      "title": "Ce que fait la fermeture",
+      "deactivated": "Votre agence est désactivée, et son nom, ses contacts, ses adresses, ses coordonnées de paiement et ses pièces d’identité sont supprimés.",
+      "agents": "Tous les contrats d’agents prennent fin. Vos agents sont prévenus.",
+      "vendors": "Toutes les connexions avec les vendeurs prennent fin. Vos vendeurs sont prévenus.",
+      "products": "Les produits livrés par votre agence sont suspendus.",
+      "records": "Les expéditions et les écritures financières sont conservées, sans vos informations.",
+      "irreversible": "La fermeture est définitive. L’agence ne pourra pas être rouverte.",
+      "otherRoles": "Seul ce compte agence est fermé. Vos autres rôles sur Wi-Mall continuent de fonctionner."
+    },
+    "warnings": {
+      "title": "Vous perdrez",
+      "prepaidPlan": "La durée payée restante de votre forfait {{plan}}, valable jusqu’au {{date}}.",
+      "prepaidPlanNoDate": "La durée payée restante de votre forfait {{plan}}.",
+      "planFallback": "actuel",
+      "credits": "Votre solde de {{amount}} crédits.",
+      "unknown": "Un service payé sur ce compte."
+    },
+    "blockers": {
+      "title": "À régler d’abord",
+      "intro_one": "L’agence ne peut pas être fermée tant que ce point est ouvert.",
+      "intro_other": "L’agence ne peut pas être fermée tant que ces {{count}} points sont ouverts.",
+      "none": "Rien ne bloque la fermeture.",
+      "open": "Ouvrir",
+      "recheck": "Vérifier à nouveau",
+      "unknown": {
+        "title": "Un élément est encore ouvert ({{code}})",
+        "action": "Contactez le support pour savoir ce qu’il reste à régler."
+      },
+      "codes": {
+        "shipments_unterminated": {
+          "title_one": "{{count}} expédition n’est pas terminée",
+          "title_other": "{{count}} expéditions ne sont pas terminées",
+          "action": "Attendez qu’elles soient livrées, retournées ou annulées. Les expéditions en échec comptent aussi."
+        },
+        "cod_collections_pending": {
+          "title_one": "{{count}} colis contre remboursement est encore en cours",
+          "title_other": "{{count}} colis contre remboursement sont encore en cours",
+          "action": "Attendez qu’ils soient livrés ou retournés."
+        },
+        "cod_cash_held": {
+          "title": "Vous détenez {{amount}} d’encaissements à la livraison",
+          "action": "Reversez ou déposez cet argent."
+        },
+        "cod_remittances_declared": {
+          "title_one": "{{count}} reversement attend la plateforme",
+          "title_other": "{{count}} reversements attendent la plateforme",
+          "action": "Attendez que la plateforme les confirme ou les rejette."
+        },
+        "cod_discrepancies_open": {
+          "title_one": "{{count}} écart de caisse est ouvert",
+          "title_other": "{{count}} écarts de caisse sont ouverts",
+          "action": "Faites résoudre les écarts."
+        },
+        "payout_request_held": {
+          "title_one": "Une demande de versement est en cours de traitement",
+          "title_other": "{{count}} demandes de versement sont en cours de traitement",
+          "action": "Attendez que le versement soit payé ou rejeté."
+        },
+        "earnings_balance": {
+          "title": "Il vous reste {{amount}} de gains",
+          "action": "Retirez d’abord votre solde."
+        },
+        "earnings_allocations_held": {
+          "title": "Des gains sont encore bloqués",
+          "action": "Attendez la fin de la période de blocage, puis retirez-les."
+        },
+        "agency_stock_held": {
+          "title_one": "Vous détenez du stock pour {{count}} produit",
+          "title_other": "Vous détenez du stock pour {{count}} produits",
+          "action": "Faites récupérer le stock par son vendeur, ou ramenez-le à zéro."
+        },
+        "storage_invoices_open": {
+          "title_one": "{{count}} relevé de stockage est impayé",
+          "title_other": "{{count}} relevés de stockage sont impayés",
+          "action": "Réglez les relevés de stockage."
+        },
+        "stock_requests_pending": {
+          "title_one": "{{count}} demande de stock est en attente",
+          "title_other": "{{count}} demandes de stock sont en attente",
+          "action": "Répondez-y ou retirez-les."
+        }
+      }
+    },
+    "confirm": {
+      "cta": "Fermer le compte agence",
+      "disabledHint": "Disponible dès que plus rien ne bloque la fermeture.",
+      "title": "Fermer ce compte agence ?",
+      "description": "C’est définitif. Votre agence est fermée et ne pourra pas être rouverte.",
+      "acknowledge": "Je comprends que la fermeture de mon compte agence est définitive et que mes contrats d’agents et mes connexions avec les vendeurs prendront fin.",
+      "word": "FERMER",
+      "typeLabel": "Saisissez {{word}} pour confirmer",
+      "submit": "Fermer mon compte agence"
+    },
+    "decline": {
+      "cta": "Garder mon compte agence",
+      "title": "Garder votre compte agence ?",
+      "description": "La demande est refusée et rien ne change pour votre agence. L’administrateur voit votre réponse.",
+      "noteLabel": "Note pour l’administrateur (facultatif)",
+      "notePlaceholder": "ex. : j’utilise toujours cette agence",
+      "submit": "Refuser la demande",
+      "done": "Demande refusée. Votre compte agence reste ouvert."
+    },
+    "none": {
+      "title": "Aucune demande de fermeture",
+      "body": "Aucune demande de fermeture n’attend votre réponse. Une demande éventuelle a été traitée, annulée ou a expiré.",
+      "back": "Retour au tableau de bord"
+    },
+    "banner": {
+      "title": "Un administrateur a demandé la fermeture de ce compte agence",
+      "body": "Rien ne change sans votre confirmation. Consultez la demande avant le {{date}}.",
+      "cta": "Voir la demande"
+    }
   }
 }

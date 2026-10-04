@@ -13,6 +13,7 @@ import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { formatCurrency } from '@/lib/format';
 import type { AnyTFunction } from '@/i18n/tx';
 import type { DeliveryFeeProposal } from '@/types/delivery-fee-proposal.types';
+import type { ShipmentDeliveryPayer } from '@/types/shipment.types';
 
 const REASON_MIN = 3;
 const REASON_MAX = 500;
@@ -47,6 +48,8 @@ export interface DeliveryFeeProposalDialogProps {
   /** The fee the shipment carries now, or `null` when unknown. */
   currentFee: number | null;
   currency: string;
+  /** Who pays this delivery, when the payload says; `null` → the copy covers both cases. */
+  deliveryPayer?: ShipmentDeliveryPayer | null;
   /** Present → edit this pending proposal; absent → a new one. */
   proposal?: DeliveryFeeProposal | null;
   open: boolean;
@@ -57,14 +60,17 @@ export interface DeliveryFeeProposalDialogProps {
 
 /**
  * Propose a different delivery fee for one shipment, or edit a pending
- * proposal (yours or your agent's — editing an agent's makes it yours). The
- * vendor must approve every change; pickup is blocked until they answer.
+ * proposal (yours or your agent's — editing an agent's makes it yours). Whoever
+ * pays the delivery answers: the vendor on a shop-paid parcel; on a
+ * customer-paid one a lower fee applies at once and a higher one waits for the
+ * customer. Pickup is blocked while an answer is awaited.
  * See api-doc/agency/shipments.md § Delivery-fee proposals.
  */
 export function DeliveryFeeProposalDialog({
   shipmentId,
   currentFee,
   currency,
+  deliveryPayer,
   proposal,
   open,
   onOpenChange,
@@ -137,7 +143,13 @@ export function DeliveryFeeProposalDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? t('deliveryFee.editTitle') : t('deliveryFee.proposeTitle')}
-      description={t('deliveryFee.dialogDescription')}
+      description={
+        deliveryPayer === 'customer'
+          ? t('deliveryFee.dialogDescriptionCustomer')
+          : deliveryPayer === 'vendor'
+            ? t('deliveryFee.dialogDescriptionVendor')
+            : t('deliveryFee.dialogDescription')
+      }
       desktopClassName="sm:max-w-md"
       mobileClassName="h-auto max-h-[92dvh]"
       disableClose={isPending}

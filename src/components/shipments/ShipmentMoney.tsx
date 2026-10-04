@@ -16,6 +16,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BadgeCheck, Banknote, CreditCard, Wallet } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { tx } from '@/i18n/tx';
@@ -32,6 +33,41 @@ function isProjected(cod: ShipmentCodInfo): boolean {
   return cod.status === null;
 }
 
+/** An online order whose customer hands the agent only the delivery fee in cash. */
+function isDeliveryFeeOnly(cod: ShipmentCodInfo): boolean {
+  return cod.kind === 'delivery_fee';
+}
+
+/**
+ * "Goods X + delivery Y" — only when the server sent both halves and the cash
+ * really is mixed. Both figures are the server's; `expectedAmount` is already
+ * their sum, so nothing is added up here.
+ */
+function useCashSplit(cod: ShipmentCodInfo): string | null {
+  const { t } = useTranslation('shipments');
+  if (isDeliveryFeeOnly(cod)) return null;
+  if (typeof cod.itemsAmount !== 'number' || typeof cod.deliveryFeeAmount !== 'number') return null;
+  if (cod.deliveryFeeAmount <= 0) return null;
+  return t('money.cashSplit', {
+    items: formatCurrency(cod.itemsAmount, cod.currency),
+    delivery: formatCurrency(cod.deliveryFeeAmount, cod.currency),
+  });
+}
+
+/** The cash pill's tooltip body — what the money is, then where the figure comes from. */
+function CodTooltipBody({ cod }: { cod: ShipmentCodInfo }) {
+  const { t } = useTranslation('shipments');
+  const split = useCashSplit(cod);
+  return (
+    <>
+      <p className="font-medium">{isDeliveryFeeOnly(cod) ? t('money.deliveryFeeOnly') : t('money.cashToCollect')}</p>
+      {isDeliveryFeeOnly(cod) && <p>{t('money.deliveryFeeOnlyHint')}</p>}
+      {split && <p className="font-numeric">{split}</p>}
+      <p>{isProjected(cod) ? t('money.codProjectedHint') : t('money.codSnapshotHint')}</p>
+    </>
+  );
+}
+
 /**
  * `true` once the delivery has been paid out and the figures are the real
  * entries. Only an explicit `false` counts: a payload that omits the flag is
@@ -45,14 +81,15 @@ function isFinal(earning: AgencyEarning): boolean {
  * The headline amount — exact once final, "≈" while it is still an estimate.
  * Shared by the list cell and the detail tile so the two never disagree.
  */
-function useEarningCopy(earning: AgencyEarning, shipment: Pick<ShipmentListItem, 'status' | 'paymentMethod'>) {
+function useEarningCopy(earning: AgencyEarning, shipment: Pick<ShipmentListItem, 'status' | 'paymentMethod' | 'cod'>) {
   const { t } = useTranslation('shipments');
   const final = isFinal(earning);
   const money = formatCurrency(earning.amount, earning.currency);
   // A returned COD run earns nothing: no cash was collected, so no entry is
-  // written. The server already sends 0; this only says why.
-  const returnedCod =
-    shipment.status === 'returned' && shipment.paymentMethod === 'cash_on_delivery' && earning.amount === 0;
+  // written — and the same for a delivery fee due in cash. The server already
+  // sends 0; this only says why.
+  const paidInCash = shipment.paymentMethod === 'cash_on_delivery' || shipment.cod?.kind === 'delivery_fee';
+  const returnedCod = shipment.status === 'returned' && paidInCash && earning.amount === 0;
   return {
     final,
     title: final ? t('money.youEarnedTitle') : t('money.youEarnTitle'),
@@ -175,8 +212,7 @@ export function ShipmentMoneyCell({ shipment, className }: ShipmentMoneyCellProp
             </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-[16rem] space-y-1">
-            <p className="font-medium">{t('money.cashToCollect')}</p>
-            <p>{isProjected(cod) ? t('money.codProjectedHint') : t('money.codSnapshotHint')}</p>
+            <CodTooltipBody cod={cod} />
           </TooltipContent>
         </Tooltip>
       ) : paymentMethod === 'online' ? (
@@ -282,6 +318,44 @@ function EarningTile({ earning, detail }: { earning: AgencyEarning; detail: Ship
 }
 
 /**
+ * What the agent collects at the door. A delivery fee paid in cash on an online
+ * order is badged as such — it is not order cash, and no COD handling fee is
+ * taken from it — and mixed cash shows its two halves.
+ */
+function CodTile({ cod }: { cod: ShipmentCodInfo }) {
+  const { t } = useTranslation(['shipments', 'cash']);
+  const split = useCashSplit(cod);
+  return (
+    <MoneyTile
+      icon={Banknote}
+      tone="gold"
+      label={t('money.cashToCollect')}
+      amount={formatCurrency(cod.expectedAmount, cod.currency)}
+      caption={
+        isProjected(cod)
+          ? t('money.codProjectedCaption')
+          : [tx(t, `cash:collectionStatus.${cod.status}`), cod.collectedAt ? formatDateTime(cod.collectedAt) : null]
+              .filter(Boolean)
+              .join(' · ')
+      }
+    >
+      {isDeliveryFeeOnly(cod) && (
+        <>
+          <Badge
+            variant="outline"
+            className="mt-2 border-gold-400/60 font-normal text-gold-700 dark:border-gold-500/40 dark:text-gold-400"
+          >
+            {t('money.deliveryFeeOnly')}
+          </Badge>
+          <p className="mt-1.5 text-xs text-muted-foreground">{t('money.deliveryFeeOnlyHint')}</p>
+        </>
+      )}
+      {split && <p className="mt-1.5 font-numeric text-xs text-muted-foreground">{split}</p>}
+    </MoneyTile>
+  );
+}
+
+/**
  * The money region of the detail sheet: cash at the door on the left, the
  * agency's net payout on the right, and the parent order's value underneath as
  * context. Deliberately sits just above the agent picker — choosing who to send
@@ -306,24 +380,7 @@ export function ShipmentMoneySection({ detail }: { detail: ShipmentDetail }) {
       </h3>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {cod && (
-          <MoneyTile
-            icon={Banknote}
-            tone="gold"
-            label={t('money.cashToCollect')}
-            amount={formatCurrency(cod.expectedAmount, cod.currency)}
-            caption={
-              isProjected(cod)
-                ? t('money.codProjectedCaption')
-                : [
-                    tx(t, `cash:collectionStatus.${cod.status}`),
-                    cod.collectedAt ? formatDateTime(cod.collectedAt) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-            }
-          />
-        )}
+        {cod && <CodTile cod={cod} />}
 
         {showPrepaid && (
           <MoneyTile

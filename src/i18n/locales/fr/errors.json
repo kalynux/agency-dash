@@ -686,7 +686,7 @@
     "WISHLIST_ITEM_NOT_FOUND": "Cet article n'est plus dans la liste d'envies.",
     "STORAGE_DOWNLOAD_NOT_SUPPORTED": "Ce déploiement ne peut pas fournir le contenu de ce fichier. C’est un problème de configuration, pas un problème de fichier — contactez le support.",
     "DELIVERY_FEE_PROPOSAL_NOT_FOUND": "Cette modification de frais n'existe plus. Rechargez pour voir les frais actuels.",
-    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "Une modification de frais attend déjà la réponse du vendeur.",
+    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "Une modification de frais attend déjà une réponse.",
     "DELIVERY_FEE_PROPOSAL_NOT_PENDING": "Cette modification de frais a déjà reçu une réponse ou a été retirée. Rechargez pour voir où elle en est.",
     "DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED": "Les frais ne peuvent être modifiés qu'avant le ramassage.",
     "DELIVERY_FEE_PROPOSAL_AGENTS_NOT_ALLOWED": "Votre agence n'autorise pas les agents à proposer des frais de livraison.",
@@ -697,13 +697,30 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "Cette expédition a avancé depuis la proposition de frais. Vous pouvez la retirer.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Les gains du vendeur sur cette commande ont changé : la modification de frais n'a pas pu être appliquée. Rien n'a été modifié.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Cette modification de frais a été éditée entre-temps. Rechargez pour voir le montant actuel.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "En attente de la réponse du vendeur à une modification de frais. Le ramassage est bloqué d'ici là.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "Une modification de frais attend encore une réponse — du vendeur, ou du client quand il paie la livraison. Le ramassage est bloqué d'ici là.",
+    "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "Cette modification baisserait les frais. Retirez cette proposition et proposez plutôt les frais plus bas — une baisse s’applique immédiatement.",
+    "DELIVERY_FEE_TOPUP_IN_PROGRESS": "Le client a accepté ces frais et paie la différence : ils ne peuvent plus être modifiés ni retirés.",
+    "DELIVERY_FEE_TOPUP_NOT_DUE": "Aucun paiement complémentaire n’est dû pour cette modification de frais.",
+    "DELIVERY_FEE_PROPOSAL_ORDER_NOT_PAID": "Le paiement de cette commande n’est pas réglé, ses frais de livraison ne peuvent donc pas changer pour l’instant.",
+    "DELIVERY_FEE_CASH_NOT_AVAILABLE": "Les frais de livraison de cette commande ne peuvent pas être payés en espèces.",
+    "COMBINED_DELIVERY_REQUEST_NOT_FOUND": "Cette demande de prix groupé n’existe plus.",
+    "COMBINED_DELIVERY_REQUEST_INELIGIBLE": "Ces colis ne peuvent pas être tarifés ensemble.",
+    "COMBINED_DELIVERY_REQUEST_ALREADY_OPEN": "Une demande de prix groupé est déjà ouverte pour ces colis.",
+    "COMBINED_DELIVERY_REQUEST_NOT_OPEN": "Cette demande a déjà été répondue, refusée ou annulée. Rechargez pour voir où elle en est.",
+    "COMBINED_DELIVERY_RESPONSE_INVALID": "Chaque nouveau tarif doit être inférieur aux frais actuels du colis.",
     "COD_VENDOR_NOT_ACCEPTED": "Une boutique de cette commande n'accepte pas le paiement à la livraison.",
     "COD_AGENCY_LIMIT_EXCEEDED": "Cela ferait dépasser à l'agence sa limite de paiement à la livraison.",
     "CINETPAY_REQUEST_FAILED": "Le prestataire de paiement n'a pas pu traiter cette demande. Réessayez sous peu.",
     "CINETPAY_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu.",
     "FAPSHI_REQUEST_FAILED": "Le prestataire de paiement n'a pas pu traiter cette demande. Réessayez sous peu.",
-    "FAPSHI_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu."
+    "FAPSHI_UNREACHABLE": "Le prestataire de paiement est injoignable. Réessayez sous peu.",
+    "AUTH_ROLE_CLOSED": "Ce compte agence a été fermé et on ne peut plus s’y connecter. Vos autres rôles sur Wi-Mall ne sont pas concernés.",
+    "ROLE_CLOSED": "Ce compte agence a été fermé et ne peut pas être rouvert.",
+    "ROLE_CLOSURE_REQUEST_NOT_FOUND": "Aucune demande de fermeture n’attend ce compte.",
+    "ROLE_CLOSURE_REQUEST_EXPIRED": "Cette demande de fermeture a expiré ou a déjà reçu une réponse.",
+    "ROLE_CLOSURE_BLOCKED": "L’agence ne peut pas encore être fermée. Réglez d’abord les points indiqués.",
+    "ROLE_CLOSURE_ALREADY_PENDING": "Une demande de fermeture attend déjà pour ce compte.",
+    "ROLE_CLOSURE_ROLE_NOT_HELD": "Ce compte ne détient pas ce rôle."
   },
   "detailed": {
     "COD_AGENT_EXPOSURE_EXCEEDED": {
@@ -722,6 +739,14 @@
     },
     "DELIVERY_FEE_PROPOSAL_NO_CHANGE": {
       "currentFee": "Ce sont déjà les frais actuels ({{fee}})."
+    },
+    "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": {
+      "currentFee": "Cette modification ferait passer les frais sous leur montant actuel de {{fee}}. Retirez cette proposition et proposez plutôt les frais plus bas — une baisse s’applique immédiatement."
+    },
+    "COMBINED_DELIVERY_RESPONSE_INVALID": {
+      "not_lower": "Chaque nouveau tarif doit être inférieur aux frais actuels du colis ({{fee}}).",
+      "empty": "Baissez au moins un frais, ou refusez la demande.",
+      "none_applied": "Aucune des baisses n’a pu être appliquée — les colis ont peut-être été ramassés entre-temps. Rien n’a été modifié."
     }
   },
   "categories": {

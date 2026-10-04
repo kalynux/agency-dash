@@ -9,21 +9,108 @@
  * whether the request still makes sense. It is also the one thing an approver has
  * to notice before signing off, hence the callout rather than a subtitle.
  *
- * WHY THE QUANTITY IS THE HEADLINE. The list response carries ids, not names — no
- * product title, no SKU — so the proposal itself is the only thing that tells one
- * row from another. It leads the row; the status badge follows it. Whether the row
- * needs an answer is answered before you read anything, by the tint and the arrow.
+ * WHAT LEADS THE ROW. Since 2026-10-04 every request names its SKU (`product`,
+ * `vendor`, `location`), so the product leads and the proposal follows it — you
+ * should know WHAT moves before reading by how much. All of it is resolved live
+ * and any of it can be null (a deleted product still has a request), so every
+ * field has a fallback. Whether the row needs an answer is answered before you
+ * read anything, by the tint and the arrow.
  *
  * See api-doc/agency/stock-requests.md §3.
  */
 
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronRight } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowRight,
+  ArrowUpRight,
+  ChevronRight,
+  MapPinOff,
+  Package,
+  Store,
+  Warehouse,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { formatDateTime, formatNumber, formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { hasDrift } from '@/types/stock-request.types';
 import type { StockRequest, StockRequestStatus } from '@/types/stock-request.types';
+
+/** The product picture, or the placeholder a picture-less (or deleted) SKU gets. */
+export function RequestProductThumb({ request, className }: { request: StockRequest; className?: string }) {
+  const url = request.product?.image?.url;
+  return url ? (
+    <img src={url} alt="" className={cn('flex-shrink-0 rounded-lg border object-cover', className)} />
+  ) : (
+    <span className={cn('flex flex-shrink-0 items-center justify-center rounded-lg border bg-muted', className)}>
+      <Package className="h-4 w-4 text-muted-foreground" />
+    </span>
+  );
+}
+
+/** Product title, with the variant and SKU beneath. Each part has its own fallback. */
+export function RequestProductName({ request, titleClassName }: { request: StockRequest; titleClassName?: string }) {
+  const { t } = useTranslation('inventory');
+  const { title, variantTitle, sku } = request.product ?? {};
+  return (
+    <>
+      <p className={cn('truncate font-medium', titleClassName)} title={title ?? undefined}>
+        {title ?? <span className="italic text-muted-foreground">{t('requests.unnamedProduct')}</span>}
+      </p>
+      {(variantTitle || sku) && (
+        <p className="truncate text-xs text-muted-foreground">
+          {variantTitle}
+          {variantTitle && sku && <span className="mx-1">·</span>}
+          {sku && <span className="font-mono">{sku}</span>}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Whose goods, and which depot. `location` is null for two different reasons, and
+ * `stockLevelId` tells them apart: no inventory row at all, or a row whose depot
+ * we have since deleted.
+ */
+export function RequestWhoseWhere({ request, className }: { request: StockRequest; className?: string }) {
+  const { t } = useTranslation('inventory');
+  const vendorName = request.vendor?.businessName;
+  const location = request.location;
+  const depot = location ? location.label || location.city : null;
+
+  return (
+    <span className={cn('flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground', className)}>
+      <span className="flex min-w-0 items-center gap-1">
+        <Store className="h-3 w-3 flex-shrink-0" />
+        <span className={cn('truncate', !vendorName && 'italic')}>
+          {vendorName ?? t('requests.unnamedVendor')}
+        </span>
+        {request.vendor && <VerifiedBadge verified={request.vendor.verified} className="flex-shrink-0" />}
+      </span>
+      {location ? (
+        <span className="flex min-w-0 items-center gap-1">
+          <Warehouse className="h-3 w-3 flex-shrink-0" />
+          <span className={cn('truncate', !depot && 'italic')}>{depot ?? t('table.unnamedLocation')}</span>
+          {location.isPrimary && (
+            <span className="flex-shrink-0 rounded bg-muted px-1 text-[10px] font-medium">
+              {t('table.primaryDepot')}
+            </span>
+          )}
+        </span>
+      ) : request.stockLevelId ? (
+        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          <MapPinOff className="h-3 w-3 flex-shrink-0" />
+          {t('table.unassignedLocation')}
+        </span>
+      ) : (
+        <span className="italic">{t('requests.notStored')}</span>
+      )}
+    </span>
+  );
+}
 
 const STATUS_TONE: Record<StockRequestStatus, string> = {
   pending: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400',
@@ -140,21 +227,29 @@ export function StockRequestCard({
         awaiting && 'bg-amber-500/[0.06]',
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full',
-          awaiting
-            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
-            : 'bg-muted text-muted-foreground',
-        )}
-      >
-        <DirectionIcon className="h-4 w-4 rtl:-scale-x-100" />
+      {/* The product, with the direction riding on its corner: out of us, or
+          into us, still readable before any word is. */}
+      <span className="relative mt-0.5 flex-shrink-0">
+        <RequestProductThumb request={request} className="h-11 w-11" />
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute -bottom-1 -end-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background',
+            awaiting
+              ? 'bg-amber-500 text-white'
+              : 'bg-muted text-muted-foreground',
+          )}
+        >
+          <DirectionIcon className="h-3 w-3 rtl:-scale-x-100" />
+        </span>
       </span>
 
       <div className="min-w-0 flex-1">
-        {/* The proposal, then how it ended up. */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        {/* WHAT moves — then by how much, and how it ended up. */}
+        <RequestProductName request={request} titleClassName="text-sm" />
+        <RequestWhoseWhere request={request} className="mt-0.5" />
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <QuantityChange
             from={request.quantityBefore}
             to={request.requestedQuantity}

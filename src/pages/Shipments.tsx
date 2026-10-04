@@ -1,8 +1,8 @@
 import { formatDate as fmtDate } from '@/lib/format';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Navigation, Package, Store, UserPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Navigation, Package, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -23,7 +23,12 @@ import { useOpenParam } from '@/hooks/useOpenParam';
 import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignStatusChip } from '@/components/shipments/AutoAssignStatusChip';
 import { DeliveryFeePendingChip } from '@/components/shipments/DeliveryFeePendingChip';
+import { CombinedRequestsEntry } from '@/components/shipments/combined/CombinedRequestsEntry';
+import { useOpenCombinedRequestCount } from '@/hooks/useOpenCombinedRequestCount';
 import { BulkAssignDialog } from '@/components/shipments/BulkAssignDialog';
+import { BulkSelectionBar } from '@/components/shipments/BulkSelectionBar';
+import { useLongPress } from '@/hooks/useLongPress';
+import { cn } from '@/lib/utils';
 import { isBulkOfferable } from '@/components/shipments/bulkAssign';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getApiErrorMessage } from '@/lib/errors';
@@ -78,10 +83,48 @@ function formatDate(iso: string): string {
   return fmtDate(iso);
 }
 
+/**
+ * A mobile shipment card: tap and press-and-hold are separate gestures. The
+ * hold is only wired when `onLongPress` is given (an offerable, unselected
+ * row), so holding anything else is an ordinary press.
+ */
+function PressableCard({
+  selected,
+  onTap,
+  onLongPress,
+  children,
+}: {
+  selected: boolean;
+  onTap: () => void;
+  onLongPress?: () => void;
+  children: ReactNode;
+}) {
+  const { handlers, consumeClick } = useLongPress(() => onLongPress?.());
+  return (
+    <div
+      {...(onLongPress ? handlers : {})}
+      onClick={() => {
+        if (consumeClick()) return;
+        onTap();
+      }}
+      data-selected={selected || undefined}
+      className={cn(
+        'relative cursor-pointer select-none p-4 transition-colors [-webkit-touch-callout:none]',
+        selected ? 'bg-primary/[0.06] active:bg-primary/10' : 'active:bg-muted/60',
+        // A start-edge accent so a selected card reads at a glance, not only by its checkbox.
+        selected && 'before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:bg-primary',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function Shipments() {
   const { t } = useTranslation(['shipments', 'common']);
   const { refetch: refetchBadge } = useShipments();
   const { agents } = useAgentsRoster();
+  const { count: openCombined, refetch: refetchCombined } = useOpenCombinedRequestCount();
   const [shipments, setShipments] = useState<ShipmentListItem[]>([]);
   const [meta, setMeta] = useState<ShipmentListMeta>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
   const [page, setPage] = useState(1);
@@ -127,6 +170,7 @@ export function Shipments() {
   usePageRefresh(() => {
     load();
     refetchBadge();
+    refetchCombined();
   }, isLoading);
 
   // Debounce typing into the query the API actually runs, and go back to page 1
@@ -314,7 +358,12 @@ export function Shipments() {
         // Not an action but a status (the switch lives in Settings →
         // Preferences) — so it rides the bar directly instead of going through
         // `actionItems`, which can only describe things you press.
-        actions={<AutoAssignStatusChip />}
+        actions={
+          <>
+            <CombinedRequestsEntry count={openCombined} />
+            <AutoAssignStatusChip />
+          </>
+        }
       />
 
       {/* Filters & Search */}
@@ -492,18 +541,35 @@ export function Shipments() {
               </div>
 
               {/* Mobile: cards */}
+              {/* Hold a card to start selecting; once anything is selected a tap
+                  toggles an offerable card instead of opening it (the list is
+                  in selection mode, as in any phone list). A card that can't be
+                  offered still opens on tap. */}
               <div className="md:hidden divide-y">
                 {shipments.map((shipment) => (
-                  <div
+                  <PressableCard
                     key={shipment.id}
-                    className="p-4 hover:bg-muted/50 active:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => openDetail(shipment.id)}
+                    selected={selected.has(shipment.id)}
+                    onLongPress={
+                      isBulkOfferable(shipment) && !selected.has(shipment.id)
+                        ? () => toggleSelected(shipment)
+                        : undefined
+                    }
+                    onTap={() =>
+                      selected.size > 0 && isBulkOfferable(shipment)
+                        ? toggleSelected(shipment)
+                        : openDetail(shipment.id)
+                    }
                   >
                     {/* Order # → status → actions */}
                     <div className="flex items-center gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         {isBulkOfferable(shipment) && (
-                          <span className="flex flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <span
+                            className="flex flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                          >
                             {renderSelect(shipment)}
                           </span>
                         )}
@@ -515,7 +581,11 @@ export function Shipments() {
                           className="flex-shrink-0"
                         />
                       </div>
-                      <div className="flex-shrink-0 -me-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex-shrink-0 -me-2"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
                         <ShipmentRowActions
                           shipment={shipment}
                           onView={() => openDetail(shipment.id)}
@@ -559,7 +629,7 @@ export function Shipments() {
                       shipment={shipment}
                       className="mt-2 flex-row flex-wrap items-center"
                     />
-                  </div>
+                  </PressableCard>
                 ))}
               </div>
             </>
@@ -603,27 +673,17 @@ export function Shipments() {
         </CardContent>
       </Card>
 
-      {/* Bulk offer bar — up whenever something is selected, pinned to the
-          bottom so it stays in reach while scrolling for more rows. */}
-      {selected.size > 0 && (
-        <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-background p-3 shadow-lg">
-          <div className="min-w-0 flex-1 text-sm">
-            <p className="font-medium">
-              {t('bulkAssign.selected', { count: selected.size, max: BULK_ASSIGN_MAX })}
-            </p>
-            {atLimit && (
-              <p className="text-xs text-muted-foreground">
-                {t('bulkAssign.limitReached', { max: BULK_ASSIGN_MAX })}
-              </p>
-            )}
-          </div>
-          <Button variant="ghost" size="sm" onClick={clearSelected}>
-            {t('bulkAssign.clear')}
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setBulkOpen(true)}>
-            <UserPlus className="w-4 h-4" /> {t('bulkAssign.action')}
-          </Button>
-        </div>
+      {/* Bulk offer bar — floats above the mobile tab bar like the settings
+          save pill. The spacer keeps the last row and the pagination
+          scrollable out from under it. Hidden while the dialog it opens is up. */}
+      {selected.size > 0 && <div aria-hidden className="h-14 md:h-10" />}
+      {!bulkOpen && (
+        <BulkSelectionBar
+          count={selected.size}
+          max={BULK_ASSIGN_MAX}
+          onClear={clearSelected}
+          onAssign={() => setBulkOpen(true)}
+        />
       )}
 
       <BulkAssignDialog

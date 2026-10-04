@@ -11,7 +11,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Ban, Boxes, MapPinOff, Wallet, Warehouse } from 'lucide-react';
+import { Ban, Boxes, ClipboardList, MapPinOff, ScanLine, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { InfoHint } from '@/components/common/InfoHint';
 import { compactCardClass, compactCardContentClass } from '@/components/layout/PageContainer';
@@ -107,15 +107,20 @@ export function StatCard({
   );
 }
 
+/**
+ * Every tile is either a fact about the stock or a to-do with its count — "not
+ * counted yet", "waiting for your answer", "location deleted" — and both to-do
+ * counts come straight off the summary (`uncountedRows`,
+ * `awaitingMyDecisionCount`) rather than being subtracted or re-counted here.
+ */
 export function InventorySummaryCards({
   summary,
-  depotCount,
   storageOffered,
   onShowUnassigned,
+  onShowAwaiting,
 }: {
   /** Null while the first load is in flight, or if the summary call failed. */
   summary: InventorySummary | null;
-  depotCount: number;
   /**
    * Whether we warehouse at all (`storageFee.storageBasedEnabled` from any row).
    * When false the monthly-estimate tile is hidden rather than showing `0`, which
@@ -123,16 +128,20 @@ export function InventorySummaryCards({
    */
   storageOffered: boolean;
   onShowUnassigned: () => void;
+  /** Opens the stock-request inbox. */
+  onShowAwaiting: () => void;
 }) {
   const { t } = useTranslation('inventory');
   const unassigned = summary?.unassignedCount ?? 0;
   const suspended = summary?.suspendedCount ?? 0;
+  const uncounted = summary?.uncountedRows ?? 0;
+  const awaiting = summary?.awaitingMyDecisionCount ?? 0;
 
   return (
     // Phone: ONE panel split into cells by 1px hairlines (the `gap-px` over a
     // border-coloured ground), the rent figure spanning the full width beneath.
-    // From `md` up: the separate tiles the desktop has always had.
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border md:gap-3 md:overflow-visible md:rounded-none md:border-0 md:bg-transparent lg:grid-cols-3 xl:grid-cols-5">
+    // From `md` up: the separate tiles the desktop has always had, three a row.
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border md:gap-3 md:overflow-visible md:rounded-none md:border-0 md:bg-transparent lg:grid-cols-3">
       <StatCard
         icon={Boxes}
         label={t('summary.skus')}
@@ -140,10 +149,19 @@ export function InventorySummaryCards({
         hint={t('summary.skusHint')}
       />
       <StatCard
-        icon={Warehouse}
-        label={t('summary.depots')}
-        value={formatNumber(depotCount)}
-        hint={t('summary.depotsHint')}
+        icon={ScanLine}
+        tone={uncounted > 0 ? 'warning' : 'default'}
+        label={t('summary.uncounted')}
+        value={formatNumber(uncounted)}
+        hint={t('summary.uncountedHint')}
+      />
+      <StatCard
+        icon={ClipboardList}
+        tone={awaiting > 0 ? 'warning' : 'default'}
+        label={t('summary.awaiting')}
+        value={formatNumber(awaiting)}
+        hint={t('summary.awaitingHint')}
+        onClick={awaiting > 0 ? onShowAwaiting : undefined}
       />
       <StatCard
         icon={MapPinOff}
@@ -160,16 +178,16 @@ export function InventorySummaryCards({
         // Products, not rows — a product with three variants is one suspension.
         value={formatNumber(suspended)}
         hint={t('summary.suspendedHint')}
+        // Without the rent tile this is the fifth, alone on a two-column row.
+        className={storageOffered ? undefined : 'max-lg:col-span-2'}
       />
       {storageOffered && (
         <StatCard
           icon={Wallet}
-          // The fifth tile would sit alone in a two-column grid; give it the row.
-          className="max-lg:col-span-2"
           label={t('summary.monthlyEstimate')}
           value={formatCurrency(summary?.totalMonthlyEstimate ?? 0)}
-          // "What you should be charging", never "due" or "owed" — the platform
-          // does not track, invoice or chase any of it.
+          // The statement's basis (counted stock × rate), but live — never "due"
+          // or "owed": the monthly statement, not this tile, is the record.
           hint={t('summary.monthlyEstimateHint')}
         />
       )}

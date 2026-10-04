@@ -106,7 +106,15 @@ type EndingKey =
   | 'membership.ending.rejected'
   | 'membership.ending.withdrawn'
   | 'membership.ending.deactivated'
-  | 'membership.ending.transferred';
+  | 'membership.ending.transferred'
+  | 'membership.ending.agentClosed';
+
+/**
+ * `removalReason` (the model's `deactivation_reason`) when the contract ended
+ * because the AGENT closed their account (ADR-A10, `agent_contract.ended_by_closure`).
+ * A code, not words anyone wrote — so it is never quoted back as a reason.
+ */
+const ROLE_CLOSED_REASON = 'role_closed';
 
 /**
  * How a terminal contract ended, or null while it is still live.
@@ -132,6 +140,9 @@ function contractEnding(
         reason: membership.withdrawalReason,
       };
     case 'deactivated':
+      if (membership.removalReason === ROLE_CLOSED_REASON) {
+        return { labelKey: 'membership.ending.agentClosed', at: membership.removedAt, reason: null };
+      }
       return {
         labelKey: membership.transferredToAgencyId
           ? 'membership.ending.transferred'
@@ -858,16 +869,26 @@ function MembershipBody({
             <div className="rounded-xl border bg-muted/40 p-4">
               <p className="text-sm font-medium">{t(ending.labelKey)}</p>
               {ending.at && <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(ending.at)}</p>}
-              {ending.reason ? (
-                <p className="mt-2 text-sm">
-                  {t('membership.ending.quotedReason', { reason: ending.reason })}
+              {ending.labelKey === 'membership.ending.agentClosed' ? (
+                // The agent's account is closed for good — there is no reason
+                // to quote and no new contract to offer them.
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t('membership.ending.agentClosedBody')}
                 </p>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">{t('membership.ending.noReason')}</p>
+                <>
+                  {ending.reason ? (
+                    <p className="mt-2 text-sm">
+                      {t('membership.ending.quotedReason', { reason: ending.reason })}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">{t('membership.ending.noReason')}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('membership.ending.newContractHint')}
+                  </p>
+                </>
               )}
-              <p className="mt-2 text-xs text-muted-foreground">
-                {t('membership.ending.newContractHint')}
-              </p>
             </div>
           )}
 

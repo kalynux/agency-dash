@@ -80,7 +80,7 @@ export function Notifications() {
       await markAsRead(n.id);
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
     }
-    navigate(notificationHref(n.action));
+    navigate(notificationHref(n.action, n.type));
   };
 
   const handleMarkRead = async (id: string) => {

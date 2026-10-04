@@ -114,6 +114,17 @@ const OUT_OF_SCOPE_PREFIXES = [
   // agency's own billing calls /agency/credits/topups and /agency/plans/:id/purchase,
   // which never mint one. Revisit if agency invoices become payable by link.
   'PAYMENT_LINK_',
+  // Manual delivery-fee refunds, settled by a wi-admin operator on
+  // /api/internal/admin/delivery-fee-refunds (ADR-A11 W-E2). Never an agency
+  // call. Revisit if agencies are ever shown or asked to settle a refund.
+  'DELIVERY_FEE_REFUND_',
+  // AI-written listing copy, POST /api/vendor/ai/listing-copy — vendor-only.
+  // Revisit if agencies get an AI writing tool.
+  'AI_COPY_',
+  // Marketplace product categories (2026-10-04): raised by product WRITES
+  // (vendor) and the internal admin category routes. An agency only reads
+  // products. Revisit if agencies ever create or edit a product.
+  'CATEGORY_',
 ];
 
 const outOfScope = (code) => OUT_OF_SCOPE_PREFIXES.some((p) => code.startsWith(p));

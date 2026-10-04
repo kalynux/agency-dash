@@ -52,16 +52,31 @@ export type ShipmentPaymentMethod = 'cash_on_delivery' | 'online';
 export type ShipmentCodStatus = 'pending' | 'collected' | 'cancelled';
 
 /**
+ * What the cash at the door is for. `order` — a cash-on-delivery order (goods,
+ * plus the delivery fee when the customer pays it); `delivery_fee` — an ONLINE
+ * order whose customer hands the agent only the delivery fee in cash. An unknown
+ * value renders like `order`.
+ */
+export type ShipmentCodKind = 'order' | 'delivery_fee';
+
+/**
  * The cash the agent has to take at the door. On the list *and* the detail for
- * every `cash_on_delivery` shipment, `null` when prepaid. Never contains the
- * customer's delivery code.
+ * every `cash_on_delivery` shipment — and for an online one whose delivery fee
+ * is paid in cash (`kind: 'delivery_fee'`) — `null` otherwise. Never contains
+ * the customer's delivery code.
  */
 export interface ShipmentCodInfo {
+  /** Absent on an older server, which only ever sent order cash. */
+  kind?: ShipmentCodKind | (string & {});
   /**
-   * A snapshot once a collection record exists, a **projection** before one does
-   * — Σ (item price × quantity), the same arithmetic acceptance will snapshot.
+   * A snapshot once a collection record exists, a **projection** before one does.
+   * Always `itemsAmount + deliveryFeeAmount` — the server's sum, never ours.
    */
   expectedAmount: number;
+  /** The goods. `0` on a `delivery_fee` collection. Your COD handling fee is computed on this only. */
+  itemsAmount?: number;
+  /** The delivery fee the customer pays in cash with the goods; `0` when the shop pays delivery. */
+  deliveryFeeAmount?: number;
   currency: string;
   /**
    * `null` until an agent accepts: the collection record is only created then.
@@ -195,6 +210,38 @@ export function describeAddress(address?: AddressDetail | null): string | null {
   if (!address) return null;
   const cityState = [address.city, address.state].filter(Boolean).join(', ');
   return cityState || address.formattedAddress || address.label || address.addressLine1 || null;
+}
+
+/**
+ * Who pays this shipment's delivery fee: the shop (free delivery) or the
+ * customer (the shop's delivery terms). You are credited the same fee either
+ * way. ⚠ Not sent on agency payloads yet (2026-10-04) — render it only when present.
+ */
+export type ShipmentDeliveryPayer = 'vendor' | 'customer';
+
+/**
+ * How the posted delivery fee was built at checkout, line by line (detail only).
+ * Render these figures; never add them up into a fee of our own — the ceiling
+ * (`capApplied`) means the parts can exceed what is charged.
+ */
+export interface ShipmentFeeComponents {
+  /** `pickup_based.base_rate_first_kg`; `0` when no item was vendor-collected. */
+  pickupBase: number;
+  /** `additional_per_kg × (kg − 1)`. */
+  weightExtra: number;
+  /** `out_of_region_surcharge`, when `outOfRegion`. */
+  regionSurcharge: number;
+  /** The storage-based part: local or out-of-region fee + pick & pack. */
+  storage: number;
+  /** Your `max_fee_per_shipment` cut the total. */
+  capApplied: boolean;
+  /** Billable kilograms — the weight rounded up, minimum 1. */
+  kg: number;
+  weightGrams: number;
+  /** The drop-off's region differs from the pickup's. */
+  outOfRegion: boolean;
+  /** You had no pricing policy; the platform's flat fee was used. */
+  flatFallback: boolean;
 }
 
 /** One row from GET /api/agency/shipments. */
@@ -391,6 +438,10 @@ export interface ShipmentDetail extends ShipmentDeliveryFeeState {
   orderTimeline: ShipmentOrderTimelineEntry[];
   /** Every fee change on this shipment, newest first. Absent on an older server. */
   deliveryFeeProposals?: DeliveryFeeProposal[];
+  /** How the posted fee was built; `null` on shipments priced before the formula. */
+  feeComponents?: ShipmentFeeComponents | null;
+  /** Not on the agency payload yet — see {@link ShipmentDeliveryPayer}. */
+  deliveryPayer?: ShipmentDeliveryPayer | null;
 }
 
 /** Slim shipment shape returned by the status/reject/tracking-number mutations. */

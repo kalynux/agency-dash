@@ -24,7 +24,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { resolveDeepLink } from '@/lib/notification-display';
+import { resolveDeepLink, routeForNotificationType } from '@/lib/notification-display';
 import { isNative } from '../env';
 
 /**
@@ -137,6 +137,15 @@ export function routeFromPushData(data: unknown): string | null {
   const payload = data as Record<string, unknown>;
 
   const path = payload.path ?? payload.action_path;
+  // A type whose screen differs from its button (a combined-price request)
+  // goes where the in-app list sends it — when the payload names the type.
+  if (typeof payload.type === 'string') {
+    const byType = routeForNotificationType(
+      payload.type,
+      typeof path === 'string' ? { label: '', path: path.trim() } : null,
+    );
+    if (byType) return byType;
+  }
   // An unrecognised label is "no button" (rule 5), so fall through to `url`
   // rather than navigating somewhere invented — and if that is unknown too,
   // `null` leaves the tap on the inbox where it belongs.

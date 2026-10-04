@@ -19,7 +19,8 @@
     "agentsBrowse": "Directorio",
     "vendors": "Vendedores",
     "vendorsConnections": "Conexiones",
-    "vendorsBrowse": "Directorio"
+    "vendorsBrowse": "Directorio",
+    "vendorsProducts": "Productos"
   },
   "footer": {
     "account": "Cuenta",

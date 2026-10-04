@@ -430,5 +430,129 @@
     "bodyPending": "A contract request is still waiting on an answer. Nobody can deliver for you until one is accepted.",
     "cta": "Find an agent",
     "ctaPending": "View requests"
+  },
+  "closure": {
+    "title": "Close agency account",
+    "description": "An administrator asked to close this agency account. Review the request and answer it.",
+    "request": {
+      "title": "An administrator asked to close this agency account",
+      "requestedAt": "Requested {{date}}",
+      "reasonLabel": "Reason given",
+      "expiresAt": "Answer by {{date}} ({{relative}}). If you do nothing, the request expires and nothing changes.",
+      "notPending": "This request can no longer be answered."
+    },
+    "effects": {
+      "title": "What closing does",
+      "deactivated": "Your agency is deactivated, and its name, contacts, addresses, payout details and identity documents are removed.",
+      "agents": "Every agent contract ends. Your agents are notified.",
+      "vendors": "Every vendor connection ends. Your vendors are notified.",
+      "products": "Products delivered through your agency are suspended.",
+      "records": "Shipments and money records are kept, without your details.",
+      "irreversible": "Closing cannot be undone. The agency cannot be reopened later.",
+      "otherRoles": "Only this agency account closes. Any other role you hold on Wi-Mall keeps working."
+    },
+    "warnings": {
+      "title": "You will lose",
+      "prepaidPlan": "The paid time left on your {{plan}} plan, which runs until {{date}}.",
+      "prepaidPlanNoDate": "The paid time left on your {{plan}} plan.",
+      "planFallback": "current",
+      "credits": "Your credit balance of {{amount}} credits.",
+      "unknown": "Something you have paid for on this account."
+    },
+    "blockers": {
+      "title": "Settle these first",
+      "intro_one": "The agency can’t be closed while this is open.",
+      "intro_other": "The agency can’t be closed while these {{count}} things are open.",
+      "none": "Nothing is blocking the closure.",
+      "open": "Open",
+      "recheck": "Check again",
+      "unknown": {
+        "title": "Something is still open ({{code}})",
+        "action": "Contact support to find out what needs to be settled."
+      },
+      "codes": {
+        "shipments_unterminated": {
+          "title_one": "{{count}} shipment isn’t finished",
+          "title_other": "{{count}} shipments aren’t finished",
+          "action": "Let them be delivered, returned or cancelled. Failed shipments count too."
+        },
+        "cod_collections_pending": {
+          "title_one": "{{count}} cash-on-delivery parcel is still out",
+          "title_other": "{{count}} cash-on-delivery parcels are still out",
+          "action": "Wait for them to be delivered or returned."
+        },
+        "cod_cash_held": {
+          "title": "You hold {{amount}} in cash on delivery",
+          "action": "Remit or deposit the cash."
+        },
+        "cod_remittances_declared": {
+          "title_one": "{{count}} remittance is waiting for the platform",
+          "title_other": "{{count}} remittances are waiting for the platform",
+          "action": "Wait for the platform to confirm or reject them."
+        },
+        "cod_discrepancies_open": {
+          "title_one": "{{count}} cash discrepancy is open",
+          "title_other": "{{count}} cash discrepancies are open",
+          "action": "Get the discrepancies resolved."
+        },
+        "payout_request_held": {
+          "title_one": "A payout request is still being processed",
+          "title_other": "{{count}} payout requests are still being processed",
+          "action": "Wait for the payout to be paid or rejected."
+        },
+        "earnings_balance": {
+          "title": "You still have {{amount}} in earnings",
+          "action": "Withdraw your balance first."
+        },
+        "earnings_allocations_held": {
+          "title": "Some earnings are still on hold",
+          "action": "Wait for the hold period to end, then withdraw them."
+        },
+        "agency_stock_held": {
+          "title_one": "You hold stock for {{count}} product",
+          "title_other": "You hold stock for {{count}} products",
+          "action": "Have the stock collected by its vendor, or counted down to zero."
+        },
+        "storage_invoices_open": {
+          "title_one": "{{count}} storage statement is unpaid",
+          "title_other": "{{count}} storage statements are unpaid",
+          "action": "Settle the storage statements."
+        },
+        "stock_requests_pending": {
+          "title_one": "{{count}} stock request is waiting",
+          "title_other": "{{count}} stock requests are waiting",
+          "action": "Answer or withdraw them."
+        }
+      }
+    },
+    "confirm": {
+      "cta": "Close agency account",
+      "disabledHint": "Available once nothing is blocking the closure.",
+      "title": "Close this agency account?",
+      "description": "This is permanent. Your agency is closed and cannot be reopened.",
+      "acknowledge": "I understand that closing my agency account is permanent, and that my agent contracts and vendor connections will end.",
+      "word": "CLOSE",
+      "typeLabel": "Type {{word}} to confirm",
+      "submit": "Close my agency account"
+    },
+    "decline": {
+      "cta": "Keep my agency account",
+      "title": "Keep your agency account?",
+      "description": "The request is declined and nothing about your agency changes. The administrator sees your answer.",
+      "noteLabel": "Note for the administrator (optional)",
+      "notePlaceholder": "e.g. I still use this agency",
+      "submit": "Decline the request",
+      "done": "Request declined. Your agency account stays open."
+    },
+    "none": {
+      "title": "No closure request",
+      "body": "Nobody is waiting on you to close this agency account. A request that was made has been answered, cancelled or has expired.",
+      "back": "Back to the dashboard"
+    },
+    "banner": {
+      "title": "An administrator asked to close this agency account",
+      "body": "Nothing changes unless you confirm. Review the request before {{date}}.",
+      "cta": "Review request"
+    }
   }
 }

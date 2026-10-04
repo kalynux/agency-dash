@@ -28,30 +28,28 @@
   },
   "derived": {
     "bannerTitle": "\"Counted on hand\" is not a shelf count yet.",
-    "bannerBody": "Nobody has counted anything: stock isn't decremented when goods leave or restored on a return, and there's no intake flow — so those figures stay at zero until stock is reserved at checkout and settled on delivery. The agreed quantity beside them is real, and it's the one your storage rent is quoted against.",
+    "bannerBody": "Rows marked \"Not counted\" have never had goods recorded on the shelf. Record a receipt on one to start tracking it — from then on sales move its count and it is billed on the monthly statement. The agreed quantity beside it is the vendor's catalogue figure.",
     "badge": "Agreed to store",
     "notCounted": "Not counted",
     "tooltipTitle": "No shelf count yet",
-    "tooltipBody": "This row exists because the vendor configured the product to be stored with you. Stock isn't decremented when goods leave or restored on a return, and there's no intake flow — so there is no honest number to show.",
-    "detailBody": "This row exists because the vendor configured the product to be stored with you. Stock isn't decremented when goods leave or restored on a return, and there's no intake flow yet, so no quantity is shown. Real counts arrive with reservation at checkout and settlement on delivery."
+    "tooltipBody": "Nobody has recorded goods arriving on this shelf yet, so there is no count to show. Record a receipt to start tracking it.",
+    "detailBody": "Nobody has recorded goods arriving on this shelf yet. Record a receipt below to start tracking it — until then sales don't move its count and it isn't billed."
   },
   "catalogStock": {
     "title": "Agreed quantity",
-    "label": "Agreed with the vendor",
-    "caption": "The catalogue quantity for this SKU. Neither of you can change it alone — one proposes, the other approves. Your storage rent is quoted against this figure.",
+    "caption": "The vendor's catalogue quantity for this SKU. Neither of you can change it alone — one proposes, the other approves.",
     "unlimited": "Unlimited",
     "unknown": "Unknown",
     "pendingChange": "Change pending → {{quantity}}",
     "pendingYours": "A change is waiting on your answer",
     "pendingTheirs": "A change you proposed is waiting on the vendor",
-    "pendingDetail": "{{from}} → {{to}}. Open the request",
-    "propose": "Propose a different quantity"
+    "proposeShort": "Propose a change",
+    "pendingArrow": "{{from}} → {{to}}"
   },
   "storageFee": {
-    "title": "What you should be charging",
+    "title": "Storage rent",
     "monthlyEstimate": "{{amount}} / month",
     "breakdown": "{{rate}} per SKU per month × {{quantity}}",
-    "notBilledCaption": "The platform doesn't track, invoice or chase this — it's what you should be charging, worked out from your own policy. Collecting it is between you and the vendor.",
     "notOffered": "You don't offer warehousing",
     "notOfferedHint": "Storage-based pricing is switched off in your policies, so no rent is quoted for this line.",
     "sizeTitle": "Size of what you're shelving",
@@ -65,13 +63,15 @@
       "variant": "This variant",
       "product_default": "Product default",
       "unknown": "Not recorded"
-    }
+    },
+    "billedCaption": "Billed monthly on this basis: your rate × what is counted on the shelf. This figure is live — the statement issued on the 1st is the record. No money moves through the platform.",
+    "uncounted": "Not counted yet",
+    "uncountedHint": "Nothing is billed for this shelf until goods are recorded on it. Your rate is {{rate}} per SKU per month."
   },
   "suspension": {
     "title": "Storefront",
     "onSale": "This product is on sale.",
     "suspendHint": "Suspending takes it off the storefront so customers can no longer buy it. Nothing here is automatic — the platform never suspends on your behalf.",
-    "suspend": "Suspend product",
     "suspended": "Suspended — off the storefront",
     "byYou": "You suspended this on {{when}}.",
     "bySystem": "Suspended by the platform, not by you — most often because the vendor's delivery agency went inactive or their connection needs re-approval. Only they can lift it.",
@@ -83,7 +83,8 @@
     "noteHint": "Optional, but it's the only explanation the vendor gets. Up to {{max}} characters.",
     "confirmSuspend": "Suspend",
     "blockedTitle": "This product can't go back on sale yet",
-    "blockedUnknown": "The vendor has something to resolve before this product can be activated."
+    "blockedUnknown": "The vendor has something to resolve before this product can be activated.",
+    "suspendShort": "Suspend"
   },
   "depot": {
     "moveAction": "Move to another depot",
@@ -100,14 +101,16 @@
   "summary": {
     "skus": "SKUs stored",
     "skusHint": "Rows in the current view",
-    "depots": "Your locations",
-    "depotsHint": "Places a vendor can name",
     "unassigned": "Unassigned",
     "unassignedHint": "Rows whose location was deleted",
     "suspended": "Suspended",
     "suspendedHint": "Products you've taken off sale",
     "monthlyEstimate": "Monthly rent",
-    "monthlyEstimateHint": "What you should be charging, not billed"
+    "monthlyEstimateHint": "Billed monthly on counted stock",
+    "uncounted": "Not counted yet",
+    "uncountedHint": "Shelves with no goods recorded yet",
+    "awaiting": "Waiting for your answer",
+    "awaitingHint": "Stock changes the vendor proposed"
   },
   "filters": {
     "location": "Location",
@@ -133,18 +136,10 @@
     "awaitingYouBadge": "Awaiting you"
   },
   "stock": {
-    "available": "Available",
-    "availableTitle": "Available to sell",
-    "availableHint": "On hand minus units already reserved by in-flight orders. This is what is genuinely left.",
-    "availableCaption": "Free to sell",
-    "onHand": "On hand",
-    "onHandCaption": "Physically on the shelf",
-    "onHandShort": "{{count}} on hand",
-    "onHandShort_one": "{{count}} on hand",
-    "onHandShort_other": "{{count}} on hand",
-    "reserved": "Reserved",
-    "reservedCaption": "Locked by open orders",
-    "reservedOfOnHand": "{{reserved}} reserved of {{onHand}}"
+    "sectionTitle": "Stock",
+    "availableReserved": "{{available}} available · {{reserved}} reserved",
+    "negativeTitle": "Below zero",
+    "negativeHint": "More has left this shelf than was ever recorded arriving — usually a delivery nobody booked in. Record a count to set the real figure."
   },
   "requests": {
     "srTitle": "Stock request detail",
@@ -214,7 +209,13 @@
     "notePlaceholder": "e.g. Counted 118 on the shelf this morning",
     "noteHint": "Optional, but it's what the vendor weighs your figure against.",
     "confirmRaise": "Send proposal",
-    "viewOpenRequest": "Open the pending request"
+    "viewOpenRequest": "Open the pending request",
+    "searchPlaceholder": "Search product or SKU...",
+    "searchLabel": "Search stock requests by product title or SKU",
+    "unnamedProduct": "Product no longer available",
+    "unnamedVendor": "Unnamed vendor",
+    "notStored": "Not in your inventory",
+    "openInInventory": "Open in inventory"
   },
   "detail": {
     "srTitle": "Stored SKU detail",
@@ -222,20 +223,17 @@
     "unnamedProduct": "Unnamed product",
     "unnamedVendor": "Unnamed vendor",
     "unnamedLocation": "Unnamed location",
-    "stock": "Counted on hand",
-    "location": "Stored at",
     "primaryDepot": "· Primary",
     "unassignedLocation": "This location no longer exists",
     "unassignedHint": "The product names a location you have since deleted, so we can't say which building holds it. Move it to a real depot below. Deliveries still route to your primary location in the meantime.",
     "manageLocations": "Manage your locations",
-    "vendor": "Vendor",
     "images": "Images",
     "storageFee": "What you charge for this",
     "storageFeeAmount": "{{amount}} / month",
-    "storageFeeCaption": "Your per-SKU storage rate. Not billed yet — this record is what unblocks it.",
     "lastReconciled": "Last checked against the catalogue {{when}}",
     "viewShipments": "Shipments with this",
-    "viewVendor": "Vendor connection"
+    "viewVendor": "Vendor connection",
+    "whereWhose": "Vendor & location"
   },
   "movements": {
     "sectionTitle": "Record a movement",
@@ -310,7 +308,6 @@
     },
     "empty": "No storage statements yet.",
     "emptyHint": "Statements are issued on the 1st of each month, and only shelves you have actually counted are billed. Record a receipt on a shelf to start billing it.",
-    "rowSummary": "{{skus}} SKUs · {{units}} units",
     "issued": "Issued {{date}}",
     "settledOn": "Settled {{date}}",
     "srTitle": "Storage statement",
@@ -336,6 +333,12 @@
     "voidReasonPlaceholder": "e.g. duplicate of the August statement",
     "voidNoReissue": "The month stays claimed, so no replacement statement will be issued for it.",
     "voidConfirm": "Void statement",
-    "voidedToast": "Statement voided."
+    "voidedToast": "Statement voided.",
+    "skuCount_one": "{{formatted}} SKU",
+    "skuCount_other": "{{formatted}} SKUs",
+    "unitCount_one": "{{formatted}} unit",
+    "unitCount_other": "{{formatted}} units",
+    "unnamedVendor": "Unnamed vendor",
+    "vendorLive": "The vendor's current store name — not part of the issued statement"
   }
 }

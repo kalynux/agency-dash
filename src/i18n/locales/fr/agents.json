@@ -265,7 +265,19 @@
     "title": "Proposer un contrat à {{name}}",
     "description": "Il peut accepter ces conditions, les refuser ou revenir avec les siennes. Rien ne commence tant qu'il n'a pas accepté.",
     "feeSplitRequired": "Un partage des frais est obligatoire — c'est ce qui rémunère le livreur.",
-    "send": "Envoyer l'offre"
+    "send": "Envoyer l'offre",
+    "kicker": "Offre de contrat",
+    "recapTitle": "En un coup d'œil",
+    "perMonth": "{{amount}} / mois",
+    "allRegions": "Toutes les régions",
+    "regionCount_one": "{{count}} région",
+    "regionCount_other": "{{count}} régions",
+    "nextTitle": "Et ensuite ?",
+    "next": {
+      "send": "Vous envoyez cette offre.",
+      "review": "{{name}} l'accepte, la refuse ou revient avec ses propres conditions.",
+      "live": "Le contrat démarre dès qu'elle est acceptée."
+    }
   },
   "membership": {
     "srDescription": "Détails du contrat de {{name}} — plafond des espèces, conditions négociées, règlements et historique.",
@@ -277,7 +289,9 @@
       "transferred": "Terminé — un administrateur a transféré ce livreur vers une autre agence",
       "quotedReason": "« {{reason}} »",
       "noReason": "Aucun motif n'a été donné.",
-      "newContractHint": "Contracter à nouveau avec ce livreur crée un nouveau contrat ; celui-ci reste dans l'historique."
+      "newContractHint": "Contracter à nouveau avec ce livreur crée un nouveau contrat ; celui-ci reste dans l'historique.",
+      "agentClosed": "Terminé — l’agent a fermé son compte",
+      "agentClosedBody": "Cet agent a fermé son compte agent Wi-Mall : le contrat a donc pris fin automatiquement. Il ne peut pas être renouvelé."
     },
     "tiles": {
       "email": "E-mail",

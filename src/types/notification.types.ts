@@ -31,6 +31,12 @@ export interface AgencyNotificationAction {
 /**
  * What a notification is about (api-doc/agency/notifications.md § Events).
  * `cod_limit` (2026-10-02) carries the agency's own id as `aggregateId`.
+ * `account` (2026-10-04) is `account.closure_requested`; its `aggregateId` is the
+ * closure REQUEST id, and its button leads to `account/closure`.
+ *
+ * Counterparty closure notices reuse existing types: `connection.ended_by_closure`
+ * (`connection`, a vendor closed its account) and `agent_contract.ended_by_closure`
+ * (`contract`, one of our agents closed theirs).
  *
  * Open-ended on purpose: the backend may add one before this app ships a case
  * for it, so anything keyed on this must keep a fallback branch.
@@ -45,6 +51,7 @@ export type AgencyNotificationAggregateType =
   | 'storage'
   | 'stock_request'
   | 'cod_limit'
+  | 'account'
   | (string & {});
 
 export interface AgencyNotification {

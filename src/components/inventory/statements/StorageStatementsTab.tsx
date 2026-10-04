@@ -40,9 +40,11 @@ import {
 import { listSurfaceClass } from '@/components/layout/PageContainer';
 import { usePageRefresh } from '@/store/pageRefresh.store';
 import { StorageStatementSheet } from '@/components/inventory/statements/StorageStatementSheet';
+import { StatementVendor } from '@/components/inventory/statements/statementDisplay';
+import { formatPeriod } from '@/components/inventory/statements/statementPeriod';
 import { storageInvoicesService } from '@/services/storage-invoices.service';
 import { getApiErrorMessage } from '@/lib/errors';
-import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 import type {
@@ -172,19 +174,20 @@ export function StorageStatementsTab() {
                   className="flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{invoice.periodKey}</span>
-                      <Badge variant="outline" className={cn('text-[10px]', STATUS_STYLE[invoice.status])}>
+                    {/* Vendor first: two statements for the same month are told
+                        apart by who they are for. */}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <StatementVendor vendor={invoice.vendor} className="text-sm font-medium" />
+                      <Badge variant="outline" className={cn('flex-shrink-0 text-[10px]', STATUS_STYLE[invoice.status])}>
                         {tx(t, `inventory:statements.statuses.${invoice.status}`)}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {t('statements.rowSummary', {
-                        skus: formatNumber(invoice.skuCount),
-                        units: formatNumber(invoice.unitCount),
-                      })}
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {formatPeriod(invoice.periodKey)}
                       {' · '}
-                      {t('statements.issued', { date: formatDate(invoice.issuedAt) })}
+                      {t('statements.skuCount', { count: invoice.skuCount, formatted: formatNumber(invoice.skuCount) })}
+                      {' · '}
+                      {t('statements.unitCount', { count: invoice.unitCount, formatted: formatNumber(invoice.unitCount) })}
                     </p>
                   </div>
                   <span className="flex-shrink-0 font-mono text-sm font-medium">

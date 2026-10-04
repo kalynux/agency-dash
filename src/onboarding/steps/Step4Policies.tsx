@@ -207,6 +207,10 @@ export function Step4Policies() {
                     rto_fee: draft?.pricing?.additional_fees?.rto_fee ?? existing?.pricing?.additional_fees?.rto_fee ?? undefined,
                     peak_season_surcharge: draft?.pricing?.additional_fees?.peak_season_surcharge ?? existing?.pricing?.additional_fees?.peak_season_surcharge ?? undefined,
                 },
+                // The PUT replaces the whole `policies` object — seed from what
+                // was loaded so a resubmit sends them back rather than resetting them.
+                max_fee_per_shipment: draft?.pricing?.max_fee_per_shipment ?? existing?.pricing?.max_fee_per_shipment ?? null,
+                accepts_cash_delivery_fee: draft?.pricing?.accepts_cash_delivery_fee ?? existing?.pricing?.accepts_cash_delivery_fee ?? false,
                 notes: draft?.pricing?.notes ?? existing?.pricing?.notes ?? '',
             },
             returns: {
@@ -565,6 +569,49 @@ export function Step4Policies() {
                                 />
                             </FieldRow>
                         </div>
+                    </div>
+
+                    {/* Ceiling + cash payment of the delivery fee (ADR-A11) */}
+                    <div className="space-y-3 border-t border-border/60 pt-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t('policies.ceilingAndCash')}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <FieldRow
+                                label={t('policies.maxFeePerShipment')}
+                                info={info('maxFeePerShipment')}
+                                hint={t('policies.maxFeePerShipmentHint')}
+                                error={pe?.max_fee_per_shipment?.message}
+                            >
+                                <FeeInput
+                                    min={1}
+                                    step={1}
+                                    placeholder={t('policies.maxFeePerShipmentPlaceholder')}
+                                    error={!!pe?.max_fee_per_shipment}
+                                    {...register('pricing.max_fee_per_shipment')}
+                                />
+                            </FieldRow>
+                        </div>
+                        <Controller
+                            control={control}
+                            name="pricing.accepts_cash_delivery_fee"
+                            render={({ field }) => (
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-medium text-foreground">
+                                            {t('policies.acceptsCashDeliveryFee')}
+                                        </p>
+                                        <InfoHint>{info('acceptsCashDeliveryFee')}</InfoHint>
+                                    </div>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        aria-label={t('policies.acceptsCashDeliveryFee')}
+                                        className="data-[state=checked]:bg-primary"
+                                    />
+                                </div>
+                            )}
+                        />
                     </div>
 
                     <FieldRow label={t('policies.notes')} error={pe?.notes?.message}>

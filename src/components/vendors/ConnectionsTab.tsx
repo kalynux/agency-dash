@@ -23,7 +23,12 @@ import {
   rowDomId,
   HIGHLIGHT_CLASS,
 } from '@/hooks/useOpenParam';
-import type { ConnectionDto, ConnectionStatus, VendorBrowseItemDto } from '@/types/vendor-connection.types';
+import {
+  endedByVendorClosure,
+  type ConnectionDto,
+  type ConnectionStatus,
+  type VendorBrowseItemDto,
+} from '@/types/vendor-connection.types';
 import { usePageRefresh } from '@/store/pageRefresh.store';
 
 /** DOM-id prefix for a deep-linked connection row. */
@@ -161,6 +166,9 @@ function ConnectionRowActions({
     }
     return <Badge variant="secondary">{t('actions.awaitingVendor')}</Badge>;
   }
+
+  // The vendor closed its account — there is nobody left to ask.
+  if (endedByVendorClosure(connection)) return null;
 
   // rejected / withdrawn / terminated
   const key = `request:${vendorId}`;
@@ -333,7 +341,11 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                       <VerifiedBadge verified={vendor?.kycVerified} />
                     </div>
                     <ConnectionStatusBadge status={connection.status} className="text-[10px] mt-0.5" />
-                    <VendorCodTerms terms={connection.vendorCodTerms} className="mt-1" />
+                    {endedByVendorClosure(connection) ? (
+                      <p className="mt-1 text-xs text-muted-foreground">{t('connections.endedByClosure')}</p>
+                    ) : (
+                      <VendorCodTerms terms={connection.vendorCodTerms} className="mt-1" />
+                    )}
                   </div>
                 </div>
                 <div className="flex-shrink-0">

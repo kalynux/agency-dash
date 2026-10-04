@@ -65,6 +65,10 @@
       "contract": "Contrato",
       "agent": "Agente",
       "activity": "Atividade"
+    },
+    "ending": {
+      "agentClosed": "Terminado — o agente encerrou a conta",
+      "agentClosedBody": "Este agente encerrou a sua conta de agente na Wi-Mall, por isso o contrato terminou automaticamente. Não pode ser renovado."
     }
   }
 }

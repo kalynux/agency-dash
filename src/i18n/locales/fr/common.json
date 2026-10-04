@@ -133,7 +133,10 @@
     "transaction_other": "transactions",
     "vendor_one": "vendeur",
     "vendor_many": "vendeurs",
-    "vendor_other": "vendeurs"
+    "vendor_other": "vendeurs",
+    "product_one": "produit",
+    "product_many": "produits",
+    "product_other": "produits"
   },
   "pagination": {
     "page": "Page {{page}}",

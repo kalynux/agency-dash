@@ -24,7 +24,8 @@
     "vendors": "Vendors",
     "vendorsConnections": "Connections",
     "vendorsBrowse": "Browse",
-    "inventoryStatements": "Storage statements"
+    "inventoryStatements": "Storage statements",
+    "vendorsProducts": "Products"
   },
   "footer": {
     "account": "Account",

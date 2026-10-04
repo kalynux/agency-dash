@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { OnboardingSkeleton } from "./OnboardingSkeleton";
+import { signOutDestination } from '@/lib/roleClosure';
 
 
 interface OnboardingGuardProps {
@@ -27,8 +28,14 @@ export function OnboardingGuard({ children, requireComplete = false }: Onboardin
 
     // Listen for hard-logout events dispatched by the API client on terminal
     // refresh failure so this guard reacts even if it is not unmounted.
+    // Routed through `signOutDestination` so it agrees with App's listener —
+    // after a closure the two must not race to different screens.
     useEffect(() => {
-        const handler = () => navigate('/login', { replace: true });
+        const handler = (event: Event) => {
+            const cause = (event as CustomEvent<{ code?: string } | undefined>).detail;
+            const { to, state } = signOutDestination(cause?.code);
+            navigate(to, { replace: true, state });
+        };
         window.addEventListener('auth:logout', handler);
         return () => window.removeEventListener('auth:logout', handler);
     }, [navigate]);

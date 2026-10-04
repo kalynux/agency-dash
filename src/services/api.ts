@@ -137,8 +137,9 @@ function carriesSession(path: string): boolean {
  * refusing: every screen erroring, nothing routing to login, no way out but a
  * manual reload. Signing out is recoverable; that state is not.
  *
- * A 403 that is not `AUTH_ACCOUNT_SUSPENDED` is an authorization answer about
- * one resource, not a verdict on the session, so it must never sign anyone out.
+ * A 403 that is not `AUTH_ACCOUNT_SUSPENDED` or `AUTH_ROLE_CLOSED` is an
+ * authorization answer about one resource, not a verdict on the session, so it
+ * must never sign anyone out.
  *
  * `opts.carriesSession: false` turns the whole table off, because a request that
  * presented no session cannot have had one refused. Login answers

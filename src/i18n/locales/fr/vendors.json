@@ -7,6 +7,10 @@
     "browse": {
       "description": "Trouvez des vendeurs auxquels demander une connexion",
       "short": "Vendeurs à connecter"
+    },
+    "products": {
+      "description": "Produits physiques que vous êtes chargé de livrer — choisis sur le produit lui-même, ou hérités parce que vous êtes l’agence par défaut du vendeur",
+      "short": "Produits que vous livrez"
     }
   },
   "status": {
@@ -60,7 +64,8 @@
     "loadFailed": "Impossible de charger vos connexions.",
     "emptyFiltered": "Aucune connexion ne correspond à votre recherche.",
     "empty": "Aucune connexion dans cette catégorie pour l'instant.",
-    "fallbackName": "Vendeur {{suffix}}"
+    "fallbackName": "Vendeur {{suffix}}",
+    "endedByClosure": "Terminée — le vendeur a fermé son compte"
   },
   "browse": {
     "searchPlaceholder": "Rechercher des vendeurs…",
@@ -202,5 +207,46 @@
     "accepts": "Accepte le paiement à la livraison",
     "none": "Pas de paiement à la livraison",
     "cap": "Plafonne à {{amount}} les espèces qu'une agence peut détenir pour lui"
+  },
+  "products": {
+    "searchPlaceholder": "Rechercher des produits…",
+    "searchLabel": "Rechercher par titre, vendeur ou catégorie",
+    "filterDescription": "Produits que vous êtes chargé de livrer. C’est le vendeur qui décide ; vous ne pouvez pas le modifier ici.",
+    "found_one": "{{count}} produit",
+    "found_many": "{{count}} produits",
+    "found_other": "{{count}} produits",
+    "empty": "Aucun vendeur ne vous a encore confié de produit. Les produits apparaissent ici lorsqu’un vendeur vous choisit pour un produit ou fait de vous son agence par défaut.",
+    "emptyFiltered": "Aucun produit ne correspond à votre recherche.",
+    "noCategory": "Sans catégorie",
+    "categoriesLabel": "Catégories",
+    "filters": {
+      "source": "Pourquoi il vous revient",
+      "status": "Disponibilité",
+      "all": "Tous",
+      "sort": "Trier par",
+      "vendorPill": "Vendeur : {{name}}",
+      "categoryPill": "Catégorie : {{name}}",
+      "remove": "Retirer le filtre"
+    },
+    "source": {
+      "own_override": "Choisi sur le produit",
+      "vendor_default": "Agence par défaut"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "En vente",
+      "archived": "Archivé",
+      "pending_review": "En revue",
+      "suspended": "Suspendu"
+    },
+    "unnamedVendor": "Vendeur sans nom",
+    "filterByVendor": "Afficher seulement ce vendeur",
+    "filterByCategory": "Afficher seulement cette catégorie",
+    "sort": {
+      "newest": "Plus récents",
+      "oldest": "Plus anciens",
+      "titleAsc": "Titre A–Z",
+      "titleDesc": "Titre Z–A"
+    }
   }
 }

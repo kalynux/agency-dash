@@ -1,5 +1,7 @@
 // Agency Tickets — see api-doc/agency/tickets.md (authoritative enums)
 
+import type { ProductCategoryRef } from '@/types/product-category.types';
+
 export type TicketStatus =
   | 'open'
   | 'in_progress'
@@ -172,7 +174,10 @@ export interface TicketReferenceProduct {
   id: string;
   title: string;
   slug: string;
-  category: string;
+  /** 1–5, vendor's order, `[0]` is the primary. `[]` on unconverted data = no category. */
+  categories: ProductCategoryRef[];
+  /** @deprecated `categories[0].name` — read `categories`. */
+  category: string | null;
   tags: string[];
   firstFileUrl: string | null;
 }

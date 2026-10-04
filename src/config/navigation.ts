@@ -31,6 +31,7 @@ import {
   FileText,
   Star,
   History,
+  Package,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -152,6 +153,7 @@ export const PRIMARY_NAV: NavItem[] = [
     children: [
       { labelKey: 'nav:primary.vendorsConnections', path: '/dashboard/vendors/connections', icon: Handshake },
       { labelKey: 'nav:primary.vendorsBrowse', path: '/dashboard/vendors/browse', icon: Search },
+      { labelKey: 'nav:primary.vendorsProducts', path: '/dashboard/vendors/products', icon: Package },
     ],
   },
 ];

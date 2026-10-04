@@ -24,7 +24,8 @@
     "vendors": "Vendeurs",
     "vendorsConnections": "Connexions",
     "vendorsBrowse": "Annuaire",
-    "inventoryStatements": "Relevés de stockage"
+    "inventoryStatements": "Relevés de stockage",
+    "vendorsProducts": "Produits"
   },
   "footer": {
     "account": "Compte",

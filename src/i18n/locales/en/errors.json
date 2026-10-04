@@ -686,7 +686,7 @@
     "WISHLIST_ITEM_NOT_FOUND": "That item is no longer on the wishlist.",
     "STORAGE_DOWNLOAD_NOT_SUPPORTED": "This deployment can’t serve that file’s contents. It’s a configuration issue, not a problem with the file — contact support.",
     "DELIVERY_FEE_PROPOSAL_NOT_FOUND": "That fee change no longer exists. Reload to see the current fee.",
-    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "A fee change is already waiting for the vendor.",
+    "DELIVERY_FEE_PROPOSAL_ALREADY_PENDING": "A fee change is already waiting for an answer.",
     "DELIVERY_FEE_PROPOSAL_NOT_PENDING": "That fee change has already been answered or withdrawn. Reload to see where it stands.",
     "DELIVERY_FEE_PROPOSAL_WINDOW_CLOSED": "Fees can only be changed before pickup.",
     "DELIVERY_FEE_PROPOSAL_AGENTS_NOT_ALLOWED": "Your agency has not allowed agents to propose delivery fees.",
@@ -697,13 +697,30 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "This shipment has moved on since the fee change was proposed. You can withdraw it.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "The vendor's earnings on this order changed, so the fee change couldn't be applied. Nothing was changed.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "This fee change was edited in the meantime. Reload to see the current figure.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "Waiting for the vendor to answer a fee change. Pickup is blocked until they do.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "A fee change is still waiting for an answer — from the vendor, or from the customer when they pay delivery. Pickup is blocked until then.",
+    "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "That edit would lower the fee. Withdraw this proposal and propose the lower fee instead — a lower fee applies straight away.",
+    "DELIVERY_FEE_TOPUP_IN_PROGRESS": "The customer has accepted this fee and is paying the difference, so it can't be changed or withdrawn now.",
+    "DELIVERY_FEE_TOPUP_NOT_DUE": "No extra payment is due on this fee change.",
+    "DELIVERY_FEE_PROPOSAL_ORDER_NOT_PAID": "This order's payment isn't settled, so its delivery fee can't change right now.",
+    "DELIVERY_FEE_CASH_NOT_AVAILABLE": "The delivery fee can't be paid in cash for this order.",
+    "COMBINED_DELIVERY_REQUEST_NOT_FOUND": "That combined-price request no longer exists.",
+    "COMBINED_DELIVERY_REQUEST_INELIGIBLE": "Those parcels can't be priced together.",
+    "COMBINED_DELIVERY_REQUEST_ALREADY_OPEN": "A combined-price request is already open for these parcels.",
+    "COMBINED_DELIVERY_REQUEST_NOT_OPEN": "That request has already been answered, declined or cancelled. Reload to see where it stands.",
+    "COMBINED_DELIVERY_RESPONSE_INVALID": "Each new fee must be lower than the parcel's current fee.",
     "COD_VENDOR_NOT_ACCEPTED": "A shop in this order doesn't accept cash on delivery.",
     "COD_AGENCY_LIMIT_EXCEEDED": "This would take the agency past its cash-on-delivery limit.",
     "CINETPAY_REQUEST_FAILED": "The payment provider could not process this right now. Try again shortly.",
     "CINETPAY_UNREACHABLE": "The payment provider is unreachable. Try again shortly.",
     "FAPSHI_REQUEST_FAILED": "The payment provider could not process this right now. Try again shortly.",
-    "FAPSHI_UNREACHABLE": "The payment provider is unreachable. Try again shortly."
+    "FAPSHI_UNREACHABLE": "The payment provider is unreachable. Try again shortly.",
+    "AUTH_ROLE_CLOSED": "This agency account has been closed and can’t be signed in to. Any other role you hold on Wi-Mall is not affected.",
+    "ROLE_CLOSED": "This agency account was closed and cannot be reopened.",
+    "ROLE_CLOSURE_REQUEST_NOT_FOUND": "There is no closure request waiting for this account.",
+    "ROLE_CLOSURE_REQUEST_EXPIRED": "This closure request has expired or has already been answered.",
+    "ROLE_CLOSURE_BLOCKED": "The agency can’t be closed yet. Settle the items listed first.",
+    "ROLE_CLOSURE_ALREADY_PENDING": "A closure request is already waiting for this account.",
+    "ROLE_CLOSURE_ROLE_NOT_HELD": "This account doesn’t hold that role."
   },
   "detailed": {
     "COD_AGENT_EXPOSURE_EXCEEDED": {
@@ -722,6 +739,14 @@
     },
     "DELIVERY_FEE_PROPOSAL_NO_CHANGE": {
       "currentFee": "That is already the fee ({{fee}})."
+    },
+    "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": {
+      "currentFee": "That edit would bring the fee below its current {{fee}}. Withdraw this proposal and propose the lower fee instead — a lower fee applies straight away."
+    },
+    "COMBINED_DELIVERY_RESPONSE_INVALID": {
+      "not_lower": "Each new fee must be lower than the parcel's current fee ({{fee}}).",
+      "empty": "Lower at least one fee, or decline the request.",
+      "none_applied": "None of the new fees could be applied — the parcels may have been picked up meanwhile. Nothing was changed."
     }
   },
   "categories": {

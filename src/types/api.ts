@@ -240,6 +240,14 @@ export interface AgencyPricingPolicy {
   storage_based: StorageBasedPricing;
   pickup_based: PickupBasedPricing;
   additional_fees: AdditionalFees;
+  /**
+   * Ceiling on ONE shipment's posted delivery fee, minor units; `null` = none.
+   * `0` is refused. A per-shipment fee proposal may go above it — it caps the
+   * automatic price only. Optional here: an older server omits it.
+   */
+  max_fee_per_shipment?: number | null;
+  /** A customer may hand your agent the delivery fee in cash on an otherwise online-paid order. */
+  accepts_cash_delivery_fee?: boolean;
   notes?: string | null;
 }
 
@@ -564,6 +572,10 @@ export const TERMINAL_AUTH_CODES: ReadonlySet<string> = new Set([
   'AUTH_SESSION_CAP_REACHED',
   // The account was closed. There is nothing left to refresh into.
   'AUTH_ACCOUNT_CLOSED',
+  // 403 — the AGENCY role was closed (ADR-A10), here or on another device.
+  // Raised by any request and by the refresh itself; re-authenticating as an
+  // agency cannot work. See api-doc/me/role-closure.md § After the closure.
+  'AUTH_ROLE_CLOSED',
 ]);
 
 export class ApiError extends Error {

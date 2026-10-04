@@ -7,6 +7,10 @@
     "browse": {
       "description": "Find vendors you can request a connection with",
       "short": "Vendors you can connect to"
+    },
+    "products": {
+      "description": "Physical products you are set up to deliver — picked on the product itself, or inherited because you are the vendor’s default agency",
+      "short": "Products you deliver"
     }
   },
   "status": {
@@ -60,7 +64,8 @@
     "loadFailed": "Could not load your connections.",
     "emptyFiltered": "No connections match your search.",
     "empty": "No connections in this category yet.",
-    "fallbackName": "Vendor {{suffix}}"
+    "fallbackName": "Vendor {{suffix}}",
+    "endedByClosure": "Ended — the vendor closed its account"
   },
   "browse": {
     "searchPlaceholder": "Search vendors…",
@@ -198,5 +203,45 @@
     "accepts": "Accepts cash on delivery",
     "none": "No cash on delivery",
     "cap": "Caps the cash one agency may hold for them at {{amount}}"
+  },
+  "products": {
+    "searchPlaceholder": "Search products…",
+    "searchLabel": "Search products by title, vendor or category",
+    "filterDescription": "Products you are set up to deliver. Vendors choose this; you can’t change it here.",
+    "found_one": "{{count}} product",
+    "found_other": "{{count}} products",
+    "empty": "No vendor has routed a product to you yet. Products appear here when a vendor picks you for a product or makes you their default agency.",
+    "emptyFiltered": "No products match your search.",
+    "noCategory": "No category",
+    "categoriesLabel": "Categories",
+    "filters": {
+      "source": "Why it’s yours",
+      "status": "Availability",
+      "all": "All",
+      "sort": "Sort by",
+      "vendorPill": "Vendor: {{name}}",
+      "categoryPill": "Category: {{name}}",
+      "remove": "Remove filter"
+    },
+    "source": {
+      "own_override": "Assigned on the product",
+      "vendor_default": "Vendor default"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "On sale",
+      "archived": "Archived",
+      "pending_review": "In review",
+      "suspended": "Suspended"
+    },
+    "unnamedVendor": "Unnamed vendor",
+    "filterByVendor": "Show only this vendor",
+    "filterByCategory": "Show only this category",
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "titleAsc": "Title A–Z",
+      "titleDesc": "Title Z–A"
+    }
   }
 }

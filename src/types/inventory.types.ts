@@ -158,12 +158,13 @@ export interface InventoryVariantSize {
 }
 
 /**
- * What this SKU should be costing in storage rent, per month.
+ * This SKU's storage rent, per month — live.
  *
- * A DISPLAY FIGURE AND NOTHING ELSE. The platform does not track storage payment,
- * does not invoice it, and never acts on it — the only lever attached to it is the
- * agency's own manual suspension. Do not label this "due", "overdue",
- * "outstanding", "invoice" or "paid". It is *what you should be charging*.
+ * THE SAME BASIS THE MONTHLY STATEMENT BILLS: the rate × the COUNTED
+ * `quantityOnHand` (clamped at 0). It is live, while the statement freezes the
+ * shelf on the 1st, so the statement — not this — is the record. "Billed monthly
+ * on this basis" is accurate; never label it "due" or "outstanding". No money
+ * moves on either. See api-doc/agency/inventory.md §1b.
  */
 export interface InventoryStorageFee {
   /** The only basis today. Named so a later volumetric basis is additive. */
@@ -176,10 +177,15 @@ export interface InventoryStorageFee {
   storageBasedEnabled: boolean;
   monthlyRatePerSku: number;
   /**
-   * The billable count — `catalogStock.quantity` clamped at 0, and 0 for an
-   * unlimited-stock SKU (inventing a quantity for one would be a fabricated charge).
+   * The billable count — the COUNTED `quantityOnHand`, clamped at 0. `0` on an
+   * uncounted row. **Not** `catalogStock.quantity`.
    */
   quantity: number;
+  /**
+   * `uncounted`: nobody has counted this shelf, so `quantity`/`monthlyEstimate`
+   * are 0 — render "not counted yet", never "0 due".
+   */
+  quantityBasis: 'counted' | 'uncounted';
   /** `monthlyRatePerSku × quantity`. */
   monthlyEstimate: number;
   /** `null` when neither the variant nor the product carries any dimensions. */
@@ -362,6 +368,17 @@ export interface InventorySummary {
   suspendedCount: number;
   /** Σ of every row's `storageFee.monthlyEstimate`. 0 when storage is not offered. */
   totalMonthlyEstimate: number;
+  /** Rows somebody has counted (`source: "counted"`). */
+  countedRows: number;
+  /** Rows never counted (`source: "derived"`). `countedRows + derivedRows = skuCount`. */
+  derivedRows: number;
+  /** Same number as `derivedRows` — what the "Not counted yet" tile reads. */
+  uncountedRows: number;
+  /**
+   * Pending stock requests the VENDOR raised on rows in this filtered set. The
+   * header tile and the sidebar badge both read this, and only this.
+   */
+  awaitingMyDecisionCount: number;
 }
 
 export interface InventorySummaryResponse {

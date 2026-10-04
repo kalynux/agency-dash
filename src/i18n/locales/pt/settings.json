@@ -1,7 +1,7 @@
 {
   "preferences": {
     "agentFeeProposals": "Permitir que os meus estafetas proponham taxas de entrega",
-    "agentFeeProposalsHint": "Quando ativado, o estafeta que aceitou um envio pode pedir uma taxa de entrega diferente para esse envio, antes da recolha. A proposta segue diretamente para o vendedor, que a aprova ou rejeita — você vê-a no envio e pode editá-la enquanto estiver pendente. Você pode sempre propor uma taxa.",
+    "agentFeeProposalsHint": "Quando ativado, o estafeta que aceitou um envio pode pedir uma taxa de entrega diferente para esse envio, antes da recolha. A proposta segue diretamente para quem paga a entrega — o vendedor ou o cliente —, que a aprova ou rejeita; você vê-a no envio e pode editá-la enquanto estiver pendente. Você pode sempre propor uma taxa.",
     "agentFeeProposalsOn": "Os seus estafetas já podem propor taxas de entrega.",
     "agentFeeProposalsOff": "Agora só você pode propor taxas de entrega."
   },
@@ -11,7 +11,7 @@
       "codLimitUpdatesDescription": "Quando um vendedor lhe envia um envio com pagamento na entrega acima de um limite, quando a atribuição automática só encontra estafetas acima do seu montante de pagamento na entrega, quando um vendedor altera as suas condições de pagamento na entrega, ou quando a Wi-Mall fixa ou liberta o seu limite.",
       "codLimitUpdatesCaveat": "Um envio enviado acima de um limite, e um que a atribuição automática não conseguiu colocar por motivos de pagamento na entrega, chegam por este interruptor — não por Novos envios. Se o desativar, não será avisado deles.",
       "deliveryFeeProposals": "Alterações da taxa de entrega",
-      "deliveryFeeProposalsDescription": "Quando um vendedor aprova ou rejeita uma alteração de taxa num dos seus envios, ou um dos seus estafetas propõe ou edita uma."
+      "deliveryFeeProposalsDescription": "Quando um vendedor ou um cliente responde a uma alteração de taxa num dos seus envios, um dos seus estafetas propõe ou edita uma, ou um cliente lhe pede um preço conjunto para várias encomendas."
     }
   }
 }

@@ -148,3 +148,57 @@ describe('notificationVisual — 2026-10-02 types', () => {
     expect(notificationVisual('shipment.assignment.unfilled').icon).toBe(Truck);
   });
 });
+
+// 2026-10-04 — ADR-A11. A customer asks for one price on several parcels. The
+// button is the shared `shipments/{firstShipmentId}` label, but the request is
+// answered on its own screen.
+describe('combined_delivery_request.received', () => {
+  const type = 'combined_delivery_request.received';
+
+  it('opens the combined-requests screen, pointing at the request holding that parcel', () => {
+    expect(notificationHref({ label: 'View shipment', path: `shipments/${ID}` }, type)).toBe(
+      `/dashboard/shipments/combined-requests?shipment=${ID}`,
+    );
+    expect(notificationHref(null, type)).toBe('/dashboard/shipments/combined-requests');
+  });
+
+  it('still opens the parcel when the type is not known (an older push payload)', () => {
+    expect(notificationHref({ label: 'View shipment', path: `shipments/${ID}` })).toBe(
+      `/dashboard/shipments?open=${ID}`,
+    );
+  });
+
+  it('reads as a fee negotiation, not shipment traffic', () => {
+    expect(notificationVisual(type).icon).toBe(Receipt);
+  });
+});
+
+// 2026-10-04 — the tenth label (ADR-A10). `account.closure_requested` sends it.
+describe('account/closure', () => {
+  it('lands on the closure screen, not on an Account tab', () => {
+    expect(resolveDeepLink('account/closure')).toBe('/dashboard/account/closure');
+    // The emailed button: `{AGENCY_APP_URL}/account/closure`.
+    expect(resolveDeepLink('/account/closure')).toBe('/dashboard/account/closure');
+    expect(resolveDeepLink('/dashboard/account/closure')).toBe('/dashboard/account/closure');
+    expect(notificationHref({ label: 'Review request', path: 'account/closure' })).toBe(
+      '/dashboard/account/closure',
+    );
+  });
+
+  it('is not read as `account` carrying an id', () => {
+    expect(resolveDeepLink('account')).toBeNull();
+    expect(resolveDeepLink('account/x')).toBeNull();
+  });
+
+  it('gives the request its own look, and leaves the counterparty notices in their streams', () => {
+    expect(notificationVisual('account.closure_requested').icon).not.toBe(
+      notificationVisual('connection.ended_by_closure').icon,
+    );
+    expect(notificationVisual('connection.ended_by_closure').icon).toBe(
+      notificationVisual('connection.approved').icon,
+    );
+    expect(notificationVisual('agent_contract.ended_by_closure').icon).toBe(
+      notificationVisual('agent_contract.approved').icon,
+    );
+  });
+});

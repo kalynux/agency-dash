@@ -154,25 +154,26 @@ export function SuspensionPanel({
           {error && !blockers && <p className="mt-2 text-xs text-destructive">{error}</p>}
         </div>
       ) : (
-        <div className="rounded-lg border p-3">
-          <p className="flex items-center gap-1.5 text-sm">
-            {t('suspension.onSale')}
-            <InfoHint className="md:hidden" title={t('suspension.title')}>
-              {t('suspension.suspendHint')}
-            </InfoHint>
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground max-md:hidden">
-            {t('suspension.suspendHint')}
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3 gap-1.5"
-            onClick={() => setSuspendOpen(true)}
-          >
-            <Ban className="h-3.5 w-3.5" />
-            {t('suspension.suspend')}
-          </Button>
+        // On sale is the normal state, so it is one row: the status, the ⓘ that
+        // explains suspending, and the button. The confirm dialog restates the
+        // consequences at the moment they matter.
+        <div className="rounded-lg border px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex min-w-0 items-center gap-1.5 text-sm">
+              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500" aria-hidden />
+              {t('suspension.onSale')}
+              <InfoHint title={t('suspension.title')}>{t('suspension.suspendHint')}</InfoHint>
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-shrink-0 gap-1.5 max-md:h-9"
+              onClick={() => setSuspendOpen(true)}
+            >
+              <Ban className="h-3.5 w-3.5" />
+              {t('suspension.suspendShort')}
+            </Button>
+          </div>
           {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
         </div>
       )}

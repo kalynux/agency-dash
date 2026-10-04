@@ -162,7 +162,13 @@
     "vendor_two": "بائعان",
     "vendor_few": "بائعين",
     "vendor_many": "بائعًا",
-    "vendor_other": "بائع"
+    "vendor_other": "بائع",
+    "product_zero": "منتج",
+    "product_one": "منتج واحد",
+    "product_two": "منتجان",
+    "product_few": "منتجات",
+    "product_many": "منتجًا",
+    "product_other": "منتج"
   },
   "pagination": {
     "page": "الصفحة {{page}}",

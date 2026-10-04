@@ -28,30 +28,28 @@
   },
   "derived": {
     "bannerTitle": "« Compté en stock » n'est pas encore un inventaire physique.",
-    "bannerBody": "Rien n'a été compté : le stock n'est ni décrémenté à la sortie ni rétabli au retour, et aucune réception n'est enregistrée — ces chiffres restent donc à zéro jusqu'à ce que le stock soit réservé au paiement et soldé à la livraison. La quantité convenue affichée à côté, elle, est réelle : c'est celle sur laquelle votre loyer de stockage est calculé.",
+    "bannerBody": "Les lignes « Non compté » n'ont jamais eu de marchandise enregistrée en rayon. Enregistrez une réception pour commencer le suivi : dès lors, les ventes font évoluer le compte et la ligne est facturée sur le relevé mensuel. La quantité convenue à côté est le chiffre du catalogue du vendeur.",
     "badge": "Accepté en dépôt",
     "notCounted": "Non compté",
     "tooltipTitle": "Aucun comptage physique",
-    "tooltipBody": "Cette ligne existe parce que le vendeur a configuré le produit pour qu'il soit entreposé chez vous. Le stock n'est ni décrémenté à la sortie ni rétabli au retour, et aucune réception n'est enregistrée — il n'y a donc aucun chiffre honnête à afficher.",
-    "detailBody": "Cette ligne existe parce que le vendeur a configuré le produit pour qu'il soit entreposé chez vous. Le stock n'est ni décrémenté à la sortie ni rétabli au retour, et aucune réception n'est encore enregistrée : aucune quantité n'est donc affichée. Les vrais comptages arriveront avec la réservation au paiement et le solde à la livraison."
+    "tooltipBody": "Aucune arrivée de marchandise n'a encore été enregistrée sur ce rayon : il n'y a donc pas de compte à afficher. Enregistrez une réception pour commencer le suivi.",
+    "detailBody": "Aucune arrivée de marchandise n'a encore été enregistrée sur ce rayon. Enregistrez une réception ci-dessous pour commencer le suivi — d'ici là, les ventes ne font pas évoluer le compte et rien n'est facturé."
   },
   "catalogStock": {
     "title": "Quantité convenue",
-    "label": "Convenue avec le vendeur",
-    "caption": "La quantité au catalogue pour ce SKU. Aucun de vous ne peut la modifier seul — l'un propose, l'autre approuve. Votre loyer de stockage est calculé sur ce chiffre.",
+    "caption": "La quantité du catalogue du vendeur pour ce SKU. Aucun de vous ne peut la modifier seul : l'un propose, l'autre approuve.",
     "unlimited": "Illimitée",
     "unknown": "Inconnue",
     "pendingChange": "Modification en attente → {{quantity}}",
     "pendingYours": "Une modification attend votre réponse",
     "pendingTheirs": "Une modification que vous avez proposée attend le vendeur",
-    "pendingDetail": "{{from}} → {{to}}. Ouvrir la demande",
-    "propose": "Proposer une autre quantité"
+    "proposeShort": "Proposer une modification",
+    "pendingArrow": "{{from}} → {{to}}"
   },
   "storageFee": {
-    "title": "Ce que vous devriez facturer",
+    "title": "Loyer de stockage",
     "monthlyEstimate": "{{amount}} / mois",
     "breakdown": "{{rate}} par SKU et par mois × {{quantity}}",
-    "notBilledCaption": "La plateforme ne suit, ne facture et ne réclame rien de tout cela — c'est ce que vous devriez facturer, calculé d'après vos propres conditions. L'encaissement se règle entre vous et le vendeur.",
     "notOffered": "Vous ne proposez pas d'entreposage",
     "notOfferedHint": "La tarification « stockage » est désactivée dans vos conditions : aucun loyer n'est calculé pour cette ligne.",
     "sizeTitle": "Taille de ce que vous stockez",
@@ -65,13 +63,15 @@
       "variant": "Cette déclinaison",
       "product_default": "Valeur par défaut du produit",
       "unknown": "Non renseignée"
-    }
+    },
+    "billedCaption": "Facturé chaque mois sur cette base : votre tarif × ce qui est compté en rayon. Ce montant est en temps réel — le relevé émis le 1er fait foi. Aucun argent ne transite par la plateforme.",
+    "uncounted": "Pas encore compté",
+    "uncountedHint": "Rien n'est facturé pour ce rayon tant qu'aucune marchandise n'y est enregistrée. Votre tarif est de {{rate}} par SKU et par mois."
   },
   "suspension": {
     "title": "Boutique",
     "onSale": "Ce produit est en vente.",
     "suspendHint": "La suspension le retire de la boutique : les clients ne peuvent plus l'acheter. Rien n'est automatique ici — la plateforme ne suspend jamais à votre place.",
-    "suspend": "Suspendre le produit",
     "suspended": "Suspendu — retiré de la boutique",
     "byYou": "Vous avez suspendu ce produit le {{when}}.",
     "bySystem": "Suspendu par la plateforme, pas par vous — le plus souvent parce que l'agence de livraison du vendeur est devenue inactive ou que leur connexion doit être réapprouvée. Eux seuls peuvent lever cette suspension.",
@@ -83,7 +83,8 @@
     "noteHint": "Facultatif, mais c'est la seule explication que le vendeur recevra. Jusqu'à {{max}} caractères.",
     "confirmSuspend": "Suspendre",
     "blockedTitle": "Ce produit ne peut pas encore repartir en vente",
-    "blockedUnknown": "Le vendeur a quelque chose à régler avant que ce produit puisse être activé."
+    "blockedUnknown": "Le vendeur a quelque chose à régler avant que ce produit puisse être activé.",
+    "suspendShort": "Suspendre"
   },
   "depot": {
     "moveAction": "Déplacer vers un autre dépôt",
@@ -101,14 +102,16 @@
   "summary": {
     "skus": "SKU entreposés",
     "skusHint": "Lignes de la vue actuelle",
-    "depots": "Vos sites",
-    "depotsHint": "Lieux qu'un vendeur peut désigner",
     "unassigned": "Sans site",
     "unassignedHint": "Lignes dont le site a été supprimé",
     "suspended": "Suspendus",
     "suspendedHint": "Produits que vous avez retirés de la vente",
     "monthlyEstimate": "Loyer mensuel",
-    "monthlyEstimateHint": "Ce que vous devriez facturer, non facturé"
+    "monthlyEstimateHint": "Facturé chaque mois sur le stock compté",
+    "uncounted": "Pas encore comptés",
+    "uncountedHint": "Rayons sans marchandise enregistrée",
+    "awaiting": "En attente de votre réponse",
+    "awaitingHint": "Changements de stock proposés par le vendeur"
   },
   "filters": {
     "location": "Site",
@@ -134,19 +137,10 @@
     "awaitingYouBadge": "Vous attend"
   },
   "stock": {
-    "available": "Disponible",
-    "availableTitle": "Disponible à la vente",
-    "availableHint": "Le stock physique moins les unités déjà réservées par des commandes en cours. C'est ce qu'il reste réellement.",
-    "availableCaption": "Libre à la vente",
-    "onHand": "En stock",
-    "onHandCaption": "Physiquement sur l'étagère",
-    "onHandShort": "{{count}} en stock",
-    "onHandShort_one": "{{count}} en stock",
-    "onHandShort_many": "{{count}} en stock",
-    "onHandShort_other": "{{count}} en stock",
-    "reserved": "Réservé",
-    "reservedCaption": "Bloqué par des commandes en cours",
-    "reservedOfOnHand": "{{reserved}} réservées sur {{onHand}}"
+    "sectionTitle": "Stock",
+    "availableReserved": "{{available}} disponibles · {{reserved}} réservés",
+    "negativeTitle": "En dessous de zéro",
+    "negativeHint": "Plus de marchandise est sortie de ce rayon qu'il n'en a été enregistré à l'arrivée — souvent une livraison que personne n'a saisie. Enregistrez un comptage pour fixer le chiffre réel."
   },
   "requests": {
     "srTitle": "Détail de la demande de stock",
@@ -216,7 +210,13 @@
     "notePlaceholder": "ex. 118 comptés sur l'étagère ce matin",
     "noteHint": "Facultatif, mais c'est ce à quoi le vendeur comparera votre chiffre.",
     "confirmRaise": "Envoyer la proposition",
-    "viewOpenRequest": "Ouvrir la demande en attente"
+    "viewOpenRequest": "Ouvrir la demande en attente",
+    "searchPlaceholder": "Rechercher un produit ou un SKU...",
+    "searchLabel": "Rechercher les demandes de stock par produit ou SKU",
+    "unnamedProduct": "Produit plus disponible",
+    "unnamedVendor": "Vendeur sans nom",
+    "notStored": "Absent de votre inventaire",
+    "openInInventory": "Ouvrir dans l'inventaire"
   },
   "detail": {
     "srTitle": "Détail du SKU entreposé",
@@ -224,20 +224,17 @@
     "unnamedProduct": "Produit sans nom",
     "unnamedVendor": "Vendeur sans nom",
     "unnamedLocation": "Site sans nom",
-    "stock": "Compté en stock",
-    "location": "Entreposé à",
     "primaryDepot": "· Principal",
     "unassignedLocation": "Ce site n'existe plus",
     "unassignedHint": "Le produit désigne un site que vous avez supprimé depuis : impossible de dire quel bâtiment le détient. Déplacez-le vers un dépôt réel ci-dessous. Les livraisons partent entre-temps de votre site principal.",
     "manageLocations": "Gérer vos sites",
-    "vendor": "Vendeur",
     "images": "Images",
     "storageFee": "Ce que vous facturez pour cela",
     "storageFeeAmount": "{{amount}} / mois",
-    "storageFeeCaption": "Votre tarif de stockage par SKU. Pas encore facturé — c'est ce registre qui le débloque.",
     "lastReconciled": "Dernière vérification avec le catalogue {{when}}",
     "viewShipments": "Expéditions liées",
-    "viewVendor": "Connexion vendeur"
+    "viewVendor": "Connexion vendeur",
+    "whereWhose": "Vendeur et emplacement"
   },
   "movements": {
     "sectionTitle": "Enregistrer un mouvement",
@@ -312,7 +309,6 @@
     },
     "empty": "Aucun relevé de stockage pour le moment.",
     "emptyHint": "Les relevés sont émis le 1er de chaque mois, et seules les étagères que vous avez réellement comptées sont facturées. Enregistrez une réception sur une étagère pour commencer à la facturer.",
-    "rowSummary": "{{skus}} SKU · {{units}} unités",
     "issued": "Émis le {{date}}",
     "settledOn": "Réglé le {{date}}",
     "srTitle": "Relevé de stockage",
@@ -338,6 +334,14 @@
     "voidReasonPlaceholder": "ex. doublon du relevé d'août",
     "voidNoReissue": "Le mois reste attribué : aucun relevé de remplacement ne sera émis pour cette période.",
     "voidConfirm": "Annuler le relevé",
-    "voidedToast": "Relevé annulé."
+    "voidedToast": "Relevé annulé.",
+    "skuCount_one": "{{formatted}} SKU",
+    "skuCount_many": "{{formatted}} SKU",
+    "skuCount_other": "{{formatted}} SKU",
+    "unitCount_one": "{{formatted}} unité",
+    "unitCount_many": "{{formatted}} unités",
+    "unitCount_other": "{{formatted}} unités",
+    "unnamedVendor": "Vendeur sans nom",
+    "vendorLive": "Nom actuel de la boutique du vendeur — ne fait pas partie du relevé émis"
   }
 }

@@ -84,5 +84,58 @@
     "refundTypes": {
       "none": "بلا استرداد"
     }
+  },
+  "connections": {
+    "endedByClosure": "منتهية — أغلق البائع حسابه"
+  },
+  "tabs": {
+    "products": {
+      "description": "المنتجات المادية المكلّف بتوصيلها — محدّدة على المنتج نفسه، أو موروثة لأنك الوكالة الافتراضية للبائع",
+      "short": "المنتجات التي توصلها"
+    }
+  },
+  "products": {
+    "searchPlaceholder": "ابحث عن منتجات…",
+    "searchLabel": "ابحث بالعنوان أو البائع أو الفئة",
+    "filterDescription": "المنتجات المكلّف بتوصيلها. البائع هو من يقرر ذلك، ولا يمكنك تغييره هنا.",
+    "found_zero": "لا منتجات",
+    "found_one": "منتج واحد",
+    "found_two": "منتجان",
+    "found_few": "{{count}} منتجات",
+    "found_many": "{{count}} منتجًا",
+    "found_other": "{{count}} منتج",
+    "empty": "لم يُسند إليك أي بائع منتجًا بعد. تظهر المنتجات هنا عندما يختارك بائع لمنتج أو يجعلك وكالته الافتراضية.",
+    "emptyFiltered": "لا توجد منتجات مطابقة لبحثك.",
+    "noCategory": "بلا فئة",
+    "categoriesLabel": "الفئات",
+    "filters": {
+      "source": "سبب إسناده إليك",
+      "status": "التوفر",
+      "all": "الكل",
+      "sort": "الترتيب حسب",
+      "vendorPill": "البائع: {{name}}",
+      "categoryPill": "الفئة: {{name}}",
+      "remove": "إزالة عامل التصفية"
+    },
+    "source": {
+      "own_override": "محدّد على المنتج",
+      "vendor_default": "الوكالة الافتراضية"
+    },
+    "status": {
+      "draft": "مسودة",
+      "active": "معروض للبيع",
+      "archived": "مؤرشف",
+      "pending_review": "قيد المراجعة",
+      "suspended": "موقوف"
+    },
+    "unnamedVendor": "بائع بلا اسم",
+    "filterByVendor": "عرض هذا البائع فقط",
+    "filterByCategory": "عرض هذه الفئة فقط",
+    "sort": {
+      "newest": "الأحدث",
+      "oldest": "الأقدم",
+      "titleAsc": "العنوان أ–ي",
+      "titleDesc": "العنوان ي–أ"
+    }
   }
 }

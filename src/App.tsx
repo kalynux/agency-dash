@@ -24,6 +24,9 @@ import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 
 const Overview = lazy(() => import('@/pages/Overview').then((m) => ({ default: m.Overview })));
 const Shipments = lazy(() => import('@/pages/Shipments').then((m) => ({ default: m.Shipments })));
+const CombinedDeliveryRequests = lazy(() =>
+  import('@/pages/CombinedDeliveryRequests').then((m) => ({ default: m.CombinedDeliveryRequests })),
+);
 const Inventory = lazy(() => import('@/pages/Inventory').then((m) => ({ default: m.Inventory })));
 const LiveTracking = lazy(() => import('@/pages/LiveTracking').then((m) => ({ default: m.LiveTracking })));
 const Notifications = lazy(() => import('@/pages/Notifications').then((m) => ({ default: m.Notifications })));
@@ -36,11 +39,13 @@ const Analytics = lazy(() => import('@/pages/Analytics').then((m) => ({ default:
 const MediaLibrary = lazy(() => import('@/pages/MediaLibrary').then((m) => ({ default: m.MediaLibrary })));
 const Account = lazy(() => import('@/pages/Account').then((m) => ({ default: m.Account })));
 const Settings = lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })));
+const AccountClosure = lazy(() => import('@/pages/AccountClosure').then((m) => ({ default: m.AccountClosure })));
 
 // Auth pages — the only screens that render outside the dashboard chrome.
 const Login = lazy(() => import('@/pages/Login').then((m) => ({ default: m.Login })));
 const Register = lazy(() => import('@/pages/Register').then((m) => ({ default: m.Register })));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
+const AccountClosed = lazy(() => import('@/pages/AccountClosed').then((m) => ({ default: m.AccountClosed })));
 
 // Layout
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -54,6 +59,8 @@ import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 import { MOBILE_TAB_PATHS } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { resolveDeepLink } from '@/lib/notification-display';
+import { ACCOUNT_CLOSED_PATH, ROLE_CLOSED_SIGN_OUT_CODE, signOutDestination } from '@/lib/roleClosure';
+import { forgetBiometricSignIn } from '@/lib/biometricUnlock';
 import { ProfileLanguageSync } from '@/i18n/ProfileLanguageSync';
 
 // Native shell behaviour (CAPACITOR-PLAN.md → Phase 3). Both are inert on the
@@ -93,6 +100,11 @@ import { NotificationsProvider } from '@/store/notifications.store';
 // Magazin (real API — business name + logo shown in the app chrome)
 import { MagazinProvider } from '@/store/magazin.store';
 import { StockRequestsProvider } from '@/store/stockRequests.store';
+
+// Role closure (ADR-A10) — a pending administrator request, read by the banner
+// and by Account → Close agency account.
+import { ClosureRequestProvider } from '@/store/closureRequest.store';
+import { ClosureRequestBanner } from '@/components/account/ClosureRequestBanner';
 
 // ─── Shared content-frame width ──────────────────────────────────────────────
 // The header and the main content share one centered column so their edges line
@@ -228,6 +240,7 @@ function DashboardShell() {
         <VendorConnectionsProvider>
         <MagazinProvider>
         <StockRequestsProvider>
+        <ClosureRequestProvider>
           <div className="min-h-screen bg-background">
             {/* Keeps the scrolling column out from under the status bar's icons
                 — `main`'s top padding only holds at scroll position 0. Renders
@@ -267,12 +280,18 @@ function DashboardShell() {
                     The boundary outside it catches the one thing splitting can
                     fail at — a chunk that 404s because the site was redeployed
                     mid-session. See `RouteErrorBoundary`. */}
+                {/* Above every page: an administrator's closure request waits
+                    on the owner, wherever in the app they are. */}
+                <ClosureRequestBanner />
                 <RouteErrorBoundary>
                 <PageRefreshProvider>
                 <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route index element={<Overview />} />
                   <Route path="shipments" element={<Shipments />} />
+                  {/* Customers' combined-price requests (ADR-A11) — a sub-page of
+                      Shipments, reached from its header and the notification. */}
+                  <Route path="shipments/combined-requests" element={<CombinedDeliveryRequests />} />
                   <Route path="inventory" element={<Navigate to="/dashboard/inventory/stock" replace />} />
                   <Route path="inventory/:tab" element={<Inventory />} />
                   {/* The stock-request inbox is a tab under Inventory. The
@@ -300,6 +319,9 @@ function DashboardShell() {
                   {/* Deep-link alias — plan-expiry notification buttons point at the literal `plans` route. */}
                   <Route path="plans" element={<Navigate to="/dashboard/account/billing" replace />} />
                   <Route path="account" element={<Navigate to="/dashboard/account/profile" replace />} />
+                  {/* Static, so it outranks `account/:tab`. The `account/closure`
+                      deep link (`account.closure_requested`) lands here. */}
+                  <Route path="account/closure" element={<AccountClosure />} />
                   <Route path="account/:tab" element={<Account />} />
                   {/* Deep-link alias — `storage.alert` notifications point at the literal `settings/storage` path. */}
                   <Route path="settings/storage" element={<Navigate to="/dashboard/media" replace />} />
@@ -314,6 +336,7 @@ function DashboardShell() {
             </div>
             {isMobile && <MobileTabBar />}
           </div>
+        </ClosureRequestProvider>
         </StockRequestsProvider>
         </MagazinProvider>
         </VendorConnectionsProvider>
@@ -363,13 +386,18 @@ function AppContent() {
   //
   // It rides router state rather than a store: it is read exactly once, by the
   // screen we are navigating to, and it must not survive a reload.
+  //
+  // `signOutDestination` decides the route: after this agency was closed
+  // (ADR-A10) it is `/account-closed` when the whole account went, and `/login`
+  // with `AUTH_ROLE_CLOSED` otherwise — whatever a stray poller was refused with.
   useEffect(() => {
     const onLogout = (event: Event) => {
       const cause = (event as CustomEvent<{ code?: string } | undefined>).detail;
-      reactNavigate('/login', {
-        replace: true,
-        state: cause?.code ? { signedOutBy: cause.code } : undefined,
-      });
+      const { to, state } = signOutDestination(cause?.code);
+      // Closed on another device: a saved fingerprint sign-in can only fail
+      // from now on, so retire it rather than offer a button that cannot work.
+      if (cause?.code === ROLE_CLOSED_SIGN_OUT_CODE) void forgetBiometricSignIn();
+      reactNavigate(to, { replace: true, state });
     };
     window.addEventListener('auth:logout', onLogout);
     return () => window.removeEventListener('auth:logout', onLogout);
@@ -425,6 +453,9 @@ function AppContent() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                {/* After a confirmed closure that took the last role — there is
+                    no session left, so it sits outside every guard. */}
+                <Route path={ACCOUNT_CLOSED_PATH} element={<AccountClosed />} />
 
                 {/* Onboarding — gated: must be authenticated, step > 0 */}
                 <Route
