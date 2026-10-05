@@ -1,6 +1,15 @@
-import { useState, type ElementType, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ElementType,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import {
   Sheet,
   SheetContent,
@@ -19,13 +28,15 @@ import { cn } from '@/lib/utils';
  * "something is wrong" everywhere else in the dashboard (`state-views`,
  * `BillingTab`, `Overview`), and help is not an error.
  *
- * IT IS A BOTTOM SHEET AT EVERY WIDTH (2026-10-03). It used to be a Popover that
- * only turned into a sheet below `md`, which left tablets and the desktop with a
- * 20rem footnote hanging off a 14px icon — and the text behind an ⓘ is usually
- * the whole explanation of a figure. It is a real `Sheet` (a modal Radix
- * dialog) rather than the styled popover, so it nests cleanly inside the other
- * sheets and dialogs it lives in, and a press on the dimmed backdrop closes it
- * the same way it closes every other sheet.
+ * A TOOLTIP ON DESKTOP, A BOTTOM SHEET ON A PHONE (2026-10-05). For two days it
+ * was a sheet at every width, and on a monitor that read as a whole panel
+ * sliding up for two sentences. On desktop it is now an anchored popover that
+ * opens on hover *and* on press (a press pins it until an outside press or Esc),
+ * so it behaves like a tooltip without being one — Radix's Tooltip never opens
+ * on touch or click, and this content is sometimes the whole explanation of a
+ * figure. Below `md` it stays a real `Sheet` (a modal Radix dialog), so it nests
+ * cleanly inside the other sheets it lives in and a press on the dimmed
+ * backdrop closes it the same way it closes every other sheet.
  *
  * Safe inside a tappable row or card: presses on the trigger and inside the
  * sheet stop at the wrapper. React bubbles events from a portal through the
@@ -35,6 +46,7 @@ export function InfoHint({
   children,
   label,
   title,
+  align = 'center',
   className,
 }: {
   children: ReactNode;
@@ -42,36 +54,122 @@ export function InfoHint({
   label?: string;
   /** Heading for the explanation — what the ⓘ is about. */
   title?: ReactNode;
-  /** @deprecated Ignored — a sheet is not anchored to its trigger. */
+  /** Desktop popover alignment against the icon. Ignored by the phone sheet. */
   align?: 'start' | 'center' | 'end';
   className?: string;
 }) {
   const { t } = useTranslation('common');
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  // Desktop only: `hover` opened it, `press` pinned it. A pinned hint ignores
+  // the pointer leaving — the user asked for it and may be reading.
+  const [pinned, setPinned] = useState(false);
+  const closeTimer = useRef<number | undefined>(undefined);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  const heading = title ?? label ?? t('form.moreInformation');
+
+  const trigger = (
+    <button
+      type="button"
+      aria-label={label ?? t('form.moreInformation')}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={() => {
+        if (isMobile) {
+          setOpen(true);
+          return;
+        }
+        // A press on an already-pinned hint closes it; otherwise it pins.
+        const next = !(open && pinned);
+        setPinned(next);
+        setOpen(next);
+      }}
+      // 32px hit area on a 24px footprint: the negative margin keeps the
+      // icon from opening a gap in the label's rhythm while still clearing
+      // the touch-target minimum.
+      className={cn(
+        'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
+        'text-muted-foreground transition-colors hover:text-foreground',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className,
+      )}
+    >
+      <Info className="h-3.5 w-3.5" />
+    </button>
+  );
+
+  if (!isMobile) {
+    const hoverOpen = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      window.clearTimeout(closeTimer.current);
+      setOpen(true);
+    };
+    const hoverClose = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || pinned) return;
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = window.setTimeout(() => setOpen(false), 150);
+    };
+    return (
+      <span
+        className="contents"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Popover
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next) setPinned(false);
+          }}
+        >
+          <PopoverAnchor asChild>
+            <span
+              ref={anchorRef}
+              className="inline-flex"
+              onPointerEnter={hoverOpen}
+              onPointerLeave={hoverClose}
+            >
+              {trigger}
+            </span>
+          </PopoverAnchor>
+          <PopoverContent
+            side="top"
+            align={align}
+            sideOffset={6}
+            collisionPadding={12}
+            // Hover-opened hints must not steal focus from whatever the user
+            // is typing in; a pinned one still traps nothing (popover is
+            // non-modal), Esc and an outside press close it.
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            // The icon is an anchor, not a Radix trigger, so a press on it
+            // counts as "outside" — let the button's own toggle decide instead
+            // of closing here and reopening on the click that follows.
+            onInteractOutside={(e) => {
+              if (anchorRef.current?.contains(e.target as Node)) e.preventDefault();
+            }}
+            onPointerEnter={hoverOpen}
+            onPointerLeave={hoverClose}
+            onClick={(e) => e.stopPropagation()}
+            className="w-auto max-w-xs space-y-1 px-3 py-2.5 text-xs leading-relaxed"
+          >
+            <p className="text-sm font-semibold text-foreground">{heading}</p>
+            <div className="text-foreground/80">{children}</div>
+          </PopoverContent>
+        </Popover>
+      </span>
+    );
+  }
+
   return (
     <span
       className="contents"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        aria-label={label ?? t('form.moreInformation')}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-        // 32px hit area on a 24px footprint: the negative margin keeps the
-        // icon from opening a gap in the label's rhythm while still clearing
-        // the touch-target minimum.
-        className={cn(
-          'inline-flex h-8 w-8 -m-1 shrink-0 items-center justify-center rounded-full',
-          'text-muted-foreground transition-colors hover:text-foreground',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          className,
-        )}
-      >
-        <Info className="h-3.5 w-3.5" />
-      </button>
+      {trigger}
       <Sheet open={open} onOpenChange={setOpen}>
         {/* `h-auto` so a two-line hint is a two-line sheet; `sm:max-w-lg` +
             `mx-auto` keeps it a readable column on a wide screen instead of a
@@ -85,9 +183,7 @@ export function InfoHint({
           </div>
           {/* `pe-12` clears the panel's own close button. */}
           <SheetHeader className="shrink-0 px-5 pb-2 pt-1 pe-12 text-start">
-            <SheetTitle className="text-base">
-              {title ?? label ?? t('form.moreInformation')}
-            </SheetTitle>
+            <SheetTitle className="text-base">{heading}</SheetTitle>
           </SheetHeader>
           <SheetDescription asChild>
             <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-sm leading-relaxed text-foreground/80">

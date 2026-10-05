@@ -1,5 +1,5 @@
 import { formatDate } from '@/lib/format';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/store/notifications.store';
@@ -10,14 +10,12 @@ import {
   Bell,
   Plus,
   Command,
-  X,
   ArrowRight,
-  SearchX,
   LogOut,
   User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { GlobalSearch } from '@/components/layout/GlobalSearch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -45,8 +43,20 @@ function initialsOf(name: string): string {
 export function Header() {
   const { t } = useTranslation(['nav', 'common']);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // The ⌘K the button advertises. Ctrl+K too — most agencies are on Windows
+  // or Android, where there is no ⌘.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   // The sign-out call itself lives in `LogoutConfirmDialog` now; this only
@@ -249,97 +259,8 @@ export function Header() {
       {/* Logout confirmation — shared with Account → Profile on mobile. */}
       <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} />
 
-      {/* Global Search Overlay */}
-      {isSearchOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-          onClick={() => setIsSearchOpen(false)}
-        >
-          <div
-            className="absolute top-20 start-1/2 -translate-x-1/2 w-full max-w-2xl px-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-card rounded-xl shadow-2xl border overflow-hidden">
-              {/* Search Input */}
-              <div className="flex items-center gap-3 p-4 border-b">
-                <Search className="w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="global-search"
-                  placeholder={t('header.searchPlaceholder')}
-                  className="flex-1 border-0 bg-transparent text-lg focus-visible:ring-0 placeholder:text-muted-foreground"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <kbd className="hidden sm:inline-flex h-7 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-xs font-medium">
-                  ESC
-                </kbd>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsSearchOpen(false)}
-                  aria-label={t('header.closeSearch')}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Search Results */}
-              <div className="max-h-[60vh] overflow-auto">
-                {searchQuery ? (
-                  // Global search has no backend endpoint yet — say so plainly
-                  // rather than painting placeholder rows that never resolve.
-                  <div className="p-8 text-center">
-                    <SearchX className="w-8 h-8 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-sm font-medium">
-                      {t('header.noResults', { query: searchQuery })}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t('header.noResultsHint')}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                      {t('header.quickActions')}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {QUICK_ACTIONS.map((action) => (
-                        <button
-                          key={action.id}
-                          onClick={() => handleQuickAction(action)}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-start transition-colors"
-                        >
-                          <action.icon className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">{tx(t, action.labelKey)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-t text-xs text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <kbd className="bg-muted px-1.5 py-0.5 rounded border">↑↓</kbd>
-                    {t('header.hintNavigate')}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="bg-muted px-1.5 py-0.5 rounded border">↵</kbd>
-                    {t('header.hintSelect')}
-                  </span>
-                </div>
-                <span className="flex items-center gap-1">
-                  <kbd className="bg-muted px-1.5 py-0.5 rounded border">esc</kbd>
-                  {t('header.hintClose')}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ⌘K palette — pages, quick actions, shipments. */}
+      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </>
   );
 }

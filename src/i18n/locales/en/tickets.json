@@ -303,7 +303,7 @@
     "items": {
       "payouts": {
         "question": "When are payouts processed?",
-        "answer": "Payouts are processed on the 1st and 15th of every month for all completed deliveries, provided your payout method is verified."
+        "answer": "Earnings become available 3 days after the order is delivered (for cash on delivery, once the cash has also reached Wi-Mall). Request a payout of your available balance from Account → Payout; our team processes it and you can follow it here under Tickets."
       },
       "coverage": {
         "question": "How do I add or remove a coverage region?",

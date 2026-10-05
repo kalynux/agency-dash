@@ -15,7 +15,8 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ResponsiveSheetShell } from '@/components/common/ResponsiveSheetShell';
 import { formatVehicleType } from '@/components/agents/vehicle.constants';
 import { VehicleIcon } from '@/components/agents/VehicleIcon';
 import { txStatic } from '@/i18n/tx';
@@ -168,17 +169,19 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
   const workingState = String(agent.workingState);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="flex h-[90dvh] flex-col gap-0 overflow-hidden rounded-t-3xl border-t-0 p-0"
-      >
+    // Bottom sheet on a phone, centred popup on desktop — a 90dvh sheet rising
+    // across a whole monitor read as the page being replaced.
+    <ResponsiveSheetShell
+      open={open}
+      onOpenChange={onOpenChange}
+      mobileClassName="h-[90dvh] rounded-t-3xl border-t-0"
+    >
         {/* Native scrolling, not Radix ScrollArea — that one never scrolls on a
             touch screen (see AgentMembershipDialog). The hero scrolls with the
             content so the stats get the whole screen once you start reading. */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <SheetHeader className="relative items-center gap-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent px-5 pb-5 pt-3 text-center">
-            <div className="mb-5 h-1 w-10 rounded-full bg-muted-foreground/25" />
+          <SheetHeader className="relative items-center gap-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent px-5 pb-5 pt-3 text-center md:pt-8">
+            <div className="mb-5 h-1 w-10 rounded-full bg-muted-foreground/25 md:hidden" />
 
             <div className="relative">
               <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-muted shadow-md">
@@ -308,7 +311,6 @@ export function AgentDetailSheet({ agent, open, onOpenChange, footerSlot }: Agen
             {footerSlot}
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+    </ResponsiveSheetShell>
   );
 }

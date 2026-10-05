@@ -5,6 +5,10 @@
   "metrics": {
     "availableEarnings": "Revenus disponibles",
     "availableEarningsHint": "Prêts à être retirés",
+    "pendingEarnings": "Revenus en attente",
+    "pendingEarningsHint": "En cours de validation — pas encore retirables",
+    "alsoAvailable": "{{amount}} prêts à être retirés",
+    "alsoPending": "{{amount}} encore en attente",
     "shipmentsNeedingAction": "Expéditions à traiter",
     "shipmentsNeedingActionHint": "En attente de votre affectation",
     "codOwed": "Dû à la plateforme (COD)",

@@ -352,13 +352,22 @@ function LatestPayoutRow({ payout }: { payout: EarningsPayoutRequest }) {
  * on a phone. Uses `Trans` because the copy has one emphasised phrase in the
  * middle — the `<1>` placeholder lets a translator move it, which a split
  * string would not.
+ *
+ * The second line is why a `pending` balance can sit still past the 3 days: a
+ * card dispute, a seller cancelling a paid order, or an investigation pauses
+ * the entry, and the clock resumes where it stopped. Spans, not paragraphs —
+ * desktop renders this inside a `<p>`.
  */
 function HowEarningsWork() {
+  const { t } = useTranslation('account');
   return (
-    <Trans
-      ns="account"
-      i18nKey="earnings.howItWorks"
-      components={{ strong: <span className="font-medium" /> }}
-    />
+    <>
+      <Trans
+        ns="account"
+        i18nKey="earnings.howItWorks"
+        components={{ strong: <span className="font-medium" /> }}
+      />
+      <span className="mt-2 block">{t('earnings.paused')}</span>
+    </>
   );
 }

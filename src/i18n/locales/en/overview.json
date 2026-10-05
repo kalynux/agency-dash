@@ -5,6 +5,10 @@
   "metrics": {
     "availableEarnings": "Available Earnings",
     "availableEarningsHint": "Ready to withdraw",
+    "pendingEarnings": "Pending Earnings",
+    "pendingEarningsHint": "Clearing — not withdrawable yet",
+    "alsoAvailable": "{{amount}} ready to withdraw",
+    "alsoPending": "{{amount}} still pending",
     "shipmentsNeedingAction": "Shipments Needing Action",
     "shipmentsNeedingActionHint": "Awaiting your dispatch",
     "codOwed": "Owed to Platform (COD)",

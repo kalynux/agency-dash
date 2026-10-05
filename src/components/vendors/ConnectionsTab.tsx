@@ -16,6 +16,8 @@ import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
 import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { PolicyTermsButton } from '@/components/common/PolicyTermsButton';
+import { VendorDetailSheet } from '@/components/vendors/VendorDetailSheet';
 import { cn } from '@/lib/utils';
 import {
   useOpenParam,
@@ -197,6 +199,7 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [chip, setChip] = useState<StatusChip>('all');
+  const [detailVendor, setDetailVendor] = useState<VendorBrowseItemDto | null>(null);
 
   // `?open=<connectionId>` — where the four `connection.*` notifications land
   // (`vendor-connections/{id}`, api-doc/notifications/deep-links.md). There is
@@ -318,16 +321,20 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
         <div className="-mx-4 divide-y border-y sm:-mx-6 md:mx-0 md:space-y-2 md:divide-y-0 md:border-y-0">
           {filtered.map((connection) => {
             const vendor = vendorDisplay.get(connection.vendorId);
+            // Approve + Reject beside the name do not fit a 360px row; they
+            // take a line of their own below it on a phone, split evenly.
+            const twoActions =
+              connection.status === 'pending' && connection.requesterRole !== 'agency';
             return (
               <div
                 key={connection.id}
                 id={rowDomId(CONNECTION_ROW, connection.id)}
                 className={cn(
-                  'flex items-center justify-between gap-3 p-4 md:rounded-xl md:border md:border-border md:p-3',
+                  'flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 p-4 md:flex-nowrap md:rounded-xl md:border md:border-border md:p-3',
                   highlighted === connection.id && HIGHLIGHT_CLASS,
                 )}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {vendor?.logoUrl ? (
                       <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
@@ -347,8 +354,28 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                       <VendorCodTerms terms={connection.vendorCodTerms} className="mt-1" />
                     )}
                   </div>
+                  {/* The same terms sheet as Browse — what was agreed to by
+                      connecting stays one tap away after connecting. Only when
+                      the vendor resolved: without its DTO there is nothing to
+                      show. */}
+                  {vendor && (
+                    <PolicyTermsButton
+                      label={t('connections.viewPolicies', { name: nameFor(connection) })}
+                      onClick={() => setDetailVendor(vendor)}
+                      className="ms-auto"
+                    />
+                  )}
                 </div>
-                <div className="flex-shrink-0">
+                <div
+                  className={cn(
+                    'flex-shrink-0',
+                    // One height for both: Reject sits inside a popover trigger
+                    // and came out shorter than Approve beside it. 40px is the
+                    // phone's tap target anyway.
+                    twoActions &&
+                      'max-md:basis-full max-md:[&>div]:w-full max-md:[&_button]:h-10 max-md:[&_button]:flex-1',
+                  )}
+                >
                   <ConnectionRowActions connection={connection} actions={actions} />
                 </div>
               </div>
@@ -356,6 +383,12 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
           })}
         </div>
       )}
+
+      <VendorDetailSheet
+        vendor={detailVendor}
+        open={!!detailVendor}
+        onOpenChange={(open) => !open && setDetailVendor(null)}
+      />
     </div>
   );
 }

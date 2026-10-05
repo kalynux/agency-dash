@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ResponsiveSheetShell } from '@/components/common/ResponsiveSheetShell';
 import { tx } from '@/i18n/tx';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -159,13 +160,18 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* An explicit height, not `max-h`: the native scroller below needs a
-          definite flex size to shrink into (see AgentMembershipDialog). */}
-      <SheetContent side="bottom" className="mx-auto flex h-[88dvh] w-full flex-col gap-0 rounded-t-2xl px-0 pb-0 sm:max-w-2xl sm:border-x">
-        <div className="mx-auto mb-1 mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-muted" />
+    // Bottom sheet on a phone, centred popup on desktop. An explicit height on
+    // the sheet, not `max-h`: the native scroller below needs a definite flex
+    // size to shrink into (see AgentMembershipDialog). The dialog sizes to its
+    // content up to its own `max-h`, like `ResponsiveModal`.
+    <ResponsiveSheetShell
+      open={open}
+      onOpenChange={onOpenChange}
+      mobileClassName="h-[88dvh] rounded-t-2xl"
+    >
+        <div className="mx-auto mb-1 mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-muted md:hidden" />
 
-        <SheetHeader className="flex-shrink-0 px-5 pb-3 pe-12">
+        <SheetHeader className="flex-shrink-0 px-5 pb-3 pe-12 md:pt-5">
           <div className="flex items-start gap-3">
             <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
               {vendor.logoUrl ? (
@@ -179,6 +185,7 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
                 {vendor.displayName ?? vendor.businessName}
                 <VerifiedBadge verified={vendor.kycVerified} className="ms-1" />
               </SheetTitle>
+              <SheetDescription className="sr-only">{t('detail.policiesTitle')}</SheetDescription>
               {vendor.displayName && vendor.displayName !== vendor.businessName && (
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{vendor.businessName}</p>
               )}
@@ -382,7 +389,6 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
             {footerSlot}
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+    </ResponsiveSheetShell>
   );
 }

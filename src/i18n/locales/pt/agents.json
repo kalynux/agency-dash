@@ -70,5 +70,13 @@
       "agentClosed": "Terminado — o agente encerrou a conta",
       "agentClosedBody": "Este agente encerrou a sua conta de agente na Wi-Mall, por isso o contrato terminou automaticamente. Não pode ser renovado."
     }
+  },
+  "connections": {
+    "viewTerms": "Ver os termos do contrato com {{name}}",
+    "termsSheet": {
+      "title": "Termos do contrato",
+      "description": "O que você e {{name}} acordaram.",
+      "manage": "Gerir contrato"
+    }
   }
 }

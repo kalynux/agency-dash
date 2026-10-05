@@ -158,7 +158,13 @@
     "withdraw": "Withdraw",
     "proposeTerms": "Propose terms",
     "view": "View",
-    "manage": "Manage"
+    "manage": "Manage",
+    "viewTerms": "View contract terms with {{name}}",
+    "termsSheet": {
+      "title": "Contract terms",
+      "description": "What you and {{name}} agreed to.",
+      "manage": "Manage contract"
+    }
   },
   "detail": {
     "kycVerified": "KYC Verified",

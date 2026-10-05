@@ -65,7 +65,8 @@
     "emptyFiltered": "No connections match your search.",
     "empty": "No connections in this category yet.",
     "fallbackName": "Vendor {{suffix}}",
-    "endedByClosure": "Ended — the vendor closed its account"
+    "endedByClosure": "Ended — the vendor closed its account",
+    "viewPolicies": "View {{name}}'s policies"
   },
   "browse": {
     "searchPlaceholder": "Search vendors…",
@@ -237,6 +238,26 @@
     "unnamedVendor": "Unnamed vendor",
     "filterByVendor": "Show only this vendor",
     "filterByCategory": "Show only this category",
+    "images": {
+      "open": "View photos of {{title}}",
+      "dialogTitle": "Photos",
+      "moreHidden": "+{{n}} more on the vendor’s listing"
+    },
+    "pickup": {
+      "vendor": "Pickup: vendor address",
+      "vendorNamed": "Pickup: vendor address «{{label}}»",
+      "depot": "Pickup: your depot",
+      "depotNamed": "Pickup: your depot «{{label}}»",
+      "notSet": "Pickup not set yet"
+    },
+    "storage": {
+      "label": "In your storage",
+      "notStored": "Not in your storage",
+      "notCounted": "Not counted yet",
+      "notCountedHint": "Configured to be stored here, but nothing has been counted yet",
+      "unassigned": "Unassigned",
+      "total": "Total {{qty}}"
+    },
     "sort": {
       "newest": "Newest",
       "oldest": "Oldest",

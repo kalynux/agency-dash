@@ -7,6 +7,7 @@ import { findNavTrail } from '@/config/navigation';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from './NotificationBell';
+import { MobileSearchButton } from './GlobalSearch';
 import { PageActions, type PageAction } from './PageActions';
 import { usePageRefreshState } from '@/store/pageRefresh.store';
 import { mobileAppBarClass, mobileAppBarTitleRowClass } from './mobileChrome';
@@ -153,7 +154,8 @@ export function PageHeader({
           {actionItems && actionItems.length > 0 && <PageActions actions={actionItems} />}
           {/* Last, so it is the constant in the corner across every screen —
               the one control whose position the user can learn. Desktop has its
-              own in `Header`. */}
+              own in `Header`. Search sits just before it, for the same reason. */}
+          <MobileSearchButton className="md:hidden" />
           <NotificationBell className="md:hidden" />
         </div>
       </div>

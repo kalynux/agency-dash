@@ -86,7 +86,8 @@
     }
   },
   "connections": {
-    "endedByClosure": "منتهية — أغلق البائع حسابه"
+    "endedByClosure": "منتهية — أغلق البائع حسابه",
+    "viewPolicies": "عرض سياسات {{name}}"
   },
   "tabs": {
     "products": {
@@ -131,6 +132,26 @@
     "unnamedVendor": "بائع بلا اسم",
     "filterByVendor": "عرض هذا البائع فقط",
     "filterByCategory": "عرض هذه الفئة فقط",
+    "images": {
+      "open": "عرض صور {{title}}",
+      "dialogTitle": "الصور",
+      "moreHidden": "+{{n}} أخرى في صفحة البائع"
+    },
+    "pickup": {
+      "vendor": "الاستلام: عنوان البائع",
+      "vendorNamed": "الاستلام: عنوان البائع «{{label}}»",
+      "depot": "الاستلام: مستودعك",
+      "depotNamed": "الاستلام: مستودعك «{{label}}»",
+      "notSet": "لم يُحدَّد مكان الاستلام بعد"
+    },
+    "storage": {
+      "label": "في مخزونك",
+      "notStored": "ليس في مخزونك",
+      "notCounted": "لم يُعَدّ بعد",
+      "notCountedHint": "مُهيّأ للتخزين هنا، لكن لم يُعَدّ شيء بعد",
+      "unassigned": "غير مخصّص",
+      "total": "الإجمالي {{qty}}"
+    },
     "sort": {
       "newest": "الأحدث",
       "oldest": "الأقدم",

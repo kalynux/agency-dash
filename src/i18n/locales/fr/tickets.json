@@ -303,7 +303,7 @@
     "items": {
       "payouts": {
         "question": "Quand les versements sont-ils traités ?",
-        "answer": "Les versements sont traités le 1er et le 15 de chaque mois pour toutes les livraisons terminées, à condition que votre moyen de paiement soit vérifié."
+        "answer": "Vos revenus deviennent disponibles 3 jours après la livraison de la commande (pour le paiement à la livraison, une fois les espèces également parvenues à Wi-Mall). Demandez le versement de votre solde disponible depuis Compte → Versements ; notre équipe le traite et vous pouvez le suivre ici, dans Tickets."
       },
       "coverage": {
         "question": "Comment ajouter ou retirer une région couverte ?",

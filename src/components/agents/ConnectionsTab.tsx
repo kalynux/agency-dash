@@ -1,7 +1,7 @@
 import { formatNumber } from '@/lib/format';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronRight, Loader2, Star, User, Users, X } from 'lucide-react';
+import { Check, Loader2, Star, User, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -18,6 +18,8 @@ import { MembershipStatusBadge } from '@/components/agents/MembershipStatusBadge
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { AgentWorkload } from '@/components/agents/AgentWorkload';
 import { AgentMembershipDialog } from '@/components/agents/AgentMembershipDialog';
+import { AgentContractTermsSheet } from '@/components/agents/AgentContractTermsSheet';
+import { PolicyTermsButton } from '@/components/common/PolicyTermsButton';
 import { StatusRequestPanel } from '@/components/agents/StatusRequestPanel';
 import { TermsProposalPanel } from '@/components/agents/TermsProposalPanel';
 import {
@@ -139,6 +141,7 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
   const [chip, setChip] = useState<StatusChip>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<RosterEntry | null>(null);
+  const [termsEntry, setTermsEntry] = useState<RosterEntry | null>(null);
   // Which status request has its note box open, and what has been typed into it.
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -289,7 +292,9 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
             // A decision belongs to this row rather than to the sheet behind
             // it. Those buttons take the full width on a phone instead of being
             // squeezed beside the name; every other row opens the sheet, and
-            // there the whole row is the target and a chevron says so.
+            // there the whole row is the target. (No chevron since the terms
+            // icon took the row's trailing spot — the two side by side read
+            // as two competing destinations.)
             const decision =
               offer === 'ours-to-answer' || offer === 'theirs-to-answer' || offer === 'needs-terms';
 
@@ -388,25 +393,33 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
                         {cashHeld > 0 && (
                           <>
                             <span aria-hidden className="flex-shrink-0 opacity-40">·</span>
-                            <span className="flex-shrink-0 text-amber-600">
+                            {/* Truncates rather than clipping mid-word when the
+                                row is narrow (the terms icon costs 40px). */}
+                            <span className="min-w-0 truncate text-amber-600">
                               {t('connections.holdsCash', { amount: formatNumber(cashHeld) })}
                             </span>
                           </>
                         )}
                       </div>
                     </div>
-                    {!decision && (
-                      <ChevronRight
-                        aria-hidden
-                        className="h-4 w-4 flex-shrink-0 text-muted-foreground md:hidden"
-                      />
-                    )}
                   </button>
+
+                  {/* The contract's terms, read-only — the same icon as on
+                      Browse. Stays on the name's line on a phone, so a row
+                      with a decision still has it beside the agent. */}
+                  <PolicyTermsButton
+                    label={t('connections.viewTerms', { name: agent.name })}
+                    onClick={() => setTermsEntry(entry)}
+                  />
 
                   <div
                     className={cn(
                       'flex flex-shrink-0 items-center gap-1.5',
-                      decision && 'max-md:w-full',
+                      // Without a decision its only child is the desktop-only
+                      // Manage button; an empty box here still took a gap slot
+                      // and pushed the terms icon out of line with the rows
+                      // that have one.
+                      decision ? 'max-md:w-full' : 'max-md:hidden',
                     )}
                   >
                     {/* The standing offer is theirs → we answer it. Countering
@@ -514,6 +527,13 @@ export function ConnectionsTab({ onContractChange, openContractId }: Connections
           })}
         </div>
       )}
+
+      <AgentContractTermsSheet
+        entry={termsEntry}
+        open={!!termsEntry}
+        onOpenChange={(open) => !open && setTermsEntry(null)}
+        onManage={setSelected}
+      />
 
       <AgentMembershipDialog
         entry={activeEntry}

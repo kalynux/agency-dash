@@ -1,7 +1,11 @@
 // Agency Earnings — see api-doc/agency/earnings.md
 
 export interface EarningsBalance {
-  /** Held — hold window not yet elapsed, or COD cash not yet settled. Minor units. */
+  /**
+   * Held — within 3 days of the order's last parcel being delivered (since
+   * 2026-10-05; before, 7 days after the order completed), paused, or COD cash
+   * not yet settled. Minor units.
+   */
   pending: number;
   /** Withdrawable — hold window elapsed and (for COD) cash settled. Minor units. */
   available: number;

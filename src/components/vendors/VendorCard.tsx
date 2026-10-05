@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, RotateCcw, Store, XCircle } from 'lucide-react';
+import { RotateCcw, ScrollText, Store, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
@@ -103,7 +103,8 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
             aria-label={t('card.viewDetails', { name: vendor.businessName })}
             className="flex items-center justify-center w-12 flex-shrink-0 border-s border-border/60 max-md:border-t text-muted-foreground hover:text-foreground hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
-            <Info className="w-4 h-4" />
+            {/* A document of terms, not an ⓘ hint — see PolicyTermsButton. */}
+            <ScrollText className="w-4 h-4" />
           </button>
         )}
       </div>

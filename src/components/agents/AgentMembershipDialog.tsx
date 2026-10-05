@@ -733,6 +733,16 @@ function MembershipBody({
           ? t('membership.footer.needsTerms', { name: agent.name })
           : null;
 
+  /** Anything for the footer's right half; without it Manage takes the row. */
+  const hasPrimaryAction =
+    dirty ||
+    saveBusy ||
+    offer === 'ours-to-answer' ||
+    offer === 'theirs-to-answer' ||
+    offer === 'needs-terms' ||
+    membership.status === 'paused' ||
+    membership.status === 'suspended';
+
   const saveLabel = negotiableDirty
     ? staged
       ? canCounterProposal
@@ -1426,12 +1436,20 @@ function MembershipBody({
                 {menuActions.length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline" className="flex-shrink-0 gap-1.5">
+                      {/* Full width: alone it is the footer's only control, and
+                          beside a primary action it takes an equal half — a
+                          small outline button hugging one corner read as an
+                          afterthought, and was a thin target on a phone. */}
+                      <Button size="sm" variant="outline" className="min-w-0 flex-1 gap-1.5">
                         <MoreHorizontal className="h-4 w-4" />
                         {t('membership.footer.manage')}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="top" className="w-52">
+                    <DropdownMenuContent
+                      align="start"
+                      side="top"
+                      className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-52"
+                    >
                       {menuActions.map((action) => (
                         <DropdownMenuItem
                           key={action.key}
@@ -1446,7 +1464,8 @@ function MembershipBody({
                   </DropdownMenu>
                 )}
 
-                <div className="flex flex-1 items-center justify-end gap-2">
+                {hasPrimaryAction && (
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-2 [&>button]:min-w-0 [&>button]:flex-1">
                   {dirty || saveBusy ? (
                     <>
                       <Button size="sm" variant="ghost" disabled={saveBusy} onClick={discardEdits}>
@@ -1515,6 +1534,7 @@ function MembershipBody({
                     </>
                   )}
                 </div>
+                )}
               </div>
             </div>
           )}

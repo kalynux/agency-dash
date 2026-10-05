@@ -65,7 +65,8 @@
     "emptyFiltered": "Aucune connexion ne correspond à votre recherche.",
     "empty": "Aucune connexion dans cette catégorie pour l'instant.",
     "fallbackName": "Vendeur {{suffix}}",
-    "endedByClosure": "Terminée — le vendeur a fermé son compte"
+    "endedByClosure": "Terminée — le vendeur a fermé son compte",
+    "viewPolicies": "Voir les politiques de {{name}}"
   },
   "browse": {
     "searchPlaceholder": "Rechercher des vendeurs…",
@@ -242,6 +243,26 @@
     "unnamedVendor": "Vendeur sans nom",
     "filterByVendor": "Afficher seulement ce vendeur",
     "filterByCategory": "Afficher seulement cette catégorie",
+    "images": {
+      "open": "Voir les photos de {{title}}",
+      "dialogTitle": "Photos",
+      "moreHidden": "+{{n}} autres sur la fiche du vendeur"
+    },
+    "pickup": {
+      "vendor": "Retrait : adresse du vendeur",
+      "vendorNamed": "Retrait : adresse du vendeur « {{label}} »",
+      "depot": "Retrait : votre dépôt",
+      "depotNamed": "Retrait : votre dépôt « {{label}} »",
+      "notSet": "Lieu de retrait pas encore défini"
+    },
+    "storage": {
+      "label": "Dans votre stock",
+      "notStored": "Pas dans votre stock",
+      "notCounted": "Pas encore compté",
+      "notCountedHint": "Configuré pour être stocké ici, mais rien n'a encore été compté",
+      "unassigned": "Non attribué",
+      "total": "Total {{qty}}"
+    },
     "sort": {
       "newest": "Plus récents",
       "oldest": "Plus anciens",

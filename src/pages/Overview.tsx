@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Wallet,
+  Hourglass,
   Truck,
   Banknote,
   Users,
@@ -112,7 +113,9 @@ function MetricCard({ title, value, icon: Icon, isLoading, onClick, hint, accent
               hero ? 'text-white/75' : 'text-muted-foreground',
             )}
           >
-            <span className="truncate">{hint}</span>
+            {/* Two lines, not one: the hero's hint carries a second amount,
+                which half a phone screen cannot fit on a single line. */}
+            <span className="line-clamp-2">{hint}</span>
             {hero && <ArrowUpRight className="h-3 w-3 flex-shrink-0 rtl:-scale-x-100" />}
           </p>
         )}
@@ -152,6 +155,20 @@ export function Overview() {
   }, dashboard.isLoading || earningsLoading);
 
   const currency = balance?.currency ?? 'XAF';
+  // The hero is whichever pot is bigger — for most agencies that is what is
+  // still clearing, and a "0 available" headline undersold a week of work. The
+  // other pot rides along as the hint so neither figure disappears. A tie
+  // (both empty included) leads with pending: it is where money lands first.
+  const pending = balance?.pending ?? 0;
+  const available = balance?.available ?? 0;
+  const heroIsPending = pending >= available;
+  const heroOther = heroIsPending ? available : pending;
+  const heroHint =
+    heroOther > 0
+      ? t(heroIsPending ? 'metrics.alsoAvailable' : 'metrics.alsoPending', {
+          amount: formatCurrency(heroOther, currency),
+        })
+      : t(heroIsPending ? 'metrics.pendingEarningsHint' : 'metrics.availableEarningsHint');
   const codLiability = dashboard.data?.cod.liability.balance ?? 0;
   const declaredCount = dashboard.data?.declaredCount ?? 0;
   const recent = dashboard.data?.recent ?? [];
@@ -175,11 +192,11 @@ export function Overview() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <MetricCard
           hero
-          title={t('metrics.availableEarnings')}
-          value={formatCurrency(balance?.available ?? 0, currency)}
-          icon={Wallet}
+          title={t(heroIsPending ? 'metrics.pendingEarnings' : 'metrics.availableEarnings')}
+          value={formatCurrency(heroIsPending ? pending : available, currency)}
+          icon={heroIsPending ? Hourglass : Wallet}
           isLoading={earningsLoading}
-          hint={t('metrics.availableEarningsHint')}
+          hint={heroHint}
           onClick={() => navigate('/dashboard/account/payout')}
         />
         <MetricCard

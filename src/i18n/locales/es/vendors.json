@@ -80,7 +80,8 @@
     }
   },
   "connections": {
-    "endedByClosure": "Finalizada: el vendedor cerró su cuenta"
+    "endedByClosure": "Finalizada: el vendedor cerró su cuenta",
+    "viewPolicies": "Ver las políticas de {{name}}"
   },
   "tabs": {
     "products": {
@@ -122,6 +123,26 @@
     "unnamedVendor": "Vendedor sin nombre",
     "filterByVendor": "Mostrar solo este vendedor",
     "filterByCategory": "Mostrar solo esta categoría",
+    "images": {
+      "open": "Ver fotos de {{title}}",
+      "dialogTitle": "Fotos",
+      "moreHidden": "+{{n}} más en la ficha del vendedor"
+    },
+    "pickup": {
+      "vendor": "Recogida: dirección del vendedor",
+      "vendorNamed": "Recogida: dirección del vendedor «{{label}}»",
+      "depot": "Recogida: tu depósito",
+      "depotNamed": "Recogida: tu depósito «{{label}}»",
+      "notSet": "Punto de recogida aún sin definir"
+    },
+    "storage": {
+      "label": "En tu almacén",
+      "notStored": "No está en tu almacén",
+      "notCounted": "Aún sin contar",
+      "notCountedHint": "Configurado para almacenarse aquí, pero aún no se ha contado nada",
+      "unassigned": "Sin asignar",
+      "total": "Total {{qty}}"
+    },
     "sort": {
       "newest": "Más recientes",
       "oldest": "Más antiguos",

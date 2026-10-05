@@ -56,6 +56,48 @@ export interface DeliverableProduct {
   /** @deprecated `categories[0].name` — read `categories`. */
   category: string | null;
   source: DeliverableProductSource;
+  /**
+   * Product-level gallery, vendor order, renderable images only, capped at 4.
+   * Optional: an older backend does not send it (added 2026-10-05).
+   */
+  images?: FileRef[];
+  /** How many renderable images the product has in total — `images` may be capped. */
+  imageCount?: number;
+  /** Where the product is picked up. `null` = not configured; absent = older backend. */
+  pickup?: DeliverableProductPickup | null;
+  /** This agency's stock of the product. `null` = not stored here; absent = older backend. */
+  agencyStock?: DeliverableProductStock | null;
+}
+
+export interface DeliverableProductPickup {
+  source: 'vendor_address' | 'agency_storage';
+  /** Null when the address could not be resolved (deleted, or ambiguous). */
+  label: string | null;
+  city: string | null;
+  state: string | null;
+  /** `agency_storage` only: which of OUR depots (resolved — primary when unset). */
+  depotId?: string | null;
+}
+
+export interface DeliverableProductStockDepot {
+  /** Null when the depot has since been deleted ("unassigned"). */
+  id: string | null;
+  label: string | null;
+  city: string | null;
+  /** Counted on-hand, summed over variants. Always 0 when `counted` is false. */
+  quantityOnHand: number;
+  /**
+   * ⚠ False = configured to be stored here, NEVER COUNTED. That is not
+   * "we hold none" — render it as "not counted yet", never as 0.
+   */
+  counted: boolean;
+}
+
+export interface DeliverableProductStock {
+  depots: DeliverableProductStockDepot[];
+  totalOnHand: number;
+  /** True when at least one depot carries a counted figure. */
+  counted?: boolean;
 }
 
 export type DeliverableProductSortBy = 'createdAt' | 'title';

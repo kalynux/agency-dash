@@ -52,7 +52,7 @@
   },
   "header": {
     "searchPlaceholderShort": "Pesquisar…",
-    "searchPlaceholder": "Pesquisar entregas, tickets…",
+    "searchPlaceholder": "Pesquisar páginas, envios, números de rastreio…",
     "searchLabel": "Abrir a pesquisa",
     "closeSearch": "Fechar a pesquisa",
     "quickActions": "Ações rápidas",
@@ -69,10 +69,15 @@
     "logoutConfirmAction": "Terminar sessão",
     "searchResultsFor": "Resultados para «{{query}}»",
     "noResults": "Sem resultados para «{{query}}»",
-    "noResultsHint": "Experimente um número de rastreio, o nome de um estafeta ou o assunto de um ticket.",
+    "noResultsHint": "Experimente um número de rastreio ou de encomenda, o nome de um cliente ou de uma página.",
     "hintNavigate": "para navegar",
     "hintSelect": "para selecionar",
-    "hintClose": "para fechar"
+    "hintClose": "para fechar",
+    "searchGroups": {
+      "pages": "Páginas",
+      "shipments": "Envios"
+    },
+    "searchShipmentsFailed": "Não foi possível pesquisar os envios neste momento."
   },
   "quickActions": {
     "newTicket": {

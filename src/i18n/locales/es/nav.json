@@ -52,7 +52,7 @@
   },
   "header": {
     "searchPlaceholderShort": "Buscar…",
-    "searchPlaceholder": "Buscar entregas, tickets…",
+    "searchPlaceholder": "Buscar páginas, envíos, números de seguimiento…",
     "searchLabel": "Abrir la búsqueda",
     "closeSearch": "Cerrar la búsqueda",
     "quickActions": "Acciones rápidas",
@@ -69,10 +69,15 @@
     "logoutConfirmAction": "Cerrar sesión",
     "searchResultsFor": "Resultados para «{{query}}»",
     "noResults": "Sin resultados para «{{query}}»",
-    "noResultsHint": "Prueba con un número de seguimiento, el nombre de un repartidor o el asunto de un ticket.",
+    "noResultsHint": "Prueba con un número de seguimiento o de pedido, el nombre de un cliente o el de una página.",
     "hintNavigate": "para navegar",
     "hintSelect": "para seleccionar",
-    "hintClose": "para cerrar"
+    "hintClose": "para cerrar",
+    "searchGroups": {
+      "pages": "Páginas",
+      "shipments": "Envíos"
+    },
+    "searchShipmentsFailed": "No se pudieron buscar los envíos en este momento."
   },
   "quickActions": {
     "newTicket": {

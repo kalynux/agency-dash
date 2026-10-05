@@ -42,8 +42,8 @@ android {
         // ⚠ versionCode must increase on EVERY upload to Play, forever, and it
         // can never be reused or lowered. versionName is the string people see.
         // Bump both here; nothing derives them from package.json.
-        versionCode 8
-        versionName "1.0.7"
+        versionCode 9
+        versionName "1.0.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

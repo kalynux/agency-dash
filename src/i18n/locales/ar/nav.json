@@ -52,7 +52,7 @@
   },
   "header": {
     "searchPlaceholderShort": "بحث…",
-    "searchPlaceholder": "ابحث عن عمليات التوصيل والتذاكر…",
+    "searchPlaceholder": "ابحث في الصفحات والشحنات وأرقام التتبّع…",
     "searchLabel": "فتح البحث",
     "closeSearch": "إغلاق البحث",
     "quickActions": "إجراءات سريعة",
@@ -73,10 +73,15 @@
     "logoutConfirmAction": "تسجيل الخروج",
     "searchResultsFor": "نتائج البحث عن «{{query}}»",
     "noResults": "لا توجد نتائج لـ «{{query}}»",
-    "noResultsHint": "جرّب رقم تتبّع أو اسم مندوب أو موضوع تذكرة.",
+    "noResultsHint": "جرّب رقم تتبّع أو رقم طلب أو اسم عميل أو اسم صفحة.",
     "hintNavigate": "للتنقل",
     "hintSelect": "للاختيار",
-    "hintClose": "للإغلاق"
+    "hintClose": "للإغلاق",
+    "searchGroups": {
+      "pages": "الصفحات",
+      "shipments": "الشحنات"
+    },
+    "searchShipmentsFailed": "تعذّر البحث في الشحنات حاليًا."
   },
   "quickActions": {
     "newTicket": {

@@ -158,7 +158,13 @@
     "withdraw": "Retirer",
     "proposeTerms": "Proposer des conditions",
     "view": "Voir",
-    "manage": "Gérer"
+    "manage": "Gérer",
+    "viewTerms": "Voir les termes du contrat avec {{name}}",
+    "termsSheet": {
+      "title": "Termes du contrat",
+      "description": "Ce que vous et {{name}} avez convenu.",
+      "manage": "Gérer le contrat"
+    }
   },
   "detail": {
     "kycVerified": "KYC vérifié",
