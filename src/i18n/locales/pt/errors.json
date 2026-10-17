@@ -35,7 +35,7 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "Este envio avançou desde que a alteração de taxa foi proposta. Pode retirá-la.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Os ganhos do vendedor nesta encomenda mudaram, por isso a alteração de taxa não pôde ser aplicada. Nada foi alterado.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Esta alteração de taxa foi editada entretanto. Recarregue para ver o valor atual.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "Uma alteração de taxa ainda aguarda resposta — do vendedor, ou do cliente quando paga a entrega. A recolha está bloqueada até lá.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "Uma alteração de taxa ainda aguarda resposta — de quem paga a entrega, ou sua se foi o vendedor ou o cliente a propô-la (ver Propostas de taxa). A recolha está bloqueada até lá.",
     "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "Essa edição baixaria a taxa. Retire esta proposta e proponha a taxa mais baixa — uma descida aplica-se de imediato.",
     "DELIVERY_FEE_TOPUP_IN_PROGRESS": "O cliente aceitou esta taxa e está a pagar a diferença, por isso já não pode ser alterada nem retirada.",
     "DELIVERY_FEE_PROPOSAL_ORDER_NOT_PAID": "O pagamento desta compra não está liquidado, por isso a taxa de entrega não pode mudar agora.",

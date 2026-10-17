@@ -9,14 +9,15 @@ import { ticketsService } from '@/services/tickets.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { FollowerSelect } from './FollowerSelect';
 import { MAX_ATTACHMENTS, formatFileSize, roleLabel } from './ticket.constants';
+import { actorName } from './ticket.rules';
 import type { ApiFile } from '@/types/file.types';
 import type { TicketAttachment, TicketActor } from '@/types/ticket.types';
 
 type VisibilityInput = 'PUBLIC' | 'PRIVATE';
 
 export function AttachmentsPanel({
-  ticketId, followers, readOnly = false,
-}: { ticketId: string; followers: TicketActor[]; readOnly?: boolean }) {
+  ticketId, followers, currentUserId, readOnly = false,
+}: { ticketId: string; followers: TicketActor[]; currentUserId?: string | null; readOnly?: boolean }) {
   const { t } = useTranslation('tickets');
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,7 @@ export function AttachmentsPanel({
         <ul className="space-y-2">
           {attachments.map((att) => {
             const isImage = att.mimeType.startsWith('image/');
-            const uploader = att.uploadedByActor?.name ?? roleLabel(att.uploadedByRole);
+            const uploader = actorName(att.uploadedByActor) ?? roleLabel(att.uploadedByRole);
             return (
               <li key={att.id} className="flex items-center gap-3 rounded-lg border bg-card p-2.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -148,7 +149,12 @@ export function AttachmentsPanel({
               />
             </div>
             {visibility === 'PRIVATE' && (
-              <FollowerSelect followers={followers} value={viewerIds} onChange={setViewerIds} />
+              <FollowerSelect
+                followers={followers}
+                excludeUserId={currentUserId}
+                value={viewerIds}
+                onChange={setViewerIds}
+              />
             )}
           </div>
 

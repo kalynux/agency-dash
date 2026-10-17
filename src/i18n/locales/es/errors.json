@@ -35,7 +35,7 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "Este envío ha avanzado desde que se propuso el cambio de tarifa. Puedes retirarlo.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Las ganancias del vendedor en este pedido cambiaron, así que no se pudo aplicar el cambio de tarifa. No se ha modificado nada.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Este cambio de tarifa se editó mientras tanto. Recarga para ver el importe actual.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "Un cambio de tarifa aún espera respuesta: del vendedor, o del cliente cuando paga la entrega. La recogida está bloqueada hasta entonces.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "Un cambio de tarifa aún espera respuesta: de quien paga la entrega, o tuya si lo propuso el vendedor o el cliente (ver Propuestas de tarifa). La recogida está bloqueada hasta entonces.",
     "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "Esa edición bajaría la tarifa. Retira esta propuesta y propón la tarifa más baja: una rebaja se aplica al instante.",
     "DELIVERY_FEE_TOPUP_IN_PROGRESS": "El cliente aceptó esta tarifa y está pagando la diferencia, así que ya no se puede cambiar ni retirar.",
     "DELIVERY_FEE_PROPOSAL_ORDER_NOT_PAID": "El pago de este pedido no está liquidado, así que su tarifa de entrega no puede cambiar ahora.",

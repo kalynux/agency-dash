@@ -99,10 +99,18 @@
       "collected_many": "Encaissé, pas encore reversé : {{amount}} ({{count}} encaissements)",
       "collected_other": "Encaissé, pas encore reversé : {{amount}} ({{count}} encaissements)",
       "overLimit": "Vous détenez plus que votre plafond. Les vendeurs ne peuvent plus vous envoyer de commandes en paiement à la livraison tant que vous n'avez pas reversé.",
+      "overLimitPaused": "Vous détenez plus que votre plafond.",
+      "paused": "Le paiement à la livraison est suspendu : aucune nouvelle expédition en paiement à la livraison ne vous parviendra, quelle que soit la marge restante sous ce plafond. Les espèces que vous détenez déjà restent dues.",
       "headroom": "Vous pouvez encore prendre {{headroom}}",
       "remitFrees": "Reverser des espèces à Wi-Mall libère de la marge",
       "explain": "Ce plafond détermine ce que les vendeurs peuvent vous confier : une commande en paiement à la livraison qui vous ferait dépasser ce plafond reste en attente chez le vendeur, et vous ne la recevez pas tant qu'elle n'y entre pas ou que le vendeur ne l'envoie pas quand même. Ce n'est pas le plafond COD par commande de vos politiques, et sa modification ne suspend jamais vos connexions."
     }
+  },
+  "restricted": {
+    "title": "Le paiement à la livraison est suspendu pour votre agence",
+    "body": "Suspendu par Wi-Mall depuis le {{date}}. Vous ne recevrez pas de nouvelles expéditions en paiement à la livraison. Les expéditions que vous détenez déjà ne sont pas concernées.",
+    "bodyUndated": "Suspendu par Wi-Mall. Vous ne recevrez pas de nouvelles expéditions en paiement à la livraison. Les expéditions que vous détenez déjà ne sont pas concernées.",
+    "contactSupport": "Contactez l'assistance pour en savoir plus."
   },
   "deposits": {
     "alertTitle_one": "{{count}} remise en attente de votre réponse",

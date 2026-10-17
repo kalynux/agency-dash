@@ -9,6 +9,7 @@ import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useVendorConnections } from '@/store/vendorConnections.store';
 import { useAgentsRoster } from '@/store/agents.store';
 import { useStockRequests } from '@/store/stockRequests.store';
+import { useFeeProposals } from '@/store/feeProposals.store';
 import { PRIMARY_NAV, FOOTER_NAV, type NavItem, type NavChild, type NavBadge } from '@/config/navigation';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
@@ -121,6 +122,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
   const { pendingActionCount } = useVendorConnections();
   const { pendingActionCount: agentActionCount } = useAgentsRoster();
   const { awaitingCount: stockRequestCount } = useStockRequests();
+  const { pendingCount: feeProposalCount } = useFeeProposals();
   const roleEntity = useOnboarding().session?.role_entity;
 
   const agencyName = roleEntity?.agency_name || t('sidebar.fallbackAgencyName');
@@ -136,6 +138,7 @@ export function MobileMoreDrawer({ open, onOpenChange }: MobileMoreDrawerProps) 
       if (badge === 'vendorConnections') return pendingActionCount;
       if (badge === 'agentContracts') return agentActionCount;
       if (badge === 'stockRequests') return stockRequestCount;
+      if (badge === 'feeProposals') return feeProposalCount;
       return 0;
     },
   };

@@ -20,7 +20,8 @@
     "vendors": "Vendedores",
     "vendorsConnections": "Conexiones",
     "vendorsBrowse": "Directorio",
-    "vendorsProducts": "Productos"
+    "vendorsProducts": "Productos",
+    "feeProposals": "Propuestas de tarifa"
   },
   "footer": {
     "account": "Cuenta",

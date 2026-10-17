@@ -24,6 +24,7 @@ import { ShipmentRowActions } from '@/components/shipments/ShipmentRowActions';
 import { AutoAssignStatusChip } from '@/components/shipments/AutoAssignStatusChip';
 import { DeliveryFeePendingChip } from '@/components/shipments/DeliveryFeePendingChip';
 import { CombinedRequestsEntry } from '@/components/shipments/combined/CombinedRequestsEntry';
+import { FeeProposalsEntry } from '@/components/shipments/FeeProposalsEntry';
 import { useOpenCombinedRequestCount } from '@/hooks/useOpenCombinedRequestCount';
 import { BulkAssignDialog } from '@/components/shipments/BulkAssignDialog';
 import { BulkSelectionBar } from '@/components/shipments/BulkSelectionBar';
@@ -360,6 +361,7 @@ export function Shipments() {
         // `actionItems`, which can only describe things you press.
         actions={
           <>
+            <FeeProposalsEntry />
             <CombinedRequestsEntry count={openCombined} />
             <AutoAssignStatusChip />
           </>

@@ -697,7 +697,7 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "Cette expédition a avancé depuis la proposition de frais. Vous pouvez la retirer.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "Les gains du vendeur sur cette commande ont changé : la modification de frais n'a pas pu être appliquée. Rien n'a été modifié.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "Cette modification de frais a été éditée entre-temps. Rechargez pour voir le montant actuel.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "Une modification de frais attend encore une réponse — du vendeur, ou du client quand il paie la livraison. Le ramassage est bloqué d'ici là.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "Une modification de frais attend encore une réponse — de qui paie la livraison, ou de vous si le vendeur ou le client l'a proposée (voir Propositions de frais). Le ramassage est bloqué d'ici là.",
     "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "Cette modification baisserait les frais. Retirez cette proposition et proposez plutôt les frais plus bas — une baisse s’applique immédiatement.",
     "DELIVERY_FEE_TOPUP_IN_PROGRESS": "Le client a accepté ces frais et paie la différence : ils ne peuvent plus être modifiés ni retirés.",
     "DELIVERY_FEE_TOPUP_NOT_DUE": "Aucun paiement complémentaire n’est dû pour cette modification de frais.",

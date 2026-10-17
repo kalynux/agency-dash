@@ -2,6 +2,8 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { getApiErrorMessage, getErrorCode } from '@/lib/errors';
+import { formatCurrency } from '@/lib/format';
+import type { AnyTFunction } from '@/i18n/tx';
 import { useActionRunner, type RunOptions } from '@/hooks/useActionRunner';
 import { shipmentsService } from '@/services/shipments.service';
 import {
@@ -20,6 +22,7 @@ import type {
 } from '@/types/shipment.types';
 import type {
   CreateDeliveryFeeProposalPayload,
+  DeliveryFeeProposal,
   EditDeliveryFeeProposalPayload,
 } from '@/types/delivery-fee-proposal.types';
 
@@ -36,7 +39,50 @@ const STALE_FEE_PROPOSAL_CODES = new Set([
   // edit crossed below the current fee — either way the view is out of date.
   'DELIVERY_FEE_TOPUP_IN_PROGRESS',
   'DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED',
+  // Answering a payer's proposal (ADR-A12): the parcel left the window meanwhile.
+  'DELIVERY_FEE_PROPOSAL_STALE',
 ]);
+
+/**
+ * Answering a fee the PAYER proposed (ADR-A12). Both verbs send the `version`
+ * that was on screen. When the payer changed the figure since, the server
+ * answers `409 DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH`: instead of the generic
+ * "reload" toast, re-read the proposal and name the NEW figure, so nobody
+ * accepts a number they never saw. `onStale` then reloads the view.
+ */
+function payerAnswerOptions(
+  t: AnyTFunction,
+  shipmentId: string,
+  proposalId: string,
+  onStale?: () => void,
+): RunOptions {
+  return {
+    silentError: (err) => getErrorCode(err) === 'DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH',
+    onError: (err) => {
+      const code = getErrorCode(err);
+      if (code === 'DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH') {
+        void (async () => {
+          try {
+            const { data } = await shipmentsService.listDeliveryFeeProposals(shipmentId);
+            const fresh = data.find((p) => p.id === proposalId);
+            if (fresh && fresh.status === 'pending') {
+              toast.warning(
+                t('shipments:deliveryFee.payer.changed', {
+                  amount: formatCurrency(fresh.proposedFee, fresh.currency),
+                }),
+              );
+              return;
+            }
+          } catch {
+            // Fall through to the registry's sentence.
+          }
+          toast.error(getApiErrorMessage(err));
+        })();
+      }
+      if (code && STALE_FEE_PROPOSAL_CODES.has(code)) onStale?.();
+    },
+  };
+}
 
 // All shipment/COD/assignment codes live in the central registry (@/lib/errors).
 export function getShipmentErrorMessage(err: unknown): string {
@@ -242,6 +288,53 @@ export function useShipmentActions() {
     [run, t],
   );
 
+  /**
+   * The answer is the proposal: `approved` when the fee applied at once, still
+   * `pending` with an unpaid `topup` on a customer-paid online increase — the
+   * toast says which, because only one of them unblocks pickup.
+   */
+  const approveDeliveryFee = useCallback(
+    async (shipmentId: string, proposal: DeliveryFeeProposal, onStale?: () => void) => {
+      const result = await run(
+        `fee-answer:${proposal.id}`,
+        async () =>
+          (
+            await shipmentsService.approveDeliveryFeeProposal(shipmentId, proposal.id, {
+              version: proposal.version ?? 1,
+            })
+          ).data,
+        payerAnswerOptions(t, shipmentId, proposal.id, onStale),
+      );
+      if (result) {
+        toast.success(
+          result.status === 'pending' && result.topup?.status === 'awaiting_payment'
+            ? t('deliveryFee.payer.acceptedAwaitingPayment', {
+                amount: formatCurrency(result.topup.amount, result.currency),
+              })
+            : t('deliveryFee.payer.accepted'),
+        );
+      }
+      return result;
+    },
+    [run, t],
+  );
+
+  const rejectDeliveryFee = useCallback(
+    (shipmentId: string, proposal: DeliveryFeeProposal, note: string | undefined, onStale?: () => void) =>
+      run(
+        `fee-answer:${proposal.id}`,
+        async () =>
+          (
+            await shipmentsService.rejectDeliveryFeeProposal(shipmentId, proposal.id, {
+              version: proposal.version ?? 1,
+              ...(note ? { note } : {}),
+            })
+          ).data,
+        { success: t('deliveryFee.payer.declined'), ...payerAnswerOptions(t, shipmentId, proposal.id, onStale) },
+      ),
+    [run, t],
+  );
+
   // No tracking-number action: the number is generated at shipment creation and
   // is read-only on every endpoint.
 
@@ -258,5 +351,7 @@ export function useShipmentActions() {
     proposeDeliveryFee,
     editDeliveryFee,
     withdrawDeliveryFee,
+    approveDeliveryFee,
+    rejectDeliveryFee,
   };
 }

@@ -172,7 +172,7 @@ the whole cash chain), three rules change:
    **dead end**, and reaching it is what raises the customer's delivery-code prompt
    (`shipment.service.ts:1421`). From there only the code moves it on: the agent submits it via
    `POST /api/agent/shipments/:id/cod/collect`, which atomically records the cash and marks the
-   shipment `delivered`. (A 7-day sweep past the dispute window is the only other exit, and it is
+   shipment `delivered`. (A 3-day sweep past the dispute window is the only other exit, and it is
    keyed on a COD shipment *sitting at* `agent_delivered`.) There is no customer app confirmation
    step for COD.
 
@@ -543,15 +543,15 @@ one transaction.
 
 | Paid | `agent_delivered` → `delivered` when | Auto-confirm? |
 |---|---|---|
-| Online | the **customer** confirms that shipment ([customer orders](../customer/orders.md)) | Yes — after a **7-day** dispute window |
-| COD | the **agent submits the customer's delivery code** ([`collect`](../agent/cod-cash.md#collect)) | Yes — after **7 days** the cash is recorded as collected *without* a code |
+| Online | the **customer** confirms that shipment ([customer orders](../customer/orders.md)) | Yes — after a **3-day** dispute window (`EARNINGS_SHIPMENT_AUTO_CONFIRM_DAYS`; 7 until 2026-10-09) |
+| COD | the **agent submits the customer's delivery code** ([`collect`](../agent/cod-cash.md#collect)) | Yes — after **3 days** the cash is recorded as collected *without* a code |
 
 > **COD:** `delivered` is rejected as a status change — a recorded cash collection is the only way
 > there, so `delivered` and "cash collected" are always the same event. The normal route is the agent
 > submitting the customer's code: the response to `agent_delivered` carries `requiresDeliveryCode:
 > true`, the agent app's cue to ask for it.
 >
-> If the shipment sits at `agent_delivered` for **7 days** with no code, the auto-confirm sweep records
+> If the shipment sits at `agent_delivered` for **3 days** with no code, the auto-confirm sweep records
 > the cash as **collected without a code** (`verification.method: "auto_no_code"`), marks the shipment
 > `delivered`, and makes the **agent** liable for that cash — leaving a shipment at `agent_delivered`
 > for the whole window is treated as an implicit assertion that the cash was taken. So an agent who was
@@ -794,7 +794,44 @@ and `agencyEdited`; `availableActions` includes `edit`.
 Withdraw a pending proposal (yours or your agent's). `409 DELIVERY_FEE_PROPOSAL_NOT_PENDING` if it
 was already answered.
 
-**After an answer**
+#### Answering a fee the PAYER proposed (2026-10-14)
+
+[ADR-A12](../../docs/ADR-A12-PAYER-FEE-PROPOSALS.md). Whoever pays a parcel's delivery — the
+**vendor** (vendor-paid) or the **customer** (customer-paid) — may now propose a different fee for
+it, higher or lower. **You** answer; while you have not, **the parcel cannot be picked up**
+(`409 SHIPMENT_DELIVERY_FEE_PENDING` — the same block as your own pending proposal).
+
+Such a proposal reads like the others on the shipment (`deliveryFeeProposals`, the list route
+above) with `proposedBy.role: 'vendor' | 'customer'`, `approver: 'agency'`, `origin: 'payer'`
+and `availableActions: ["approve","reject"]`. You cannot edit or withdraw it — it is theirs.
+
+| Method | Path | What |
+|---|---|---|
+| GET | `/api/agency/delivery-fee-proposals?status=pending&page=1&limit=20` | your inbox of payer proposals across shipments (every status by default) — `{ data, meta: { total, page, limit, totalPages } }` |
+| POST | `/api/agency/shipments/:id/delivery-fee-proposals/:proposalId/approve` | accept. Body **`{ "version": int }`** — the version you displayed |
+| POST | `/api/agency/shipments/:id/delivery-fee-proposals/:proposalId/reject` | decline; the fee stays. Body `{ "version": int, "note"?: string ≤ 500 }` — the note reaches the payer |
+
+What accepting does:
+- **vendor-paid** → the fee applies at once (`deliveryFeeOverride`), pickup unblocks.
+- **customer-paid, lower** → applies at once (the customer is refunded / pays less cash).
+- **customer-paid, higher, cash on delivery** → applies at once (more cash to collect).
+- **customer-paid, higher, paid online** → the proposal stays `pending` with `payerAcceptance` set and
+  `topup.status: 'awaiting_payment'`: the customer must pay the difference first. When they do, it
+  applies and you are told (`delivery_fee_proposal.payer_paid`); pickup stays blocked until then.
+  While waiting, `availableActions` is `["reject"]` — decline if you will not wait any longer.
+
+Your agents can answer too, **only while `agentsCanProposeDeliveryFee` is on** (the same switch that
+lets them propose). A stale `version` → `409 DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH`; already
+answered → `409 DELIVERY_FEE_PROPOSAL_NOT_PENDING`; a vendor-paid figure that would leave the
+vendor earning nothing → `422 DELIVERY_FEE_PROPOSAL_VENDOR_NET_NOT_POSITIVE`.
+
+The payer's two proposals per parcel are counted apart from your two.
+
+Notifications (preference `deliveryFeeProposals`): `delivery_fee_proposal.payer_proposed`,
+`payer_edited` (they changed the figure — re-read; answer the new `version`), `payer_withdrawn`
+(pickup unblocked), `payer_paid` (the customer paid the higher fee you accepted).
+
+**After an answer** (to a proposal of YOURS)
 - **approved** → the shipment's fee is the proposed one: `deliveryFeeOverride: { amount,
   proposalId, approvedAt }` appears on the shipment, and `agencyEarning` / the agent's `earning`
   are computed from it. Pickup is unblocked.

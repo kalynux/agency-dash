@@ -1,9 +1,9 @@
 {
   "preferences": {
-    "agentFeeProposals": "Permitir que os meus estafetas proponham taxas de entrega",
-    "agentFeeProposalsHint": "Quando ativado, o estafeta que aceitou um envio pode pedir uma taxa de entrega diferente para esse envio, antes da recolha. A proposta segue diretamente para quem paga a entrega — o vendedor ou o cliente —, que a aprova ou rejeita; você vê-a no envio e pode editá-la enquanto estiver pendente. Você pode sempre propor uma taxa.",
-    "agentFeeProposalsOn": "Os seus estafetas já podem propor taxas de entrega.",
-    "agentFeeProposalsOff": "Agora só você pode propor taxas de entrega."
+    "agentFeeProposals": "Permitir que os meus estafetas negociem taxas de entrega",
+    "agentFeeProposalsHint": "Quando ativado, o estafeta que aceitou um envio pode propor outra taxa de entrega para esse envio antes da recolha, e responder às taxas propostas por vendedores e clientes. A sua própria proposta segue diretamente para quem paga a entrega; você vê-a no envio e pode editá-la enquanto estiver pendente. Você pode sempre propor e responder a taxas.",
+    "agentFeeProposalsOn": "Os seus estafetas já podem propor e responder a taxas de entrega.",
+    "agentFeeProposalsOff": "Agora só você pode propor e responder a taxas de entrega."
   },
   "notifications": {
     "events": {
@@ -11,7 +11,7 @@
       "codLimitUpdatesDescription": "Quando um vendedor lhe envia um envio com pagamento na entrega acima de um limite, quando a atribuição automática só encontra estafetas acima do seu montante de pagamento na entrega, quando um vendedor altera as suas condições de pagamento na entrega, ou quando a Wi-Mall fixa ou liberta o seu limite.",
       "codLimitUpdatesCaveat": "Um envio enviado acima de um limite, e um que a atribuição automática não conseguiu colocar por motivos de pagamento na entrega, chegam por este interruptor — não por Novos envios. Se o desativar, não será avisado deles.",
       "deliveryFeeProposals": "Alterações da taxa de entrega",
-      "deliveryFeeProposalsDescription": "Quando um vendedor ou um cliente responde a uma alteração de taxa num dos seus envios, um dos seus estafetas propõe ou edita uma, ou um cliente lhe pede um preço conjunto para várias encomendas."
+      "deliveryFeeProposalsDescription": "Quando um vendedor ou um cliente lhe propõe uma taxa para responder, a altera ou a retira, ou responde a uma sua; quando um dos seus estafetas propõe ou edita uma; ou quando um cliente lhe pede um preço conjunto para várias encomendas."
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -22,19 +22,29 @@ import { getApiErrorMessage } from '@/lib/errors';
 import { CreateTicketSheet } from '@/components/tickets/CreateTicketSheet';
 import { TicketDetailSheet } from '@/components/tickets/TicketDetailSheet';
 import { useOpenParam } from '@/hooks/useOpenParam';
+import { useCurrentUserId } from '@/hooks/useCurrentUserId';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { FaqSheet } from '@/components/tickets/FaqSheet';
 import {
   statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, STATUS_TAB_VALUES,
   priorityLabel, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
   TICKET_TYPE_GROUPS, ticketTypeGroupLabel, ticketTypeLabel,
-  getTypeVisual, shortTicketRef, relativeTime, ENTITY_ICONS,
+  getTypeVisual, shortTicketRef, relativeTime, ENTITY_ICONS, openerLabel,
 } from '@/components/tickets/ticket.constants';
+import { isTicketCreator, ticketOpener } from '@/components/tickets/ticket.rules';
 import type {
   Ticket, TicketPagination, TicketStatus, TicketPriority, TicketType, ListTicketsParams,
 } from '@/types/ticket.types';
 
 const PAGE_LIMIT = 20;
 const ALL = '__all__';
+
+/**
+ * Whose tickets to list. The list is everything this agency FOLLOWS — since
+ * 2026-10-09 that includes each ticket about an order it carries — and `mine`
+ * narrows it to the ones it opened (`?createdByUserId=`).
+ */
+type OpenerFilter = 'all' | 'mine';
 
 type SortKey = 'updated' | 'created' | 'priority';
 
@@ -82,9 +92,19 @@ export function Tickets() {
     [t],
   );
 
+  const openerOptions = useMemo(
+    () => [
+      { value: 'all' as OpenerFilter, label: t('page.filters.openedByAnyone') },
+      { value: 'mine' as OpenerFilter, label: t('page.filters.openedByMe') },
+    ],
+    [t],
+  );
+
+  const currentUserId = useCurrentUserId();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<TicketPagination>({ total: 0, page: 1, limit: PAGE_LIMIT, pages: 1 });
   const [page, setPage] = useState(1);
+  const [openerFilter, setOpenerFilter] = useState<OpenerFilter>('all');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | null>(null);
   const [typeFilter, setTypeFilter] = useState<TicketType | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
@@ -118,34 +138,57 @@ export function Tickets() {
     }
   }, [location.state, location.pathname, navigate]);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const mineOnly = openerFilter === 'mine' && !!currentUserId;
+
+  // Monotonic token: a quiet refresh and a filter change can overlap, and the
+  // older answer must not land on top of the newer one.
+  const reqRef = useRef(0);
+
+  /**
+   * `silent` re-reads the list without the skeleton or an error screen — for
+   * the refreshes nobody asked for (coming back to the tab, a change made in the
+   * open sheet), where blanking the list the user is reading would be worse
+   * than a list that is a moment stale.
+   */
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    const token = ++reqRef.current;
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
     const sortConfig = SORT_CONFIG[sort];
     try {
       const res = await ticketsService.list({
         status: statusFilter ?? undefined,
         type: typeFilter || undefined,
         priority: priorityFilter || undefined,
+        createdByUserId: mineOnly && currentUserId ? currentUserId : undefined,
         page,
         limit: PAGE_LIMIT,
         sortBy: sortConfig.sortBy,
         sortOrder: sortConfig.sortOrder,
       });
+      if (reqRef.current !== token) return;
       setTickets(res.data);
       setPagination(res.pagination);
+      setError(null);
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      if (reqRef.current === token && !silent) setError(getApiErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      if (reqRef.current === token) setIsLoading(false);
     }
-  }, [statusFilter, typeFilter, priorityFilter, sort, page]);
+  }, [statusFilter, typeFilter, priorityFilter, mineOnly, currentUserId, sort, page]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  usePageRefresh(load, isLoading);
+  usePageRefresh(() => load(), isLoading);
+
+  // No notification is sent when this agency is added to a ticket — it simply
+  // appears. So look again whenever the user comes back to the screen.
+  const refreshQuietly = useCallback(() => load({ silent: true }), [load]);
+  useRefreshOnFocus(refreshQuietly);
 
   // The agency list endpoint has no text search, so search filters the loaded page.
   const filtered = tickets.filter((ticket) => {
@@ -154,13 +197,16 @@ export function Tickets() {
     return ticket.subject.toLowerCase().includes(q) || ticket.description.toLowerCase().includes(q);
   });
 
-  const hasActiveFilter = !!statusFilter || !!typeFilter || !!priorityFilter || searchQuery.trim().length > 0;
+  const hasActiveFilter =
+    mineOnly || !!statusFilter || !!typeFilter || !!priorityFilter || searchQuery.trim().length > 0;
 
   /** Sort counts as a filter for the badge — it changes what the top of the list is. */
   const activeFilterCount =
+    (mineOnly ? 1 : 0) +
     (statusFilter ? 1 : 0) + (typeFilter ? 1 : 0) + (priorityFilter ? 1 : 0) + (sort === 'updated' ? 0 : 1);
 
   const resetFilters = () => {
+    setOpenerFilter('all');
     setStatusFilter(null);
     setTypeFilter('');
     setPriorityFilter('');
@@ -205,6 +251,16 @@ export function Tickets() {
         resultCount={searchQuery.trim() ? filtered.length : pagination.total}
         resultNounKey="common:nouns.ticket"
       >
+        {currentUserId && (
+          <FilterSection label={t('page.filters.openedBy')}>
+            <FilterOptionGroup
+              value={openerFilter}
+              onChange={(v) => { setOpenerFilter(v); setPage(1); }}
+              options={openerOptions}
+            />
+          </FilterSection>
+        )}
+
         <FilterSection label={t('page.filters.status')}>
           <FilterOptionGroup
             value={statusFilter ?? ALL}
@@ -261,7 +317,7 @@ export function Tickets() {
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
           <TicketIcon className="h-10 w-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button variant="outline" size="sm" onClick={load}>{t('common:actions.retry')}</Button>
+          <Button variant="outline" size="sm" onClick={() => load()}>{t('common:actions.retry')}</Button>
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -301,7 +357,7 @@ export function Tickets() {
                     onClick={() => setSelectedId(ticket.id)}
                     className="group cursor-pointer border-b last:border-0 hover:bg-muted/40"
                   >
-                    <td className="px-4 py-3"><TicketIdentity ticket={ticket} /></td>
+                    <td className="px-4 py-3"><TicketIdentity ticket={ticket} currentUserId={currentUserId} /></td>
                     <td className="px-4 py-3"><StatusPill status={ticket.status} /></td>
                     <td className="px-4 py-3"><PriorityPill priority={ticket.priority} locked={ticket.priority_locked} /></td>
                     <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{relativeTime(ticket.updatedAt)}</td>
@@ -322,7 +378,7 @@ export function Tickets() {
                 onClick={() => setSelectedId(ticket.id)}
                 className="flex w-full flex-col gap-3 p-4 text-start active:bg-muted/50"
               >
-                <TicketIdentity ticket={ticket} />
+                <TicketIdentity ticket={ticket} currentUserId={currentUserId} />
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill status={ticket.status} />
                   <PriorityPill priority={ticket.priority} locked={ticket.priority_locked} />
@@ -372,7 +428,7 @@ export function Tickets() {
         </>
       )}
 
-      <CreateTicketSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
+      <CreateTicketSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={() => load()} />
       <TicketDetailSheet
         ticketId={selectedId}
         onOpenChange={(open) => {
@@ -382,7 +438,9 @@ export function Tickets() {
           // just closed on the next render.
           clearOpenParam();
         }}
-        onChanged={load}
+        // Quietly: the list sits behind the open sheet. Also how a ticket we
+        // were removed from (403 on open) leaves the list.
+        onChanged={refreshQuietly}
       />
       <FaqSheet open={faqOpen} onOpenChange={setFaqOpen} />
     </div>
@@ -404,8 +462,14 @@ function EntityChip({ ticket }: { ticket: Ticket }) {
   );
 }
 
-function TicketIdentity({ ticket }: { ticket: Ticket }) {
+function TicketIdentity({ ticket, currentUserId }: { ticket: Ticket; currentUserId: string | null }) {
+  const { t } = useTranslation('tickets');
   const { Icon, className } = getTypeVisual(ticket.type);
+  // Many rows are now somebody else's ticket — a customer's complaint about an
+  // order we carry, the vendor's, the platform's — so every row says whose.
+  const openedBy = isTicketCreator(ticket, currentUserId)
+    ? t('people.openedByYou')
+    : t('people.openedBy', { name: openerLabel(ticketOpener(ticket)) });
   return (
     <div className="flex items-start gap-3">
       <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', className)}>
@@ -418,6 +482,7 @@ function TicketIdentity({ ticket }: { ticket: Ticket }) {
           <span>·</span>
           <EntityChip ticket={ticket} />
         </div>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{openedBy}</p>
       </div>
     </div>
   );

@@ -157,8 +157,10 @@ export interface NotificationEventPreferences {
   /**
    * **Delivery-fee proposals** (2026-10-02): `delivery_fee_proposal.approved` /
    * `.rejected` (the vendor answered) and `.agent_proposed` / `.agent_edited`
-   * (one of your agents proposed or changed a figure). Default `true`; an older
-   * preferences row omits it.
+   * (one of your agents proposed or changed a figure). Since 2026-10-14 (ADR-A12)
+   * also `.payer_proposed` / `.payer_edited` / `.payer_withdrawn` / `.payer_paid`
+   * — the vendor or the customer proposed a fee for you to answer; all open
+   * `shipments/{shipmentId}`. Default `true`; an older preferences row omits it.
    */
   deliveryFeeProposals: boolean;
 }

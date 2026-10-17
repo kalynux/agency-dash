@@ -1,14 +1,17 @@
 {
   "page": {
     "title": "Tickets",
-    "description": "Get help from the Wi-Mall support team",
+    "description": "Your support requests, and every ticket about an order you carry",
     "refresh": "Refresh",
     "faq": "FAQ",
     "newTicket": "New ticket",
     "searchPlaceholder": "Search tickets…",
     "searchLabel": "Search this page by subject or description",
-    "filterDescription": "Status, type and priority filter every ticket; search looks at the page you're on.",
+    "filterDescription": "Opener, status, type and priority filter every ticket; search looks at the page you're on.",
     "filters": {
+      "openedBy": "Opened by",
+      "openedByAnyone": "Anyone",
+      "openedByMe": "Me",
       "status": "Status",
       "priority": "Priority",
       "type": "Type",
@@ -37,6 +40,12 @@
     },
     "matchesOnPage_one": "{{count}} match on this page",
     "matchesOnPage_other": "{{count}} matches on this page"
+  },
+  "_peopleComment": "Who opened a ticket. Since 2026-10-09 an agency follows every ticket about an order it carries, so {{name}} is often a customer, a vendor, an agent or the platform — already joined with its role, e.g. \"Acme Store · Vendor\".",
+  "people": {
+    "openedBy": "Opened by {{name}}",
+    "openedByYou": "Opened by you",
+    "you": "You"
   },
   "_statusComment": "One table for both the detail control and the list filter tabs — the two used to carry the same words in different casing.",
   "status": {
@@ -164,22 +173,31 @@
     "status": "Status",
     "priority": "Priority",
     "charCount": "{{current}}/{{max}}",
-    "noParticipant": "no participant",
     "priorityLocked": "Locked",
     "priorityLockedHint": "Support set this priority; it can no longer be changed.",
     "type": "Type",
     "importance": "Importance",
     "relatedTo": "Related to",
+    "openShipment": "Open {{label}} in Shipments",
+    "notInShipments": "Not in your shipments list",
     "tracking": "Tracking",
+    "openedBy": "Opened by",
     "assignedTo": "Assigned to",
+    "assignedToSupport": "Support team",
     "unassigned": "Unassigned",
     "escalate": "Escalate to support",
     "followers": "Followers",
+    "followersCount": "Followers · {{total}}",
     "noFollowers": "No followers yet.",
     "created": "Created",
     "lastUpdated": "Last updated",
     "ticketId": "Ticket ID",
     "closeTicket": "Close ticket",
+    "closeOnlyCreator": "Only whoever opened this ticket, or support, can close it.",
+    "lostAccess": {
+      "title": "You no longer follow this ticket",
+      "description": "Support removed your agency from it, so it can't be opened from here any more. It has also left your list."
+    },
     "confirmCloseTitle": "Close this ticket?",
     "confirmCloseDescription": "Closing the ticket marks it as resolved. You won't be able to change its priority or add new messages or attachments afterwards. Reopening is handled by support.",
     "keepOpen": "Keep open",
@@ -242,6 +260,22 @@
     "closed": "This ticket is closed. No new messages can be added.",
     "tooLong": "Note must be {{max}} characters or less"
   },
+  "_timelineComment": "System events in a ticket's conversation, drawn as timeline points rather than messages. {{role}}, {{from}} and {{to}} arrive already translated.",
+  "timeline": {
+    "followerAdded": "New participant: {{role}}",
+    "followerRemoved": "A participant was removed",
+    "statusChanged": "Status: {{from}} → {{to}}",
+    "priorityChanged": "Priority: {{from}} → {{to}}",
+    "priorityLocked": "Priority: {{from}} → {{to}}, locked by support",
+    "assigned": "Assigned to: {{role}}",
+    "assignedAdmin": "Taken on by {{name}} (support)",
+    "closed": "Ticket closed",
+    "reopened": "Ticket reopened by support"
+  },
+  "_orderTicketsComment": "On a shipment's detail: the tickets about its order.",
+  "orderTickets": {
+    "title": "Tickets on this order · {{total}}"
+  },
   "attachments": {
     "title": "Attachments",
     "counter": "{{current}}/{{max}}",
@@ -258,11 +292,11 @@
     "attached_other": "Attached {{count}} files"
   },
   "followerSelect": {
-    "everyone": "Everyone (admins only)",
+    "everyone": "Only you and support",
     "selected_one": "{{count}} follower",
     "selected_other": "{{count}} followers",
     "none": "No followers to add",
-    "hint": "Who can see this private item? Support can always see it."
+    "hint": "Who else can see this private item? You and support always can."
   },
   "entityPicker": {
     "placeholderAgency": "Optional — leave blank to use your agency",

@@ -1,14 +1,17 @@
 {
   "page": {
     "title": "Tickets",
-    "description": "Obtenez de l'aide auprès de l'équipe d'assistance Wi-Mall",
+    "description": "Vos demandes d'assistance, et tous les tickets concernant une commande que vous livrez",
     "refresh": "Actualiser",
     "faq": "FAQ",
     "newTicket": "Nouveau ticket",
     "searchPlaceholder": "Rechercher un ticket…",
     "searchLabel": "Rechercher dans cette page par sujet ou description",
-    "filterDescription": "Le statut, le type et la priorité filtrent tous les tickets ; la recherche ne porte que sur la page affichée.",
+    "filterDescription": "L'auteur, le statut, le type et la priorité filtrent tous les tickets ; la recherche ne porte que sur la page affichée.",
     "filters": {
+      "openedBy": "Ouvert par",
+      "openedByAnyone": "Tout le monde",
+      "openedByMe": "Moi",
       "status": "Statut",
       "priority": "Priorité",
       "type": "Type",
@@ -38,6 +41,11 @@
     "matchesOnPage_one": "{{count}} résultat sur cette page",
     "matchesOnPage_many": "{{count}} résultats sur cette page",
     "matchesOnPage_other": "{{count}} résultats sur cette page"
+  },
+  "people": {
+    "openedBy": "Ouvert par {{name}}",
+    "openedByYou": "Ouvert par vous",
+    "you": "Vous"
   },
   "status": {
     "all": "Tous",
@@ -162,22 +170,31 @@
     "status": "Statut",
     "priority": "Priorité",
     "charCount": "{{current}}/{{max}}",
-    "noParticipant": "aucun participant",
     "priorityLocked": "Verrouillée",
     "priorityLockedHint": "L'assistance a défini cette priorité ; elle ne peut plus être modifiée.",
     "type": "Type",
     "importance": "Importance",
     "relatedTo": "Concerne",
+    "openShipment": "Ouvrir {{label}} dans Expéditions",
+    "notInShipments": "Absent de votre liste d'expéditions",
     "tracking": "Suivi",
+    "openedBy": "Ouvert par",
     "assignedTo": "Assigné à",
+    "assignedToSupport": "Équipe d'assistance",
     "unassigned": "Non assigné",
     "escalate": "Escalader à l'assistance",
     "followers": "Abonnés",
+    "followersCount": "Abonnés · {{total}}",
     "noFollowers": "Aucun abonné pour l'instant.",
     "created": "Créé",
     "lastUpdated": "Dernière modification",
     "ticketId": "Identifiant du ticket",
     "closeTicket": "Fermer le ticket",
+    "closeOnlyCreator": "Seule la personne qui a ouvert ce ticket, ou l'assistance, peut le fermer.",
+    "lostAccess": {
+      "title": "Vous ne suivez plus ce ticket",
+      "description": "L'assistance a retiré votre agence de ce ticket : il ne peut plus être ouvert d'ici, et il a également quitté votre liste."
+    },
     "confirmCloseTitle": "Fermer ce ticket ?",
     "confirmCloseDescription": "Fermer le ticket le marque comme résolu. Vous ne pourrez plus modifier sa priorité ni ajouter de nouveaux messages ou pièces jointes. La réouverture est gérée par l'assistance.",
     "keepOpen": "Le laisser ouvert",
@@ -241,6 +258,20 @@
     "closed": "Ce ticket est fermé. Aucun nouveau message ne peut être ajouté.",
     "tooLong": "Le message ne doit pas dépasser {{max}} caractères"
   },
+  "timeline": {
+    "followerAdded": "Nouveau participant : {{role}}",
+    "followerRemoved": "Un participant a été retiré",
+    "statusChanged": "Statut : {{from}} → {{to}}",
+    "priorityChanged": "Priorité : {{from}} → {{to}}",
+    "priorityLocked": "Priorité : {{from}} → {{to}}, verrouillée par l'assistance",
+    "assigned": "Assigné à : {{role}}",
+    "assignedAdmin": "Pris en charge par {{name}} (assistance)",
+    "closed": "Ticket fermé",
+    "reopened": "Ticket rouvert par l'assistance"
+  },
+  "orderTickets": {
+    "title": "Tickets sur cette commande · {{total}}"
+  },
   "attachments": {
     "title": "Pièces jointes",
     "counter": "{{current}}/{{max}}",
@@ -258,12 +289,12 @@
     "attached_other": "{{count}} fichiers joints"
   },
   "followerSelect": {
-    "everyone": "Tout le monde (assistance uniquement)",
+    "everyone": "Vous et l'assistance uniquement",
     "selected_one": "{{count}} abonné",
     "selected_many": "{{count}} abonnés",
     "selected_other": "{{count}} abonnés",
     "none": "Aucun abonné à ajouter",
-    "hint": "Qui peut voir cet élément privé ? L'assistance y a toujours accès."
+    "hint": "Qui d'autre peut voir cet élément privé ? Vous et l'assistance y avez toujours accès."
   },
   "entityPicker": {
     "placeholderAgency": "Facultatif — laissez vide pour utiliser votre agence",

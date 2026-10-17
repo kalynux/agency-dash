@@ -15,12 +15,15 @@ import { DeliveryProofPanel } from '@/components/shipments/DeliveryProofPanel';
 import { DeliveryReviewPanel } from '@/components/shipments/DeliveryReviewPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
 import { DeliveryFeeSection } from '@/components/shipments/DeliveryFeeSection';
+import { ShipmentTicketsSection } from '@/components/shipments/ShipmentTicketsSection';
 import {
   getNextActions,
   canRejectStatus,
   isTerminalStatus,
   pickupBlockReason,
 } from '@/components/shipments/shipment-actions';
+import { blockingProposal, pickupBlockedCopy } from '@/components/shipments/delivery-fee-rules';
+import { pickupBlockedText } from '@/components/shipments/deliveryFeeCopy';
 import { shipmentsService } from '@/services/shipments.service';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { useAgentsRoster } from '@/store/agents.store';
@@ -89,8 +92,12 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const nextActions = detail ? getNextActions(detail.status) : [];
   const canReject = detail ? canRejectStatus(detail.status) : false;
   const isTerminal = detail ? isTerminalStatus(detail.status) : false;
-  // Pickup needs an accepted agent, and no fee change waiting on the vendor.
+  // Pickup needs an accepted agent, and no fee change waiting for an answer —
+  // whoever proposed it (yours waits on the payer, the payer's waits on you).
   const pickupBlock = detail ? pickupBlockReason(detail) : null;
+  const feeBlockedText = detail
+    ? pickupBlockedText(t, pickupBlockedCopy(blockingProposal(detail.deliveryFeeProposals, detail.pendingDeliveryFeeProposalId)))
+    : '';
 
   const runStatus = async (status: ShipmentActionableStatus, label: string) => {
     const result = await actions.updateStatus(detail!.id, status, label, refresh);
@@ -290,6 +297,15 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
             </div>
           </section>
 
+          {/* Open complaints and questions about this order — ours or anyone
+              else's. Keyed so the list never carries over to the next shipment;
+              renders nothing when there are none. */}
+          <ShipmentTicketsSection
+            key={`tickets-${detail.id}`}
+            orderId={detail.orderId}
+            shipmentId={detail.id}
+          />
+
           {/* Agent assignment (offer / acceptance workflow) */}
           {/* Keyed so a local offer / region prompt never carries over to the next shipment. */}
           {!isTerminal && (
@@ -383,7 +399,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
               title={
                 pickupBlock !== null && next.status === 'picked_up'
                   ? pickupBlock === 'fee_pending'
-                    ? t('deliveryFee.pickupBlocked')
+                    ? feeBlockedText
                     : t('actions.needsAcceptedOffer')
                   : undefined
               }
@@ -411,7 +427,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
           )}
           {/* A tooltip alone is invisible on touch screens. */}
           {pickupBlock === 'fee_pending' && nextActions.some((a) => a.status === 'picked_up') && (
-            <p className="basis-full text-xs text-muted-foreground">{t('deliveryFee.pickupBlocked')}</p>
+            <p className="basis-full text-xs text-muted-foreground">{feeBlockedText}</p>
           )}
         </div>
       )}

@@ -312,7 +312,7 @@ async function searchEntities(entityType: TicketEntityType, query: string): Prom
       status: fulfillmentStatusLabel(o.fulfillmentStatus),
     }),
     caption: o.orderNumber,
-    imageUrl: o.customerAvatarUrl,
+    imageUrl: o.customerAvatar?.url ?? null,
     trackingOptions: o.shipments
       .filter((s) => s.trackingNumber)
       .map((s) => ({

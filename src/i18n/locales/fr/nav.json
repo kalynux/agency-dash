@@ -25,7 +25,8 @@
     "vendorsConnections": "Connexions",
     "vendorsBrowse": "Annuaire",
     "inventoryStatements": "Relevés de stockage",
-    "vendorsProducts": "Produits"
+    "vendorsProducts": "Produits",
+    "feeProposals": "Propositions de frais"
   },
   "footer": {
     "account": "Compte",

@@ -14,9 +14,17 @@
       "collected_many": "Cobrado, ainda não remetido: {{amount}} ({{count}} cobranças)",
       "collected_other": "Cobrado, ainda não remetido: {{amount}} ({{count}} cobranças)",
       "overLimit": "Tem mais dinheiro do que o seu limite. Os vendedores não lhe podem enviar encomendas com pagamento na entrega até que faça a remessa.",
+      "overLimitPaused": "Tem mais dinheiro do que o seu limite.",
+      "paused": "O pagamento na entrega está suspenso: nenhum novo envio com pagamento na entrega chegará até si, seja qual for a margem que reste neste limite. O dinheiro que já detém continua a ser devido.",
       "headroom": "Pode assumir mais {{headroom}}",
       "remitFrees": "Remeter dinheiro à Wi-Mall liberta margem",
       "explain": "Este limite decide o que os vendedores lhe podem despachar: uma encomenda com pagamento na entrega que o faria ultrapassá-lo fica retida do lado do vendedor, e não a recebe até que caiba ou o vendedor a envie mesmo assim. Não é o teto de pagamento na entrega por encomenda das suas políticas, e uma alteração nele nunca pausa as suas ligações."
     }
+  },
+  "restricted": {
+    "title": "O pagamento na entrega está suspenso para a sua agência",
+    "body": "Suspenso pela Wi-Mall desde {{date}}. Não receberá novos envios com pagamento na entrega. Os envios que já tem consigo não são afetados.",
+    "bodyUndated": "Suspenso pela Wi-Mall. Não receberá novos envios com pagamento na entrega. Os envios que já tem consigo não são afetados.",
+    "contactSupport": "Contacte o suporte para mais informações."
   }
 }

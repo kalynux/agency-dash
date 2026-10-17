@@ -16,9 +16,11 @@ import type {
   ReassignResponse,
 } from '@/types/shipment.types';
 import type {
+  ApproveDeliveryFeeProposalPayload,
   CreateDeliveryFeeProposalPayload,
   DeliveryFeeProposal,
   EditDeliveryFeeProposalPayload,
+  RejectDeliveryFeeProposalPayload,
 } from '@/types/delivery-fee-proposal.types';
 
 interface DeliveryFeeProposalResponse {
@@ -186,6 +188,38 @@ export const shipmentsService = {
   withdrawDeliveryFeeProposal(id: string, proposalId: string): Promise<DeliveryFeeProposalResponse> {
     return api.post<DeliveryFeeProposalResponse>(
       `/agency/shipments/${id}/delivery-fee-proposals/${proposalId}/withdraw`,
+    );
+  },
+
+  // ── Answering a fee the PAYER proposed (ADR-A12) — agency/shipments.md ──────
+  // Both carry the `version` you displayed; a stale one answers
+  // 409 DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH.
+
+  /**
+   * POST …/:proposalId/approve. The answer is the proposal: `approved` when the
+   * fee applied at once, still `pending` with `topup.status: 'awaiting_payment'`
+   * on a customer-paid online increase (pickup stays blocked until they pay).
+   */
+  approveDeliveryFeeProposal(
+    id: string,
+    proposalId: string,
+    payload: ApproveDeliveryFeeProposalPayload,
+  ): Promise<DeliveryFeeProposalResponse> {
+    return api.post<DeliveryFeeProposalResponse>(
+      `/agency/shipments/${id}/delivery-fee-proposals/${proposalId}/approve`,
+      payload,
+    );
+  },
+
+  /** POST …/:proposalId/reject — the fee stays; the note reaches the payer. */
+  rejectDeliveryFeeProposal(
+    id: string,
+    proposalId: string,
+    payload: RejectDeliveryFeeProposalPayload,
+  ): Promise<DeliveryFeeProposalResponse> {
+    return api.post<DeliveryFeeProposalResponse>(
+      `/agency/shipments/${id}/delivery-fee-proposals/${proposalId}/reject`,
+      payload,
     );
   },
 

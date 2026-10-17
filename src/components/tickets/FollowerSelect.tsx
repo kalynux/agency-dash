@@ -7,23 +7,32 @@ import { cn } from '@/lib/utils';
 import { ActorAvatar } from './ActorAvatar';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { roleLabel } from './ticket.constants';
+import { actorName } from './ticket.rules';
 import type { TicketActor } from '@/types/ticket.types';
 
 interface FollowerSelectProps {
   followers: TicketActor[];
+  /** The signed-in user — the author always sees their own private item. */
+  excludeUserId?: string | null;
   value: string[];
   onChange: (userIds: string[]) => void;
   disabled?: boolean;
 }
 
 /**
- * Picks which followers may see a PRIVATE note/attachment. Per the API, admins
- * are auto-included on private items, so only **non-admin** followers are
- * offered as explicit viewers.
+ * Picks which followers may see a PRIVATE note/attachment — the vendor or one
+ * of our agents on an order ticket, say. The list IS the ticket's `followers`:
+ * the backend refuses (403) a recipient who does not follow the ticket.
+ *
+ * Per the API, admins are auto-included on private items and the author sees
+ * their own, so neither is offered as an explicit viewer.
  */
-export function FollowerSelect({ followers, value, onChange, disabled }: FollowerSelectProps) {
+export function FollowerSelect({ followers, excludeUserId, value, onChange, disabled }: FollowerSelectProps) {
   const { t } = useTranslation('tickets');
-  const options = useMemo(() => followers.filter((f) => f.role !== 'admin'), [followers]);
+  const options = useMemo(
+    () => followers.filter((f) => f.role !== 'admin' && f.user_id !== excludeUserId),
+    [followers, excludeUserId],
+  );
   const selected = useMemo(() => new Set(value), [value]);
 
   function toggle(userId: string) {
@@ -69,7 +78,7 @@ export function FollowerSelect({ followers, value, onChange, disabled }: Followe
                   <ActorAvatar actor={f} className="h-6 w-6" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1">
-                      <span className="truncate">{f.name}</span>
+                      <span className="truncate">{actorName(f) ?? roleLabel(f.role)}</span>
                       <VerifiedBadge verified={f.verified} />
                     </span>
                     <span className="block text-xs text-muted-foreground">{roleLabel(f.role)}</span>

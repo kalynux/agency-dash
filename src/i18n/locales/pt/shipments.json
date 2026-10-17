@@ -135,7 +135,11 @@
       "rejected": "Rejeitada",
       "rejectedByCustomer": "Recusada pelo cliente",
       "withdrawn": "Retirada",
-      "unknown": "Estado desconhecido"
+      "unknown": "Estado desconhecido",
+      "awaitingYou": "À espera da sua resposta",
+      "acceptedAwaitingPayment": "Aceite — pagamento pendente",
+      "accepted": "Aceite",
+      "declined": "Recusada"
     },
     "validation": {
       "number": "Introduza um valor.",
@@ -144,6 +148,25 @@
       "sameAsCurrent": "Essa já é a taxa.",
       "reasonMin": "Indique um motivo com pelo menos {{min}} caracteres.",
       "reasonMax": "O motivo deve ter menos de {{max}} caracteres."
+    },
+    "payer": {
+      "pickupBlockedVendor": "O vendedor propôs outra taxa — a recolha está bloqueada até a aceitar ou recusar.",
+      "pickupBlockedCustomer": "O cliente propôs outra taxa — a recolha está bloqueada até a aceitar ou recusar.",
+      "awaitingPayment": "Aceite — à espera de que o cliente pague {{amount}}; a recolha continua bloqueada.",
+      "acceptedBy": "Aceite por {{who}} · {{date}}",
+      "accept": "Aceitar {{amount}}",
+      "decline": "Recusar",
+      "declineTitle": "Recusar esta taxa?",
+      "declineDescription": "A taxa fica em {{before}} em vez de {{after}}, e a recolha é desbloqueada. É-lhes comunicado que recusou.",
+      "declineAfterAcceptDescription": "Aceitou {{after}}, mas o cliente ainda não pagou a diferença. Recusar mantém a taxa em {{before}} e desbloqueia a recolha.",
+      "declineNote": "Nota para eles (opcional)",
+      "declineNotePlaceholder": "Ex.: o nosso preço já cobre esta distância.",
+      "declineSubmit": "Recusar a taxa",
+      "declineNoteSent": "Nota enviada com a recusa: {{note}}",
+      "accepted": "Taxa aceite — aplica-se já e a recolha é desbloqueada.",
+      "acceptedAwaitingPayment": "Aceite — o cliente tem agora de pagar {{amount}}. A recolha continua bloqueada até lá.",
+      "declined": "Taxa recusada — mantém-se a taxa original e a recolha é desbloqueada.",
+      "changed": "Entretanto alteraram o valor para {{amount}}. Verifique-o e responda de novo."
     }
   },
   "combined": {
@@ -207,5 +230,32 @@
       "submit": "Recusar o pedido",
       "success": "Pedido recusado."
     }
+  },
+  "feeProposals": {
+    "title": "Propostas de taxa por responder",
+    "description": "Taxas de entrega que um vendedor ou um cliente propôs nos seus envios — mais altas ou mais baixas. Uma pendente bloqueia a recolha dessa encomenda até a aceitar ou recusar.",
+    "shortDescription": "Taxas que lhe propõem",
+    "entry": "Propostas de taxa",
+    "entryPending_one": "{{count}} proposta de taxa aguarda a sua resposta",
+    "entryPending_other": "{{count}} propostas de taxa aguardam a sua resposta",
+    "filterStatus": "Estado",
+    "filterDescription": "As pendentes retêm uma recolha — incluindo uma taxa mais alta que aceitou e que o cliente ainda não pagou.",
+    "filter": {
+      "pending": "Pendentes",
+      "approved": "Aceites",
+      "rejected": "Recusadas",
+      "withdrawn": "Retiradas"
+    },
+    "emptyPending": "Nada por responder",
+    "emptyPendingBody": "Quando um vendedor ou um cliente propuser outra taxa de entrega num dos seus envios, aparece aqui.",
+    "empty": "Nada aqui",
+    "emptyBody": "Nenhuma proposta com este estado.",
+    "fromVendor": "Proposta do vendedor",
+    "fromCustomer": "Proposta do cliente",
+    "parcelFallback": "Envio",
+    "higherBy": "mais {{amount}}",
+    "lowerBy": "menos {{amount}}",
+    "theirReason": "O motivo deles",
+    "closedOn": "Encerrada a {{date}}"
   }
 }

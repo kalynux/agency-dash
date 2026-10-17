@@ -3,7 +3,7 @@ import { useForm, Controller, type DefaultValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { FileText, ShieldAlert, X } from 'lucide-react';
+import { Ban, FileText, ShieldAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { MediaPicker } from '@/components/features/MediaPicker';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { UnsavedChangesBar } from '@/components/agency-settings/UnsavedChangesBa
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { useAccountStanding } from '@/hooks/useAccountStanding';
+import { useCodLimit } from '@/hooks/useCodLimit';
 import { buildPoliciesSchema, type PoliciesFormValues } from '@/onboarding/schemas/onboarding.schemas';
 import type { AgencyPolicies } from '@/types/api';
 import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
@@ -230,6 +231,9 @@ export function PoliciesSettings() {
   // the COD toggle below is the one place in this dashboard where the difference
   // is the difference between a setting that works and one that silently doesn't.
   const { kycVerified } = useAccountStanding();
+  // Only for the note beside the COD switch. A failed or pre-deploy read leaves
+  // it `false`, i.e. the form exactly as it was.
+  const codRestricted = useCodLimit().limit?.codRestricted === true;
   const [apiError, setApiError] = useState<string | null>(null);
   // Rebuilt on a language switch so validation messages follow the UI.
   const schema = useMemo(() => buildPoliciesSchema(t), [t]);
@@ -505,6 +509,25 @@ export function PoliciesSettings() {
                 Left switchable on purpose: the setting is real and takes effect
                 the moment the verdict lands. Disabling the control would make
                 the agency come back and set it a second time. */}
+            {/* An administrator's pause (`codRestricted`) is a second, separate
+                reason COD orders stop arriving. The switch above stays whatever
+                the agency set — it is never shown as off because of the pause —
+                so this says the one thing the switch cannot: flipping it does
+                not lift the pause. Shown whichever way the switch points. */}
+            {codRestricted && (
+              <div className="flex items-start gap-2 rounded-lg border border-gold-400/50 bg-gold-50/70 p-3 dark:border-gold-500/25 dark:bg-gold-500/10">
+                <Ban className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-700 dark:text-gold-400" />
+                <p className="text-xs text-muted-foreground">
+                  {t('policies.cod.restricted')}{' '}
+                  <Link
+                    to="/dashboard/tickets"
+                    className="font-medium text-foreground underline underline-offset-2"
+                  >
+                    {t('policies.cod.restrictedCta')}
+                  </Link>
+                </p>
+              </div>
+            )}
             {codEnabled && !kycVerified && (
               <div className="flex items-start gap-2 rounded-lg border border-gold-400/50 bg-gold-50/70 p-3 dark:border-gold-500/25 dark:bg-gold-500/10">
                 <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-700 dark:text-gold-400" />

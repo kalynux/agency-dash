@@ -1,5 +1,6 @@
 // Agency Tickets — see api-doc/agency/tickets.md (authoritative enums)
 
+import type { FileRef } from '@/types/file.types';
 import type { ProductCategoryRef } from '@/types/product-category.types';
 
 export type TicketStatus =
@@ -53,16 +54,46 @@ export type TicketType =
   // Other
   | 'OTHER';
 
+/**
+ * Who a ticket, note or attachment names — `created_by`, `assigned_to`, each
+ * `followers` entry, a note's `author`, an attachment's `uploadedByActor`.
+ *
+ * Since 2026-10-09 an agency follows every ticket about an order it carries, so
+ * these are routinely somebody else: the customer, the vendor, one of its agents.
+ */
 export interface TicketActor {
   user_id: string;
   role: string;
+  /**
+   * `''` (not `null`) for a vendor or agency with neither a display name nor a
+   * store/magazin, and the capitalised role (`"Admin"`) when the reference could
+   * not be resolved at all. Test for empty.
+   */
   name: string;
-  avatar_url: string | null;
+  /**
+   * A resolved file object, never a URL string. For a vendor or an agency it is
+   * the store/magazin logo.
+   */
+  avatar: FileRef | null;
   /**
    * The KYC verdict — present ONLY on `vendor` and `agent` actors. Absent on any
    * other role (or an unresolved actor) means "no badge", not "unverified".
    */
   verified?: boolean;
+}
+
+/**
+ * A support administrator, as a ticket follower is shown them — `assigned_admin`
+ * and `created_by_admin`. NOT a {@link TicketActor}: no `role`, no `user_id`.
+ *
+ * Administrators live in another service, so this is a snapshot copied onto the
+ * ticket. `avatar_url` is reserved and always `null`; draw initials from `name`.
+ */
+export interface TicketAdminSnapshot {
+  name: string;
+  job_title: string | null;
+  department: string | null;
+  avatar_url: string | null;
 }
 
 export interface TicketEntityRef {
@@ -107,14 +138,30 @@ export interface Ticket {
   entity_id: string;
   tracking_number?: string | null;
   entity: TicketEntityRef | null;
+  /**
+   * The one field that decides who may close the ticket — compare it with the
+   * signed-in user's id. Present on write responses too.
+   */
   created_by_user_id: string;
   created_by_role: string;
+  /**
+   * Often not this agency. When an administrator or the platform opened the
+   * ticket this still arrives, with `role: 'admin'`, but its `user_id` resolves
+   * nowhere and its `avatar` is `null` — render the person from
+   * `created_by_admin` instead.
+   */
   created_by: TicketActor | null;
+  /** Non-null only on a ticket an administrator or the platform ("Wi-Mall (automatic)") opened. */
+  created_by_admin?: TicketAdminSnapshot | null;
   assigned_to_role: string | null;
   assigned_to: TicketActor | null;
-  assigned_admin_id: string | null;
-  assigned_admin: TicketActor | null;
+  /** `null` until an administrator takes the ticket, which is the normal state. */
+  assigned_admin: TicketAdminSnapshot | null;
   priority_locked: boolean;
+  /**
+   * Detail only (`GET /:id` and create) — absent from list rows and from every
+   * write response. Oldest first.
+   */
   followers?: TicketActor[];
   createdAt: string;
   updatedAt: string;
@@ -166,7 +213,8 @@ export interface TicketReferenceOrder {
   fulfillmentStatus: string;
   createdAt: string;
   customerName: string;
-  customerAvatarUrl: string | null;
+  /** A resolved file object, never a URL string. */
+  customerAvatar: FileRef | null;
   shipments: TicketReferenceOrderShipment[];
 }
 
@@ -197,6 +245,8 @@ export interface ListTicketsParams {
   priority?: TicketPriority;
   entityType?: TicketEntityType;
   entityId?: string;
+  /** Pass the signed-in user's id to get only the tickets this agency opened. */
+  createdByUserId?: string;
   page?: number;
   limit?: number;
   sortBy?: 'createdAt' | 'updatedAt' | 'priority' | 'status';

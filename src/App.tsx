@@ -27,6 +27,9 @@ const Shipments = lazy(() => import('@/pages/Shipments').then((m) => ({ default:
 const CombinedDeliveryRequests = lazy(() =>
   import('@/pages/CombinedDeliveryRequests').then((m) => ({ default: m.CombinedDeliveryRequests })),
 );
+const DeliveryFeeProposals = lazy(() =>
+  import('@/pages/DeliveryFeeProposals').then((m) => ({ default: m.DeliveryFeeProposals })),
+);
 const Inventory = lazy(() => import('@/pages/Inventory').then((m) => ({ default: m.Inventory })));
 const LiveTracking = lazy(() => import('@/pages/LiveTracking').then((m) => ({ default: m.LiveTracking })));
 const Notifications = lazy(() => import('@/pages/Notifications').then((m) => ({ default: m.Notifications })));
@@ -100,6 +103,8 @@ import { NotificationsProvider } from '@/store/notifications.store';
 // Magazin (real API — business name + logo shown in the app chrome)
 import { MagazinProvider } from '@/store/magazin.store';
 import { StockRequestsProvider } from '@/store/stockRequests.store';
+// Fees the payer proposed and we must answer (ADR-A12) — the sidebar badge.
+import { FeeProposalsProvider } from '@/store/feeProposals.store';
 
 // Role closure (ADR-A10) — a pending administrator request, read by the banner
 // and by Account → Close agency account.
@@ -240,6 +245,7 @@ function DashboardShell() {
         <VendorConnectionsProvider>
         <MagazinProvider>
         <StockRequestsProvider>
+        <FeeProposalsProvider>
         <ClosureRequestProvider>
           <div className="min-h-screen bg-background">
             {/* Keeps the scrolling column out from under the status bar's icons
@@ -292,6 +298,10 @@ function DashboardShell() {
                   {/* Customers' combined-price requests (ADR-A11) — a sub-page of
                       Shipments, reached from its header and the notification. */}
                   <Route path="shipments/combined-requests" element={<CombinedDeliveryRequests />} />
+                  {/* Fees the vendor or the customer proposed (ADR-A12). Not under
+                      `shipments/`: the sidebar matches by prefix, and a nested
+                      path would light Shipments up too. */}
+                  <Route path="fee-proposals" element={<DeliveryFeeProposals />} />
                   <Route path="inventory" element={<Navigate to="/dashboard/inventory/stock" replace />} />
                   <Route path="inventory/:tab" element={<Inventory />} />
                   {/* The stock-request inbox is a tab under Inventory. The
@@ -337,6 +347,7 @@ function DashboardShell() {
             {isMobile && <MobileTabBar />}
           </div>
         </ClosureRequestProvider>
+        </FeeProposalsProvider>
         </StockRequestsProvider>
         </MagazinProvider>
         </VendorConnectionsProvider>

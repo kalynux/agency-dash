@@ -95,10 +95,18 @@
       "collected_one": "Collected, not yet remitted: {{amount}} ({{count}} collection)",
       "collected_other": "Collected, not yet remitted: {{amount}} ({{count}} collections)",
       "overLimit": "You hold more than your limit. Vendors cannot send you cash-on-delivery orders until you remit.",
+      "overLimitPaused": "You hold more than your limit.",
+      "paused": "Cash on delivery is paused: no new cash-on-delivery shipment will reach you, whatever room is left under this limit. The cash you already hold is still owed.",
       "headroom": "You can take {{headroom}} more",
       "remitFrees": "Remitting cash to Wi-Mall frees room",
       "explain": "This limit decides what vendors can dispatch to you: a cash-on-delivery order that would take you over it is held on the vendor's side, and you don't receive it until it fits or the vendor sends it anyway. It is not the per-order COD cap in your policies, and a change to it never pauses your connections."
     }
+  },
+  "restricted": {
+    "title": "Cash on delivery is paused for your agency",
+    "body": "Paused by Wi-Mall since {{date}}. You will not receive new cash-on-delivery shipments. Shipments you already hold are not affected.",
+    "bodyUndated": "Paused by Wi-Mall. You will not receive new cash-on-delivery shipments. Shipments you already hold are not affected.",
+    "contactSupport": "Contact support for details."
   },
   "deposits": {
     "alertTitle_one": "{{count}} hand-over awaiting your answer",

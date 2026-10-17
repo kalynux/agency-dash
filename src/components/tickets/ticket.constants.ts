@@ -21,9 +21,9 @@ import type {
   TicketPriority,
   TicketImportance,
   TicketType,
-  TicketRole,
   TicketEntityType,
 } from '@/types/ticket.types';
+import type { TicketOpener } from './ticket.rules';
 
 export { formatFileSize };
 
@@ -100,15 +100,6 @@ export const STATUS_DOT_CLASSES: Record<TicketStatus, string> = {
   waiting_on_agent: 'bg-cyan-500',
   resolved: 'bg-green-500',
   closed: 'bg-muted-foreground/50',
-};
-
-/** The participant role a `waiting_on_<role>` status targets (admin is always allowed). */
-export const WAITING_STATUS_ROLE: Partial<Record<TicketStatus, TicketRole>> = {
-  waiting_on_admin: 'admin',
-  waiting_on_vendor: 'vendor',
-  waiting_on_customer: 'customer',
-  waiting_on_agency: 'agency',
-  waiting_on_agent: 'agent',
 };
 
 /**
@@ -329,6 +320,15 @@ export function roleLabel(role: string): string {
   return tokenLabel('roles', role);
 }
 
+/**
+ * "Acme Store · Vendor" — who opened a ticket, on one line. Just the role when
+ * there is no usable name.
+ */
+export function openerLabel(opener: TicketOpener): string {
+  const role = roleLabel(opener.role);
+  return opener.name ? `${opener.name} · ${role}` : role;
+}
+
 /** Avatar fallback tint per role. */
 export const ROLE_AVATAR_CLASSES: Record<string, string> = {
   admin: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
@@ -344,7 +344,12 @@ export function roleAvatarClass(role: string): string {
 
 /** Up to two initials from a display name. */
 export function actorInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  // Leading punctuation is dropped per word, so "Wi-Mall (automatic)" is "WA", not "W(".
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+/u, ''))
+    .filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();

@@ -91,9 +91,11 @@ export function getNextActions(status: ShipmentStatus): ShipmentNextAction[] {
  *
  * - `needs_agent` — under the acceptance workflow an `assigned` shipment needs an
  *   agent who accepted the offer first.
- * - `fee_pending` — a delivery-fee proposal waits for the vendor; the server
- *   answers `409 SHIPMENT_DELIVERY_FEE_PENDING` until they answer or it is
- *   withdrawn. See api-doc/agency/shipments.md § Delivery-fee proposals.
+ * - `fee_pending` — a delivery-fee proposal waits for an answer, whoever made
+ *   it: yours waits on the payer, the payer's (ADR-A12) waits on you. The server
+ *   answers `409 SHIPMENT_DELIVERY_FEE_PENDING` until it is answered, withdrawn
+ *   or — an accepted higher fee on an online order — paid.
+ *   See api-doc/agency/shipments.md § Delivery-fee proposals.
  */
 export type PickupBlockReason = 'needs_agent' | 'fee_pending';
 

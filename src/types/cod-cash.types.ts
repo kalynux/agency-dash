@@ -58,6 +58,20 @@ export interface CodLimit {
   headroom: number;
   /** `total > limit` (after a vendor force or a lowered pin). */
   overLimit: boolean;
+  /**
+   * `true` while an administrator has switched cash on delivery off for this
+   * agency (2026-10-10, see api-doc/agency/FRONTEND-CHANGELOG-cod-restrictions.md).
+   * No new COD shipment arrives then, **whatever `headroom` says**; everything
+   * already held runs to the end. The reason and the author are never sent.
+   *
+   * Optional: absent until the backend ships it — read a missing value as `false`.
+   *
+   * ⚠ Not `policies.cod.enabled`. That is the agency's own switch and keeps
+   * whatever it set; toggling it does not lift this.
+   */
+  codRestricted?: boolean;
+  /** ISO date the pause was set; `null` when not restricted. */
+  codRestrictedAt?: string | null;
 }
 
 export type CodDepositStatus = 'declared' | 'confirmed' | 'rejected';

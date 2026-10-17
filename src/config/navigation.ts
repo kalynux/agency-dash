@@ -32,6 +32,7 @@ import {
   Star,
   History,
   Package,
+  Scale,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -52,7 +53,8 @@ export type NavBadge =
   | 'notifications'
   | 'vendorConnections'
   | 'agentContracts'
-  | 'stockRequests';
+  | 'stockRequests'
+  | 'feeProposals';
 
 export interface NavChild {
   /** `nav:` namespace key, resolved at render. */
@@ -79,6 +81,10 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { labelKey: 'nav:primary.overview', path: '/dashboard', icon: LayoutDashboard },
   { labelKey: 'nav:primary.shipments', path: '/dashboard/shipments', icon: Truck, badge: 'shipments' },
+  // Fees the vendor or the customer proposed (ADR-A12). Badged: a pending one
+  // holds that parcel's pickup until we answer. Its own top-level route, not
+  // `/dashboard/shipments/…`, so the prefix match doesn't light Shipments too.
+  { labelKey: 'nav:primary.feeProposals', path: '/dashboard/fee-proposals', icon: Scale, badge: 'feeProposals' },
   { labelKey: 'nav:primary.tracking', path: '/dashboard/tracking', icon: Radio },
   // Sits next to the shipment surfaces on purpose: storage-based stock is what
   // those shipments are picked from. The requests child is the agency half of the

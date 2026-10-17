@@ -9,6 +9,7 @@ import { useAgentsRoster } from '@/store/agents.store';
 import { useShipments } from '@/store/shipments.store';
 import { useMagazin } from '@/store/magazin.store';
 import { useStockRequests } from '@/store/stockRequests.store';
+import { useFeeProposals } from '@/store/feeProposals.store';
 import {
   ChevronLeft,
   ChevronRight,
@@ -148,6 +149,7 @@ export function Sidebar() {
   const { pendingActionCount } = useVendorConnections();
   const { pendingActionCount: agentActionCount } = useAgentsRoster();
   const { awaitingCount: stockRequestCount } = useStockRequests();
+  const { pendingCount: feeProposalCount } = useFeeProposals();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -231,6 +233,7 @@ export function Sidebar() {
     if (badge === 'vendorConnections') return pendingActionCount;
     if (badge === 'agentContracts') return agentActionCount;
     if (badge === 'stockRequests') return stockRequestCount;
+    if (badge === 'feeProposals') return feeProposalCount;
     return 0;
   };
 

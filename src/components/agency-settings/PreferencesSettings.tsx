@@ -117,8 +117,9 @@ function AutoAssignRow() {
 
 /**
  * `agentsCanProposeDeliveryFee`: lets the agent holding a shipment's accepted
- * offer propose a different delivery fee. The proposal goes straight to the
- * vendor — the agency sees it and may edit it, but does not approve it first.
+ * offer negotiate its delivery fee — propose one (it goes straight to whoever
+ * pays; the agency sees it and may edit it, but does not approve it first) and,
+ * since ADR-A12 (2026-10-14), answer one the vendor or the customer proposed.
  * Its PATCH carries only this key (the endpoint is partial since 2026-10-02).
  */
 function AgentFeeProposalsRow() {

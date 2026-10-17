@@ -697,7 +697,7 @@
     "DELIVERY_FEE_PROPOSAL_STALE": "This shipment has moved on since the fee change was proposed. You can withdraw it.",
     "DELIVERY_FEE_PROPOSAL_SETTLEMENT_CONFLICT": "The vendor's earnings on this order changed, so the fee change couldn't be applied. Nothing was changed.",
     "DELIVERY_FEE_PROPOSAL_VERSION_MISMATCH": "This fee change was edited in the meantime. Reload to see the current figure.",
-    "SHIPMENT_DELIVERY_FEE_PENDING": "A fee change is still waiting for an answer — from the vendor, or from the customer when they pay delivery. Pickup is blocked until then.",
+    "SHIPMENT_DELIVERY_FEE_PENDING": "A fee change is still waiting for an answer — from whoever pays the delivery, or from you if the vendor or the customer proposed it (see Fee proposals). Pickup is blocked until then.",
     "DELIVERY_FEE_PROPOSAL_DIRECTION_CHANGED": "That edit would lower the fee. Withdraw this proposal and propose the lower fee instead — a lower fee applies straight away.",
     "DELIVERY_FEE_TOPUP_IN_PROGRESS": "The customer has accepted this fee and is paying the difference, so it can't be changed or withdrawn now.",
     "DELIVERY_FEE_TOPUP_NOT_DUE": "No extra payment is due on this fee change.",

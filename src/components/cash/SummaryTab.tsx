@@ -23,7 +23,8 @@ import {
 import { cn } from '@/lib/utils';
 import { codCashService } from '@/services/cod-cash.service';
 import { getApiErrorMessage } from '@/lib/errors';
-import type { CodLimit, CodSummary } from '@/types/cod-cash.types';
+import type { CodSummary } from '@/types/cod-cash.types';
+import type { CodLimitState } from '@/hooks/useCodLimit';
 import { usePageRefresh } from '@/store/pageRefresh.store';
 
 type HoldingFilter = 'all' | 'holding' | 'settled';
@@ -110,31 +111,11 @@ function MiniStat({
  *
  * It loads on its own and fails on its own: a limit that cannot be fetched
  * shows a one-line retry here and leaves the cash position below untouched.
+ * The read itself lives on the Cash page (`useCodLimit`), which also needs it
+ * for the pause banner above the tabs.
  */
-function CodLimitCard() {
+function CodLimitCard({ limit, isLoading, loadError, reload: load }: CodLimitState) {
   const { t } = useTranslation(['cash', 'common']);
-  const [limit, setLimit] = useState<CodLimit | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const { data } = await codCashService.getCodLimit();
-      setLimit(data);
-    } catch (err) {
-      setLoadError(getApiErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  usePageRefresh(load, isLoading);
 
   if (!limit) {
     return (
@@ -153,6 +134,10 @@ function CodLimitCard() {
   }
 
   const { exposure, overLimit } = limit;
+  // While an administrator has paused COD, the exposure is as real as ever —
+  // that cash is still held — but `headroom` is not room for new work, and the
+  // dispatch rules in `explain` (a vendor "sends it anyway") do not apply.
+  const restricted = limit.codRestricted === true;
   const percent =
     limit.limit > 0
       ? Math.min(100, Math.max(0, (exposure.total / limit.limit) * 100))
@@ -201,7 +186,19 @@ function CodLimitCard() {
           </p>
         </div>
 
-        {overLimit ? (
+        {restricted ? (
+          <>
+            {/* Still over the limit, but "until you remit" would promise that
+                remitting brings COD orders back. It does not lift the pause. */}
+            {overLimit && (
+              <p className="flex items-start gap-1.5 text-sm font-medium text-destructive">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                {t('summary.limit.overLimitPaused')}
+              </p>
+            )}
+            <p className="text-sm">{t('summary.limit.paused')}</p>
+          </>
+        ) : overLimit ? (
           <p className="flex items-start gap-1.5 text-sm font-medium text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {t('summary.limit.overLimit')}
@@ -216,20 +213,22 @@ function CodLimitCard() {
           to="/dashboard/cash/remittances"
           className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          {t('summary.limit.remitFrees')}
+          {restricted ? t('summary.declareRemittance') : t('summary.limit.remitFrees')}
           <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
 
-        <p className="text-xs leading-snug text-muted-foreground">{t('summary.limit.explain')}</p>
+        {!restricted && (
+          <p className="text-xs leading-snug text-muted-foreground">{t('summary.limit.explain')}</p>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export function SummaryTab() {
+export function SummaryTab({ codLimit }: { codLimit: CodLimitState }) {
   return (
     <div className="space-y-6">
-      <CodLimitCard />
+      <CodLimitCard {...codLimit} />
       <CashPosition />
     </div>
   );

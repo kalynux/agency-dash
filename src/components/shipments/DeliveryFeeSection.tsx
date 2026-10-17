@@ -4,7 +4,16 @@ import { ArrowRight, Ban, Loader2, Pencil, Receipt, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DeliveryFeeProposalDialog } from '@/components/shipments/DeliveryFeeProposalDialog';
+import { PayerFeeAnswer } from '@/components/shipments/PayerFeeAnswer';
 import { canRejectStatus } from '@/components/shipments/shipment-actions';
+import {
+  awaitingTopup,
+  blockingProposal,
+  isPayerProposal,
+  payerAcceptedAwaitingPayment,
+  pickupBlockedCopy,
+} from '@/components/shipments/delivery-fee-rules';
+import { pickupBlockedText } from '@/components/shipments/deliveryFeeCopy';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { formatCurrency, formatDateTime, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -36,11 +45,6 @@ function approverOf(p: DeliveryFeeProposal): string {
   return p.approver ?? 'vendor';
 }
 
-/** The customer accepted an increase on an online order and the top-up is still unpaid. */
-function awaitingTopup(p: DeliveryFeeProposal): boolean {
-  return p.status === 'pending' && !!p.customerApproval && p.topup?.status === 'awaiting_payment';
-}
-
 /** The customer, not the vendor, turned it down. */
 function rejectedByCustomer(p: DeliveryFeeProposal): boolean {
   return p.status === 'rejected' && (p.respondedBy?.role === 'customer' || approverOf(p) === 'customer');
@@ -49,7 +53,8 @@ function rejectedByCustomer(p: DeliveryFeeProposal): boolean {
 /**
  * The badge for a proposal. The four statuses are the API's; on a customer-paid
  * parcel they read differently, so they're refined from `approver`,
- * `customerApproval` and `topup` — each of which the server sets.
+ * `customerApproval` and `topup` — each of which the server sets. A payer's
+ * proposal waits on YOU, so it reads from your side.
  */
 type BadgeKey =
   | 'pending'
@@ -59,9 +64,25 @@ type BadgeKey =
   | 'applied'
   | 'rejected'
   | 'rejectedByCustomer'
-  | 'withdrawn';
+  | 'withdrawn'
+  | 'awaitingYou'
+  | 'acceptedAwaitingPayment'
+  | 'accepted'
+  | 'declined';
 
 function badgeKey(p: DeliveryFeeProposal & { status: DeliveryFeeProposalStatus }): BadgeKey {
+  if (isPayerProposal(p)) {
+    switch (p.status) {
+      case 'pending':
+        return payerAcceptedAwaitingPayment(p) ? 'acceptedAwaitingPayment' : 'awaitingYou';
+      case 'approved':
+        return 'accepted';
+      case 'rejected':
+        return 'declined';
+      default:
+        return 'withdrawn';
+    }
+  }
   switch (p.status) {
     case 'pending':
       if (awaitingTopup(p)) return 'awaitingPayment';
@@ -170,6 +191,10 @@ export interface DeliveryFeeSectionProps {
  * Who answers is the payer: the vendor on a shop-paid parcel; on a customer-paid
  * one a decrease applies at once and an increase waits for the customer (and,
  * online, for their top-up payment).
+ *
+ * The other way round (ADR-A12): the payer proposes and you Accept / Decline,
+ * from `availableActions`. Those proposals have their own two-per-parcel cap, so
+ * they never count against yours and never trigger "they rejected your fee".
  */
 export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: DeliveryFeeSectionProps) {
   const { t } = useTranslation(['shipments', 'common']);
@@ -182,8 +207,9 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
   const inWindow = (DELIVERY_FEE_PROPOSAL_WINDOW as readonly string[]).includes(detail.status);
   const pending = proposals.find((p) => p.status === 'pending');
   const hasPending = detail.deliveryFeeProposalPending === true || !!pending;
-  // Yours and your agents' — a change-of-agency difference is the platform's.
-  const ownProposals = proposals.filter((p) => p.origin !== 'change_agency');
+  // Yours and your agents' — a change-of-agency difference is the platform's, and
+  // a payer's proposal is theirs (with a cap of its own).
+  const ownProposals = proposals.filter((p) => p.origin !== 'change_agency' && !isPayerProposal(p));
   const counted = ownProposals.filter((p) => p.status !== 'withdrawn').length;
   const canPropose = inWindow && !hasPending && counted < MAX_DELIVERY_FEE_PROPOSALS;
   const latest = ownProposals[0];
@@ -197,15 +223,13 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
 
   if (!inWindow && proposals.length === 0 && !detail.deliveryFeeOverride && !components && !payer) return null;
 
-  const pickupBlockedText = !pending
-    ? t('deliveryFee.pickupBlocked')
-    : awaitingTopup(pending)
-      ? t('deliveryFee.pickupBlockedTopup')
-      : approverOf(pending) === 'customer'
-        ? t('deliveryFee.pickupBlockedCustomer')
-        : t('deliveryFee.pickupBlockedVendor');
+  const blockedText = pickupBlockedText(
+    t,
+    pickupBlockedCopy(blockingProposal(proposals, detail.pendingDeliveryFeeProposalId)),
+  );
 
-  const who = (actor: DeliveryFeeProposalActor | null | undefined): string => {
+  // `role` is open: an unknown one falls to "not available" below.
+  const who = (actor: (Omit<DeliveryFeeProposalActor, 'role'> & { role: string }) | null | undefined): string => {
     if (!actor) return t('common:values.notAvailable');
     switch (actor.role) {
       case 'agency':
@@ -258,7 +282,7 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
                 {t('deliveryFee.agreedOn', { date: formatDateTime(detail.deliveryFeeOverride.approvedAt) })}
               </p>
             )}
-            {hasPending && <p className="text-xs text-amber-700 dark:text-amber-300">{pickupBlockedText}</p>}
+            {hasPending && <p className="text-xs text-amber-700 dark:text-amber-300">{blockedText}</p>}
           </div>
           {canPropose && (
             <Button
@@ -328,9 +352,19 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
                   {badge === 'applied' && p.origin !== 'combined_request' && (
                     <p className="text-muted-foreground">{t('deliveryFee.appliedDirectly')}</p>
                   )}
+                  {p.payerAcceptance && (
+                    <p className="text-muted-foreground">
+                      {t('deliveryFee.payer.acceptedBy', {
+                        who: who({ role: p.payerAcceptance.role, userId: null, agentId: p.payerAcceptance.agentId }),
+                        date: formatDateTime(p.payerAcceptance.at),
+                      })}
+                    </p>
+                  )}
                   {awaitingTopup(p) && p.topup && (
                     <p className="text-amber-700 dark:text-amber-300">
-                      {t('deliveryFee.topupAwaiting', { amount: formatCurrency(p.topup.amount, p.currency) })}
+                      {payerAcceptedAwaitingPayment(p)
+                        ? t('deliveryFee.payer.awaitingPayment', { amount: formatCurrency(p.topup.amount, p.currency) })
+                        : t('deliveryFee.topupAwaiting', { amount: formatCurrency(p.topup.amount, p.currency) })}
                     </p>
                   )}
                   {p.edits && p.edits.length > 0 && (
@@ -348,10 +382,12 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
                     </ul>
                   )}
                   {p.status === 'rejected' && p.rejectionNote && (
-                    <p className="text-destructive">
-                      {rejectedByCustomer(p)
-                        ? t('deliveryFee.rejectionNoteCustomer', { note: p.rejectionNote })
-                        : t('deliveryFee.rejectionNote', { note: p.rejectionNote })}
+                    <p className={isPayerProposal(p) ? 'text-muted-foreground' : 'text-destructive'}>
+                      {isPayerProposal(p)
+                        ? t('deliveryFee.payer.declineNoteSent', { note: p.rejectionNote })
+                        : rejectedByCustomer(p)
+                          ? t('deliveryFee.rejectionNoteCustomer', { note: p.rejectionNote })
+                          : t('deliveryFee.rejectionNote', { note: p.rejectionNote })}
                     </p>
                   )}
                   {p.status === 'withdrawn' && <p className="text-muted-foreground">{withdrawnText(p)}</p>}
@@ -380,6 +416,7 @@ export function DeliveryFeeSection({ detail, agents, onChanged, onDecline }: Del
                       )}
                     </div>
                   )}
+                  <PayerFeeAnswer shipmentId={detail.id} proposal={p} onChanged={onChanged} />
                 </li>
               );
             })}

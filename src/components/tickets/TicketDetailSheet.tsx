@@ -2,7 +2,7 @@ import { formatDate as fmtDate } from '@/lib/format';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Loader2, Lock, Pencil, X, Check, CircleSlash, Info, XCircle, ShieldAlert,
+  Loader2, Lock, Pencil, X, Check, CircleSlash, Info, XCircle, ShieldAlert, EyeOff,
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -23,21 +23,27 @@ import {
 import { cn } from '@/lib/utils';
 import { useActionRunner } from '@/hooks/useActionRunner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useCurrentUserId } from '@/hooks/useCurrentUserId';
 import { ticketsService } from '@/services/tickets.service';
-import { getApiErrorMessage } from '@/lib/errors';
+import { getApiErrorMessage, getErrorCode } from '@/lib/errors';
+import { ApiError } from '@/types/api';
 import { NotesThread } from './NotesThread';
 import { AttachmentsPanel } from './AttachmentsPanel';
 import { ActorAvatar } from './ActorAvatar';
+import { TicketEntityLink } from './TicketEntityLink';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import {
   statusLabel, STATUS_BADGE_CLASSES, STATUS_DOT_CLASSES, TICKET_STATUSES,
   priorityLabel, PRIORITY_BADGE_CLASSES, PRIORITY_DOT_CLASSES, TICKET_PRIORITIES,
-  importanceLabel, IMPORTANCE_BADGE_CLASSES, WAITING_STATUS_ROLE,
-  ticketTypeLabel, ENTITY_ICONS, roleLabel, getTypeVisual, shortTicketRef, relativeTime,
+  importanceLabel, IMPORTANCE_BADGE_CLASSES,
+  ticketTypeLabel, roleLabel, openerLabel, getTypeVisual, shortTicketRef, relativeTime,
   responsiveSheetProps, DESCRIPTION_MAX_LENGTH,
 } from './ticket.constants';
+import {
+  actorName, followerName, isTicketCreator, mergeTicketWrite, offerableStatuses, ticketOpener,
+} from './ticket.rules';
 import type {
-  Ticket, TicketStatus, TicketPriority, TicketImportance,
+  Ticket, TicketActor, TicketStatus, TicketPriority, TicketImportance,
 } from '@/types/ticket.types';
 
 export interface TicketDetailSheetProps {
@@ -46,15 +52,34 @@ export interface TicketDetailSheetProps {
   onChanged?: () => void;
 }
 
+/**
+ * Why the ticket could not be shown. `lostAccess` is its own state, not an
+ * error: an administrator can remove this agency from a ticket's followers, and
+ * a link opened afterwards answers `403 TICKET_ACCESS_DENIED`.
+ */
+interface LoadFailure {
+  message: string;
+  lostAccess: boolean;
+}
+
+const NO_FOLLOWERS: TicketActor[] = [];
+
 function formatDate(iso: string): string {
   return fmtDate(iso);
 }
 
+function isAccessDenied(err: unknown): boolean {
+  return getErrorCode(err) === 'TICKET_ACCESS_DENIED' || (err instanceof ApiError && err.status === 403);
+}
+
 export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketDetailSheetProps) {
   const { t } = useTranslation(['tickets', 'common']);
+  const currentUserId = useCurrentUserId();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadFailure | null>(null);
+  /** Bumped after every write, each of which appends a system note to the thread. */
+  const [notesKey, setNotesKey] = useState(0);
 
   const [editing, setEditing] = useState(false);
   const [draftSubject, setDraftSubject] = useState('');
@@ -64,6 +89,12 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
   const { run, pendingKey } = useActionRunner();
   const isMobile = useIsMobile();
   const sheet = responsiveSheetProps(isMobile, 'sm:max-w-2xl lg:max-w-4xl');
+
+  // Read through a ref so `load` keeps one identity whatever the parent passes.
+  const onChangedRef = useRef(onChanged);
+  useEffect(() => {
+    onChangedRef.current = onChanged;
+  });
 
   // Monotonic token so a slow fetch for a previously-selected ticket can't
   // overwrite the state of the one now open.
@@ -81,7 +112,11 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
       setDraftSubject(res.data.subject);
       setDraftDescription(res.data.description);
     } catch (err) {
-      if (reqRef.current === token) setError(getApiErrorMessage(err));
+      if (reqRef.current !== token) return;
+      const lostAccess = isAccessDenied(err);
+      setError({ message: getApiErrorMessage(err), lostAccess });
+      // The ticket has left our list too; drop the stale row behind the sheet.
+      if (lostAccess) onChangedRef.current?.();
     } finally {
       if (reqRef.current === token) setLoading(false);
     }
@@ -91,9 +126,20 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (ticketId) load(ticketId);
   }, [ticketId, load]);
 
-  function applyUpdate(updated: Ticket) {
-    setTicket(updated);
+  function applyUpdate(written: Ticket) {
+    // A write answers with the bare document — keep the resolved blocks.
+    setTicket((current) => (current ? mergeTicketWrite(current, written) : written));
+    setNotesKey((k) => k + 1);
     onChanged?.();
+  }
+
+  /**
+   * A write refused with 403 means the ticket on screen is out of date — most
+   * likely we were removed from it while it was open. Re-read it, which lands on
+   * the lost-access state if so.
+   */
+  function onWriteError(err: unknown) {
+    if (ticket && isAccessDenied(err)) load(ticket.id);
   }
 
   async function saveEdit() {
@@ -101,7 +147,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     const res = await run(
       'edit',
       () => ticketsService.update(ticket.id, { subject: draftSubject, description: draftDescription }),
-      { success: t('detail.toasts.updated') },
+      { success: t('detail.toasts.updated'), onError: onWriteError },
     );
     if (res) {
       applyUpdate(res.data);
@@ -113,6 +159,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (!ticket || status === ticket.status) return;
     const res = await run('status', () => ticketsService.updateStatus(ticket.id, status), {
       success: t('detail.toasts.statusUpdated'),
+      onError: onWriteError,
     });
     if (res) applyUpdate(res.data);
   }
@@ -121,6 +168,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (!ticket || priority === ticket.priority) return;
     const res = await run('priority', () => ticketsService.updatePriority(ticket.id, priority), {
       success: t('detail.toasts.priorityUpdated'),
+      onError: onWriteError,
     });
     if (res) applyUpdate(res.data);
   }
@@ -129,6 +177,7 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (!ticket) return;
     const res = await run('escalate', () => ticketsService.assign(ticket.id, 'admin'), {
       success: t('detail.toasts.escalated'),
+      onError: onWriteError,
     });
     if (res) applyUpdate(res.data);
   }
@@ -137,6 +186,10 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
     if (!ticket) return;
     const res = await run('close', () => ticketsService.close(ticket.id), {
       success: t('detail.toasts.closed'),
+      onError: (err) => {
+        setConfirmCloseOpen(false);
+        onWriteError(err);
+      },
     });
     if (res) {
       applyUpdate(res.data);
@@ -145,22 +198,21 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
   }
 
   const isClosed = ticket?.status === 'closed';
-  const assignee = ticket?.assigned_admin ?? ticket?.assigned_to ?? null;
   const TypeIcon = ticket ? getTypeVisual(ticket.type).Icon : null;
-  const EntityIcon = ticket?.entity ? ENTITY_ICONS[ticket.entity.type] ?? null : null;
-  const followers = ticket?.followers ?? [];
+  const followers = ticket?.followers ?? NO_FOLLOWERS;
+  const opener = ticket ? ticketOpener(ticket) : null;
 
-  // Roles present on the ticket — a `waiting_on_<role>` status is only allowed
-  // when a participant with that role exists (admin is always allowed).
-  const participantRoles = useMemo(() => {
-    const roles = new Set<string>();
-    if (!ticket) return roles;
-    roles.add(ticket.created_by_role);
-    if (ticket.assigned_to?.role) roles.add(ticket.assigned_to.role);
-    if (ticket.assigned_admin?.role) roles.add(ticket.assigned_admin.role);
-    (ticket.followers ?? []).forEach((f) => roles.add(f.role));
-    return roles;
-  }, [ticket]);
+  // Closing is the creator's alone; every other write only needs followership.
+  // Anyone else pressing Close gets `403 TICKET_ACCESS_DENIED`, so it is not offered.
+  const isCreator = ticket ? isTicketCreator(ticket, currentUserId) : false;
+
+  // A `waiting_on_<role>` status is offered only when a follower holds that role.
+  const statusOptions = useMemo(
+    () => (ticket ? offerableStatuses(TICKET_STATUSES, ticket.status, followers, isCreator) : []),
+    [ticket, followers, isCreator],
+  );
+
+  const withSupport = ticket?.assigned_to_role === 'admin' || !!ticket?.assigned_admin;
 
   return (
     <Sheet open={!!ticketId} onOpenChange={onOpenChange}>
@@ -175,6 +227,15 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                 <span className="font-mono text-xs text-muted-foreground">{shortTicketRef(ticket.id)}</span>
               </div>
               <SheetTitle className="text-lg leading-snug">{ticket.subject}</SheetTitle>
+              {/* Up here because on a phone the sidebar is a long scroll away, and
+                  "whose ticket is this" is now the first question. */}
+              {opener && (
+                <p className="text-xs text-muted-foreground">
+                  {isCreator
+                    ? t('people.openedByYou')
+                    : t('people.openedBy', { name: openerLabel(opener) })}
+                </p>
+              )}
             </>
           ) : (
             <SheetTitle>{loading ? t('detail.loading') : t('detail.fallbackTitle')}</SheetTitle>
@@ -197,8 +258,20 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
             <DetailSkeleton />
           ) : error ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <XCircle className="h-8 w-8 text-destructive" />
-              <p className="text-sm text-muted-foreground">{error}</p>
+              {error.lostAccess ? (
+                <>
+                  <EyeOff className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">{t('detail.lostAccess.title')}</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    {t('detail.lostAccess.description')}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-8 w-8 text-destructive" />
+                  <p className="text-sm text-muted-foreground">{error.message}</p>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                 {t('common:actions.close')}
               </Button>
@@ -261,9 +334,20 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                   )}
                 </section>
 
-                <AttachmentsPanel ticketId={ticket.id} followers={followers} readOnly={isClosed} />
+                <AttachmentsPanel
+                  ticketId={ticket.id}
+                  followers={followers}
+                  currentUserId={currentUserId}
+                  readOnly={isClosed}
+                />
 
-                <NotesThread ticketId={ticket.id} followers={followers} readOnly={isClosed} />
+                <NotesThread
+                  ticketId={ticket.id}
+                  followers={followers}
+                  currentUserId={currentUserId}
+                  refreshKey={notesKey}
+                  readOnly={isClosed}
+                />
               </div>
 
               {/* Sidebar */}
@@ -283,18 +367,9 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {TICKET_STATUSES.map((s) => {
-                          const role = WAITING_STATUS_ROLE[s];
-                          const blocked = !!role && role !== 'admin' && role !== 'agency' && !participantRoles.has(role);
-                          return (
-                            <SelectItem key={s} value={s} disabled={blocked}>
-                              {statusLabel(s)}
-                              {blocked && (
-                                <span className="text-muted-foreground"> · {t('detail.noParticipant')}</span>
-                              )}
-                            </SelectItem>
-                          );
-                        })}
+                        {statusOptions.map((s) => (
+                          <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </SidebarSection>
@@ -344,17 +419,9 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                       {importanceLabel(ticket.importance)}
                     </Badge>
                   </InfoRow>
-                  <InfoRow label={t('detail.relatedTo')}>
-                    {ticket.entity ? (
-                      <Badge variant="outline" className="max-w-full gap-1">
-                        {EntityIcon && <EntityIcon className="h-3 w-3 shrink-0" />}
-                        <span className="truncate">{ticket.entity.label}</span>
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {ticket.entity_id || t('common:values.notAvailable')}
-                      </span>
-                    )}
+                  {/* Keyed so a different ticket never inherits the last one's link. */}
+                  <InfoRow label={t('detail.relatedTo')} align="start">
+                    <TicketEntityLink key={ticket.id} ticket={ticket} />
                   </InfoRow>
                   {ticket.tracking_number && (
                     <InfoRow label={t('detail.tracking')}>
@@ -363,23 +430,46 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                   )}
                 </div>
 
-                {/* Assigned to + escalate */}
+                {/* Opened by — often not us: the customer, the vendor, one of our
+                    agents, or the platform itself. */}
+                {opener && (
+                  <SidebarSection label={t('detail.openedBy')} className="border-t pt-4">
+                    <PersonRow
+                      avatar={<ActorAvatar actor={opener.actor} role={opener.role} name={opener.name} />}
+                      name={opener.name ?? roleLabel(opener.role)}
+                      caption={opener.admin?.job_title || roleLabel(opener.role)}
+                      verified={opener.actor?.verified}
+                      isYou={isCreator}
+                      strong
+                    />
+                  </SidebarSection>
+                )}
+
+                {/* Assigned to + escalate. A support administrator is a snapshot
+                    (name and job title), not an actor with a role. */}
                 <SidebarSection label={t('detail.assignedTo')} className="border-t pt-4">
-                  {assignee ? (
-                    <div className="flex items-center gap-2.5">
-                      <ActorAvatar actor={assignee} />
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-1 text-sm font-medium">
-                          <span className="truncate">{assignee.name}</span>
-                          <VerifiedBadge verified={assignee.verified} />
-                        </p>
-                        <p className="text-xs text-muted-foreground">{roleLabel(assignee.role)}</p>
-                      </div>
-                    </div>
+                  {ticket.assigned_admin ? (
+                    <PersonRow
+                      avatar={<ActorAvatar actor={null} role="admin" name={ticket.assigned_admin.name} />}
+                      name={ticket.assigned_admin.name}
+                      caption={ticket.assigned_admin.job_title || roleLabel('admin')}
+                      strong
+                    />
+                  ) : ticket.assigned_to ? (
+                    <PersonRow
+                      avatar={<ActorAvatar actor={ticket.assigned_to} />}
+                      name={actorName(ticket.assigned_to) ?? roleLabel(ticket.assigned_to.role)}
+                      caption={roleLabel(ticket.assigned_to.role)}
+                      verified={ticket.assigned_to.verified}
+                      isYou={ticket.assigned_to.user_id === currentUserId}
+                      strong
+                    />
+                  ) : ticket.assigned_to_role === 'admin' ? (
+                    <p className="text-sm text-muted-foreground">{t('detail.assignedToSupport')}</p>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('detail.unassigned')}</p>
                   )}
-                  {!isClosed && (
+                  {!isClosed && !withSupport && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -393,24 +483,35 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
                   )}
                 </SidebarSection>
 
-                {/* Followers */}
-                <SidebarSection label={t('detail.followers')} className="border-t pt-4">
-                  <ul className="space-y-2">
+                {/* Followers — everyone who reads this ticket's public notes. On an
+                    order ticket that is the vendor, each agency and each agent,
+                    plus whoever opened it. */}
+                <SidebarSection
+                  label={
+                    followers.length > 0
+                      ? t('detail.followersCount', { total: followers.length })
+                      : t('detail.followers')
+                  }
+                  className="border-t pt-4"
+                >
+                  <ul className="space-y-2.5">
                     {followers.length === 0 ? (
                       <li className="text-sm text-muted-foreground">{t('detail.noFollowers')}</li>
                     ) : (
-                      followers.map((f) => (
-                        <li key={f.user_id} className="flex items-center gap-2.5">
-                          <ActorAvatar actor={f} className="h-7 w-7" />
-                          <div className="min-w-0">
-                            <p className="flex items-center gap-1 text-sm">
-                              <span className="truncate">{f.name}</span>
-                              <VerifiedBadge verified={f.verified} />
-                            </p>
-                            <p className="text-xs text-muted-foreground">{roleLabel(f.role)}</p>
-                          </div>
-                        </li>
-                      ))
+                      followers.map((f) => {
+                        const name = followerName(f, ticket);
+                        return (
+                          <li key={`${f.role}:${f.user_id}`}>
+                            <PersonRow
+                              avatar={<ActorAvatar actor={f} name={name} className="h-7 w-7" />}
+                              name={name ?? roleLabel(f.role)}
+                              caption={roleLabel(f.role)}
+                              verified={f.verified}
+                              isYou={f.user_id === currentUserId}
+                            />
+                          </li>
+                        );
+                      })
                     )}
                   </ul>
                 </SidebarSection>
@@ -428,15 +529,24 @@ export function TicketDetailSheet({ ticketId, onOpenChange, onChanged }: TicketD
 
         {ticket && !isClosed && (
           <SheetFooter className="border-t">
-            <Button
-              variant="outline"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setConfirmCloseOpen(true)}
-              disabled={pendingKey === 'close'}
-            >
-              <CircleSlash className="me-2 h-4 w-4" />
-              {t('detail.closeTicket')}
-            </Button>
+            {isCreator ? (
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setConfirmCloseOpen(true)}
+                disabled={pendingKey === 'close'}
+              >
+                <CircleSlash className="me-2 h-4 w-4" />
+                {t('detail.closeTicket')}
+              </Button>
+            ) : (
+              // No Close button on a ticket we follow but did not open — say why,
+              // rather than leave the footer the user expects simply missing.
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {t('detail.closeOnlyCreator')}
+              </p>
+            )}
           </SheetFooter>
         )}
       </SheetContent>
@@ -499,11 +609,49 @@ function SidebarSection({
   );
 }
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InfoRow({
+  label, children, align = 'center',
+}: { label: string; children: React.ReactNode; align?: 'center' | 'start' }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
+    <div
+      className={cn(
+        'flex justify-between gap-3 text-sm',
+        align === 'start' ? 'items-start' : 'items-center',
+      )}
+    >
+      <span className="shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 text-end font-medium">{children}</span>
+    </div>
+  );
+}
+
+/** One person: avatar, name (+ verified seal, + "You"), and what they are. */
+function PersonRow({
+  avatar, name, caption, verified, isYou, strong,
+}: {
+  avatar: React.ReactNode;
+  name: string;
+  caption: string;
+  verified?: boolean;
+  isYou?: boolean;
+  strong?: boolean;
+}) {
+  const { t } = useTranslation('tickets');
+  return (
+    <div className="flex items-center gap-2.5">
+      {avatar}
+      <div className="min-w-0">
+        <p className={cn('flex items-center gap-1 text-sm', strong && 'font-medium')}>
+          <span className="truncate">{name}</span>
+          <VerifiedBadge verified={verified} />
+          {isYou && (
+            <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] font-medium">
+              {t('people.you')}
+            </Badge>
+          )}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{caption}</p>
+      </div>
     </div>
   );
 }

@@ -135,7 +135,11 @@
       "rejected": "Rechazada",
       "rejectedByCustomer": "Rechazada por el cliente",
       "withdrawn": "Retirada",
-      "unknown": "Estado desconocido"
+      "unknown": "Estado desconocido",
+      "awaitingYou": "Esperando tu respuesta",
+      "acceptedAwaitingPayment": "Aceptada — pago pendiente",
+      "accepted": "Aceptada",
+      "declined": "Rechazada"
     },
     "validation": {
       "number": "Introduce un importe.",
@@ -144,6 +148,25 @@
       "sameAsCurrent": "Esa ya es la tarifa.",
       "reasonMin": "Indica un motivo de al menos {{min}} caracteres.",
       "reasonMax": "El motivo debe tener menos de {{max}} caracteres."
+    },
+    "payer": {
+      "pickupBlockedVendor": "El vendedor propuso otra tarifa: la recogida está bloqueada hasta que la aceptes o la rechaces.",
+      "pickupBlockedCustomer": "El cliente propuso otra tarifa: la recogida está bloqueada hasta que la aceptes o la rechaces.",
+      "awaitingPayment": "Aceptada — esperando a que el cliente pague {{amount}}; la recogida sigue bloqueada.",
+      "acceptedBy": "Aceptada por {{who}} · {{date}}",
+      "accept": "Aceptar {{amount}}",
+      "decline": "Rechazar",
+      "declineTitle": "¿Rechazar esta tarifa?",
+      "declineDescription": "La tarifa se queda en {{before}} en lugar de {{after}} y la recogida se desbloquea. Se le avisa de que la rechazaste.",
+      "declineAfterAcceptDescription": "Aceptaste {{after}}, pero el cliente aún no ha pagado la diferencia. Si la rechazas, la tarifa se queda en {{before}} y la recogida se desbloquea.",
+      "declineNote": "Nota para ellos (opcional)",
+      "declineNotePlaceholder": "P. ej.: nuestro precio ya cubre esta distancia.",
+      "declineSubmit": "Rechazar la tarifa",
+      "declineNoteSent": "Nota enviada con el rechazo: {{note}}",
+      "accepted": "Tarifa aceptada: se aplica ya y la recogida se desbloquea.",
+      "acceptedAwaitingPayment": "Aceptada: ahora el cliente debe pagar {{amount}}. La recogida sigue bloqueada hasta entonces.",
+      "declined": "Tarifa rechazada: se mantiene la tarifa original y la recogida se desbloquea.",
+      "changed": "Cambiaron el importe a {{amount}} mientras tanto. Revísalo y vuelve a responder."
     }
   },
   "combined": {
@@ -207,5 +230,32 @@
       "submit": "Rechazar la solicitud",
       "success": "Solicitud rechazada."
     }
+  },
+  "feeProposals": {
+    "title": "Propuestas de tarifa por responder",
+    "description": "Tarifas de entrega que un vendedor o un cliente propuso en tus envíos, más altas o más bajas. Una pendiente bloquea la recogida de ese paquete hasta que la aceptes o la rechaces.",
+    "shortDescription": "Tarifas que te proponen",
+    "entry": "Propuestas de tarifa",
+    "entryPending_one": "{{count}} propuesta de tarifa espera tu respuesta",
+    "entryPending_other": "{{count}} propuestas de tarifa esperan tu respuesta",
+    "filterStatus": "Estado",
+    "filterDescription": "Las pendientes retienen una recogida, incluida una tarifa más alta que aceptaste y que el cliente aún no ha pagado.",
+    "filter": {
+      "pending": "Pendientes",
+      "approved": "Aceptadas",
+      "rejected": "Rechazadas",
+      "withdrawn": "Retiradas"
+    },
+    "emptyPending": "Nada por responder",
+    "emptyPendingBody": "Cuando un vendedor o un cliente proponga otra tarifa de entrega en uno de tus envíos, aparecerá aquí.",
+    "empty": "Nada por aquí",
+    "emptyBody": "No hay propuestas con este estado.",
+    "fromVendor": "Propuesta del vendedor",
+    "fromCustomer": "Propuesta del cliente",
+    "parcelFallback": "Envío",
+    "higherBy": "{{amount}} más",
+    "lowerBy": "{{amount}} menos",
+    "theirReason": "Su motivo",
+    "closedOn": "Cerrada el {{date}}"
   }
 }

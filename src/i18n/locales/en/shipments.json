@@ -424,7 +424,11 @@
       "rejected": "Rejected",
       "rejectedByCustomer": "Declined by the customer",
       "withdrawn": "Withdrawn",
-      "unknown": "Unknown status"
+      "unknown": "Unknown status",
+      "awaitingYou": "Waiting for your answer",
+      "acceptedAwaitingPayment": "Accepted — awaiting payment",
+      "accepted": "Accepted",
+      "declined": "Declined"
     },
     "validation": {
       "number": "Enter an amount.",
@@ -433,6 +437,25 @@
       "sameAsCurrent": "That is already the fee.",
       "reasonMin": "Give a reason of at least {{min}} characters.",
       "reasonMax": "Keep the reason under {{max}} characters."
+    },
+    "payer": {
+      "pickupBlockedVendor": "The vendor proposed a different fee — pickup is blocked until you accept or decline it.",
+      "pickupBlockedCustomer": "The customer proposed a different fee — pickup is blocked until you accept or decline it.",
+      "awaitingPayment": "Accepted — waiting for the customer to pay {{amount}}; pickup stays blocked.",
+      "acceptedBy": "Accepted by {{who}} · {{date}}",
+      "accept": "Accept {{amount}}",
+      "decline": "Decline",
+      "declineTitle": "Decline this fee?",
+      "declineDescription": "The fee stays at {{before}} instead of {{after}}, and pickup is unblocked. They are told you declined.",
+      "declineAfterAcceptDescription": "You accepted {{after}}, but the customer hasn't paid the difference yet. Declining keeps the fee at {{before}} and unblocks pickup.",
+      "declineNote": "Note for them (optional)",
+      "declineNotePlaceholder": "E.g. Our price already covers this distance.",
+      "declineSubmit": "Decline the fee",
+      "declineNoteSent": "Note sent with the decline: {{note}}",
+      "accepted": "Fee accepted — it applies now and pickup is unblocked.",
+      "acceptedAwaitingPayment": "Accepted — the customer must now pay {{amount}}. Pickup stays blocked until they do.",
+      "declined": "Fee declined — the original fee stands and pickup is unblocked.",
+      "changed": "They changed the figure to {{amount}} in the meantime. Check it and answer again."
     }
   },
   "combined": {
@@ -496,5 +519,32 @@
       "submit": "Decline request",
       "success": "Request declined."
     }
+  },
+  "feeProposals": {
+    "title": "Fee proposals to answer",
+    "description": "Delivery fees a vendor or a customer proposed on your shipments — higher or lower. A pending one blocks that parcel's pickup until you accept or decline it.",
+    "shortDescription": "Fees proposed to you",
+    "entry": "Fee proposals",
+    "entryPending_one": "{{count}} fee proposal is waiting for your answer",
+    "entryPending_other": "{{count}} fee proposals are waiting for your answer",
+    "filterStatus": "Status",
+    "filterDescription": "Pending ones hold a pickup — including a higher fee you accepted that the customer hasn't paid yet.",
+    "filter": {
+      "pending": "Pending",
+      "approved": "Accepted",
+      "rejected": "Declined",
+      "withdrawn": "Withdrawn"
+    },
+    "emptyPending": "Nothing to answer",
+    "emptyPendingBody": "When a vendor or a customer proposes a different delivery fee on one of your shipments, it appears here.",
+    "empty": "Nothing here",
+    "emptyBody": "No proposals with this status.",
+    "fromVendor": "Proposed by the vendor",
+    "fromCustomer": "Proposed by the customer",
+    "parcelFallback": "Shipment",
+    "higherBy": "{{amount}} more",
+    "lowerBy": "{{amount}} less",
+    "theirReason": "Their reason",
+    "closedOn": "Closed {{date}}"
   }
 }

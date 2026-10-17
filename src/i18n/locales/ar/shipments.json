@@ -151,7 +151,11 @@
       "rejected": "مرفوض",
       "rejectedByCustomer": "رفضه العميل",
       "withdrawn": "مسحوب",
-      "unknown": "حالة غير معروفة"
+      "unknown": "حالة غير معروفة",
+      "awaitingYou": "بانتظار ردك",
+      "acceptedAwaitingPayment": "مقبول — بانتظار الدفع",
+      "accepted": "مقبول",
+      "declined": "مرفوض"
     },
     "validation": {
       "number": "أدخل مبلغًا.",
@@ -160,6 +164,25 @@
       "sameAsCurrent": "هذه هي الرسوم الحالية بالفعل.",
       "reasonMin": "اكتب سببًا من {{min}} أحرف على الأقل.",
       "reasonMax": "يجب أن يكون السبب أقل من {{max}} حرفًا."
+    },
+    "payer": {
+      "pickupBlockedVendor": "اقترح البائع رسومًا مختلفة — الاستلام محظور حتى تقبلها أو ترفضها.",
+      "pickupBlockedCustomer": "اقترح العميل رسومًا مختلفة — الاستلام محظور حتى تقبلها أو ترفضها.",
+      "awaitingPayment": "مقبول — بانتظار أن يدفع العميل {{amount}}؛ يبقى الاستلام محظورًا.",
+      "acceptedBy": "قبله {{who}} · {{date}}",
+      "accept": "قبول {{amount}}",
+      "decline": "رفض",
+      "declineTitle": "رفض هذه الرسوم؟",
+      "declineDescription": "تبقى الرسوم {{before}} بدلًا من {{after}}، ويُفتح الاستلام. سيُبلَّغ برفضك.",
+      "declineAfterAcceptDescription": "قبلتَ {{after}}، لكن العميل لم يدفع الفرق بعد. الرفض يُبقي الرسوم عند {{before}} ويفتح الاستلام.",
+      "declineNote": "ملاحظة لهم (اختياري)",
+      "declineNotePlaceholder": "مثال: سعرنا يغطي هذه المسافة أصلًا.",
+      "declineSubmit": "رفض الرسوم",
+      "declineNoteSent": "ملاحظة أُرسلت مع الرفض: {{note}}",
+      "accepted": "قُبلت الرسوم — تُطبَّق الآن ويُفتح الاستلام.",
+      "acceptedAwaitingPayment": "قُبلت — على العميل الآن دفع {{amount}}. يبقى الاستلام محظورًا حتى يدفع.",
+      "declined": "رُفضت الرسوم — تبقى الرسوم الأصلية ويُفتح الاستلام.",
+      "changed": "غيّروا المبلغ في الأثناء إلى {{amount}}. تحقّق منه وأجب من جديد."
     }
   },
   "combined": {
@@ -231,5 +254,36 @@
       "submit": "رفض الطلب",
       "success": "رُفض الطلب."
     }
+  },
+  "feeProposals": {
+    "title": "اقتراحات رسوم بانتظار ردك",
+    "description": "رسوم توصيل اقترحها بائع أو عميل على شحناتك — أعلى أو أقل. الاقتراح المعلّق يحظر استلام الطرد حتى تقبله أو ترفضه.",
+    "shortDescription": "رسوم مقترحة عليك",
+    "entry": "اقتراحات الرسوم",
+    "entryPending_zero": "لا توجد اقتراحات رسوم بانتظار ردك",
+    "entryPending_one": "اقتراح رسوم واحد بانتظار ردك",
+    "entryPending_two": "اقتراحا رسوم بانتظار ردك",
+    "entryPending_few": "{{count}} اقتراحات رسوم بانتظار ردك",
+    "entryPending_many": "{{count}} اقتراحًا للرسوم بانتظار ردك",
+    "entryPending_other": "{{count}} اقتراح رسوم بانتظار ردك",
+    "filterStatus": "الحالة",
+    "filterDescription": "المعلّقة تحجز استلامًا — بما فيها رسوم أعلى قبلتَها ولم يدفعها العميل بعد.",
+    "filter": {
+      "pending": "معلّقة",
+      "approved": "مقبولة",
+      "rejected": "مرفوضة",
+      "withdrawn": "مسحوبة"
+    },
+    "emptyPending": "لا شيء بانتظار ردك",
+    "emptyPendingBody": "عندما يقترح بائع أو عميل رسوم توصيل مختلفة على إحدى شحناتك، يظهر الاقتراح هنا.",
+    "empty": "لا شيء هنا",
+    "emptyBody": "لا توجد اقتراحات بهذه الحالة.",
+    "fromVendor": "اقتراح من البائع",
+    "fromCustomer": "اقتراح من العميل",
+    "parcelFallback": "شحنة",
+    "higherBy": "{{amount}} أكثر",
+    "lowerBy": "{{amount}} أقل",
+    "theirReason": "سببهم",
+    "closedOn": "أُغلق في {{date}}"
   }
 }

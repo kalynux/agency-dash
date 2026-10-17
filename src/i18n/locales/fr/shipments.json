@@ -425,7 +425,11 @@
       "rejected": "Refusée",
       "rejectedByCustomer": "Refusée par le client",
       "withdrawn": "Retirée",
-      "unknown": "Statut inconnu"
+      "unknown": "Statut inconnu",
+      "awaitingYou": "En attente de votre réponse",
+      "acceptedAwaitingPayment": "Acceptée — paiement en attente",
+      "accepted": "Acceptée",
+      "declined": "Refusée"
     },
     "validation": {
       "number": "Saisissez un montant.",
@@ -434,6 +438,25 @@
       "sameAsCurrent": "Ce sont déjà les frais actuels.",
       "reasonMin": "Indiquez un motif d’au moins {{min}} caractères.",
       "reasonMax": "Le motif doit faire moins de {{max}} caractères."
+    },
+    "payer": {
+      "pickupBlockedVendor": "Le vendeur propose d’autres frais — le ramassage est bloqué tant que vous ne les avez pas acceptés ou refusés.",
+      "pickupBlockedCustomer": "Le client propose d’autres frais — le ramassage est bloqué tant que vous ne les avez pas acceptés ou refusés.",
+      "awaitingPayment": "Acceptée — en attente du paiement de {{amount}} par le client ; le ramassage reste bloqué.",
+      "acceptedBy": "Acceptée par {{who}} · {{date}}",
+      "accept": "Accepter {{amount}}",
+      "decline": "Refuser",
+      "declineTitle": "Refuser ces frais ?",
+      "declineDescription": "Les frais restent à {{before}} au lieu de {{after}}, et le ramassage est débloqué. Votre refus lui est notifié.",
+      "declineAfterAcceptDescription": "Vous avez accepté {{after}}, mais le client n’a pas encore payé la différence. Refuser maintient les frais à {{before}} et débloque le ramassage.",
+      "declineNote": "Note pour eux (facultatif)",
+      "declineNotePlaceholder": "Ex. : notre tarif couvre déjà cette distance.",
+      "declineSubmit": "Refuser les frais",
+      "declineNoteSent": "Note envoyée avec le refus : {{note}}",
+      "accepted": "Frais acceptés — ils s’appliquent et le ramassage est débloqué.",
+      "acceptedAwaitingPayment": "Acceptés — le client doit maintenant payer {{amount}}. Le ramassage reste bloqué d’ici là.",
+      "declined": "Frais refusés — les frais d’origine restent et le ramassage est débloqué.",
+      "changed": "Le montant a été modifié entre-temps : {{amount}}. Vérifiez-le et répondez à nouveau."
     }
   },
   "combined": {
@@ -497,5 +520,32 @@
       "submit": "Refuser la demande",
       "success": "Demande refusée."
     }
+  },
+  "feeProposals": {
+    "title": "Propositions de frais à traiter",
+    "description": "Les frais de livraison qu’un vendeur ou un client propose sur vos expéditions — à la hausse ou à la baisse. Une proposition en attente bloque le ramassage du colis jusqu’à votre réponse.",
+    "shortDescription": "Frais qu’on vous propose",
+    "entry": "Propositions de frais",
+    "entryPending_one": "{{count}} proposition de frais attend votre réponse",
+    "entryPending_other": "{{count}} propositions de frais attendent votre réponse",
+    "filterStatus": "Statut",
+    "filterDescription": "Celles en attente bloquent un ramassage — y compris des frais plus élevés que vous avez acceptés et que le client n’a pas encore payés.",
+    "filter": {
+      "pending": "En attente",
+      "approved": "Acceptées",
+      "rejected": "Refusées",
+      "withdrawn": "Retirées"
+    },
+    "emptyPending": "Rien à traiter",
+    "emptyPendingBody": "Quand un vendeur ou un client propose d’autres frais de livraison sur l’une de vos expéditions, la proposition apparaît ici.",
+    "empty": "Rien ici",
+    "emptyBody": "Aucune proposition avec ce statut.",
+    "fromVendor": "Proposé par le vendeur",
+    "fromCustomer": "Proposé par le client",
+    "parcelFallback": "Expédition",
+    "higherBy": "{{amount}} de plus",
+    "lowerBy": "{{amount}} de moins",
+    "theirReason": "Leur motif",
+    "closedOn": "Clôturée le {{date}}"
   }
 }

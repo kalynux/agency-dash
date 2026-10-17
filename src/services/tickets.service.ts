@@ -3,6 +3,7 @@ import type {
   CreateTicketPayload,
   ListTicketsParams,
   ListTicketsResponse,
+  TicketPagination,
   TicketResponse,
   TicketStatus,
   TicketPriority,
@@ -43,24 +44,52 @@ function normalizeTicket(res: TicketResponse): TicketResponse {
   return { ...res, data: withId(res.data) };
 }
 
+/**
+ * The ticket list counts its pages in `totalPages`; the two reference lists on
+ * the same router use `pages`. Read either, so the list's pager does not depend
+ * on which spelling the backend settles on.
+ */
+function normalizePagination(raw: Partial<TicketPagination> & { totalPages?: number }): TicketPagination {
+  return {
+    total: raw.total ?? 0,
+    page: raw.page ?? 1,
+    limit: raw.limit ?? 20,
+    pages: raw.pages ?? raw.totalPages ?? 1,
+  };
+}
+
 export const ticketsService = {
   /** POST /agency/tickets — create a support ticket. */
   async create(payload: CreateTicketPayload): Promise<TicketResponse> {
     return normalizeTicket(await api.post<TicketResponse>('/agency/tickets', payload));
   },
 
-  /** GET /agency/tickets — list tickets visible to this agency. */
+  /**
+   * GET /agency/tickets — every ticket this agency FOLLOWS, not only the ones it
+   * opened. Since 2026-10-09 that includes each ticket about an order it
+   * carries, whoever opened it; `createdByUserId` narrows to its own. Rows carry
+   * no `followers`. See api-doc/agency/FRONTEND-CHANGELOG-ticket-followers.md.
+   */
   async list(params: ListTicketsParams = {}): Promise<ListTicketsResponse> {
     const res = await api.get<ListTicketsResponse>(
       `/agency/tickets${buildQueryString(params as Record<string, unknown>)}`,
     );
-    return { ...res, data: res.data.map(withId) };
+    return { ...res, data: res.data.map(withId), pagination: normalizePagination(res.pagination) };
   },
 
-  /** GET /agency/tickets/:id — full ticket detail (+ followers). */
+  /**
+   * GET /agency/tickets/:id — full ticket detail (+ followers).
+   * `403 TICKET_ACCESS_DENIED` once an administrator has removed this agency
+   * from the ticket's followers.
+   */
   async getById(id: string): Promise<TicketResponse> {
     return normalizeTicket(await api.get<TicketResponse>(`/agency/tickets/${id}`));
   },
+
+  // ⚠ The five writes below answer with the ticket document UN-ENRICHED:
+  // `created_by`, `assigned_to`, `assigned_admin`, `entity` and `followers` are
+  // added on create/list/detail only. Merge a write over the ticket already on
+  // screen (`mergeTicketWrite`) rather than replacing it.
 
   /** PATCH /agency/tickets/:id — update subject and/or description. */
   async update(id: string, body: { subject?: string; description?: string }): Promise<TicketResponse> {
@@ -87,7 +116,10 @@ export const ticketsService = {
     );
   },
 
-  /** POST /agency/tickets/:id/close — close a ticket (creator or admin only). */
+  /**
+   * POST /agency/tickets/:id/close — the one write that checks authorship, not
+   * followership: `403 TICKET_ACCESS_DENIED` unless this agency opened the ticket.
+   */
   async close(id: string): Promise<TicketResponse> {
     return normalizeTicket(await api.post<TicketResponse>(`/agency/tickets/${id}/close`));
   },

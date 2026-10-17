@@ -133,6 +133,21 @@ describe('notificationVisual — 2026-10-02 types', () => {
     }
   });
 
+  it('opens the shipment for the payer proposal types (ADR-A12, 2026-10-14)', () => {
+    const id = '66fc0000000000000000aaaa';
+    for (const type of [
+      'delivery_fee_proposal.payer_proposed',
+      'delivery_fee_proposal.payer_edited',
+      'delivery_fee_proposal.payer_withdrawn',
+      'delivery_fee_proposal.payer_paid',
+    ]) {
+      expect(notificationVisual(type).icon).toBe(Receipt);
+      expect(notificationHref({ label: 'View', path: `shipments/${id}` }, type)).toBe(
+        `/dashboard/shipments?open=${id}`,
+      );
+    }
+  });
+
   it('reads every codLimitUpdates type as one stream, not routine shipment traffic', () => {
     for (const type of [
       'shipment.cod_limit.forced',
