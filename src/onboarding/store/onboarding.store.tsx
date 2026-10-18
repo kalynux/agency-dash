@@ -14,8 +14,9 @@ import { passesLaunchGate } from '@/lib/biometricUnlock';
 import { onboardingService } from '@/services/onboarding.service';
 import { agencyProfileService } from '@/services/agency-profile.service';
 import { ApiError } from '@/types/api';
-import type { UpdateAgencyProfilePayload } from '@/types/agency-profile.types';
+import type { DeliveryAgencyProfile, UpdateAgencyProfilePayload } from '@/types/agency-profile.types';
 import type {
+    AgencyAccountStatus,
     AgencyAuthSession,
     AgencyOnboardingStep,
     LogisticsPayload,
@@ -91,6 +92,14 @@ export interface OnboardingState {
     adoptSession: (session: AgencyAuthSession) => void;
     /** Re-fetch the session (used after a post-onboarding profile edit). */
     refreshSession: () => Promise<void>;
+    /**
+     * Fold a `PATCH /api/agency/profile` response into the session — status,
+     * display name and phone flag, with no extra call. Since 2026-10-18 that
+     * PATCH can ACTIVATE the agency (verified phone + non-blank name), and its
+     * response's `status` already says so; this is what takes the activation
+     * banner down. See api-doc/agency/FRONTEND-CHANGELOG-activation-and-counterparty.md § 2.
+     */
+    adoptProfile: (profile: DeliveryAgencyProfile) => void;
     /**
      * Post-onboarding profile edit via PATCH /api/agency/profile. Use this from
      * Settings — the onboarding step endpoints are locked once onboarding is
@@ -339,12 +348,30 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
+    const adoptProfile = useCallback((profile: DeliveryAgencyProfile) => {
+        setSession((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                role_entity: {
+                    ...prev.role_entity,
+                    status: profile.status as AgencyAccountStatus,
+                    display_name: profile.displayName,
+                    phone_verified: profile.phoneVerified,
+                },
+            };
+        });
+    }, []);
+
     const updateAgencyProfile = useCallback(
         async (payload: UpdateAgencyProfilePayload) => {
             setIsSubmitting(true);
             setError(null);
             try {
-                await agencyProfileService.updateProfile(payload);
+                const res = await agencyProfileService.updateProfile(payload);
+                // The response already carries a promotion to `active`; adopt it
+                // first so the banner drops even if the refresh below fails.
+                adoptProfile(res.data);
                 await refreshSession();
             } catch (err) {
                 const apiErr =
@@ -355,7 +382,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
                 setIsSubmitting(false);
             }
         },
-        [refreshSession],
+        [refreshSession, adoptProfile],
     );
 
     const goBack = useCallback((fromStep: AgencyOnboardingStep) => {
@@ -391,6 +418,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
                 initialize,
                 adoptSession,
                 refreshSession,
+                adoptProfile,
                 updateAgencyProfile,
                 submitLogistics,
                 submitPayout,

@@ -62,7 +62,7 @@
  * api-doc/auth/README.md § Account activation.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ElementType, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -70,14 +70,18 @@ import {
   AlertTriangle,
   AtSign,
   CheckCircle2,
+  Clock3,
   Loader2,
+  Pencil,
   Phone,
+  RotateCw,
   ShieldCheck,
   X,
 } from 'lucide-react';
 
 import { FieldHint, FieldLabel, InfoHint, SectionHeading } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -89,6 +93,7 @@ import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { useAccountStanding } from '@/hooks/useAccountStanding';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
+import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import type { ContactState } from '@/types/contact.types';
@@ -135,7 +140,7 @@ export function ContactChangeCard() {
   /** Which field is being edited, if any. Only one at a time. */
   const [editing, setEditing] = useState<Channel | null>(null);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState<Channel | 'send' | 'code' | null>(null);
+  const [busy, setBusy] = useState<Channel | 'send' | 'code' | 'resend' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // ─── OTP state ──────────────────────────────────────────────────────────────
@@ -263,6 +268,27 @@ export function ContactChangeCard() {
   };
 
   /**
+   * Re-request the pending address. A second request **supersedes** the first
+   * (api-doc/me/contact-change.md), so this mints a fresh link and kills the
+   * old one — exactly what "I never got the email" needs.
+   */
+  const resendEmailLink = async () => {
+    const target = state?.pendingEmail?.target;
+    if (!target) return;
+    setBusy('resend');
+    setError(null);
+    try {
+      await contactService.changeEmail({ email: target });
+      await load();
+      toast.success(t('contact.email.resent'));
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /**
    * Send a code. The target is the server's to choose — the pending number if a
    * change is in flight, otherwise the current one — so nothing is passed.
    */
@@ -379,6 +405,179 @@ export function ContactChangeCard() {
     editing !== 'phone' &&
     (!!state.pendingPhone || (!!state.phone && phoneVerified !== true) || codeLive);
 
+  /**
+   * Where the code entry lives. When it completes a pending change it belongs
+   * INSIDE that change's panel — one place that says what is changing, how to
+   * finish it and how to back out — instead of a second box under it.
+   */
+  const verifyInPanel = completesChange && !!state?.pendingPhone;
+  /** Any request in flight locks every other control on the card. */
+  const locked = busy !== null;
+
+  /** The WhatsApp code: send, type, resend. Rendered inside whichever panel owns it. */
+  const verifyBody = (
+    <div className="space-y-3">
+      {codeLive ? (
+        <>
+          <form
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canConfirmCode) void confirmCode();
+            }}
+          >
+            {/* Digits only — the code is six of them, generated one
+                `randomInt(0, 10)` at a time — so stripping the rest makes a
+                pasted "123 456" work instead of failing. */}
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={CODE_LENGTH}
+              placeholder={t('contact.phone.verify.codePlaceholder')}
+              aria-label={t('contact.phone.verify.codeLabel')}
+              // No autofocus: a code left live from another device would yank
+              // the page to this card on every load of the Security tab.
+              // `indent` balances the trailing letter-spacing so the digits centre.
+              className="h-12 bg-background text-center indent-[0.4em] font-mono text-xl tracking-[0.4em] sm:h-10 sm:w-48 sm:text-lg"
+            />
+            <Button
+              type="submit"
+              disabled={!canConfirmCode}
+              className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
+            >
+              {busy === 'code' && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t('contact.phone.verify.submit')}
+            </Button>
+          </form>
+
+          <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <p className="text-xs text-muted-foreground">
+              {verifyTarget && t('contact.phone.verify.sentTo', { phone: verifyTarget })}
+              {codeExpiresAt && ` ${t('contact.expires', { when: formatDateTime(codeExpiresAt) })}`}
+              {/* Reported because it is the first thing support asks when a
+                  code did not arrive. */}
+              {sent?.delivery === 'template' && ` ${t('contact.phone.verify.deliveryTemplate')}`}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void sendCode()}
+              disabled={locked || cooldownLeft > 0}
+              className="-ml-3 shrink-0 gap-1.5 sm:ml-0"
+            >
+              {busy === 'send' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCw className="h-3.5 w-3.5" />
+              )}
+              {cooldownLeft > 0
+                ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
+                : t('contact.phone.verify.resend')}
+            </Button>
+          </div>
+
+          {attemptsLeft !== null && (
+            <p className="text-xs text-warning">
+              {t('contact.phone.verify.attemptsLeft', { count: attemptsLeft })}
+            </p>
+          )}
+        </>
+      ) : (
+        <Button
+          onClick={() => void sendCode()}
+          disabled={locked || cooldownLeft > 0}
+          className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
+        >
+          {busy === 'send' && <Loader2 className="h-4 w-4 animate-spin" />}
+          {cooldownLeft > 0
+            ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
+            : deliveryFailures > 0
+              ? t('common:actions.retry')
+              : t('contact.phone.verify.send')}
+        </Button>
+      )}
+
+      {codeError && <p className="text-xs text-destructive">{codeError}</p>}
+
+      {/* WhatsApp refused every route — free text and the approved template.
+          A temporary failure: the Resend button above is the primary action,
+          support the secondary once it has happened twice. ⛔ Never "message
+          our bot first": the backend has already done everything that could
+          help. */}
+      {deliveryFailures > 0 && (
+        <div
+          role="alert"
+          className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <p className="flex items-start gap-1.5">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            {t('contact.phone.verify.deliveryFailed')}
+          </p>
+          {deliveryFailures > 1 && (
+            <Link
+              to="/dashboard/tickets"
+              state={{ create: true }}
+              className="inline-block font-medium underline"
+            >
+              {t('contact.phone.verify.contactSupport')}
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  /** What the code proves, and — while the account is pending — what it unlocks. */
+  const verifyHeading = (
+    <div className="space-y-1">
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+        {completesChange
+          ? t('contact.phone.verify.titleChange')
+          : t('contact.phone.verify.titleCurrent')}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {completesChange
+          ? t('contact.phone.verify.hintChange')
+          : t('contact.phone.verify.hintCurrent')}
+      </p>
+      {/* Since 2026-09-15 this code is not merely a contact-detail formality:
+          proving the phone is what promotes an agency from
+          `pending_verification` to `active`, and it is the only thing that
+          does. Worth saying on the one screen that can do it — someone sent
+          here by the activation banner arrives wanting to know they are in the
+          right place.
+
+          ⚠ Only for `pending_verification`. An `inactive` or `suspended`
+          account is not promoted by a proved phone, so promising activation
+          there would be a lie — which is exactly the distinction
+          `awaitingActivation` carries. */}
+      {awaitingActivation && (
+        <p className="text-xs font-medium text-gold-700 dark:text-gold-400">
+          {t('contact.phone.verify.activatesAccount')}
+        </p>
+      )}
+    </div>
+  );
+
+  const changeButton = (channel: Channel) => (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => startEdit(channel)}
+      disabled={locked}
+      // Icon-only on a phone: the label would squeeze the address into a
+      // mid-word wrap. The name stays for screen readers.
+      aria-label={t('contact.change')}
+      className="size-9 gap-1.5 p-0 sm:h-8 sm:w-auto sm:px-2.5"
+    >
+      <Pencil className="h-3.5 w-3.5" />
+      <span className="max-sm:sr-only">{t('contact.change')}</span>
+    </Button>
+  );
+
   return (
     <Card className={sectionSurfaceClass}>
       {/* No `short` copy exists for this section, so on a phone the whole
@@ -401,7 +600,7 @@ export function ContactChangeCard() {
         }
         description={<span className="max-md:hidden">{t('contact.description')}</span>}
       />
-      <CardContent className="space-y-4 md:space-y-5 max-md:px-0">
+      <CardContent className="space-y-5 max-md:px-0">
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -417,252 +616,164 @@ export function ContactChangeCard() {
         ) : state ? (
           <>
             {/* ── Email ────────────────────────────────────────────────────── */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                    <AtSign className="h-3.5 w-3.5 text-muted-foreground" />
-                    {state.email ?? (
-                      <span className="italic text-muted-foreground">{t('contact.none')}</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('contact.email.label')}</p>
-                </div>
-                {editing !== 'email' && (
-                  <Button variant="outline" size="sm" onClick={() => startEdit('email')}>
-                    {t('contact.change')}
-                  </Button>
-                )}
-              </div>
+            <section className="space-y-3">
+              <IdentifierRow
+                icon={AtSign}
+                label={t('contact.email.label')}
+                value={state.email}
+                emptyLabel={t('contact.none')}
+                // While a change is pending its panel offers "use a different
+                // address" instead — a second "Change" here would read as a
+                // third, unrelated action.
+                action={!state.pendingEmail && editing !== 'email' && changeButton('email')}
+              />
 
-              {state.pendingEmail && (
-                <PendingRow
+              {state.pendingEmail && editing !== 'email' && (
+                <PendingChangePanel
+                  newLabel={t('contact.email.newLabel')}
                   target={state.pendingEmail.target}
                   expiresAt={state.pendingEmail.expiresAt}
                   hint={t('contact.email.pendingHint')}
-                  busy={busy === 'email'}
+                  locked={locked}
+                  cancelBusy={busy === 'email'}
                   onCancel={() => void cancel('email')}
-                  cancelLabel={t('contact.cancelChange')}
+                  // Beside "waiting for the link" — the same place the phone
+                  // panel offers "send a new code".
+                  hintAction={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void resendEmailLink()}
+                      disabled={locked}
+                      className="-ml-3 gap-1.5"
+                    >
+                      {busy === 'resend' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RotateCw className="h-3.5 w-3.5" />
+                      )}
+                      {t('contact.email.resendLink')}
+                    </Button>
+                  }
+                  actions={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startEdit('email')}
+                      disabled={locked}
+                      className={panelActionClass}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {t('contact.pending.useAnotherEmail')}
+                    </Button>
+                  }
                 />
               )}
 
               {editing === 'email' && (
-                <div className="space-y-2 rounded-lg border p-3">
+                <EditPanel
+                  onCancel={() => setEditing(null)}
+                  onSubmit={() => void request('email')}
+                  canSubmit={!!draft.trim() && !locked}
+                  busy={busy === 'email'}
+                  submitLabel={t('contact.email.submit')}
+                >
                   <FieldLabel htmlFor="contact-email" hint={t('contact.email.hint')}>
                     {t('contact.email.newLabel')}
                   </FieldLabel>
                   <Input
                     id="contact-email"
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder={t('contact.email.placeholder')}
+                    className="h-11 bg-background sm:h-10"
                     autoFocus
                   />
                   <FieldHint>{t('contact.email.hint')}</FieldHint>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
-                      {t('common:actions.cancel')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => void request('email')}
-                      disabled={!draft.trim() || busy === 'email'}
-                      className="gap-1.5"
-                    >
-                      {busy === 'email' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      {t('contact.email.submit')}
-                    </Button>
-                  </div>
-                </div>
+                </EditPanel>
               )}
-            </div>
+            </section>
 
             {/* ── Phone ────────────────────────────────────────────────────── */}
-            <div className="space-y-2 border-t pt-4 md:pt-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      {state.phone ?? (
-                        <span className="italic text-muted-foreground">{t('contact.none')}</span>
-                      )}
-                    </span>
-                    {/* Only worth saying once it can actually be true. Until the
-                        OTP path existed an agency could never reach it. */}
-                    {phoneVerified === true && !state.pendingPhone && (
-                      <span className="inline-flex items-center gap-1 text-xs font-normal text-emerald-600 dark:text-emerald-500">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {t('contact.phone.verify.verified')}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('contact.phone.label')}</p>
-                </div>
-                {editing !== 'phone' && (
-                  <Button variant="outline" size="sm" onClick={() => startEdit('phone')}>
-                    {t('contact.change')}
-                  </Button>
-                )}
-              </div>
+            <section className="space-y-3 border-t pt-5">
+              <IdentifierRow
+                icon={Phone}
+                label={t('contact.phone.label')}
+                value={state.phone}
+                emptyLabel={t('contact.none')}
+                badge={
+                  // Only worth saying once it can actually be true. Until the
+                  // OTP path existed an agency could never reach it. A `null`
+                  // (failed profile read) claims neither.
+                  state.pendingPhone || !state.phone ? null : phoneVerified === true ? (
+                    <Badge variant="success">
+                      <CheckCircle2 />
+                      {t('contact.phone.verify.verified')}
+                    </Badge>
+                  ) : phoneVerified === false ? (
+                    <Badge className="border-transparent bg-warning/15 text-warning">
+                      {t('contact.phone.verify.notVerified')}
+                    </Badge>
+                  ) : null
+                }
+                action={!state.pendingPhone && editing !== 'phone' && changeButton('phone')}
+              />
 
-              {state.pendingPhone && (
-                <PendingRow
+              {state.pendingPhone && editing !== 'phone' && (
+                <PendingChangePanel
+                  newLabel={t('contact.phone.newLabel')}
                   target={state.pendingPhone.target}
                   expiresAt={state.pendingPhone.expiresAt}
-                  hint={t('contact.phone.pendingHint')}
-                  busy={busy === 'phone'}
+                  // The code step below says the same thing, and says how.
+                  hint={verifyInPanel && showVerify ? undefined : t('contact.phone.pendingHint')}
+                  locked={locked}
+                  cancelBusy={busy === 'phone'}
                   onCancel={() => void cancel('phone')}
-                  cancelLabel={t('contact.cancelChange')}
-                />
+                  actions={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startEdit('phone')}
+                      disabled={locked}
+                      className={panelActionClass}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {t('contact.pending.useAnotherPhone')}
+                    </Button>
+                  }
+                >
+                  {/* The WhatsApp code is the only proof a dashboard uses. Which
+                      number it proves is the server's choice, and
+                      `completesChange` is what it chose. */}
+                  {verifyInPanel && showVerify && (
+                    <div className="space-y-3">
+                      {verifyHeading}
+                      {verifyBody}
+                    </div>
+                  )}
+                </PendingChangePanel>
               )}
 
-              {/* ── Proving the number ─────────────────────────────────────
-                  The WhatsApp code is the only proof a dashboard uses, for a
-                  change and for the current number alike. Which number this
-                  proves is the server's choice, and `completesChange` is what
-                  it chose. */}
-              {showVerify && (
-                <div className="space-y-3 rounded-lg border p-3">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-sm font-medium">
-                      <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                      {completesChange
-                        ? t('contact.phone.verify.titleChange')
-                        : t('contact.phone.verify.titleCurrent')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {completesChange
-                        ? t('contact.phone.verify.hintChange')
-                        : t('contact.phone.verify.hintCurrent')}
-                    </p>
-                    {/* Since 2026-09-15 this code is not merely a contact-detail
-                        formality: proving the phone is what promotes an agency
-                        from `pending_verification` to `active`, and it is the
-                        only thing that does. Worth saying on the one screen that
-                        can do it — someone sent here by the activation banner
-                        arrives wanting to know they are in the right place.
-
-                        ⚠ Only for `pending_verification`. An `inactive` or
-                        `suspended` account is not promoted by a proved phone,
-                        so promising activation there would be a lie — which is
-                        exactly the distinction `awaitingActivation` carries. */}
-                    {awaitingActivation && (
-                      <p className="mt-1 text-xs font-medium text-gold-700 dark:text-gold-400">
-                        {t('contact.phone.verify.activatesAccount')}
-                      </p>
-                    )}
-                  </div>
-
-                  {codeLive ? (
-                    <div className="space-y-2">
-                      <form
-                        className="flex items-center gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          if (canConfirmCode) void confirmCode();
-                        }}
-                      >
-                        {/* Digits only — the code is six of them, generated one
-                            `randomInt(0, 10)` at a time — so stripping the rest
-                            makes a pasted "123 456" work instead of failing. */}
-                        <Input
-                          value={code}
-                          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          maxLength={CODE_LENGTH}
-                          placeholder={t('contact.phone.verify.codePlaceholder')}
-                          aria-label={t('contact.phone.verify.codeLabel')}
-                          // No autofocus: a code left live from another device
-                          // would yank the page to this card on every load of
-                          // the Security tab.
-                          className="font-mono tracking-widest"
-                        />
-                        <Button type="submit" size="sm" disabled={!canConfirmCode} className="gap-1.5">
-                          {busy === 'code' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                          {t('contact.phone.verify.submit')}
-                        </Button>
-                      </form>
-
-                      <p className="text-xs text-muted-foreground">
-                        {verifyTarget && t('contact.phone.verify.sentTo', { phone: verifyTarget })}
-                        {codeExpiresAt &&
-                          ` ${t('contact.expires', { when: formatDateTime(codeExpiresAt) })}`}
-                        {/* Reported because it is the first thing support asks
-                            when a code did not arrive. */}
-                        {sent?.delivery === 'template' &&
-                          ` ${t('contact.phone.verify.deliveryTemplate')}`}
-                      </p>
-
-                      {attemptsLeft !== null && (
-                        <p className="text-xs text-warning">
-                          {t('contact.phone.verify.attemptsLeft', { count: attemptsLeft })}
-                        </p>
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void sendCode()}
-                        disabled={busy === 'send' || cooldownLeft > 0}
-                        className="gap-1.5"
-                      >
-                        {busy === 'send' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        {cooldownLeft > 0
-                          ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
-                          : t('contact.phone.verify.resend')}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => void sendCode()}
-                      disabled={busy === 'send' || cooldownLeft > 0}
-                      className="gap-1.5"
-                    >
-                      {busy === 'send' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      {cooldownLeft > 0
-                        ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
-                        : deliveryFailures > 0
-                          ? t('common:actions.retry')
-                          : t('contact.phone.verify.send')}
-                    </Button>
-                  )}
-
-                  {codeError && <p className="text-xs text-destructive">{codeError}</p>}
-
-                  {/* WhatsApp refused every route — free text and the approved
-                      template. A temporary failure: the Resend button above is
-                      the primary action, support the secondary once it has
-                      happened twice. ⛔ Never "message our bot first": the
-                      backend has already done everything that could help. */}
-                  {deliveryFailures > 0 && (
-                    <div
-                      role="alert"
-                      className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-                    >
-                      <p className="flex items-start gap-1.5">
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                        {t('contact.phone.verify.deliveryFailed')}
-                      </p>
-                      {deliveryFailures > 1 && (
-                        <Link
-                          to="/dashboard/tickets"
-                          state={{ create: true }}
-                          className="inline-block font-medium underline"
-                        >
-                          {t('contact.phone.verify.contactSupport')}
-                        </Link>
-                      )}
-                    </div>
-                  )}
+              {/* Proving the number already on the account — no change involved,
+                  so nothing to cancel. */}
+              {showVerify && !verifyInPanel && (
+                <div className="space-y-3 rounded-xl border bg-muted/30 p-3 sm:p-4">
+                  {verifyHeading}
+                  {verifyBody}
                 </div>
               )}
 
               {editing === 'phone' && (
-                <div className="space-y-2 rounded-lg border p-3">
+                <EditPanel
+                  onCancel={() => setEditing(null)}
+                  onSubmit={() => void request('phone')}
+                  canSubmit={!!draft.trim() && !locked}
+                  busy={busy === 'phone'}
+                  submitLabel={t('contact.phone.submit')}
+                >
                   <FieldLabel htmlFor="contact-phone" hint={t('contact.phone.hint')}>
                     {t('contact.phone.newLabel')}
                   </FieldLabel>
@@ -673,25 +784,15 @@ export function ContactChangeCard() {
                     defaultCountry={defaultCountry}
                   />
                   <FieldHint>{t('contact.phone.hint')}</FieldHint>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
-                      {t('common:actions.cancel')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => void request('phone')}
-                      disabled={!draft.trim() || busy === 'phone'}
-                      className="gap-1.5"
-                    >
-                      {busy === 'phone' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      {t('contact.phone.submit')}
-                    </Button>
-                  </div>
-                </div>
+                </EditPanel>
               )}
-            </div>
+            </section>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
 
             {/* Said out loud because a security screen implies the opposite —
                 inline from `md` up, and in the heading's ⓘ on a phone. */}
@@ -703,43 +804,161 @@ export function ContactChangeCard() {
   );
 }
 
-/** What is waiting on confirmation, and the one control that abandons it. */
-function PendingRow({
+/**
+ * Footer buttons of a panel: full-width, thumb-sized and stacked on a phone,
+ * inline and compact from `sm` up.
+ */
+const panelActionClass = 'h-10 w-full gap-1.5 sm:h-8 sm:w-auto';
+
+/** One sign-in identifier: what it is, its value, its state, and how to change it. */
+function IdentifierRow({
+  icon: Icon,
+  label,
+  value,
+  emptyLabel,
+  badge,
+  action,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string | null | undefined;
+  emptyLabel: string;
+  badge?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+        <Icon className="h-[18px] w-[18px]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-sm font-medium [overflow-wrap:anywhere]">
+            {value ?? <span className="font-normal italic text-muted-foreground">{emptyLabel}</span>}
+          </p>
+          {badge}
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * A change waiting on proof: the new value, when it lapses, whatever finishes
+ * it (`children`), and — always visible, always labelled — the way out.
+ */
+function PendingChangePanel({
+  newLabel,
   target,
   expiresAt,
   hint,
-  busy,
+  hintAction,
+  actions,
+  locked,
+  cancelBusy,
   onCancel,
-  cancelLabel,
+  children,
 }: {
+  newLabel: string;
   target: string;
   expiresAt: string;
-  hint: string;
-  busy: boolean;
+  hint?: string;
+  /** A small follow-up to `hint` ("resend the link"), drawn right under it. */
+  hintAction?: ReactNode;
+  actions?: ReactNode;
+  locked: boolean;
+  cancelBusy: boolean;
   onCancel: () => void;
-  cancelLabel: string;
+  children?: ReactNode;
 }) {
   const { t } = useTranslation('account');
   return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border border-dashed p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{target}</p>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {t('contact.expires', { when: formatDateTime(expiresAt) })}
-        </p>
+    <div className="overflow-hidden rounded-xl border border-warning/30 bg-warning/[0.06]">
+      <div className="space-y-1 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Badge className="border-transparent bg-warning/15 text-warning">
+            <Clock3 />
+            {t('contact.pending.title')}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {t('contact.expires', { when: formatDateTime(expiresAt) })}
+          </span>
+        </div>
+        <p className="pt-1.5 text-xs text-muted-foreground">{newLabel}</p>
+        <p className="text-base font-semibold [overflow-wrap:anywhere]">{target}</p>
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        {hintAction && <div className="pt-1">{hintAction}</div>}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 flex-shrink-0"
-        onClick={onCancel}
-        disabled={busy}
-        aria-label={cancelLabel}
-        title={cancelLabel}
-      >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-      </Button>
+
+      {children && <div className="border-t border-warning/20 p-3 sm:p-4">{children}</div>}
+
+      <div className="flex flex-col gap-2 border-t border-warning/20 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-4">
+        {actions}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={locked}
+          className={cn(
+            panelActionClass,
+            'border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive sm:ml-auto',
+          )}
+        >
+          {cancelBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+          {t('contact.cancelChange')}
+        </Button>
+      </div>
     </div>
+  );
+}
+
+/** The inline "type the new value" form. A real `<form>`, so Enter submits. */
+function EditPanel({
+  onCancel,
+  onSubmit,
+  canSubmit,
+  busy,
+  submitLabel,
+  children,
+}: {
+  onCancel: () => void;
+  onSubmit: () => void;
+  canSubmit: boolean;
+  busy: boolean;
+  submitLabel: string;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation('common');
+  return (
+    <form
+      className="space-y-3 rounded-xl border bg-muted/30 p-3 sm:p-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (canSubmit) onSubmit();
+      }}
+    >
+      <div className="space-y-2">{children}</div>
+      {/* Primary on top on a phone (thumb reach), on the right from `sm` up. */}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          className="h-11 w-full sm:h-9 sm:w-auto"
+        >
+          {t('actions.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          disabled={!canSubmit}
+          className="h-11 w-full gap-1.5 sm:h-9 sm:w-auto"
+        >
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+          {submitLabel}
+        </Button>
+      </div>
+    </form>
   );
 }

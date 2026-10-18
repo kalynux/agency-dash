@@ -298,6 +298,13 @@ export interface AgencyRoleEntity {
   _id: string;
   user_id: string;
   agency_name: string;
+  /**
+   * The person's name (Account → Profile "Display name"). Half of what
+   * activates the account — see {@link AgencyRoleEntity.status}. `null` when
+   * never set, `''` when cleared; optional because the raw document omits it
+   * when it was never written.
+   */
+  display_name?: string | null;
   logo_url: string | null;
   timezone: string;
   email: string | null;

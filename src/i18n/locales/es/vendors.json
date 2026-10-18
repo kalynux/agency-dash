@@ -1,4 +1,10 @@
 {
+  "vendorStatus": {
+    "notActiveYet": "Aún no activo",
+    "notActiveYetHint": "Este vendedor aún no ha terminado de activar su cuenta. Puedes aprobar la solicitud de todos modos.",
+    "inactive": "Inactivo",
+    "inactiveHint": "Esta cuenta de vendedor está inactiva."
+  },
   "codTerms": {
     "title": "Pago contra entrega",
     "accepts": "Acepta pago contra entrega",
@@ -81,7 +87,8 @@
   },
   "connections": {
     "endedByClosure": "Finalizada: el vendedor cerró su cuenta",
-    "viewPolicies": "Ver las políticas de {{name}}"
+    "viewPolicies": "Ver las políticas de {{name}}",
+    "termsUnavailable": "Las condiciones de este vendedor no están disponibles en este momento."
   },
   "tabs": {
     "products": {

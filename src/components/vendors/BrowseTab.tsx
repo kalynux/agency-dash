@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { SearchFilterBar } from '@/components/common/SearchFilterBar';
 import { VendorCard, VendorCardSkeleton } from '@/components/vendors/VendorCard';
 import { VendorDetailSheet } from '@/components/vendors/VendorDetailSheet';
+import { VendorAccountStatusBadge } from '@/components/vendors/VendorAccountStatusBadge';
 import { VendorFiltersPanel } from '@/components/vendors/VendorFiltersPanel';
 import { countActiveVendorFilters, INITIAL_VENDOR_FILTERS, type VendorFilters } from '@/components/vendors/vendorFilters';
 import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
@@ -140,7 +141,11 @@ function ConnectionActionSlot({
     const approveKey = `approve:${connection.id}`;
     const rejectKey = `reject:${connection.id}`;
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {/* Rare here — browse lists active vendors only — but a vendor can
+            drop out of `active` after the listing loaded. Information only:
+            Approve stays as it is. */}
+        <VendorAccountStatusBadge status={detail.counterpartyStatus} />
         <Button
           size="sm"
           className={ACTION_BUTTON}

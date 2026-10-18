@@ -6,7 +6,6 @@ import type {
   VendorBrowseItemDto,
   VendorBrowseQueryParams,
   VendorConnectionResponse,
-  ConnectionDto,
 } from '@/types/vendor-connection.types';
 
 function buildQueryString(params: Record<string, unknown>): string {
@@ -72,49 +71,21 @@ export const vendorConnectionsService = {
   },
 };
 
-// ─── Cross-reference helper ─────────────────────────────────────────────────────
-// `ConnectionDto` only carries `vendorId` — never a display name/logo — and there is
-// no "fetch vendors by id" endpoint. To show a connected vendor's details, we cross
-// reference the authoritative connection list against the paginated browse listing.
-
-const DEFAULT_MAX_BROWSE_PAGES = 6; // up to ~600 vendors scanned at the browse endpoint's max page size (100)
-const BROWSE_PAGE_LIMIT = 100;
+// ─── One vendor's terms ─────────────────────────────────────────────────────────
+// Connection rows are named from `counterpartyProfile` (2026-10-18), which
+// replaced a scan of up to 600 browse entries per load. The vendor's policies and
+// COD terms are still only on browse, so the terms sheet fetches its one vendor
+// when it is opened.
 
 /**
- * Resolve display details (name, logo, policies, …) for an arbitrary set of
- * connections by scanning the browse listing for matching vendor ids.
- *
- * Known limitation: if the platform has enough vendors that a target vendor
- * falls outside the bounded scan (`maxBrowsePages`), it is reported in
- * `unresolvedVendorIds` and callers should fall back to an id-only display —
- * there is no backend "fetch vendors by ids" endpoint to close this gap.
+ * Find one vendor's browse entry, for the terms sheet on a connection row: one
+ * search by name, matched on id. `null` when it is not listed — browse lists
+ * `active` vendors only, so a vendor that is not active is never found.
  */
-export async function resolveVendorDisplayForConnections(
-  connections: ConnectionDto[],
-  opts: { maxBrowsePages?: number } = {},
-): Promise<{ resolved: Map<string, VendorBrowseItemDto>; unresolvedVendorIds: string[] }> {
-  const targetIds = new Set(connections.map((c) => c.vendorId));
-  const resolved = new Map<string, VendorBrowseItemDto>();
-
-  if (targetIds.size === 0) {
-    return { resolved, unresolvedVendorIds: [] };
-  }
-
-  const maxBrowsePages = opts.maxBrowsePages ?? DEFAULT_MAX_BROWSE_PAGES;
-  let page = 1;
-  let totalPages = 1;
-
-  while (page <= totalPages && page <= maxBrowsePages && resolved.size < targetIds.size) {
-    const { data, meta } = await vendorConnectionsService.browse({ page, limit: BROWSE_PAGE_LIMIT });
-    totalPages = meta.totalPages;
-    for (const vendor of data) {
-      if (targetIds.has(vendor.id) && !resolved.has(vendor.id)) {
-        resolved.set(vendor.id, vendor);
-      }
-    }
-    page += 1;
-  }
-
-  const unresolvedVendorIds = [...targetIds].filter((id) => !resolved.has(id));
-  return { resolved, unresolvedVendorIds };
+export async function findVendorInBrowse(
+  vendorId: string,
+  name: string,
+): Promise<VendorBrowseItemDto | null> {
+  const { data } = await vendorConnectionsService.browse({ search: name, limit: 100 });
+  return data.find((vendor) => vendor.id === vendorId) ?? null;
 }

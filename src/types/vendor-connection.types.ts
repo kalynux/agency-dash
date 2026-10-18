@@ -1,6 +1,8 @@
 // Vendor Connections — contract-based agency↔vendor delivery relationship.
 // See api-doc/agency/vendor-connections.md.
 
+import type { FileRef } from '@/types/file.types';
+
 export type ConnectionStatus =
   | 'pending'
   | 'active'
@@ -51,12 +53,47 @@ export interface VendorCodTerms {
   maxCashPerAgency: number | null;
 }
 
+/**
+ * The VENDOR's account status, as carried on a connection (2026-10-18). `null`
+ * only when the vendor record no longer exists. See
+ * api-doc/agency/FRONTEND-CHANGELOG-connection-activation.md.
+ */
+export type CounterpartyStatus = 'active' | 'pending_verification' | 'inactive';
+
+/**
+ * The VENDOR's display fields, as carried on a connection (2026-10-18). What
+ * names and draws a connection row — browse lists `active` vendors only, so it
+ * cannot name a `pending_verification` one. See
+ * api-doc/agency/FRONTEND-CHANGELOG-activation-and-counterparty.md.
+ */
+export interface CounterpartyProfile {
+  /** The vendor's Store name; `''` when it has no Store yet. */
+  businessName: string;
+  displayName: string | null;
+  /** The Store logo. Render through `resolveFileUrl`, never `url` directly. */
+  logo: FileRef | null;
+  kycVerified: boolean;
+}
+
 export interface ConnectionDto {
   /**
    * Agency side only (`GET /` and `GET /:id`). Optional — responses older than
    * 2026-10-02, and mutation responses, may omit it.
    */
   vendorCodTerms?: VendorCodTerms | null;
+  /**
+   * The vendor's account status — on every connection response (list, detail
+   * and all five mutations). A badge, never a gate: approving a
+   * `pending_verification` vendor's request is allowed as usual. Optional only
+   * because a backend older than 2026-10-18 does not send it.
+   */
+  counterpartyStatus?: CounterpartyStatus | null;
+  /**
+   * The vendor's name, logo and KYC flag, on the same responses as
+   * `counterpartyStatus`. `null` only when the vendor record is gone; optional
+   * for a backend older than 2026-10-18.
+   */
+  counterpartyProfile?: CounterpartyProfile | null;
   id: string;
   vendorId: string;
   agencyId: string;
@@ -141,7 +178,12 @@ export interface VendorBrowseItemDto {
   id: string;
   businessName: string;
   displayName: string | null;
-  logoUrl: string | null;
+  /**
+   * The Store logo — a file object, not a URL string. Render through
+   * `resolveFileUrl`. (This was typed as a `logoUrl` string the backend never
+   * sent, so browse logos never rendered; fixed 2026-10-18.)
+   */
+  logo: FileRef | null;
   kycVerified: boolean;
   primaryAddress: VendorPrimaryAddress | null;
   policies: VendorPolicySummary | null;

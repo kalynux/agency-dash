@@ -19,6 +19,7 @@ import {
 } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { formatPhoneDisplay, toPhoneCountry } from '@/lib/phone';
 import { normalizeLanguage, type LanguageCode } from '@/i18n/config';
 import type {
@@ -130,6 +131,7 @@ function buildPayload(form: FormState, profile: DeliveryAgencyProfile): UpdateAg
 export function ProfileSettings() {
   const { t } = useTranslation(['account', 'common']);
   const { languages, setLanguage, syncFromProfile } = useLanguage();
+  const { adoptProfile } = useOnboarding();
   const { data: profile, isLoading, error, refetch, setData } = useResource(
     () => agencyProfileService.getProfile().then((r) => r.data),
     [],
@@ -199,13 +201,17 @@ export function ProfileSettings() {
     try {
       const res = await agencyProfileService.updateProfile(buildPayload(form, profile));
       setData(res.data);
+      // Any save can activate the agency (verified phone + name, 2026-10-18),
+      // and the response's `status` already says so. `ActivationNotice` reads
+      // the session, so this is what takes it down.
+      adoptProfile(res.data);
       toast.success(t('profile.saved'));
     } catch (err) {
       setSaveError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
-  }, [profile, form, setData, t]);
+  }, [profile, form, setData, t, adoptProfile]);
 
   if (isLoading && !profile) return <LoadingState label={t('profile.loading')} />;
   if (error && !profile) return <ErrorState error={error} onRetry={refetch} />;

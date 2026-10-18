@@ -10,6 +10,7 @@ import { ResponsiveSheetShell } from '@/components/common/ResponsiveSheetShell';
 import { tx } from '@/i18n/tx';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { resolveFileUrl } from '@/services/files.service';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { InfoHint } from '@/components/common/InfoHint';
 import type {
@@ -132,6 +133,7 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
   const support = p?.supportPolicy ?? null;
   const documents = p?.documents ?? [];
   const cod = vendor.codTerms ?? null;
+  const logoUrl = vendor.logo ? resolveFileUrl(vendor.logo) : null;
   const yes = t('common:values.yes');
   const no = t('common:values.no');
   const notSet = <Muted>{t('detail.notSpecified')}</Muted>;
@@ -174,8 +176,8 @@ export function VendorDetailSheet({ vendor, open, onOpenChange, footerSlot }: Ve
         <SheetHeader className="flex-shrink-0 px-5 pb-3 pe-12 md:pt-5">
           <div className="flex items-start gap-3">
             <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
-              {vendor.logoUrl ? (
-                <img src={vendor.logoUrl} alt={vendor.businessName} className="h-full w-full object-cover" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={vendor.businessName} className="h-full w-full object-cover" />
               ) : (
                 <Store className="h-7 w-7 text-muted-foreground" />
               )}

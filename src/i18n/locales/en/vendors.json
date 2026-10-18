@@ -21,6 +21,12 @@
     "withdrawn": "Withdrawn",
     "terminated": "Terminated"
   },
+  "vendorStatus": {
+    "notActiveYet": "Not active yet",
+    "notActiveYetHint": "This vendor hasn't finished activating its account. You can still approve the request.",
+    "inactive": "Inactive",
+    "inactiveHint": "This vendor account is inactive."
+  },
   "actions": {
     "request": "Request",
     "requestAgain": "Request Again",
@@ -66,7 +72,8 @@
     "empty": "No connections in this category yet.",
     "fallbackName": "Vendor {{suffix}}",
     "endedByClosure": "Ended — the vendor closed its account",
-    "viewPolicies": "View {{name}}'s policies"
+    "viewPolicies": "View {{name}}'s policies",
+    "termsUnavailable": "This vendor's terms aren't available right now."
   },
   "browse": {
     "searchPlaceholder": "Search vendors…",

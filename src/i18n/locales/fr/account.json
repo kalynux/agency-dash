@@ -379,6 +379,11 @@
     "cancelled": "Modification annulée.",
     "expires": "Expire {{when}}",
     "noSignOutNotice": "Modifier votre e-mail ou votre téléphone ne vous déconnecte nulle part. Seul un changement de mot de passe le fait.",
+    "pending": {
+      "title": "Modification en attente",
+      "useAnotherEmail": "Utiliser une autre adresse",
+      "useAnotherPhone": "Utiliser un autre numéro"
+    },
     "email": {
       "label": "E-mail de connexion",
       "newLabel": "Nouvelle adresse e-mail",
@@ -386,7 +391,9 @@
       "hint": "Nous enverrons un lien de confirmation à la nouvelle adresse. Tant que vous ne l'ouvrez pas, vous vous connectez avec l'adresse actuelle.",
       "submit": "Envoyer la confirmation",
       "requested": "Consultez la nouvelle adresse pour le lien de confirmation.",
-      "pendingHint": "En attente de l'ouverture du lien envoyé ici."
+      "pendingHint": "En attente de l'ouverture du lien envoyé ici.",
+      "resendLink": "Renvoyer le lien",
+      "resent": "Un nouveau lien a été envoyé. L'ancien ne fonctionne plus."
     },
     "phone": {
       "label": "Téléphone de connexion",
@@ -396,6 +403,7 @@
       "pendingHint": "En attente de la vérification de ce numéro.",
       "verify": {
         "verified": "Vérifié",
+        "notVerified": "Non vérifié",
         "titleCurrent": "Vérifier ce numéro",
         "titleChange": "Vérifier le nouveau numéro",
         "hintCurrent": "Nous enverrons un code à six chiffres à ce numéro sur WhatsApp.",
@@ -421,9 +429,16 @@
   },
   "activation": {
     "title": "Votre compte n'est pas encore actif",
-    "body": "Vérifiez votre numéro de téléphone pour terminer son activation — nous envoyons un code à six chiffres sur WhatsApp, cela prend une minute. Vous pouvez continuer à utiliser le tableau de bord entre-temps.",
-    "bodyPhoneVerified": "Votre téléphone est vérifié mais le compte n'a pas été activé. Contactez le support si cela ne se règle pas rapidement.",
-    "cta": "Vérifier mon téléphone"
+    "body": "D'ici là, les vendeurs ne trouvent pas votre agence dans leurs recherches, et un vendeur connecté à vous ne peut pas livrer par votre intermédiaire. Vous pouvez continuer à utiliser le tableau de bord entre-temps.",
+    "bodyPhoneVerified": "Votre téléphone est vérifié et votre nom est renseigné, mais le compte n'a pas été activé. Contactez le support si cela ne se règle pas rapidement.",
+    "steps": {
+      "name": "Renseigner un nom affiché",
+      "phone": "Vérifier votre numéro de téléphone (un code à six chiffres sur WhatsApp)"
+    },
+    "stepDone": "fait",
+    "nameCta": "Renseigner mon nom",
+    "cta": "Vérifier mon téléphone",
+    "onboardingBody": "Les vendeurs ne peuvent ni trouver votre agence ni livrer par son intermédiaire tant que votre compte n'est pas actif. Une fois la configuration terminée, vérifiez votre numéro dans Compte → Sécurité."
   },
   "agentContract": {
     "title": "Vous n'avez encore aucun agent sous contrat",

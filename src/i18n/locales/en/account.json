@@ -379,6 +379,11 @@
     "cancelled": "Change cancelled.",
     "expires": "Expires {{when}}",
     "noSignOutNotice": "Changing your email or phone does not sign you out anywhere. Only changing your password does that.",
+    "pending": {
+      "title": "Change pending",
+      "useAnotherEmail": "Use a different address",
+      "useAnotherPhone": "Use a different number"
+    },
     "email": {
       "label": "Sign-in email",
       "newLabel": "New email address",
@@ -386,7 +391,9 @@
       "hint": "We will send a confirmation link to the new address. Until you open it, you still sign in with your current email.",
       "submit": "Send confirmation",
       "requested": "Check the new address for a confirmation link.",
-      "pendingHint": "Waiting for you to open the link we sent here."
+      "pendingHint": "Waiting for you to open the link we sent here.",
+      "resendLink": "Resend the link",
+      "resent": "A new link is on its way. The previous one no longer works."
     },
     "phone": {
       "label": "Sign-in phone",
@@ -396,6 +403,7 @@
       "pendingHint": "Waiting for this number to be verified.",
       "verify": {
         "verified": "Verified",
+        "notVerified": "Not verified",
         "titleCurrent": "Verify this number",
         "titleChange": "Verify the new number",
         "hintCurrent": "We'll send a six-digit code to this number on WhatsApp.",
@@ -421,9 +429,16 @@
   },
   "activation": {
     "title": "Your account isn't active yet",
-    "body": "Verify your phone number to finish activating it — we send a six-digit code on WhatsApp and it takes a minute. You can keep using the dashboard in the meantime.",
-    "bodyPhoneVerified": "Your phone is verified but the account has not been activated. Contact support if this does not clear shortly.",
-    "cta": "Verify my phone"
+    "body": "Until it is, vendors can't find your agency when they search, and a vendor who connects with you can't deliver through you. You can keep using the dashboard in the meantime.",
+    "bodyPhoneVerified": "Your phone is verified and your name is set, but the account has not been activated. Contact support if this does not clear shortly.",
+    "steps": {
+      "name": "Set a display name",
+      "phone": "Verify your phone number (a six-digit code on WhatsApp)"
+    },
+    "stepDone": "done",
+    "nameCta": "Set my name",
+    "cta": "Verify my phone",
+    "onboardingBody": "Vendors can't find your agency or deliver through it until your account is active. Once setup is done, verify your phone number under Account → Security."
   },
   "agentContract": {
     "title": "You don't have an agent under contract yet",

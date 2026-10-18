@@ -9,6 +9,7 @@ import { tx } from '@/i18n/tx';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
 import { LanguagePicker } from '@/components/common/LanguagePicker';
+import { ActivationNotice } from '@/components/common/ActivationNotice';
 import { useOnboarding, stepToRoute } from '@/onboarding/store/onboarding.store';
 import { useKeyboardOpen } from '@/platform/shell/keyboard';
 import type { AgencyOnboardingStep } from '@/types/api';
@@ -202,6 +203,9 @@ export function OnboardingLayout({ children, ctaSlot, stepKey }: OnboardingLayou
                 search's result list — into a little inner scroll box. */}
             <main className="flex-1">
                 <div className="w-full max-w-xl mx-auto px-4 py-4 md:py-10">
+                    {/* Outside the per-step animation: it is about the account,
+                        not the step, so it should not re-enter on every step. */}
+                    <ActivationNotice variant="onboarding" />
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={stepKey}

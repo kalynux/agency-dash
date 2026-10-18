@@ -1,4 +1,10 @@
 {
+  "vendorStatus": {
+    "notActiveYet": "غير مفعّل بعد",
+    "notActiveYetHint": "لم يُكمل هذا البائع تفعيل حسابه بعد. لا يزال بإمكانك قبول الطلب.",
+    "inactive": "غير نشط",
+    "inactiveHint": "حساب هذا البائع غير نشط."
+  },
   "codTerms": {
     "title": "الدفع عند الاستلام",
     "accepts": "يقبل الدفع عند الاستلام",
@@ -87,7 +93,8 @@
   },
   "connections": {
     "endedByClosure": "منتهية — أغلق البائع حسابه",
-    "viewPolicies": "عرض سياسات {{name}}"
+    "viewPolicies": "عرض سياسات {{name}}",
+    "termsUnavailable": "شروط هذا البائع غير متاحة حاليًا."
   },
   "tabs": {
     "products": {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Store } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,9 +12,11 @@ import {
   SearchFilterBar,
 } from '@/components/common/SearchFilterBar';
 import { useVendorConnectionActions } from '@/hooks/useVendorConnectionActions';
-import { vendorConnectionsService, resolveVendorDisplayForConnections } from '@/services/vendor-connections.service';
+import { vendorConnectionsService, findVendorInBrowse } from '@/services/vendor-connections.service';
+import { resolveFileUrl } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ConnectionStatusBadge } from '@/components/vendors/ConnectionStatusBadge';
+import { VendorAccountStatusBadge } from '@/components/vendors/VendorAccountStatusBadge';
 import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { PolicyTermsButton } from '@/components/common/PolicyTermsButton';
@@ -39,6 +42,12 @@ const CONNECTION_ROW = 'connection';
 type StatusChip = 'all' | 'pending' | 'active' | 'paused_reapproval' | 'history';
 
 const HISTORY_STATUSES: ConnectionStatus[] = ['rejected', 'withdrawn', 'terminated'];
+
+/** Up to two initials for the logo tile when the vendor has no logo. */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+}
 
 function matchesChip(status: ConnectionStatus, chip: StatusChip): boolean {
   if (chip === 'all') return true;
@@ -195,11 +204,12 @@ export interface ConnectionsTabProps {
 export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
   const { t } = useTranslation(['vendors', 'common']);
   const [connections, setConnections] = useState<ConnectionDto[]>([]);
-  const [vendorDisplay, setVendorDisplay] = useState<Map<string, VendorBrowseItemDto>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [chip, setChip] = useState<StatusChip>('all');
   const [detailVendor, setDetailVendor] = useState<VendorBrowseItemDto | null>(null);
+  /** The connection whose terms sheet is being fetched — one at a time. */
+  const [termsLoadingFor, setTermsLoadingFor] = useState<string | null>(null);
 
   // `?open=<connectionId>` — where the four `connection.*` notifications land
   // (`vendor-connections/{id}`, api-doc/notifications/deep-links.md). There is
@@ -228,10 +238,16 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
         const next = [...prev];
         // A mutation response may not carry `vendorCodTerms` (only `GET /` and
         // `GET /:id` are documented to) — keep the terms the list already had.
-        next[idx] =
-          dto.vendorCodTerms === undefined
-            ? { ...dto, vendorCodTerms: prev[idx].vendorCodTerms }
-            : dto;
+        // `counterpartyStatus` / `counterpartyProfile` are on every response,
+        // but not from a backend older than 2026-10-18; keep the row's then too.
+        next[idx] = {
+          ...dto,
+          vendorCodTerms: dto.vendorCodTerms === undefined ? prev[idx].vendorCodTerms : dto.vendorCodTerms,
+          counterpartyStatus:
+            dto.counterpartyStatus === undefined ? prev[idx].counterpartyStatus : dto.counterpartyStatus,
+          counterpartyProfile:
+            dto.counterpartyProfile === undefined ? prev[idx].counterpartyProfile : dto.counterpartyProfile,
+        };
         return next;
       });
       onConnectionChange?.();
@@ -253,8 +269,6 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
         page += 1;
       }
       setConnections(all);
-      const { resolved } = await resolveVendorDisplayForConnections(all);
-      setVendorDisplay(resolved);
     } catch (err) {
       setLoadError(getApiErrorMessage(err));
     } finally {
@@ -268,14 +282,35 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
 
   usePageRefresh(load, isLoading);
 
+  /**
+   * The vendor's own name, or `null` when it has none to show. `businessName`
+   * is the Store name and `''` before a Store exists, hence `||`, not `??`.
+   */
+  const realNameFor = (connection: ConnectionDto): string | null => {
+    const profile = connection.counterpartyProfile;
+    return profile?.businessName || profile?.displayName || null;
+  };
+
   /** The name shown on a row — also what the search box matches against. */
-  const nameFor = (connection: ConnectionDto): string => {
-    const vendor = vendorDisplay.get(connection.vendorId);
-    return (
-      vendor?.displayName ??
-      vendor?.businessName ??
-      t('connections.fallbackName', { suffix: connection.vendorId.slice(-6) })
-    );
+  const nameFor = (connection: ConnectionDto): string =>
+    realNameFor(connection) ?? t('connections.fallbackName', { suffix: connection.vendorId.slice(-6) });
+
+  /**
+   * Open the vendor's terms sheet. Policies and COD terms are only on browse,
+   * so this fetches the one vendor now rather than every vendor on load.
+   */
+  const openTerms = async (connection: ConnectionDto, name: string) => {
+    if (termsLoadingFor) return;
+    setTermsLoadingFor(connection.id);
+    try {
+      const vendor = await findVendorInBrowse(connection.vendorId, name);
+      if (vendor) setDetailVendor(vendor);
+      else toast.error(t('connections.termsUnavailable'));
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setTermsLoadingFor(null);
+    }
   };
 
   const query = search.trim().toLowerCase();
@@ -320,7 +355,17 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
       ) : (
         <div className="-mx-4 divide-y border-y sm:-mx-6 md:mx-0 md:space-y-2 md:divide-y-0 md:border-y-0">
           {filtered.map((connection) => {
-            const vendor = vendorDisplay.get(connection.vendorId);
+            const profile = connection.counterpartyProfile;
+            const realName = realNameFor(connection);
+            const logoUrl = profile?.logo ? resolveFileUrl(profile.logo) : null;
+            // Browse lists `active` vendors only, so the terms of one that is
+            // not active cannot be fetched — no button rather than one that
+            // always fails. A backend that does not send the status yet: try.
+            const termsReachable =
+              realName !== null &&
+              connection.counterpartyStatus !== 'pending_verification' &&
+              connection.counterpartyStatus !== 'inactive' &&
+              connection.counterpartyStatus !== null;
             // Approve + Reject beside the name do not fit a 360px row; they
             // take a line of their own below it on a phone, split evenly.
             const twoActions =
@@ -336,8 +381,12 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {vendor?.logoUrl ? (
-                      <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : realName ? (
+                      <span aria-hidden className="text-xs font-semibold text-muted-foreground">
+                        {initialsOf(realName)}
+                      </span>
                     ) : (
                       <Store className="w-4 h-4 text-muted-foreground" />
                     )}
@@ -345,9 +394,14 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1 min-w-0">
                       <p className="text-sm font-medium truncate min-w-0">{nameFor(connection)}</p>
-                      <VerifiedBadge verified={vendor?.kycVerified} />
+                      <VerifiedBadge verified={profile?.kycVerified} />
                     </div>
-                    <ConnectionStatusBadge status={connection.status} className="text-[10px] mt-0.5" />
+                    {/* The connection's state, then the vendor's own account
+                        state. Approve stays available either way. */}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      <ConnectionStatusBadge status={connection.status} className="text-[10px]" />
+                      <VendorAccountStatusBadge status={connection.counterpartyStatus} className="text-[10px]" />
+                    </div>
                     {endedByVendorClosure(connection) ? (
                       <p className="mt-1 text-xs text-muted-foreground">{t('connections.endedByClosure')}</p>
                     ) : (
@@ -355,14 +409,12 @@ export function ConnectionsTab({ onConnectionChange }: ConnectionsTabProps) {
                     )}
                   </div>
                   {/* The same terms sheet as Browse — what was agreed to by
-                      connecting stays one tap away after connecting. Only when
-                      the vendor resolved: without its DTO there is nothing to
-                      show. */}
-                  {vendor && (
+                      connecting stays one tap away after connecting. */}
+                  {termsReachable && (
                     <PolicyTermsButton
-                      label={t('connections.viewPolicies', { name: nameFor(connection) })}
-                      onClick={() => setDetailVendor(vendor)}
-                      className="ms-auto"
+                      label={t('connections.viewPolicies', { name: realName })}
+                      onClick={() => void openTerms(connection, realName)}
+                      className={cn('ms-auto', termsLoadingFor === connection.id && 'animate-pulse')}
                     />
                   )}
                 </div>

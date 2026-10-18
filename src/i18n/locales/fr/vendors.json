@@ -21,6 +21,12 @@
     "withdrawn": "Retirée",
     "terminated": "Résiliée"
   },
+  "vendorStatus": {
+    "notActiveYet": "Pas encore actif",
+    "notActiveYetHint": "Ce vendeur n'a pas fini d'activer son compte. Vous pouvez quand même approuver la demande.",
+    "inactive": "Inactif",
+    "inactiveHint": "Ce compte vendeur est inactif."
+  },
   "actions": {
     "request": "Demander",
     "requestAgain": "Redemander",
@@ -66,7 +72,8 @@
     "empty": "Aucune connexion dans cette catégorie pour l'instant.",
     "fallbackName": "Vendeur {{suffix}}",
     "endedByClosure": "Terminée — le vendeur a fermé son compte",
-    "viewPolicies": "Voir les politiques de {{name}}"
+    "viewPolicies": "Voir les politiques de {{name}}",
+    "termsUnavailable": "Les conditions de ce vendeur ne sont pas disponibles pour le moment."
   },
   "browse": {
     "searchPlaceholder": "Rechercher des vendeurs…",

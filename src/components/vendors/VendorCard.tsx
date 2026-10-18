@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { VendorCodTerms } from '@/components/vendors/VendorCodTerms';
 import { cn } from '@/lib/utils';
+import { resolveFileUrl } from '@/services/files.service';
 import type { VendorBrowseItemDto } from '@/types/vendor-connection.types';
 
 export interface VendorCardProps {
@@ -19,6 +20,7 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
   const { t } = useTranslation('vendors');
   const addr = vendor.primaryAddress;
   const p = vendor.policies;
+  const logoUrl = vendor.logo ? resolveFileUrl(vendor.logo) : null;
 
   return (
     <div className="rounded-xl border-2 border-border bg-card overflow-hidden transition-all duration-200">
@@ -32,8 +34,8 @@ export function VendorCard({ vendor, onInfo, rightSlot }: VendorCardProps) {
         <div className="flex-1 p-4 min-w-0 max-md:basis-full">
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {vendor.logoUrl ? (
-                <img src={vendor.logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={vendor.businessName} className="w-full h-full object-cover" />
               ) : (
                 <Store className="w-5 h-5 text-muted-foreground" />
               )}

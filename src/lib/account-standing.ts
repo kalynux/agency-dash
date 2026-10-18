@@ -55,8 +55,17 @@ export interface AccountStanding {
    * administrator's decision and the self-service copy would be a lie.
    */
   awaitingActivation: boolean;
-  /** The one thing standing between `pending_verification` and `active`. */
+  /**
+   * Half of what stands between `pending_verification` and `active`. The
+   * promotion runs on the call that proves the phone, and (since 2026-10-18)
+   * on every `PATCH /api/agency/profile`.
+   */
   phoneVerified: boolean;
+  /**
+   * The other half: a non-blank `display_name`. Almost always set — registration
+   * writes it — so `phoneVerified` is the usual remedy.
+   */
+  nameSet: boolean;
   /**
    * Has an administrator vetted this business? The **only** honest source for a
    * trust badge, a verified marker, or the copy explaining a payout cap.
@@ -98,6 +107,9 @@ export function readAccountStanding(
     activated: status === 'active',
     awaitingActivation: status === 'pending_verification',
     phoneVerified: entity?.phone_verified === true,
+    // Blank counts as unset, the same test as the backend's
+    // `meetsActivationFundamentals`.
+    nameSet: typeof entity?.display_name === 'string' && entity.display_name.trim() !== '',
     kycVerified,
     kycVerdict: kycVerified ? 'verified' : (kyc?.status ?? 'pending'),
     kycRejectionReason: kyc?.rejection_reason ?? null,

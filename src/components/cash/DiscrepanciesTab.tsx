@@ -335,7 +335,7 @@ export function DiscrepanciesTab() {
               className="h-10 w-full min-w-0"
             />
           </CashFormField>
-          <CashFormField label={t('discrepancies.amountPlaceholder')} htmlFor="discrepancy-amount" optional>
+          <CashFormField label={t('discrepancies.amountPlaceholder')} htmlFor="discrepancy-amount">
             <Input
               id="discrepancy-amount"
               type="number"
@@ -345,7 +345,7 @@ export function DiscrepanciesTab() {
               onChange={(e) => setAmount(e.target.value)}
             />
           </CashFormField>
-          <CashFormField label={t('discrepancies.note')} htmlFor="discrepancy-note" optional>
+          <CashFormField label={t('discrepancies.note')} htmlFor="discrepancy-note">
             <Textarea
               id="discrepancy-note"
               rows={3}

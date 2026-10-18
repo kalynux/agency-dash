@@ -1,4 +1,10 @@
 {
+  "vendorStatus": {
+    "notActiveYet": "Ainda não ativo",
+    "notActiveYetHint": "Este vendedor ainda não terminou de ativar a conta. Pode aprovar o pedido mesmo assim.",
+    "inactive": "Inativo",
+    "inactiveHint": "Esta conta de vendedor está inativa."
+  },
   "codTerms": {
     "title": "Pagamento na entrega",
     "accepts": "Aceita pagamento na entrega",
@@ -81,7 +87,8 @@
   },
   "connections": {
     "endedByClosure": "Terminada — o vendedor encerrou a conta",
-    "viewPolicies": "Ver as políticas de {{name}}"
+    "viewPolicies": "Ver as políticas de {{name}}",
+    "termsUnavailable": "Os termos deste vendedor não estão disponíveis de momento."
   },
   "tabs": {
     "products": {
