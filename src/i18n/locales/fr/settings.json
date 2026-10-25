@@ -216,14 +216,18 @@
       "handlingFee": "Frais de traitement",
       "windowDays": "Délai de retour",
       "notes": "Notes sur les retours",
-      "notesPlaceholder": "ex. seuls les articles non ouverts sont acceptés…"
+      "notesPlaceholder": "ex. seuls les articles non ouverts sont acceptés…",
+      "earningsHoldNote": "Ces conditions déterminent aussi la durée de retenue de vos revenus après la livraison (3 jours au plus)."
     },
     "damage": {
       "title": "Politique en cas de dommage",
       "claimDeadline": "Délai de réclamation",
       "maxRefund": "Remboursement maximum par article",
       "notes": "Notes sur les dommages",
-      "notesPlaceholder": "ex. emballage d'origine exigé…"
+      "notesPlaceholder": "ex. emballage d'origine exigé…",
+      "earningsHoldNote": "Ces conditions déterminent aussi la durée de retenue de vos revenus après la livraison (3 jours au plus).",
+      "claimsNote": "Pendant ce délai, un colis endommagé lors de la livraison peut vous être facturé, jusqu'à votre remboursement maximum par article plus vos frais d'enquête.",
+      "investigationFee": "Vos frais d'enquête, fixés par Wi-Mall : {{amount}}."
     },
     "documents": {
       "title": "Documents justificatifs",

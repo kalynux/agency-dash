@@ -353,7 +353,7 @@ function LatestPayoutRow({ payout }: { payout: EarningsPayoutRequest }) {
  * middle — the `<1>` placeholder lets a translator move it, which a split
  * string would not.
  *
- * The second line is why a `pending` balance can sit still past the 3 days: a
+ * The second line is why a `pending` balance can sit still past its hold: a
  * card dispute, a seller cancelling a paid order, or an investigation pauses
  * the entry, and the clock resumes where it stopped. Spans, not paragraphs —
  * desktop renders this inside a `<p>`.

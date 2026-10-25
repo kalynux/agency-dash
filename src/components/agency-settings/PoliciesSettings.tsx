@@ -25,6 +25,7 @@ import type { AgencyPolicies } from '@/types/api';
 import { isQuotaBlockedFile, resolveFileUrl } from '@/services/files.service';
 import { getApiErrorMessage } from '@/lib/errors';
 import { isSameFormValue } from '@/lib/form-diff';
+import { formatCurrency } from '@/lib/format';
 import { tx, txStatic } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
 
@@ -234,6 +235,9 @@ export function PoliciesSettings() {
   // Only for the note beside the COD switch. A failed or pre-deploy read leaves
   // it `false`, i.e. the form exactly as it was.
   const codRestricted = useCodLimit().limit?.codRestricted === true;
+  // Admin-set, never sent back — shown only because the damage note names it
+  // and this is the one place an agency could learn what it is.
+  const investigationFee = roleEntity?.policies?.damage?.investigation_fee;
   const [apiError, setApiError] = useState<string | null>(null);
   // Rebuilt on a language switch so validation messages follow the UI.
   const schema = useMemo(() => buildPoliciesSchema(t), [t]);
@@ -569,6 +573,10 @@ export function PoliciesSettings() {
                 />
               )} />
               {re?.payer && <p className="text-xs text-red-500">{re.payer.message}</p>}
+              {/* Visible at every width, not behind the ⓘ: since 2026-10-22 this
+                  choice moves real money (an agency that pays returns is held
+                  3 days), and the label gives no hint of it. */}
+              <p className="text-xs text-muted-foreground">{t('policies.returns.earningsHoldNote')}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -598,6 +606,16 @@ export function PoliciesSettings() {
                 <FieldLabel name="damage.max_refund_per_item">{t('policies.damage.maxRefund')}</FieldLabel>
                 <MoneyInput {...register('damage.max_refund_per_item')} />
               </div>
+            </div>
+            {/* The deadline sets both how long earnings are held and the window
+                in which a refund or a damage claim can reach the agency; the
+                max refund caps that claim. See api-doc/agency/earnings.md. */}
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>{t('policies.damage.earningsHoldNote')}</p>
+              <p>{t('policies.damage.claimsNote')}</p>
+              {investigationFee !== undefined && (
+                <p>{t('policies.damage.investigationFee', { amount: formatCurrency(investigationFee) })}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <FieldLabel name="damage.notes">{t('policies.damage.notes')}</FieldLabel>

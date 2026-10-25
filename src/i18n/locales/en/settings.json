@@ -215,14 +215,18 @@
       "handlingFee": "Handling fee",
       "windowDays": "Return window",
       "notes": "Returns notes",
-      "notesPlaceholder": "E.g. only unopened items accepted..."
+      "notesPlaceholder": "E.g. only unopened items accepted...",
+      "earningsHoldNote": "These terms also decide how long your earnings are held after delivery (up to 3 days)."
     },
     "damage": {
       "title": "Damage Policy",
       "claimDeadline": "Claim deadline",
       "maxRefund": "Max refund per item",
       "notes": "Damage notes",
-      "notesPlaceholder": "E.g. original packaging required..."
+      "notesPlaceholder": "E.g. original packaging required...",
+      "earningsHoldNote": "These terms also decide how long your earnings are held after delivery (up to 3 days).",
+      "claimsNote": "Inside this deadline you can be charged for a parcel damaged in delivery, up to your max refund per item plus your investigation fee.",
+      "investigationFee": "Your investigation fee, set by Wi-Mall: {{amount}}."
     },
     "documents": {
       "title": "Supporting Documents",

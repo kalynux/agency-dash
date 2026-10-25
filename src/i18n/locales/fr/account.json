@@ -314,21 +314,21 @@
   },
   "earnings": {
     "title": "Revenus",
-    "description": "Votre solde de frais de livraison — retenu 3 jours après la livraison de chaque commande, puis retirable",
+    "description": "Votre solde de frais de livraison — retenu 3 jours au plus après chaque livraison, selon vos propres conditions, puis retirable",
     "descriptionShort": "Votre solde de frais de livraison",
     "aboutLabel": "À propos des revenus",
     "loading": "Chargement des revenus…",
     "noData": "Aucune donnée disponible.",
     "refresh": "Actualiser",
-    "howItWorksLead": "Votre solde de frais de livraison — retenu 3 jours après la livraison de chaque commande, puis retirable.",
-    "howItWorks": "Vous gagnez des frais de livraison lorsque le livreur remet l'expédition — pas au moment où le client paie — et une écriture est créée par expédition. Ce qui arrive ici, ce sont les frais <strong>déduction faite de la part contractuelle du livreur</strong>, que la plateforme lui verse directement. Le montant devient disponible 3 jours après la livraison de la commande, c'est-à-dire une fois son dernier colis remis. Pour le paiement à la livraison, le code du client doit avoir été saisi, et les espèces doivent aussi être parvenues à Wi-Mall. Une expédition retournée vous rapporte vos frais de retour à l'expéditeur.",
-    "paused": "Des revenus en attente peuvent être suspendus : pendant la contestation d'un paiement par carte, lorsque le vendeur annule une commande payée, ou pendant une vérification par notre équipe. Les 3 jours reprennent là où ils s'étaient arrêtés dès la levée de la suspension.",
+    "howItWorksLead": "Votre solde de frais de livraison — retenu 3 jours au plus après chaque livraison, selon vos propres conditions, puis retirable.",
+    "howItWorks": "Vous gagnez des frais de livraison lorsque le livreur remet l'expédition — pas au moment où le client paie — et une écriture est créée par expédition. Ce qui arrive ici, ce sont les frais <strong>déduction faite de la part contractuelle du livreur</strong>, que la plateforme lui verse directement. Les revenus en attente sont libérés après une retenue de 3 jours au plus, fixée par vos conditions de retours et de réclamations pour dommages. Sans l'une ni l'autre, ils sont libérés la nuit suivant la confirmation de la livraison. Pour le paiement à la livraison, le code du client doit avoir été saisi, et les espèces doivent aussi être parvenues à Wi-Mall. Une expédition retournée vous rapporte vos frais de retour à l'expéditeur.",
+    "paused": "Des revenus en attente peuvent être suspendus : pendant la contestation d'un paiement par carte, lorsque le vendeur annule une commande payée, ou pendant une vérification par notre équipe. La retenue reprend là où elle s'était arrêtée dès la levée de la suspension.",
     "balance": {
       "aboutLabel": "À propos de votre solde « {{label}} »",
       "available": "Disponible",
       "availableHint": "Retirable dès maintenant via une demande de versement",
       "pending": "En attente",
-      "pendingHint": "Moins de 3 jours après la livraison, suspendu, ou espèces COD pas encore parvenues à Wi-Mall",
+      "pendingHint": "Encore en retenue après la livraison (3 jours au plus), suspendu, ou espèces COD pas encore parvenues à Wi-Mall",
       "reserve": "Réserve",
       "reserveHint": "Marge de sécurité COD — immobilisée 30 jours",
       "requested": "Demandé",
@@ -368,6 +368,51 @@
       },
       "noBalance": "Aucun solde disponible à retirer pour l'instant.",
       "belowMinimum": "Le versement minimum est de {{amount}}."
+    },
+    "adjustments": {
+      "title": "Ajustements",
+      "description": "L'argent repris sur vos revenus, et les dettes remboursées ou annulées — chacun avec sa raison.",
+      "short": "Argent repris, avec la raison",
+      "aboutLabel": "À propos des ajustements",
+      "loading": "Chargement des ajustements…",
+      "empty": "Rien n'a été repris sur vos revenus.",
+      "kind": {
+        "refund_clawback": "Repris",
+        "clawback_recovery": "Dette remboursée",
+        "write_off": "Dette annulée",
+        "unknown": "Ajustement"
+      },
+      "owed": "Vous devez maintenant {{amount}}",
+      "owedNote": "Vos prochains revenus servent d'abord à rembourser ce montant."
+    },
+    "claims": {
+      "title": "Réclamations pour dommages",
+      "description": "Les colis que l'équipe Wi-Mall vous a facturés comme endommagés lors de la livraison, pendant votre délai de réclamation. Vos livreurs ne sont jamais facturés.",
+      "short": "Colis endommagés qui vous ont été facturés",
+      "aboutLabel": "À propos des réclamations pour dommages",
+      "loading": "Chargement des réclamations…",
+      "empty": "Aucune réclamation pour dommage ne vous a été facturée.",
+      "order": "Commande {{order}}",
+      "parcel": "Colis {{parcel}}",
+      "unknownRef": "—",
+      "charged": "{{amount}} facturés",
+      "withFee": "{{amount}} + {{fee}} de frais d'enquête"
+    },
+    "reasons": {
+      "order": "la commande {{order}}",
+      "thisOrder": "cette commande",
+      "parcel": "colis {{parcel}}",
+      "thisParcel": "ce colis",
+      "unknownDate": "une date inconnue",
+      "refund_share": "Le client a été remboursé sur {{order}} : {{amount}} de votre part ont été repris.",
+      "dispute_share": "Le client a obtenu gain de cause dans une contestation de paiement par carte sur {{order}} : {{amount}} de votre part ont été repris.",
+      "refund_delivery_fault": "Le client a été remboursé sur {{order}}, {{parcel}}, et la livraison a été jugée fautive. Le problème a été signalé le {{raisedAt}}, dans votre délai de {{windowDays}} jours après la livraison du {{deliveredAt}} : {{amount}} des frais de livraison ont donc été repris.",
+      "damage_claim_one": "Réclamation pour dommage sur {{order}}, {{parcel}} : {{count}} article endommagé lors de la livraison, signalé le {{raisedAt}}, dans votre délai de réclamation de {{windowDays}} jours. Vos conditions prévoient au plus {{maxPerItem}} par article : {{amount}} ont donc été facturés.",
+      "damage_claim_other": "Réclamation pour dommage sur {{order}}, {{parcel}} : {{count}} articles endommagés lors de la livraison, signalés le {{raisedAt}}, dans votre délai de réclamation de {{windowDays}} jours. Vos conditions prévoient au plus {{maxPerItem}} par article : {{amount}} ont donc été facturés.",
+      "investigationFee": "Vos frais d'enquête de {{fee}} ont également été facturés.",
+      "refund_clawback": "{{amount}} ont été repris parce que le client a été remboursé.",
+      "clawback_recovery": "{{amount}} de nouveaux revenus ont servi à rembourser une dette liée à un remboursement.",
+      "write_off": "Wi-Mall a annulé {{amount}} d'une dette liée à un remboursement."
     }
   },
   "contact": {

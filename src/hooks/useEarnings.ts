@@ -4,7 +4,12 @@ import { toast } from 'sonner';
 import { earningsService } from '@/services/earnings.service';
 import { formatCurrency } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
-import type { EarningsBalance, EarningsPayoutRequest } from '@/types/earnings.types';
+import type {
+  EarningsBalance,
+  EarningsListMeta,
+  EarningsListResponse,
+  EarningsPayoutRequest,
+} from '@/types/earnings.types';
 
 // ─── Shared earnings hook ─────────────────────────────────────────────────────
 
@@ -66,4 +71,41 @@ export function useEarnings() {
     requestPayout,
     refetch,
   };
+}
+
+// ─── Paged earnings lists (adjustments, damage claims) ────────────────────────
+
+/**
+ * One page of an earnings list, with the page number held here. `fetchPage`
+ * must be stable (a service method, not an inline arrow).
+ */
+export function usePagedEarningsList<T>(
+  fetchPage: (page: number, limit: number) => Promise<EarningsListResponse<T>>,
+  limit = 10,
+) {
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState<T[]>([]);
+  const [meta, setMeta] = useState<EarningsListMeta | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetchPage(page, limit);
+      setRows(res.data);
+      setMeta(res.meta);
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchPage, page, limit]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { rows, meta, page, setPage, isLoading, loadError, refetch };
 }

@@ -169,11 +169,11 @@
       "failedDeliveryFee": "Fee charged to the vendor when a delivery attempt fails (e.g. customer unavailable or unreachable). Example: 500 XAF per failed attempt. Leave blank to default to 0.",
       "rtoFee": "Return-to-origin fee charged when a package is sent back to the vendor after all delivery attempts fail. Example: 800 XAF per RTO shipment. Leave blank to default to 0.",
       "peakSeasonSurcharge": "Optional extra charge applied during high-demand periods (e.g. December holidays). Example: 200 XAF added to every delivery in that period. Set to 0 if not applicable.",
-      "returnsPayer": "Who bears the cost of shipping and processing a returned order. Vendor = merchants pay; Agency = you absorb it; Customer = buyer pays.",
+      "returnsPayer": "Who bears the cost of shipping and processing a returned order. Vendor = merchants pay; Agency = you absorb it; Customer = buyer pays. These terms also decide how long your earnings are held after delivery (up to 3 days).",
       "handlingFee": "Fee charged to process each return — covers logistics, inspection, and re-shelving. Example: 500 XAF per returned order. Leave blank to default to 0.",
       "returnWindow": "How many days after delivery a return request can be accepted. Example: 7 means customers have 7 days from delivery to initiate a return. Leave blank to default to 0.",
-      "claimDeadline": "Maximum days after delivery to file a damage claim. Example: 3 means damage must be reported within 3 days of receipt. Leave blank to default to 0.",
-      "maxRefundPerItem": "Maximum compensation you will pay per damaged item, regardless of its value. Example: a 10,000 XAF cap means a 50,000 XAF item is refunded up to 10,000 XAF. Leave blank to default to 0.",
+      "claimDeadline": "Maximum days after delivery to file a damage claim. Example: 3 means damage must be reported within 3 days of receipt. Leave blank to default to 0. These terms also decide how long your earnings are held after delivery (up to 3 days). Inside this deadline you can be charged for a parcel damaged in delivery, up to your max refund per item plus your investigation fee.",
+      "maxRefundPerItem": "Maximum compensation you will pay per damaged item, regardless of its value. Example: a 10,000 XAF cap means a 50,000 XAF item is refunded up to 10,000 XAF. Leave blank to default to 0. Inside your claim deadline you can be charged for a parcel damaged in delivery, up to this amount per item plus your investigation fee.",
       "codEnabled": "Whether your agency accepts cash-on-delivery orders at all. When off, customers can't place COD orders whose shipments you would carry. This is separate from the COD handling fee above, which only applies once COD is on.",
       "codMaxAmount": "Optional cap on a single COD order's total. Checkout rejects COD orders above this amount. Leave blank for no cap."
     }

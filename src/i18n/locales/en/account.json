@@ -314,21 +314,21 @@
   },
   "earnings": {
     "title": "Earnings",
-    "description": "Your delivery-fee balance — held for 3 days after each order is delivered, then withdrawable",
+    "description": "Your delivery-fee balance — held for up to 3 days after each delivery, as your own terms set, then withdrawable",
     "descriptionShort": "Your delivery-fee balance",
     "aboutLabel": "About earnings",
     "loading": "Loading earnings…",
     "noData": "No data available.",
     "refresh": "Refresh",
-    "howItWorksLead": "Your delivery-fee balance — held for 3 days after each order is delivered, then withdrawable.",
-    "howItWorks": "You earn a delivery fee when the agent delivers the shipment — not when the customer pays — and one entry is created per shipment. What lands here is the fee <strong>minus the delivering agent's contracted share</strong>, which the platform pays them directly. It becomes available 3 days after the order is delivered, meaning its last parcel has been handed over. For cash on delivery, the customer's code must have been entered, and the cash must also have reached Wi-Mall. A shipment that comes back earns your return-to-origin fee instead.",
-    "paused": "Pending earnings can be paused: during a disputed card payment, when the seller cancels a paid order, or while our team investigates. The 3 days continue where they stopped once the pause is lifted.",
+    "howItWorksLead": "Your delivery-fee balance — held for up to 3 days after each delivery, as your own terms set, then withdrawable.",
+    "howItWorks": "You earn a delivery fee when the agent delivers the shipment — not when the customer pays — and one entry is created per shipment. What lands here is the fee <strong>minus the delivering agent's contracted share</strong>, which the platform pays them directly. Pending earnings are released after a hold of up to 3 days, set by your return and damage-claim terms. With neither, they are released the night after the delivery is confirmed. For cash on delivery, the customer's code must have been entered, and the cash must also have reached Wi-Mall. A shipment that comes back earns your return-to-origin fee instead.",
+    "paused": "Pending earnings can be paused: during a disputed card payment, when the seller cancels a paid order, or while our team investigates. The hold continues where it stopped once the pause is lifted.",
     "balance": {
       "aboutLabel": "About your {{label}} balance",
       "available": "Available",
       "availableHint": "Withdrawable now via a payout request",
       "pending": "Pending",
-      "pendingHint": "Within 3 days of delivery, paused, or COD cash not yet at Wi-Mall",
+      "pendingHint": "Still in its hold after delivery (up to 3 days), paused, or COD cash not yet at Wi-Mall",
       "reserve": "Reserve",
       "reserveHint": "COD security margin — parked 30 days",
       "requested": "Requested",
@@ -368,6 +368,51 @@
       },
       "noBalance": "No available balance to withdraw yet.",
       "belowMinimum": "Minimum payout is {{amount}}."
+    },
+    "adjustments": {
+      "title": "Adjustments",
+      "description": "Money taken back from your earnings, and debts paid off or forgiven — each with the reason.",
+      "short": "Money taken back, with the reason",
+      "aboutLabel": "About adjustments",
+      "loading": "Loading adjustments…",
+      "empty": "Nothing has been taken back from your earnings.",
+      "kind": {
+        "refund_clawback": "Taken back",
+        "clawback_recovery": "Debt repaid",
+        "write_off": "Debt forgiven",
+        "unknown": "Adjustment"
+      },
+      "owed": "You now owe {{amount}}",
+      "owedNote": "Your next earnings pay this first."
+    },
+    "claims": {
+      "title": "Damage claims",
+      "description": "Parcels the Wi-Mall team charged you for as damaged in delivery, inside your damage-claim deadline. Your agents are never charged.",
+      "short": "Damaged parcels charged to you",
+      "aboutLabel": "About damage claims",
+      "loading": "Loading damage claims…",
+      "empty": "No damage claims have been charged to you.",
+      "order": "Order {{order}}",
+      "parcel": "Parcel {{parcel}}",
+      "unknownRef": "—",
+      "charged": "{{amount}} charged",
+      "withFee": "{{amount}} + {{fee}} investigation fee"
+    },
+    "reasons": {
+      "order": "order {{order}}",
+      "thisOrder": "this order",
+      "parcel": "parcel {{parcel}}",
+      "thisParcel": "this parcel",
+      "unknownDate": "an unknown date",
+      "refund_share": "The customer was refunded on {{order}}: {{amount}} of your share was returned.",
+      "dispute_share": "The customer won a card dispute on {{order}}: {{amount}} of your share was taken back.",
+      "refund_delivery_fault": "The customer was refunded on {{order}}, {{parcel}}, and the delivery was found at fault. The problem was raised on {{raisedAt}}, within your {{windowDays}}-day window after delivery on {{deliveredAt}}, so {{amount}} of the delivery fee was returned.",
+      "damage_claim_one": "Damage claim on {{order}}, {{parcel}}: {{count}} item damaged in delivery, reported on {{raisedAt}}, within your {{windowDays}}-day damage-claim window. Your terms allow up to {{maxPerItem}} per item, so {{amount}} was charged.",
+      "damage_claim_other": "Damage claim on {{order}}, {{parcel}}: {{count}} items damaged in delivery, reported on {{raisedAt}}, within your {{windowDays}}-day damage-claim window. Your terms allow up to {{maxPerItem}} per item, so {{amount}} was charged.",
+      "investigationFee": "Your investigation fee of {{fee}} was charged as well.",
+      "refund_clawback": "{{amount}} was taken back because the customer was refunded.",
+      "clawback_recovery": "{{amount}} of new earnings went to pay back a refund debt you owed.",
+      "write_off": "Wi-Mall forgave {{amount}} of a refund debt you owed."
     }
   },
   "contact": {

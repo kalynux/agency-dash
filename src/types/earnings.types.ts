@@ -2,9 +2,10 @@
 
 export interface EarningsBalance {
   /**
-   * Held — within 3 days of the order's last parcel being delivered (since
-   * 2026-10-05; before, 7 days after the order completed), paused, or COD cash
-   * not yet settled. Minor units.
+   * Held — still inside the hold the agency's OWN terms set, counted from its
+   * own parcel's delivery (since 2026-10-22: 3 days if it pays returns, else its
+   * damage-claim deadline capped at 3, else until the delivery is confirmed),
+   * paused, or COD cash not yet settled. Minor units.
    */
   pending: number;
   /** Withdrawable — hold window elapsed and (for COD) cash settled. Minor units. */
@@ -137,4 +138,94 @@ export interface EarningsPayoutRequestResponse {
 export interface EarningsPayoutStatusResponse {
   success: true;
   data: EarningsPayoutRequest | null;
+}
+
+// ─── Why money was taken back (2026-10-22) ────────────────────────────────────
+
+/** `meta` of the two lists below. ⚠ `pages`, not the `totalPages` of /transactions. */
+export interface EarningsListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface EarningsListResponse<T> {
+  success: true;
+  data: T[];
+  meta: EarningsListMeta;
+}
+
+/**
+ * `refund_clawback` took money back, `clawback_recovery` is new earnings that
+ * paid a debt, `write_off` is a debt Wi-Mall forgave. Typed open: the backend
+ * may grow the vocabulary.
+ */
+export type EarningsAdjustmentKind = 'refund_clawback' | 'clawback_recovery' | 'write_off';
+
+/**
+ * The closed reason vocabulary. `null` on rows written before 2026-10-22 —
+ * their `explanation` is then a plain sentence built from `kind`.
+ */
+export type AdjustmentReasonCode =
+  | 'refund_share'
+  | 'refund_beyond_share'
+  | 'refund_delivery_fault'
+  | 'dispute_share'
+  | 'dispute_payin_fee'
+  | 'damage_claim';
+
+/** One row of GET /agency/earnings/adjustments. Newest first. Minor units. */
+export interface EarningsAdjustment {
+  id: string;
+  kind: EarningsAdjustmentKind | (string & {});
+  amount: number;
+  currency: string;
+  /**
+   * Where `amount` came from. ⚠ `debt > 0` means the balances could not cover
+   * it and the agency now OWES that much — its next earnings pay it first.
+   */
+  takenFrom: { pending: number; reserve: number; available: number; debt: number };
+  /** The part of `amount` that is fees. */
+  feeAmount: number;
+  reasonCode: AdjustmentReasonCode | (string & {}) | null;
+  /** The numbers and dates `explanation` uses, so it can be re-rendered in French. */
+  reasonParams: Record<string, unknown> | null;
+  /** The English sentence, always present — the fallback for any code we cannot render. */
+  explanation: string;
+  refundRequestId: string | null;
+  agencyClaimId: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
+  createdAt: string;
+}
+
+/**
+ * One row of GET /agency/earnings/claims — a damage claim the Wi-Mall team
+ * charged this agency for a parcel, inside its damage-claim window. Agents are
+ * never charged. One claim per parcel.
+ */
+export interface AgencyDamageClaim {
+  id: string;
+  kind: 'damage';
+  shipmentId: string;
+  orderId: string;
+  orderNumber: string | null;
+  trackingNumber: string | null;
+  itemCount: number;
+  /** The agency's own `max_refund_per_item` when the claim was charged. */
+  maxPerItem: number;
+  /** `maxPerItem × itemCount` — the most `amount` could be. */
+  cap: number;
+  /** Charged for the damage, ⚠ NOT including `investigationFee`. */
+  amount: number;
+  investigationFee: number;
+  currency: string;
+  deliveredAt: string;
+  raisedAt: string;
+  windowDays: number;
+  reasonCode: string;
+  reasonParams: Record<string, unknown>;
+  explanation: string;
+  createdAt: string;
 }

@@ -13,6 +13,7 @@ import { VerificationSettings } from '@/components/agency-settings/verification/
 import { SecuritySettings } from '@/components/agency-settings/SecuritySettings';
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
+import { DamageClaimsCard, EarningsAdjustmentsCard } from '@/components/agency-settings/EarningsHistory';
 import { BillingTab } from '@/components/billing/BillingTab';
 import { SubPageHeader, sectionGroupClass } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
@@ -88,6 +89,8 @@ export function Account() {
       {activeTab === 'payout' && (
         <div className={sectionGroupClass}>
           <EarningsPayoutCard />
+          <EarningsAdjustmentsCard />
+          <DamageClaimsCard />
           <PayoutSettings />
         </div>
       )}
