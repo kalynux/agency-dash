@@ -57,6 +57,9 @@
     "ROLE_CLOSURE_BLOCKED": "La agencia aún no se puede cerrar. Resuelve primero los puntos indicados."
   },
   "detailed": {
+    "SHIPMENT_REASSIGNMENT_CONFLICT": {
+      "refundOpened": "Este paquete no puede volver a salir: se ha abierto un reembolso de lo que el cliente pagó en línea."
+    },
     "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
       "max": "Este envío ya ha tenido sus {{max}} cambios de tarifa; no se pueden proponer más."
     },

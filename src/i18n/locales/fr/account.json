@@ -48,6 +48,7 @@
       "phone": "Téléphone",
       "phonePlaceholder": "+237 6XX XXX XXX",
       "phoneLocked": "C'est le numéro avec lequel vous vous connectez.",
+      "emailUnverified": "Cet e-mail n'est pas encore vérifié.",
       "phoneUnverified": "Ce numéro n'est pas encore vérifié.",
       "verifyLink": "Le vérifier",
       "securityLink": "Le modifier dans Sécurité"
@@ -383,7 +384,17 @@
         "unknown": "Ajustement"
       },
       "owed": "Vous devez maintenant {{amount}}",
-      "owedNote": "Vos prochains revenus servent d'abord à rembourser ce montant."
+      "owedNote": "Vos prochains revenus servent d'abord à rembourser ce montant.",
+      "partialReturn": {
+        "title": "Quand un colis payé en partie en ligne est retourné",
+        "intro": "Le motif de l'échec de livraison propose la partie fautive, et un administrateur la confirme.",
+        "customerLabel": "Client fautif (refus, non-paiement, absent, injoignable)",
+        "customer": "Vous recevez vos frais de retour, prélevés sur ce que le client a prépayé. Jamais plus que ce montant.",
+        "vendorLabel": "Vendeur fautif",
+        "vendor": "Vous recevez vos frais de retour, facturés au vendeur.",
+        "agencyLabel": "Vous êtes fautif",
+        "agency": "Vous ne recevez rien pour la course et vous payez les frais de paiement et de transfert du remboursement du client. Si votre solde ne les couvre pas, ils sont enregistrés comme une somme que vous devez."
+      }
     },
     "claims": {
       "title": "Réclamations pour dommages",
@@ -410,6 +421,9 @@
       "damage_claim_one": "Réclamation pour dommage sur {{order}}, {{parcel}} : {{count}} article endommagé lors de la livraison, signalé le {{raisedAt}}, dans votre délai de réclamation de {{windowDays}} jours. Vos conditions prévoient au plus {{maxPerItem}} par article : {{amount}} ont donc été facturés.",
       "damage_claim_other": "Réclamation pour dommage sur {{order}}, {{parcel}} : {{count}} articles endommagés lors de la livraison, signalés le {{raisedAt}}, dans votre délai de réclamation de {{windowDays}} jours. Vos conditions prévoient au plus {{maxPerItem}} par article : {{amount}} ont donc été facturés.",
       "investigationFee": "Vos frais d'enquête de {{fee}} ont également été facturés.",
+      "partial_return_fault": "Un colis de {{order}} a été retourné par votre faute, et le client a récupéré tout ce qu'il avait payé en ligne : {{charges}}.",
+      "partialReturnTrip": "{{amount}} pour la course de retour du livreur",
+      "partialReturnFees": "{{amount}} de frais de paiement et de transfert sur le remboursement du client",
       "refund_clawback": "{{amount}} ont été repris parce que le client a été remboursé.",
       "clawback_recovery": "{{amount}} de nouveaux revenus ont servi à rembourser une dette liée à un remboursement.",
       "write_off": "Wi-Mall a annulé {{amount}} d'une dette liée à un remboursement."
@@ -438,7 +452,18 @@
       "requested": "Consultez la nouvelle adresse pour le lien de confirmation.",
       "pendingHint": "En attente de l'ouverture du lien envoyé ici.",
       "resendLink": "Renvoyer le lien",
-      "resent": "Un nouveau lien a été envoyé. L'ancien ne fonctionne plus."
+      "resent": "Un nouveau lien a été envoyé. L'ancien ne fonctionne plus.",
+      "verify": {
+        "verified": "Vérifiée",
+        "notVerified": "Non vérifiée",
+        "title": "Vérifier cette adresse",
+        "hint": "Nous enverrons un lien à cette adresse. Ouvrez-le pour confirmer qu'elle vous appartient.",
+        "send": "Envoyer le lien",
+        "sentHint": "Nous avons envoyé un lien à {{email}}. Ouvrez-le dans les 24 heures, puis revenez ici. Vous ne le trouvez pas ? Regardez dans vos courriers indésirables.",
+        "sentToast": "Lien envoyé à {{email}}.",
+        "resendIn": "Renvoyer le lien dans {{seconds}} s",
+        "verifiedToast": "Votre adresse e-mail est vérifiée."
+      }
     },
     "phone": {
       "label": "Téléphone de connexion",

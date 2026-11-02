@@ -85,13 +85,16 @@ const loadedLanguages = new Set<LanguageCode>([DEFAULT_LANGUAGE]);
  */
 export async function changeLanguage(next: LanguageCode): Promise<void> {
   const language = normalizeLanguage(next);
-  if (!loadedLanguages.has(language)) {
+  const justLoaded = !loadedLanguages.has(language);
+  if (justLoaded) {
     await loadLanguageBundles(language, (lng, ns: Namespace, resources) => {
       i18n.addResourceBundle(lng, ns, resources, true, true);
     });
     loadedLanguages.add(language);
   }
-  if (i18n.language !== language) {
+  // `justLoaded` covers booting in a stored language: `language` already reads
+  // "fr", but `resolvedLanguage` stays on English until this runs with the bundles in.
+  if (justLoaded || i18n.language !== language) {
     await i18n.changeLanguage(language);
   }
   applyDocumentDirection(language);

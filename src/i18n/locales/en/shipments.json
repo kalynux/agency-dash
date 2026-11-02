@@ -58,7 +58,13 @@
     "retryDelivery": "Retry Delivery",
     "markReturned": "Mark Returned",
     "statusChanged": "Shipment marked “{{label}}”.",
-    "markPickedUpAfterHandover": "Confirm the handover pickup"
+    "markPickedUpAfterHandover": "Confirm the handover pickup",
+    "failureReminder": {
+      "titleFailed": "Mark this parcel as failed?",
+      "titleReturned": "Mark this parcel as returned?",
+      "whyItMatters": "The customer already paid {{amount}} of this parcel online, so the reason for the failed delivery proposes who pays for the return. An administrator confirms it.",
+      "howToReport": "This dashboard can't record a reason. If you can, have your agent report this in their app and choose the true reason, instead of marking it here."
+    }
   },
   "autoAssign": {
     "label": "Auto-assign",
@@ -174,7 +180,10 @@
     "codSnapshotHint": "Cash the agent takes from the customer at the door.",
     "codProjectedHint": "Nobody has taken this delivery yet, so this is a projection of the cash due at the door — item prices × quantity. It's locked in the moment an agent accepts.",
     "codProjectedCaption": "Projected — no agent has taken this yet",
+    "codProjectedPrepaidHint": "Nobody has taken this delivery yet, so this is a projection of the cash due at the door, already net of what was paid online. It's locked in the moment an agent accepts.",
     "cashSplit": "Goods {{items}} + delivery {{delivery}}",
+    "prepaidPartial": "{{prepaid}} already paid online, collect {{cash}}",
+    "prepaidShort": "{{amount}} paid online",
     "deliveryFeeOnly": "Delivery fee only — cash",
     "deliveryFeeOnlyHint": "The customer paid the items online and hands your agent the delivery fee in cash. It's your money — no commission and no COD handling fee on it.",
     "payment": "Payment",
@@ -190,6 +199,7 @@
     "youEarnedTitle": "You earned",
     "finalCaveat": "Final: these are the amounts actually credited for this delivery.",
     "returnedCodZero": "A returned cash-on-delivery shipment earns nothing: no cash was collected, so there is no fee, agent share or COD fee.",
+    "returnedPrepaid": "This parcel was partly paid online, so what you receive for the return depends on who was at fault, once an administrator confirms it.",
     "allocation": {
       "held": "Held in escrow",
       "released": "Released to your balance",

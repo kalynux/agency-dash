@@ -2,12 +2,24 @@
   "reject": {
     "description": "Rechaza esta entrega antes de la recogida. Si un agente la había aceptado, queda liberado, y se retira cualquier cambio de tarifa pendiente del vendedor. Se informa al vendedor de tu motivo para que la asigne a otra agencia."
   },
+  "actions": {
+    "failureReminder": {
+      "titleFailed": "¿Marcar este paquete como fallido?",
+      "titleReturned": "¿Marcar este paquete como devuelto?",
+      "whyItMatters": "El cliente ya pagó {{amount}} de este paquete en línea, así que el motivo del fallo propone quién paga la devolución. Lo confirma un administrador.",
+      "howToReport": "Este panel no puede registrar un motivo. Si puedes, pide a tu agente que lo notifique en su aplicación y elija el motivo real, en lugar de marcarlo aquí."
+    }
+  },
   "offerFlags": {
     "codLimitForced": "Enviada por encima del límite COD del agente"
   },
   "money": {
     "agentSalaried": "Agente asalariado",
+    "codProjectedPrepaidHint": "Nadie ha tomado esta entrega todavía: es una proyección del efectivo que se debe en la puerta, ya descontado lo pagado en línea. Se fija en cuanto un agente acepta.",
     "cashSplit": "Artículos {{items}} + entrega {{delivery}}",
+    "prepaidPartial": "{{prepaid}} ya pagados en línea, cobrar {{cash}}",
+    "prepaidShort": "{{amount}} pagados en línea",
+    "returnedPrepaid": "Este paquete se pagó en parte en línea: lo que recibes por la devolución depende de quién tuvo la culpa, una vez que lo confirme un administrador.",
     "deliveryFeeOnly": "Solo la tarifa de entrega — en efectivo",
     "deliveryFeeOnlyHint": "El cliente pagó los artículos en línea y entrega la tarifa de entrega en efectivo a tu agente. Ese dinero es tuyo: sin comisión ni tarifa de gestión contra entrega."
   },

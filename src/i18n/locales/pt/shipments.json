@@ -2,12 +2,24 @@
   "reject": {
     "description": "Recuse esta entrega antes da recolha. Se um agente a tinha aceitado, fica libertado, e uma alteração de taxa pendente do vendedor é retirada. O vendedor é informado do seu motivo para a atribuir a outra agência."
   },
+  "actions": {
+    "failureReminder": {
+      "titleFailed": "Marcar esta encomenda como falhada?",
+      "titleReturned": "Marcar esta encomenda como devolvida?",
+      "whyItMatters": "O cliente já pagou {{amount}} desta encomenda online, por isso o motivo da falha propõe quem paga a devolução. Um administrador confirma-o.",
+      "howToReport": "Este painel não pode registar um motivo. Se possível, peça ao seu agente que o comunique na aplicação dele e escolha o motivo verdadeiro, em vez de o marcar aqui."
+    }
+  },
   "offerFlags": {
     "codLimitForced": "Enviada acima do limite COD do agente"
   },
   "money": {
     "agentSalaried": "Agente assalariado",
+    "codProjectedPrepaidHint": "Ninguém aceitou esta entrega ainda: é uma projeção do numerário devido à porta, já descontado o que foi pago online. Fica fixada assim que um agente aceita.",
     "cashSplit": "Artigos {{items}} + entrega {{delivery}}",
+    "prepaidPartial": "{{prepaid}} já pagos online, cobrar {{cash}}",
+    "prepaidShort": "{{amount}} pagos online",
+    "returnedPrepaid": "Esta encomenda foi paga em parte online: o que recebe pela devolução depende de quem teve culpa, depois de um administrador o confirmar.",
     "deliveryFeeOnly": "Só a taxa de entrega — em numerário",
     "deliveryFeeOnlyHint": "O cliente pagou os artigos online e entrega a taxa de entrega em numerário ao seu agente. Esse dinheiro é seu — sem comissão nem taxa de gestão de pagamento na entrega."
   },

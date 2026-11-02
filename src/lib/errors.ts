@@ -54,6 +54,14 @@ interface DetailedMessage {
  * English server copy, the same as `error.message`.
  */
 const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMessage | undefined> = {
+  // The code means two things on a reassign. A lost race names what it expected
+  // (`expectedStatus`), and retrying is right. A returned parcel whose refund has
+  // been opened sends only `shipmentId`, and retrying can never work. See
+  // api-doc/agency/FRONTEND-CHANGELOG-partial-payment.md.
+  SHIPMENT_REASSIGNMENT_CONFLICT: (d) =>
+    typeof d.shipmentId === 'string' && d.expectedStatus === undefined
+      ? { key: 'SHIPMENT_REASSIGNMENT_CONFLICT.refundOpened' }
+      : undefined,
   // The limit is `min(our slice, the agent's pool) × trust` since 2026-09-21, and
   // `poolBinds` says which of the two refused, so whether raising our slice can
   // help. Absent (an older server) means the slice. See

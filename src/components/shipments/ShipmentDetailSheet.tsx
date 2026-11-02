@@ -14,13 +14,16 @@ import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { DeliveryProofPanel } from '@/components/shipments/DeliveryProofPanel';
 import { DeliveryReviewPanel } from '@/components/shipments/DeliveryReviewPanel';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
+import { FailureReasonReminderDialog } from '@/components/shipments/FailureReasonReminderDialog';
 import { DeliveryFeeSection } from '@/components/shipments/DeliveryFeeSection';
 import { ShipmentTicketsSection } from '@/components/shipments/ShipmentTicketsSection';
 import {
   getNextActions,
   canRejectStatus,
   isTerminalStatus,
+  needsFailureReasonReminder,
   pickupBlockReason,
+  type ShipmentNextAction,
 } from '@/components/shipments/shipment-actions';
 import { blockingProposal, pickupBlockedCopy } from '@/components/shipments/delivery-fee-rules';
 import { pickupBlockedText } from '@/components/shipments/deliveryFeeCopy';
@@ -57,6 +60,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [reminderAction, setReminderAction] = useState<ShipmentNextAction | null>(null);
   const { agents } = useAgentsRoster();
   const actions = useShipmentActions();
 
@@ -102,6 +106,10 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
   const runStatus = async (status: ShipmentActionableStatus, label: string) => {
     const result = await actions.updateStatus(detail!.id, status, label, refresh);
     if (result) refresh();
+  };
+  const requestStatus = (next: ShipmentNextAction) => {
+    if (needsFailureReasonReminder(next.status, detail?.cod)) setReminderAction(next);
+    else runStatus(next.status, tx(t, next.labelKey));
   };
   const TitleComp = isMobile ? SheetTitle : DialogTitle;
 
@@ -403,7 +411,7 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
                     : t('actions.needsAcceptedOffer')
                   : undefined
               }
-              onClick={() => runStatus(next.status, tx(t, next.labelKey))}
+              onClick={() => requestStatus(next)}
             >
               {actions.pendingKey === `status:${detail.id}` ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -464,6 +472,15 @@ export function ShipmentDetailSheet({ shipmentId, open, onOpenChange, onChanged 
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         onRejected={refresh}
+      />
+      <FailureReasonReminderDialog
+        action={reminderAction}
+        cod={detail?.cod}
+        onCancel={() => setReminderAction(null)}
+        onConfirm={(next) => {
+          setReminderAction(null);
+          runStatus(next.status, tx(t, next.labelKey));
+        }}
       />
     </>
   );

@@ -57,6 +57,9 @@
     "ROLE_CLOSURE_BLOCKED": "لا يمكن إغلاق الوكالة بعد. قم بتسوية العناصر المذكورة أولاً."
   },
   "detailed": {
+    "SHIPMENT_REASSIGNMENT_CONFLICT": {
+      "refundOpened": "لا يمكن إرسال هذا الطرد مرة أخرى: فُتح استرداد لما دفعه العميل عبر الإنترنت."
+    },
     "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
       "max": "حصلت هذه الشحنة على تعديلات الرسوم الـ{{max}} المتاحة — لا يمكن اقتراح المزيد."
     },

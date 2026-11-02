@@ -70,13 +70,21 @@ export interface ShipmentCodInfo {
   kind?: ShipmentCodKind | (string & {});
   /**
    * A snapshot once a collection record exists, a **projection** before one does.
-   * Always `itemsAmount + deliveryFeeAmount` — the server's sum, never ours.
+   * Always `itemsAmount + deliveryFeeAmount − prepaidAmount` — the server's sum,
+   * never ours. This is the only figure that is cash: liability and COD limits
+   * count it alone, so never add `prepaidAmount` to it.
    */
   expectedAmount: number;
-  /** The goods. `0` on a `delivery_fee` collection. Your COD handling fee is computed on this only. */
+  /** The goods, at full value even when part was paid online. `0` on a `delivery_fee` collection. */
   itemsAmount?: number;
-  /** The delivery fee the customer pays in cash with the goods; `0` when the shop pays delivery. */
+  /** The delivery fee the customer pays with the goods, at full value; `0` when the shop pays delivery. */
   deliveryFeeAmount?: number;
+  /**
+   * What the customer already paid online for this parcel — a partial-payment
+   * order. `0` on every other shipment; absent on an older server.
+   * See api-doc/agency/FRONTEND-CHANGELOG-partial-payment.md.
+   */
+  prepaidAmount?: number;
   currency: string;
   /**
    * `null` until an agent accepts: the collection record is only created then.
@@ -114,7 +122,8 @@ export type AgencyEarningAllocationStatus = 'held' | 'released' | 'reversed';
  * (`estimated: false`) every figure is read from the entries actually written.
  *
  * A returned cash-on-delivery shipment reads `0`: no cash was collected, so
- * nothing is credited — no RTO fee, no agent share, no COD fee.
+ * nothing is credited — no RTO fee, no agent share, no COD fee. The exception is
+ * a parcel partly paid online, whose return fee depends on who was at fault.
  */
 export interface AgencyEarning {
   /** What you keep: `earnedFee − agentCut + codHandlingFee`. */

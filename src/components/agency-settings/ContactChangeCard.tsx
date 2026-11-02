@@ -38,6 +38,17 @@
  * tried free text and the approved template by then, and until 2026-09-21 that
  * advice actively made delivery fail. See phone-verification.types.ts.
  *
+ * ─── Proving the email already on the account ─────────────────────────────────
+ *
+ * A change is not the only thing a link can prove: an address set at registration
+ * starts out unverified. `POST /auth/send-email-verification` takes no target — it
+ * mails the address on this role's profile — and its link lands on the same main
+ * site, so this card only ever learns the outcome by re-reading the profile.
+ *
+ * ⚠ It is not the change flow's link. A second send does **not** kill the first
+ * (each stays good for 24 hours), and the endpoint has no cooldown of its own, so
+ * the one on the Resend button is this card's.
+ *
  * ⚠ A contact change does **not** sign other devices out. Only a password change
  * does. The copy says so, because a security screen implies otherwise.
  *
@@ -87,10 +98,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { agencyProfileService } from '@/services/agency-profile.service';
+import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
 import { phoneVerificationService } from '@/services/phone-verification.service';
 import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { useAccountStanding } from '@/hooks/useAccountStanding';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
 import { getApiErrorMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
@@ -122,6 +135,12 @@ const CODE_LENGTH = 6;
  */
 const RESEND_COOLDOWN_SECONDS = 60;
 
+/**
+ * Client-side only: `send-email-verification` has no cooldown, just the shared
+ * credential bucket (20/min/IP). This keeps an impatient tap from flooding the inbox.
+ */
+const EMAIL_LINK_COOLDOWN_SECONDS = 60;
+
 export function ContactChangeCard() {
   const { t } = useTranslation(['account', 'common']);
   const defaultCountry = useDefaultPhoneCountry();
@@ -134,14 +153,22 @@ export function ContactChangeCard() {
   const [verify, setVerify] = useState<PhoneVerificationState | null>(null);
   /** `phone_verified` off the profile. `null` when that read failed — see `load`. */
   const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
+  /** `email_verified` off the profile. `null` when that read failed — see `load`. */
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   /** Which field is being edited, if any. Only one at a time. */
   const [editing, setEditing] = useState<Channel | null>(null);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState<Channel | 'send' | 'code' | 'resend' | null>(null);
+  const [busy, setBusy] = useState<Channel | 'send' | 'code' | 'resend' | 'emailLink' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ─── Email verification link ────────────────────────────────────────────────
+  /** The address the last link went to, if this session sent one. */
+  const [emailLinkSentTo, setEmailLinkSentTo] = useState<string | null>(null);
+  const [emailLinkError, setEmailLinkError] = useState<string | null>(null);
+  const [emailCooldownEndsAt, setEmailCooldownEndsAt] = useState(0);
 
   // ─── OTP state ──────────────────────────────────────────────────────────────
   /** The last code we sent, if this session sent one. */
@@ -163,7 +190,7 @@ export function ContactChangeCard() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [contact, verifyState, verified] = await Promise.all([
+      const [contact, verifyState, profile] = await Promise.all([
         contactService.get(),
         // Free and side-effect-free: it mints no code and spends no cooldown,
         // so it is safe on mount. `pending` can be a code sent from another
@@ -172,15 +199,17 @@ export function ContactChangeCard() {
         // Non-fatal on purpose. This only decides whether to OFFER verification;
         // offering it for a number that turns out to be verified costs a code,
         // whereas hiding it on a failed read hides the only way an agency has to
-        // ever reach `phone_verified`.
+        // ever reach `phone_verified`. The email half is the same trade, and a
+        // needless send there is only a 409 — see `sendEmailLink`.
         agencyProfileService
           .getProfile()
-          .then((r) => r.data.phoneVerified)
+          .then((r) => r.data)
           .catch(() => null),
       ]);
       setState(contact);
       setVerify(verifyState);
-      setPhoneVerified(verified);
+      setPhoneVerified(profile?.phoneVerified ?? null);
+      setEmailVerified(profile?.emailVerified ?? null);
     } catch (err) {
       setLoadError(getApiErrorMessage(err));
     } finally {
@@ -192,17 +221,37 @@ export function ContactChangeCard() {
     void load();
   }, [load]);
 
+  // The link is opened in a mail client — another tab, often another device — so
+  // nothing tells this card it was spent. Look again when they come back; quiet
+  // on purpose, and a failed read just leaves the panel up for the next return.
+  useRefreshOnFocus(async () => {
+    try {
+      const { data } = await agencyProfileService.getProfile();
+      if (!data.emailVerified) return;
+      // Confirming a pending change flips this too, and that moves the address.
+      setState(await contactService.get());
+      setEmailVerified(true);
+      setEmailLinkSentTo(null);
+      setEmailLinkError(null);
+      toast.success(t('contact.email.verify.verifiedToast'));
+    } catch {
+      // Not worth interrupting anyone over — see above.
+    }
+  }, emailVerified === false);
+
   // Ticks only while a cooldown is actually running, and stops itself at zero.
   useEffect(() => {
-    if (cooldownEndsAt <= Date.now()) return;
+    const endsAt = Math.max(cooldownEndsAt, emailCooldownEndsAt);
+    if (endsAt <= Date.now()) return;
     const id = setInterval(() => {
       setNow(Date.now());
-      if (Date.now() >= cooldownEndsAt) clearInterval(id);
+      if (Date.now() >= endsAt) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
-  }, [cooldownEndsAt]);
+  }, [cooldownEndsAt, emailCooldownEndsAt]);
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownEndsAt - now) / 1000));
+  const emailCooldownLeft = Math.max(0, Math.ceil((emailCooldownEndsAt - now) / 1000));
 
   /** Forget anything about a code in flight. Used whenever the target changes. */
   const resetCode = () => {
@@ -234,6 +283,9 @@ export function ContactChangeCard() {
     setEditing(null);
     setDraft('');
     if (channel === 'email') {
+      // A link sent to the old address is no longer what this card is asking for.
+      setEmailLinkSentTo(null);
+      setEmailLinkError(null);
       await load();
       setBusy(null);
       toast.success(t('contact.email.requested'));
@@ -283,6 +335,41 @@ export function ContactChangeCard() {
       toast.success(t('contact.email.resent'));
     } catch (err) {
       setError(getApiErrorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /**
+   * Email a verification link to the address already on the account. Nothing is
+   * passed: the server reads the user and role from the session.
+   */
+  const sendEmailLink = async () => {
+    const target = state?.email;
+    if (!target) return;
+    setBusy('emailLink');
+    setEmailLinkError(null);
+    try {
+      await authService.sendEmailVerification();
+      setEmailLinkSentTo(target);
+      setEmailCooldownEndsAt(Date.now() + EMAIL_LINK_COOLDOWN_SECONDS * 1000);
+      setNow(Date.now());
+      toast.success(t('contact.email.verify.sentToast', { email: target }));
+    } catch (err) {
+      // Proved since this card loaded — in another tab, or from a link sent
+      // earlier. Nothing went wrong and nothing is left to ask for.
+      if (err instanceof ApiError && err.code === 'AUTH_EMAIL_ALREADY_VERIFIED') {
+        setEmailVerified(true);
+        setEmailLinkSentTo(null);
+        toast.success(t('contact.email.verify.verifiedToast'));
+        return;
+      }
+      // Honour the rate limiter's countdown when it gives one.
+      if (err instanceof ApiError && err.retryAfterSeconds !== undefined) {
+        setEmailCooldownEndsAt(Date.now() + err.retryAfterSeconds * 1000);
+        setNow(Date.now());
+      }
+      setEmailLinkError(getApiErrorMessage(err));
     } finally {
       setBusy(null);
     }
@@ -413,6 +500,13 @@ export function ContactChangeCard() {
   const verifyInPanel = completesChange && !!state?.pendingPhone;
   /** Any request in flight locks every other control on the card. */
   const locked = busy !== null;
+  /**
+   * Offered until the profile says it is proved; a `null` is a failed read and
+   * counts as unverified — see `load`. Not during a change: confirming that one
+   * proves the new address, so proving the outgoing one would be wasted effort.
+   */
+  const showEmailVerify =
+    !!state?.email && !state.pendingEmail && editing !== 'email' && emailVerified !== true;
 
   /** The WhatsApp code: send, type, resend. Rendered inside whichever panel owns it. */
   const verifyBody = (
@@ -622,11 +716,79 @@ export function ContactChangeCard() {
                 label={t('contact.email.label')}
                 value={state.email}
                 emptyLabel={t('contact.none')}
+                badge={
+                  // Same rule as the phone row below: a `null` (failed profile
+                  // read) claims neither.
+                  state.pendingEmail || !state.email ? null : emailVerified === true ? (
+                    <Badge variant="success">
+                      <CheckCircle2 />
+                      {t('contact.email.verify.verified')}
+                    </Badge>
+                  ) : emailVerified === false ? (
+                    <Badge className="border-transparent bg-warning/15 text-warning">
+                      {t('contact.email.verify.notVerified')}
+                    </Badge>
+                  ) : null
+                }
                 // While a change is pending its panel offers "use a different
                 // address" instead — a second "Change" here would read as a
                 // third, unrelated action.
                 action={!state.pendingEmail && editing !== 'email' && changeButton('email')}
               />
+
+              {/* Proving the address already on the account — no change involved,
+                  so nothing to cancel. */}
+              {showEmailVerify && (
+                <div className="space-y-3 rounded-xl border bg-muted/30 p-3 sm:p-4">
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-1.5 text-sm font-medium">
+                      <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                      {t('contact.email.verify.title')}
+                    </p>
+                    <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                      {emailLinkSentTo
+                        ? t('contact.email.verify.sentHint', { email: emailLinkSentTo })
+                        : t('contact.email.verify.hint')}
+                    </p>
+                  </div>
+
+                  {emailLinkSentTo ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void sendEmailLink()}
+                      disabled={locked || emailCooldownLeft > 0}
+                      className="-ml-3 gap-1.5"
+                    >
+                      {busy === 'emailLink' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RotateCw className="h-3.5 w-3.5" />
+                      )}
+                      {emailCooldownLeft > 0
+                        ? t('contact.email.verify.resendIn', { seconds: emailCooldownLeft })
+                        : t('contact.email.resendLink')}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => void sendEmailLink()}
+                      disabled={locked || emailCooldownLeft > 0}
+                      className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
+                    >
+                      {busy === 'emailLink' && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {emailCooldownLeft > 0
+                        ? t('contact.email.verify.resendIn', { seconds: emailCooldownLeft })
+                        : t('contact.email.verify.send')}
+                    </Button>
+                  )}
+
+                  {emailLinkError && (
+                    <p role="alert" className="text-xs text-destructive">
+                      {emailLinkError}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {state.pendingEmail && editing !== 'email' && (
                 <PendingChangePanel

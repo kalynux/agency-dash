@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import { shipmentsService } from '@/services/shipments.service';
+import { prepaidAmountOf } from '@/components/shipments/shipment-actions';
 import { formatCurrency } from '@/lib/format';
 import { getApiErrorMessage } from '@/lib/errors';
 import { ReassignDialog } from '@/components/shipments/ReassignDialog';
@@ -153,6 +154,14 @@ export function AssignmentPanel({ detail, agents, onChanged }: AssignmentPanelPr
                 amount: formatCurrency(detail.cod.expectedAmount, detail.cod.currency),
               })
             : t('assignment.codHint')}
+          {detail.cod && prepaidAmountOf(detail.cod) > 0 && (
+            <span className="mt-0.5 block font-numeric">
+              {t('money.prepaidPartial', {
+                prepaid: formatCurrency(prepaidAmountOf(detail.cod), detail.cod.currency),
+                cash: formatCurrency(detail.cod.expectedAmount, detail.cod.currency),
+              })}
+            </span>
+          )}
         </p>
       )}
 

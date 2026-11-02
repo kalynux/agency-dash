@@ -163,8 +163,38 @@ export function EarningsAdjustmentsCard() {
             <AdjustmentRow key={row.id} row={row} explanation={explainAdjustment(t, i18n.resolvedLanguage, row)} />
           ))}
         </ListBody>
+        <PartialReturnNote />
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * What the agency receives when a parcel partly paid online comes back, by who
+ * was at fault. Shown even with no rows: it is most useful before the first
+ * `partial_return_fault` charge appears (api-doc/agency/FRONTEND-CHANGELOG-partial-payment.md).
+ */
+function PartialReturnNote() {
+  const { t } = useTranslation('account');
+  return (
+    <section className="rounded-lg bg-muted/50 p-3 text-xs md:p-4">
+      <h4 className="font-medium">{t('earnings.adjustments.partialReturn.title')}</h4>
+      <p className="mt-0.5 text-muted-foreground">{t('earnings.adjustments.partialReturn.intro')}</p>
+      <dl className="mt-2 space-y-2">
+        <div>
+          <dt className="font-medium">{t('earnings.adjustments.partialReturn.customerLabel')}</dt>
+          <dd className="text-muted-foreground">{t('earnings.adjustments.partialReturn.customer')}</dd>
+        </div>
+        <div>
+          <dt className="font-medium">{t('earnings.adjustments.partialReturn.vendorLabel')}</dt>
+          <dd className="text-muted-foreground">{t('earnings.adjustments.partialReturn.vendor')}</dd>
+        </div>
+        <div>
+          <dt className="font-medium">{t('earnings.adjustments.partialReturn.agencyLabel')}</dt>
+          <dd className="text-muted-foreground">{t('earnings.adjustments.partialReturn.agency')}</dd>
+        </div>
+      </dl>
+    </section>
   );
 }
 

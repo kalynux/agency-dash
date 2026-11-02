@@ -78,6 +78,27 @@ describe('earnings explanations', () => {
       expect(out).not.toContain('{{');
     });
 
+    it('rebuilds a partial-return fault charge, naming only the charges that apply', () => {
+      const out = explainAdjustment(t, 'fr', adjustment({
+        reasonCode: 'partial_return_fault',
+        reasonParams: { orderNumber: 'ORD-1', currency: 'XAF', returnFee: 0, fees: 240 },
+      }));
+      expect(out).toContain('la commande ORD-1');
+      expect(out).toContain('par votre faute');
+      expect(out).toContain('240');
+      expect(out).toContain('frais de paiement et de transfert');
+      expect(out).not.toContain('course de retour');
+      expect(out).not.toContain('{{');
+    });
+
+    it('falls back to the English sentence for a partial-return charge it cannot rebuild', () => {
+      const nothingCharged = { orderNumber: 'ORD-1', currency: 'XAF', returnFee: 0, fees: 0 };
+      expect(explainAdjustment(t, 'fr', adjustment({ reasonCode: 'partial_return_fault', reasonParams: nothingCharged })))
+        .toBe('ENGLISH FROM SERVER');
+      expect(explainAdjustment(t, 'fr', adjustment({ reasonCode: 'partial_return_fault', reasonParams: { orderNumber: 'ORD-1' } })))
+        .toBe('ENGLISH FROM SERVER');
+    });
+
     it('localises a pre-2026-10-22 row from its kind', () => {
       const out = explainAdjustment(t, 'fr', adjustment({ kind: 'write_off', reasonCode: null, reasonParams: null }));
       expect(out).toContain('Wi-Mall a annulé');

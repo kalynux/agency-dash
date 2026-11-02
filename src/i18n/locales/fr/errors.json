@@ -723,6 +723,9 @@
     "ROLE_CLOSURE_ROLE_NOT_HELD": "Ce compte ne détient pas ce rôle."
   },
   "detailed": {
+    "SHIPMENT_REASSIGNMENT_CONFLICT": {
+      "refundOpened": "Ce colis ne peut pas repartir : un remboursement a été ouvert pour ce que le client a payé en ligne."
+    },
     "COD_AGENT_EXPOSURE_EXCEEDED": {
       "poolBinds": "Cette expédition ferait dépasser au livreur son propre pool d'espèces, désormais inférieur au plafond de votre contrat. Relever votre plafond n'y changera rien : il doit déposer les espèces qu'il détient, ou son pool doit remonter."
     },

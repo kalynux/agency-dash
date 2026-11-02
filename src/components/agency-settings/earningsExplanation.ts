@@ -119,6 +119,20 @@ export function explainAdjustment(t: AccountT, lang: string | undefined, row: Ea
         windowDays,
       });
     }
+    case 'partial_return_fault': {
+      const returnFee = num(p, 'returnFee');
+      const fees = num(p, 'fees');
+      if (returnFee === null || fees === null) break;
+      const charges = [
+        returnFee > 0 ? t('earnings.reasons.partialReturnTrip', { amount: money(returnFee) }) : null,
+        fees > 0 ? t('earnings.reasons.partialReturnFees', { amount: money(fees) }) : null,
+      ].filter(Boolean);
+      if (charges.length === 0) break;
+      return t('earnings.reasons.partial_return_fault', {
+        order: orderRef(t, str(p, 'orderNumber')),
+        charges: charges.join('; '),
+      });
+    }
     case null: {
       // Written before 2026-10-22: the backend's sentence is built from `kind`.
       const vars = { amount: money(row.amount) };

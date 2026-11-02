@@ -228,6 +228,7 @@ export function ProfileSettings() {
     ? t('profile.localization.languagePreviewHint')
     : t('profile.localization.languageHint');
   const phoneUnverified = !!profile.phone && !profile.phoneVerified;
+  const emailUnverified = !!profile.email && !profile.emailVerified;
   const securityLink = (
     <Link to="/dashboard/account/security" className="underline">
       {t('profile.identity.securityLink')}
@@ -321,7 +322,7 @@ export function ProfileSettings() {
               {nameError && <p className="text-xs text-destructive">{nameError}</p>}
             </div>
             <div className="space-y-2">
-              <FieldLabel htmlFor="email" hint={emailHint}>
+              <FieldLabel htmlFor="email" hint={emailUnverified ? undefined : emailHint}>
                 {t('profile.identity.email')}
               </FieldLabel>
               <div className="relative">
@@ -330,7 +331,17 @@ export function ProfileSettings() {
                   <CheckCircle2 className="absolute end-3 top-1/2 w-4 h-4 -translate-y-1/2 text-green-600" />
                 )}
               </div>
-              <FieldHint>{emailHint}</FieldHint>
+              {emailUnverified ? (
+                // A state to act on, not help — visible at every width.
+                <p className="text-xs text-warning">
+                  {t('profile.identity.emailUnverified')}{' '}
+                  <Link to="/dashboard/account/security" className="underline">
+                    {t('profile.identity.verifyLink')}
+                  </Link>
+                </p>
+              ) : (
+                <FieldHint>{emailHint}</FieldHint>
+              )}
             </div>
             <div className="space-y-2">
               <FieldLabel htmlFor="phone" hint={phoneUnverified ? undefined : phoneHint}>

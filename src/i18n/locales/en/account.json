@@ -48,6 +48,7 @@
       "phone": "Phone",
       "phonePlaceholder": "+237 6XX XXX XXX",
       "phoneLocked": "This is the number you sign in with.",
+      "emailUnverified": "This email isn't verified yet.",
       "phoneUnverified": "This number isn't verified yet.",
       "verifyLink": "Verify it",
       "securityLink": "Change it under Security"
@@ -383,7 +384,17 @@
         "unknown": "Adjustment"
       },
       "owed": "You now owe {{amount}}",
-      "owedNote": "Your next earnings pay this first."
+      "owedNote": "Your next earnings pay this first.",
+      "partialReturn": {
+        "title": "When a parcel partly paid online comes back",
+        "intro": "The delivery failure reason proposes who is at fault, and an administrator confirms it.",
+        "customerLabel": "Customer at fault (refused, did not pay, absent, unreachable)",
+        "customer": "You receive your return fee, from what the customer prepaid. Never more than they prepaid.",
+        "vendorLabel": "Vendor at fault",
+        "vendor": "You receive your return fee, charged to the vendor.",
+        "agencyLabel": "You at fault",
+        "agency": "You receive nothing for the trip, and you pay the payment and transfer fees on the customer's refund. If your balance does not cover them, they are recorded as money you owe."
+      }
     },
     "claims": {
       "title": "Damage claims",
@@ -410,6 +421,9 @@
       "damage_claim_one": "Damage claim on {{order}}, {{parcel}}: {{count}} item damaged in delivery, reported on {{raisedAt}}, within your {{windowDays}}-day damage-claim window. Your terms allow up to {{maxPerItem}} per item, so {{amount}} was charged.",
       "damage_claim_other": "Damage claim on {{order}}, {{parcel}}: {{count}} items damaged in delivery, reported on {{raisedAt}}, within your {{windowDays}}-day damage-claim window. Your terms allow up to {{maxPerItem}} per item, so {{amount}} was charged.",
       "investigationFee": "Your investigation fee of {{fee}} was charged as well.",
+      "partial_return_fault": "A parcel on {{order}} came back through your fault, and the customer got back everything they paid online: {{charges}}.",
+      "partialReturnTrip": "{{amount}} for the delivery company's return trip",
+      "partialReturnFees": "{{amount}} of payment and transfer fees on the customer's refund",
       "refund_clawback": "{{amount}} was taken back because the customer was refunded.",
       "clawback_recovery": "{{amount}} of new earnings went to pay back a refund debt you owed.",
       "write_off": "Wi-Mall forgave {{amount}} of a refund debt you owed."
@@ -438,7 +452,18 @@
       "requested": "Check the new address for a confirmation link.",
       "pendingHint": "Waiting for you to open the link we sent here.",
       "resendLink": "Resend the link",
-      "resent": "A new link is on its way. The previous one no longer works."
+      "resent": "A new link is on its way. The previous one no longer works.",
+      "verify": {
+        "verified": "Verified",
+        "notVerified": "Not verified",
+        "title": "Verify this address",
+        "hint": "We'll email a link to this address. Open it to confirm the address is yours.",
+        "send": "Send the link",
+        "sentHint": "We sent a link to {{email}}. Open it within 24 hours, then come back here. Can't find it? Check your spam folder.",
+        "sentToast": "Link sent to {{email}}.",
+        "resendIn": "Resend the link in {{seconds}}s",
+        "verifiedToast": "Your email address is verified."
+      }
     },
     "phone": {
       "label": "Sign-in phone",

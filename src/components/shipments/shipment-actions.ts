@@ -10,6 +10,7 @@
 import { CircleCheck, PackageCheck, RotateCcw, Truck, XCircle, type LucideIcon } from 'lucide-react';
 import type {
   ShipmentActionableStatus,
+  ShipmentCodInfo,
   ShipmentRejectionReason,
   ShipmentStatus,
 } from '@/types/shipment.types';
@@ -81,6 +82,24 @@ export const REJECTION_REASONS: ShipmentRejectionReason[] = [
 
 /** Max length of a rejection note, per the API. */
 export const REJECTION_NOTE_MAX = 200;
+
+/** What the customer already paid online for this parcel; `0` when nothing was, or on an older server. */
+export function prepaidAmountOf(cod: ShipmentCodInfo | null | undefined): number {
+  return typeof cod?.prepaidAmount === 'number' ? cod.prepaidAmount : 0;
+}
+
+/**
+ * On a parcel partly paid online, the last failure reason proposes who pays for
+ * the return, and only the agent's app can record one: the agency endpoint
+ * accepts no reason. So these two transitions pause to say so on such a parcel,
+ * and nowhere else, because on any other parcel the reason decides no money.
+ */
+export function needsFailureReasonReminder(
+  status: ShipmentActionableStatus,
+  cod: ShipmentCodInfo | null | undefined,
+): boolean {
+  return (status === 'failed' || status === 'returned') && prepaidAmountOf(cod) > 0;
+}
 
 export function getNextActions(status: ShipmentStatus): ShipmentNextAction[] {
   return NEXT_ACTIONS[status] ?? [];

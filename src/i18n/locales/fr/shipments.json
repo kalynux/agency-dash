@@ -59,7 +59,13 @@
     "retryDelivery": "Relancer la livraison",
     "markReturned": "Marquer retournée",
     "statusChanged": "Expédition marquée « {{label}} ».",
-    "markPickedUpAfterHandover": "Confirmer la prise en charge"
+    "markPickedUpAfterHandover": "Confirmer la prise en charge",
+    "failureReminder": {
+      "titleFailed": "Marquer ce colis comme échoué ?",
+      "titleReturned": "Marquer ce colis comme retourné ?",
+      "whyItMatters": "Le client a déjà payé {{amount}} de ce colis en ligne : le motif de l'échec propose donc qui paie le retour. Un administrateur le confirme.",
+      "howToReport": "Ce tableau de bord ne peut pas enregistrer de motif. Si possible, demandez à votre livreur de le signaler dans son application en choisissant le vrai motif, plutôt que de le marquer ici."
+    }
   },
   "autoAssign": {
     "label": "Affectation auto",
@@ -175,7 +181,10 @@
     "codSnapshotHint": "Les espèces que le livreur encaisse auprès du client à la remise.",
     "codProjectedHint": "Personne n'a encore pris cette livraison : ce montant est une projection de ce qui sera dû à la remise — prix des articles × quantité. Il est figé dès qu'un livreur accepte.",
     "codProjectedCaption": "Projection — aucun livreur n'a encore pris cette course",
+    "codProjectedPrepaidHint": "Personne n'a encore pris cette livraison : ce montant est une projection de ce qui sera dû à la remise, déduction faite de ce qui a été payé en ligne. Il est figé dès qu'un livreur accepte.",
     "cashSplit": "Articles {{items}} + livraison {{delivery}}",
+    "prepaidPartial": "{{prepaid}} déjà payés en ligne, encaisser {{cash}}",
+    "prepaidShort": "{{amount}} payés en ligne",
     "deliveryFeeOnly": "Frais de livraison seuls — espèces",
     "deliveryFeeOnlyHint": "Le client a payé les articles en ligne et remet les frais de livraison en espèces à votre livreur. Cet argent est à vous — ni commission ni frais de gestion COD dessus.",
     "payment": "Paiement",
@@ -191,6 +200,7 @@
     "youEarnedTitle": "Vous avez gagné",
     "finalCaveat": "Définitif : ce sont les montants réellement crédités pour cette livraison.",
     "returnedCodZero": "Une expédition en paiement à la livraison retournée ne rapporte rien : aucune somme n'a été encaissée, donc ni frais, ni part du livreur, ni frais de gestion des espèces.",
+    "returnedPrepaid": "Ce colis a été payé en partie en ligne : ce que vous recevez pour le retour dépend donc de la partie fautive, une fois confirmée par un administrateur.",
     "allocation": {
       "held": "Bloqué en séquestre",
       "released": "Versé sur votre solde",

@@ -723,6 +723,9 @@
     "ROLE_CLOSURE_ROLE_NOT_HELD": "This account doesn’t hold that role."
   },
   "detailed": {
+    "SHIPMENT_REASSIGNMENT_CONFLICT": {
+      "refundOpened": "This parcel can't be sent out again: a refund has been opened for what the customer paid online."
+    },
     "COD_AGENT_EXPOSURE_EXCEEDED": {
       "poolBinds": "This shipment would take the agent past their own COD pool, which is now lower than the limit on your contract. Raising your limit won't help: they need to deposit the cash they're holding, or their pool needs to go back up."
     },

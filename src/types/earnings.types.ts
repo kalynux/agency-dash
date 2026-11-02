@@ -173,7 +173,9 @@ export type AdjustmentReasonCode =
   | 'refund_delivery_fault'
   | 'dispute_share'
   | 'dispute_payin_fee'
-  | 'damage_claim';
+  | 'damage_claim'
+  /** A parcel partly paid online came back through this agency's fault. */
+  | 'partial_return_fault';
 
 /** One row of GET /agency/earnings/adjustments. Newest first. Minor units. */
 export interface EarningsAdjustment {

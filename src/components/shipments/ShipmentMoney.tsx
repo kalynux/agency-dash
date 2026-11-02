@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { tx } from '@/i18n/tx';
 import { cn } from '@/lib/utils';
+import { prepaidAmountOf } from '@/components/shipments/shipment-actions';
 import type {
   AgencyEarning,
   ShipmentCodInfo,
@@ -40,8 +41,8 @@ function isDeliveryFeeOnly(cod: ShipmentCodInfo): boolean {
 
 /**
  * "Goods X + delivery Y" — only when the server sent both halves and the cash
- * really is mixed. Both figures are the server's; `expectedAmount` is already
- * their sum, so nothing is added up here.
+ * really is mixed. Both figures are the server's, and nothing is added up here:
+ * `expectedAmount` is already their sum, less anything prepaid online.
  */
 function useCashSplit(cod: ShipmentCodInfo): string | null {
   const { t } = useTranslation('shipments');
@@ -54,16 +55,43 @@ function useCashSplit(cod: ShipmentCodInfo): string | null {
   });
 }
 
+/**
+ * "6,000 already paid online, collect 14,000" on a parcel partly paid online.
+ * Display only: the prepaid part is not cash, so it never joins a cash total.
+ * Once the cash is collected or the collection cancelled there is nothing left
+ * to collect, so only the online part is stated.
+ */
+function usePrepaidLine(cod: ShipmentCodInfo): string | null {
+  const { t } = useTranslation('shipments');
+  const prepaid = prepaidAmountOf(cod);
+  if (prepaid <= 0) return null;
+  if (cod.status === 'collected' || cod.status === 'cancelled') {
+    return t('money.prepaidShort', { amount: formatCurrency(prepaid, cod.currency) });
+  }
+  return t('money.prepaidPartial', {
+    prepaid: formatCurrency(prepaid, cod.currency),
+    cash: formatCurrency(cod.expectedAmount, cod.currency),
+  });
+}
+
 /** The cash pill's tooltip body — what the money is, then where the figure comes from. */
 function CodTooltipBody({ cod }: { cod: ShipmentCodInfo }) {
   const { t } = useTranslation('shipments');
   const split = useCashSplit(cod);
+  const prepaidLine = usePrepaidLine(cod);
   return (
     <>
       <p className="font-medium">{isDeliveryFeeOnly(cod) ? t('money.deliveryFeeOnly') : t('money.cashToCollect')}</p>
       {isDeliveryFeeOnly(cod) && <p>{t('money.deliveryFeeOnlyHint')}</p>}
       {split && <p className="font-numeric">{split}</p>}
-      <p>{isProjected(cod) ? t('money.codProjectedHint') : t('money.codSnapshotHint')}</p>
+      {prepaidLine && <p className="font-numeric">{prepaidLine}</p>}
+      <p>
+        {isProjected(cod)
+          ? prepaidLine
+            ? t('money.codProjectedPrepaidHint')
+            : t('money.codProjectedHint')
+          : t('money.codSnapshotHint')}
+      </p>
     </>
   );
 }
@@ -90,6 +118,9 @@ function useEarningCopy(earning: AgencyEarning, shipment: Pick<ShipmentListItem,
   // sends 0; this only says why.
   const paidInCash = shipment.paymentMethod === 'cash_on_delivery' || shipment.cod?.kind === 'delivery_fee';
   const returnedCod = shipment.status === 'returned' && paidInCash && earning.amount === 0;
+  // Except a parcel partly paid online: its return fee can come out of that
+  // prepaid part or from the vendor, once an administrator settles who was at fault.
+  const returnedPrepaid = returnedCod && prepaidAmountOf(shipment.cod) > 0;
   return {
     final,
     title: final ? t('money.youEarnedTitle') : t('money.youEarnTitle'),
@@ -97,11 +128,13 @@ function useEarningCopy(earning: AgencyEarning, shipment: Pick<ShipmentListItem,
     allocation: final && earning.allocationStatus
       ? tx(t, `shipments:money.allocation.${earning.allocationStatus}`)
       : null,
-    caveat: returnedCod
-      ? t('money.returnedCodZero')
-      : final
-        ? t('money.finalCaveat')
-        : t('money.estimateCaveat'),
+    caveat: returnedPrepaid
+      ? t('money.returnedPrepaid')
+      : returnedCod
+        ? t('money.returnedCodZero')
+        : final
+          ? t('money.finalCaveat')
+          : t('money.estimateCaveat'),
   };
 }
 
@@ -202,19 +235,29 @@ export function ShipmentMoneyCell({ shipment, className }: ShipmentMoneyCellProp
   return (
     <div className={cn('flex flex-col items-start gap-x-3 gap-y-1', className)}>
       {cod ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex cursor-help items-center gap-1.5 rounded-md bg-gold-500/15 px-2 py-0.5 text-gold-700 dark:text-gold-400">
-              <Banknote className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="font-numeric text-xs font-semibold">
-                {formatCurrency(cod.expectedAmount, cod.currency)}
+        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex cursor-help items-center gap-1.5 rounded-md bg-gold-500/15 px-2 py-0.5 text-gold-700 dark:text-gold-400">
+                <Banknote className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="font-numeric text-xs font-semibold">
+                  {formatCurrency(cod.expectedAmount, cod.currency)}
+                </span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[16rem] space-y-1">
+              <CodTooltipBody cod={cod} />
+            </TooltipContent>
+          </Tooltip>
+          {prepaidAmountOf(cod) > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <CreditCard className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="font-numeric">
+                {t('money.prepaidShort', { amount: formatCurrency(prepaidAmountOf(cod), cod.currency) })}
               </span>
             </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-[16rem] space-y-1">
-            <CodTooltipBody cod={cod} />
-          </TooltipContent>
-        </Tooltip>
+          )}
+        </span>
       ) : paymentMethod === 'online' ? (
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <CreditCard className="h-3.5 w-3.5 flex-shrink-0" />
@@ -320,11 +363,13 @@ function EarningTile({ earning, detail }: { earning: AgencyEarning; detail: Ship
 /**
  * What the agent collects at the door. A delivery fee paid in cash on an online
  * order is badged as such — it is not order cash, and no COD handling fee is
- * taken from it — and mixed cash shows its two halves.
+ * taken from it — mixed cash shows its two halves, and a parcel partly paid
+ * online says how much of that is already covered.
  */
 function CodTile({ cod }: { cod: ShipmentCodInfo }) {
   const { t } = useTranslation(['shipments', 'cash']);
   const split = useCashSplit(cod);
+  const prepaidLine = usePrepaidLine(cod);
   return (
     <MoneyTile
       icon={Banknote}
@@ -351,6 +396,9 @@ function CodTile({ cod }: { cod: ShipmentCodInfo }) {
         </>
       )}
       {split && <p className="mt-1.5 font-numeric text-xs text-muted-foreground">{split}</p>}
+      {prepaidLine && (
+        <p className="mt-1.5 font-numeric text-xs font-medium text-foreground">{prepaidLine}</p>
+      )}
     </MoneyTile>
   );
 }

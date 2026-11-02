@@ -12,10 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { RejectShipmentDialog } from '@/components/shipments/RejectShipmentDialog';
+import { FailureReasonReminderDialog } from '@/components/shipments/FailureReasonReminderDialog';
 import { useShipmentActions } from '@/hooks/useShipmentActions';
 import {
   canRejectStatus,
   getNextActions,
+  needsFailureReasonReminder,
   pickupBlockReason,
   type ShipmentNextAction,
 } from '@/components/shipments/shipment-actions';
@@ -44,6 +46,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
   const { updateStatus, pendingKey } = useShipmentActions();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [reminderAction, setReminderAction] = useState<ShipmentNextAction | null>(null);
 
   const nextActions = getNextActions(shipment.status);
   const canReject = canRejectStatus(shipment.status);
@@ -55,6 +58,11 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
   const runStatus = async (action: ShipmentNextAction) => {
     const result = await updateStatus(shipment.id, action.status, tx(t, action.labelKey), onChanged);
     if (result) onChanged();
+  };
+
+  const requestStatus = (action: ShipmentNextAction) => {
+    if (needsFailureReasonReminder(action.status, shipment.cod)) setReminderAction(action);
+    else runStatus(action);
   };
 
   const trigger = (
@@ -103,7 +111,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                       destructive={action.variant === 'destructive'}
                       onClick={() => {
                         setSheetOpen(false);
-                        runStatus(action);
+                        requestStatus(action);
                       }}
                     />
                   );
@@ -143,7 +151,7 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
                     <DropdownMenuItem
                       key={action.status}
                       disabled={blocked}
-                      onSelect={() => runStatus(action)}
+                      onSelect={() => requestStatus(action)}
                       className={cn(action.variant === 'destructive' && 'text-destructive focus:text-destructive')}
                     >
                       <action.icon className="w-4 h-4" />
@@ -180,6 +188,16 @@ export function ShipmentRowActions({ shipment, onView, onChanged }: ShipmentRowA
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         onRejected={onChanged}
+      />
+
+      <FailureReasonReminderDialog
+        action={reminderAction}
+        cod={shipment.cod}
+        onCancel={() => setReminderAction(null)}
+        onConfirm={(action) => {
+          setReminderAction(null);
+          runStatus(action);
+        }}
       />
     </>
   );
