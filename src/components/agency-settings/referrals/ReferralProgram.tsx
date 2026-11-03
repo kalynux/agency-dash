@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Clock, Loader2, PauseCircle, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -250,14 +250,21 @@ function HowReferralsWork({ program }: { program: ReferralProgramInfo }) {
       <li>{t('referrals.how.source')}</li>
       <li>{t('referrals.how.who')}</li>
       <li>{t('referrals.how.limited')}</li>
-      <li>{t('referrals.how.earned')}</li>
       {/* An administrator may set no wait at all, and "0 days" is not a sentence. */}
       <li>
         {program.rewardWaitDays > 0
-          ? t('referrals.how.wait', { count: program.rewardWaitDays })
-          : t('referrals.how.noWait')}
+          ? t('referrals.how.earned', { count: program.rewardWaitDays })
+          : t('referrals.how.earnedNoWait')}
       </li>
-      <li>{t('referrals.how.withdraw', { amount: minimum })}</li>
+      <li>{t('referrals.how.refund')}</li>
+      <li>
+        <Trans
+          ns="account"
+          i18nKey="referrals.how.withdraw"
+          values={{ amount: minimum }}
+          components={{ strong: <span className="font-medium text-foreground" /> }}
+        />
+      </li>
     </ul>
   );
 }

@@ -685,14 +685,14 @@
       "notAllowed": "Vous ne pouvez pas candidater à nouveau sans l'accord d'un administrateur."
     },
     "how": {
-      "source": "Les récompenses sont prélevées sur la commission de Wi-Mall, jamais sur la valeur de la commande.",
-      "who": "Les vendeurs, les clients et les agences vous rapportent des récompenses. Un livreur peut s'inscrire par votre lien, mais ses propres livraisons ne rapportent rien.",
-      "limited": "Un parrainage rapporte pendant une durée limitée, comptée à partir du jour d'inscription de la personne.",
-      "earned": "Une récompense est acquise quand Wi-Mall perçoit sa commission, quelque temps après la livraison, et pour une commande en espèces une fois l'argent parvenu à Wi-Mall. Une commande passée avant la date de fin peut donc ne rien rapporter.",
-      "wait_one": "Une récompense peut être retirée après un délai de {{count}} jour. Elle diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
-      "wait_other": "Une récompense peut être retirée après un délai de {{count}} jours. Elle diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
-      "noWait": "Une récompense diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
-      "withdraw": "Le retrait minimum est de {{amount}}, et un retrait porte sur la totalité de votre solde disponible."
+      "source": "Votre récompense est prélevée sur la commission de Wi-Mall.",
+      "who": "Les vendeurs, les clients et les agences vous rapportent des récompenses.",
+      "limited": "Chaque personne vous rapporte des récompenses pendant une durée limitée, à compter du jour de son inscription.",
+      "earned_one": "Une récompense est comptabilisée une fois que Wi-Mall a reçu sa commission sur la commande. Vous pouvez retirer une récompense {{count}} jour plus tard.",
+      "earned_other": "Une récompense est comptabilisée une fois que Wi-Mall a reçu sa commission sur la commande. Vous pouvez retirer une récompense {{count}} jours plus tard.",
+      "earnedNoWait": "Une récompense est comptabilisée une fois que Wi-Mall a reçu sa commission sur la commande. Vous pouvez la retirer aussitôt.",
+      "refund": "Si une commande est remboursée alors que vous avez déjà retiré sa récompense, vous pourriez devoir rembourser ce montant. Vos prochaines récompenses le règlent automatiquement.",
+      "withdraw": "Le retrait minimum est de <strong>{{amount}}</strong>."
     },
     "apply": {
       "title": "Devenir partenaire",

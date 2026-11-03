@@ -685,14 +685,14 @@
       "notAllowed": "You cannot apply again unless an administrator allows it."
     },
     "how": {
-      "source": "Rewards come out of Wi-Mall's commission, never the order value.",
-      "who": "Vendors, customers and agencies earn you rewards. A delivery agent can register through your link, but an agent's own deliveries earn nothing.",
-      "limited": "A referral earns for a limited time, counted from the day the person registered.",
-      "earned": "A reward is earned when Wi-Mall receives its commission, some time after delivery, and for a cash order once the cash has reached Wi-Mall. So an order placed before the end date can still earn nothing.",
-      "wait_one": "A reward can be withdrawn after a wait of {{count}} day. It goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
-      "wait_other": "A reward can be withdrawn after a wait of {{count}} days. It goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
-      "noWait": "A reward goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
-      "withdraw": "The minimum withdrawal is {{amount}}, and a withdrawal takes your whole available balance."
+      "source": "Your reward comes out of Wi-Mall's commission.",
+      "who": "Vendors, customers and agencies earn you rewards.",
+      "limited": "Each person earns you rewards for a limited time from the day they sign up.",
+      "earned_one": "A reward counts once Wi-Mall has received its commission on the order. You can withdraw a reward {{count}} day after that.",
+      "earned_other": "A reward counts once Wi-Mall has received its commission on the order. You can withdraw a reward {{count}} days after that.",
+      "earnedNoWait": "A reward counts once Wi-Mall has received its commission on the order. You can withdraw it straight away.",
+      "refund": "If an order is refunded after you've already withdrawn its reward, you may owe that amount back. Your next rewards pay it off automatically.",
+      "withdraw": "The minimum withdrawal is <strong>{{amount}}</strong>."
     },
     "apply": {
       "title": "Apply to become a partner",
