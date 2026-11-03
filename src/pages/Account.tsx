@@ -14,6 +14,7 @@ import { SecuritySettings } from '@/components/agency-settings/SecuritySettings'
 import { PayoutSettings } from '@/components/agency-settings/PayoutSettings';
 import { EarningsPayoutCard } from '@/components/agency-settings/EarningsPayoutCard';
 import { DamageClaimsCard, EarningsAdjustmentsCard } from '@/components/agency-settings/EarningsHistory';
+import { ReferralProgram } from '@/components/agency-settings/referrals/ReferralProgram';
 import { BillingTab } from '@/components/billing/BillingTab';
 import { SubPageHeader, sectionGroupClass } from '@/components/layout/PageContainer';
 import { TabSwipeArea } from '@/components/layout/TabSwipeArea';
@@ -26,6 +27,7 @@ const VALID_TABS = [
   'security',
   'billing',
   'payout',
+  'referrals',
 ] as const;
 type AccountTab = typeof VALID_TABS[number];
 
@@ -94,6 +96,7 @@ export function Account() {
           <PayoutSettings />
         </div>
       )}
+      {activeTab === 'referrals' && <ReferralProgram />}
     </TabSwipeArea>
   );
 }

@@ -674,6 +674,15 @@
     "WEBHOOK_SECRET_INVALID": "Cette requête n'a pas pu être vérifiée.",
     "ACCOUNT_CLOSURE_ORDERS_IN_FLIGHT": "Des commandes sont encore en cours sur ce compte.",
     "ACCOUNT_CLOSURE_ROLE_NOT_ELIGIBLE": "Ce type de compte ne peut pas être fermé ici.",
+    "ACCOUNT_CLOSURE_REFERRAL_BALANCE": "Votre solde de parrainage doit être retiré ou régularisé avant la fermeture de ce compte.",
+    "REFERRAL_PROGRAM_DISABLED": "Le programme de parrainage n'est pas ouvert pour le moment.",
+    "REFERRAL_ALREADY_APPLIED": "Vous avez déjà candidaté au programme de parrainage.",
+    "REFERRAL_REAPPLY_NOT_ALLOWED": "Vous ne pouvez pas candidater à nouveau au programme de parrainage sans l'accord d'un administrateur.",
+    "REFERRAL_PARTNER_NOT_FOUND": "Vous n'avez pas encore candidaté au programme de parrainage.",
+    "REFERRAL_PARTNER_STATUS_CONFLICT": "Cette action n'est pas possible avec le statut actuel de ce partenaire.",
+    "REFERRAL_BALANCE_FROZEN": "Ce solde est gelé jusqu'à ce qu'un administrateur l'ait examiné.",
+    "REFERRAL_BALANCE_NOT_FROZEN": "Il n'y a aucun solde gelé à libérer.",
+    "REFERRAL_PAYOUT_METHOD_MANAGED_ELSEWHERE": "Votre destination de versement se gère sur votre page de versements existante.",
     "AGENT_TRUST_OVERRIDE_OUT_OF_BOUNDS": "Cette valeur de confiance est hors des limites autorisées.",
     "CART_ITEM_NOT_FOUND": "Cet article n'est plus dans le panier.",
     "CATALOG_VARIANT_BARGAIN_NOT_SUPPORTED": "Cet article ne permet pas la négociation du prix.",
@@ -723,6 +732,9 @@
     "ROLE_CLOSURE_ROLE_NOT_HELD": "Ce compte ne détient pas ce rôle."
   },
   "detailed": {
+    "EARNINGS_PAYOUT_BELOW_MINIMUM": {
+      "minAmount": "Votre solde disponible est inférieur au minimum de {{amount}}."
+    },
     "SHIPMENT_REASSIGNMENT_CONFLICT": {
       "refundOpened": "Ce colis ne peut pas repartir : un remboursement a été ouvert pour ce que le client a payé en ligne."
     },

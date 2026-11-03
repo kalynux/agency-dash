@@ -54,6 +54,13 @@ interface DetailedMessage {
  * English server copy, the same as `error.message`.
  */
 const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMessage | undefined> = {
+  // Two minimums answer with this code, the agency's earnings and the referral
+  // program's own, so the catalogued sentence is only true of the first. Read the
+  // one that refused. See api-doc/me/referrals.md § POST /api/me/referral/payout.
+  EARNINGS_PAYOUT_BELOW_MINIMUM: (d) =>
+    typeof d.minAmount === 'number'
+      ? { key: 'EARNINGS_PAYOUT_BELOW_MINIMUM.minAmount', context: { amount: formatCurrency(d.minAmount) } }
+      : undefined,
   // The code means two things on a reassign. A lost race names what it expected
   // (`expectedStatus`), and retrying is right. A returned parcel whose refund has
   // been opened sends only `shipmentId`, and retrying can never work. See

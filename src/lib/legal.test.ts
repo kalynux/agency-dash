@@ -5,6 +5,7 @@ describe('legalUrl', () => {
   it('gives a French UI the French documents', () => {
     expect(legalUrl('terms', 'fr')).toBe('https://cdn.wi-mall.com/legal/terms-of-service-fr.html');
     expect(legalUrl('privacy', 'fr')).toBe('https://cdn.wi-mall.com/legal/privacy-policy-fr.html');
+    expect(legalUrl('referralTerms', 'fr')).toBe('https://cdn.wi-mall.com/legal/referral-partner-terms-fr.html');
     expect(legalUrl('terms', 'fr-CM')).toBe(LEGAL_URLS.terms.fr);
   });
 
@@ -12,6 +13,7 @@ describe('legalUrl', () => {
     for (const lang of ['en', 'en-GB', 'pt', 'es', 'ar', '', null, undefined]) {
       expect(legalUrl('terms', lang)).toBe('https://cdn.wi-mall.com/legal/terms-of-service-en.html');
       expect(legalUrl('privacy', lang)).toBe('https://cdn.wi-mall.com/legal/privacy-policy-en.html');
+      expect(legalUrl('referralTerms', lang)).toBe('https://cdn.wi-mall.com/legal/referral-partner-terms-en.html');
     }
   });
 

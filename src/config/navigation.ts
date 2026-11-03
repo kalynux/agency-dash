@@ -33,6 +33,7 @@ import {
   History,
   Package,
   Scale,
+  Gift,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -181,6 +182,9 @@ export const FOOTER_NAV: NavItem[] = [
       { labelKey: 'nav:footer.accountSecurity', path: '/dashboard/account/security', icon: Shield },
       { labelKey: 'nav:footer.accountBilling', path: '/dashboard/account/billing', icon: CreditCard },
       { labelKey: 'nav:footer.accountPayout', path: '/dashboard/account/payout', icon: Wallet },
+      // Beside Payout, and never merged with it: a partner's referral balance is
+      // separate money with its own withdrawal and its own minimum.
+      { labelKey: 'nav:footer.accountReferrals', path: '/dashboard/account/referrals', icon: Gift },
     ],
   },
   {

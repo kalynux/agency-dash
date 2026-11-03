@@ -674,6 +674,15 @@
     "WEBHOOK_SECRET_INVALID": "That request could not be verified.",
     "ACCOUNT_CLOSURE_ORDERS_IN_FLIGHT": "There are still orders in progress on this account.",
     "ACCOUNT_CLOSURE_ROLE_NOT_ELIGIBLE": "This account type cannot be closed here.",
+    "ACCOUNT_CLOSURE_REFERRAL_BALANCE": "Your referral balance must be withdrawn or settled before this account can be closed.",
+    "REFERRAL_PROGRAM_DISABLED": "The referral program is not open right now.",
+    "REFERRAL_ALREADY_APPLIED": "You have already applied to the referral program.",
+    "REFERRAL_REAPPLY_NOT_ALLOWED": "You can't apply to the referral program again unless an administrator allows it.",
+    "REFERRAL_PARTNER_NOT_FOUND": "You haven't applied to the referral program yet.",
+    "REFERRAL_PARTNER_STATUS_CONFLICT": "That can't be done from this partner's current status.",
+    "REFERRAL_BALANCE_FROZEN": "This balance is frozen until an administrator has reviewed it.",
+    "REFERRAL_BALANCE_NOT_FROZEN": "There is no frozen balance to release.",
+    "REFERRAL_PAYOUT_METHOD_MANAGED_ELSEWHERE": "Your payout destination is managed on your existing payout page.",
     "AGENT_TRUST_OVERRIDE_OUT_OF_BOUNDS": "That trust value is outside the allowed range.",
     "CART_ITEM_NOT_FOUND": "That item is no longer in the cart.",
     "CATALOG_VARIANT_BARGAIN_NOT_SUPPORTED": "This item does not support price negotiation.",
@@ -723,6 +732,9 @@
     "ROLE_CLOSURE_ROLE_NOT_HELD": "This account doesn’t hold that role."
   },
   "detailed": {
+    "EARNINGS_PAYOUT_BELOW_MINIMUM": {
+      "minAmount": "Your available balance is below the {{amount}} minimum."
+    },
     "SHIPMENT_REASSIGNMENT_CONFLICT": {
       "refundOpened": "This parcel can't be sent out again: a refund has been opened for what the customer paid online."
     },

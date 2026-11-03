@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +19,7 @@ import { getApiErrorMessage } from '@/lib/errors';
 import {
   AGENCY_NAME_MAX,
   buildRegisterSchema,
+  REFERRAL_CODE_MAX,
   validationMessage,
   type RegisterFormValues,
 } from '@/lib/validation-schemas';
@@ -67,11 +68,15 @@ const REGISTER_ERROR_OVERRIDES: Record<string, string> = {
 export function Register() {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { session, adoptSession } = useOnboarding();
   const [apiError, setApiError] = useState<string | null>(null);
 
   // Rebuilt on a language switch so field errors follow the UI.
   const schema = useMemo(() => buildRegisterSchema(t), [t]);
+  // A `?ref=` too long to be a code is dropped rather than cut: cut, it would be
+  // a different code, and sent whole, the server would refuse the sign-up.
+  const refParam = searchParams.get('ref')?.trim() ?? '';
   const {
     register,
     control,
@@ -89,6 +94,7 @@ export function Register() {
       confirmPassword: '',
       // Unticked: consent is given, never presumed.
       terms_accepted: false,
+      referral_code: refParam.length <= REFERRAL_CODE_MAX ? refParam : '',
     },
   });
 
@@ -105,6 +111,7 @@ export function Register() {
         email: values.email,
         // The resolver only lets a submit through with the box ticked.
         terms_accepted: true,
+        referral_code: values.referral_code,
       });
 
       const step = res.data.role_entity.onboarding_step;
@@ -271,6 +278,25 @@ export function Register() {
           error={errors.confirmPassword?.message}
           registration={register('confirmPassword')}
         />
+
+        {/* Optional, with no message of any kind about it, before or after the
+            submit: the server ignores a bad code and never says what it did
+            with a good one. */}
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="referral_code">{t('register.referralCode')}</FieldLabel>
+          <Input
+            id="referral_code"
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={REFERRAL_CODE_MAX}
+            className="h-11"
+            aria-describedby="referral_code-message"
+            {...register('referral_code')}
+          />
+          <FieldMessage id="referral_code-message" hint={t('register.referralCodeHint')} />
+        </div>
 
         {/* Consent, directly above the button it unlocks, unticked by default.
             The document names are links inside the label; a tap on one opens

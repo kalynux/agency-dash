@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { InfoHint } from '@/components/common/InfoHint';
 import { sectionSurfaceClass } from '@/components/layout/PageContainer';
+import { BalanceRow, BalanceStat } from '@/components/agency-settings/BalanceStat';
+import { PAYOUT_STATUS_VIEW } from '@/components/agency-settings/payoutStatusView';
 import { Badge } from '@/components/ui/badge';
 import { useEarnings } from '@/hooks/useEarnings';
 import { useOnboarding } from '@/onboarding/store/onboarding.store';
@@ -15,7 +17,6 @@ import {
   readPayoutStatus,
   type EarningsPayoutRequest,
   type OpenPayoutStatus,
-  type PayoutStatusView,
 } from '@/types/earnings.types';
 import { usePageRefresh } from '@/store/pageRefresh.store';
 
@@ -24,57 +25,6 @@ import { usePageRefresh } from '@/store/pageRefresh.store';
 // whole `available` balance whether or not the agency is verified.
 const MIN_PAYOUT = 10_000;
 const AUTO_PAYOUT_THRESHOLD = 2_000_000;
-
-/**
- * How each payout status is rendered — colour, badge label, and the line under
- * it that says where the money actually is.
- *
- * ⛔ **Every value has its OWN entry, `unknown` included.** This map used to be
- * exhaustive over three statuses; when `processing` and `failed` arrived, a map
- * of that shape sends both into whichever branch is reached last — telling an
- * agency their payout was *declined* while their money is in flight.
- *
- * ⚠ The colours carry the same distinction the copy does. `failed` is amber —
- * still open, money still held, an administrator is on it — and deliberately
- * NOT the red of `rejected`, which is closed with the balance handed back.
- * `processing` is blue rather than green, because green reads as "arrived".
- */
-const STATUS_VIEW = {
-  pending: {
-    className: 'border-yellow-500 text-yellow-600 bg-yellow-50',
-    labelKey: 'earnings.status.pending',
-    noteKey: 'earnings.statusNote.pending',
-  },
-  processing: {
-    className: 'border-blue-500 text-blue-600 bg-blue-50',
-    labelKey: 'earnings.status.processing',
-    noteKey: 'earnings.statusNote.processing',
-  },
-  paid: {
-    className: 'border-green-500 text-green-600 bg-green-50',
-    labelKey: 'earnings.status.paid',
-    // The only status that needs no qualifier: the money arrived.
-    noteKey: null,
-  },
-  rejected: {
-    className: 'border-red-500 text-red-600 bg-red-50',
-    labelKey: 'earnings.status.rejected',
-    noteKey: 'earnings.statusNote.rejected',
-  },
-  failed: {
-    className: 'border-orange-500 text-orange-600 bg-orange-50',
-    labelKey: 'earnings.status.failed',
-    noteKey: 'earnings.statusNote.failed',
-  },
-  unknown: {
-    className: 'border-muted-foreground/40 text-muted-foreground bg-muted',
-    labelKey: 'earnings.status.unknown',
-    noteKey: 'earnings.statusNote.unknown',
-  },
-} as const satisfies Record<
-  PayoutStatusView,
-  { className: string; labelKey: string; noteKey: string | null }
->;
 
 /**
  * Why the withdraw button is disabled while a payout is still open — one
@@ -88,63 +38,6 @@ const OPEN_REQUEST_KEY = {
   failed: 'earnings.blocked.openRequest.failed',
   unknown: 'earnings.blocked.openRequest.unknown',
 } as const satisfies Record<OpenPayoutStatus, string>;
-
-/**
- * One balance tile. Sized as a flex item so the row below can pair them up:
- * `basis` asks for half a row, while the amount's `whitespace-nowrap` sets the
- * tile's automatic minimum size. A tile whose figure needs more than half the
- * row therefore can't share one — see `BALANCE_ROW`.
- *
- * The icon sits beside the label rather than beside the amount so the figure
- * gets the tile's full inner width; sharing a row with a 36px chip would leave
- * roughly 70px for it on a phone, and every balance would then claim a row.
- */
-function BalanceStat({
-  icon: Icon,
-  label,
-  value,
-  currency,
-  hint,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number;
-  currency: string;
-  hint: string;
-}) {
-  const { t } = useTranslation(['account', 'common']);
-  return (
-    <div className="flex grow basis-[calc(50%_-_0.5rem)] flex-col rounded-lg border p-3 sm:p-4 lg:basis-[calc(25%_-_0.75rem)]">
-      <div className="flex items-start justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-          {label}
-          {/* The hint is 2–3 wrapped lines in a half-width tile on a phone, which
-              triples the tile's height for text the user reads once. */}
-          <InfoHint
-            className="md:hidden"
-            label={t('earnings.balance.aboutLabel', { label: label.toLowerCase() })}
-          >
-            {hint}
-          </InfoHint>
-        </p>
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 sm:h-9 sm:w-9">
-          <Icon className="w-4 h-4 text-primary" />
-        </div>
-      </div>
-      <p className="mt-2 whitespace-nowrap text-lg font-bold sm:text-2xl">{formatCurrency(value, currency)}</p>
-      <p className="text-xs text-muted-foreground mt-1.5 max-md:hidden">{hint}</p>
-    </div>
-  );
-}
-
-/**
- * 2×2 on phones, one row of four from `lg`. A wrapping flex row rather than a
- * grid on purpose: grid tracks are fixed, so a long amount would either clip or
- * overflow its cell. Here each tile's minimum size is driven by its own
- * (non-wrapping) figure, so a balance too wide to sit beside a sibling pushes
- * itself onto its own full-width line instead.
- */
-const BALANCE_ROW = 'flex flex-wrap gap-3 sm:gap-4';
 
 export function EarningsPayoutCard() {
   const { t } = useTranslation(['account', 'common']);
@@ -207,7 +100,7 @@ export function EarningsPayoutCard() {
           </div>
         ) : (
           <>
-            <div className={BALANCE_ROW}>
+            <BalanceRow>
               <BalanceStat
                 icon={Wallet}
                 label={t('earnings.balance.available')}
@@ -236,7 +129,7 @@ export function EarningsPayoutCard() {
                 currency={balance.currency}
                 hint={t('earnings.balance.requestedHint')}
               />
-            </div>
+            </BalanceRow>
 
             {/* When the money is earned, and what has already come out of it.
                 Six lines of prose on a phone — folded into the ⓘ on the
@@ -304,10 +197,10 @@ function LatestPayoutRow({ payout }: { payout: EarningsPayoutRequest }) {
   const { t } = useTranslation(['account', 'common']);
   const navigate = useNavigate();
 
-  // ⛔ Through `readPayoutStatus`, never `STATUS_VIEW[payout.status]` directly:
+  // ⛔ Through `readPayoutStatus`, never `PAYOUT_STATUS_VIEW[payout.status]` directly:
   // a status added to the backend after this build would index the map to
   // `undefined` and paint a blank badge on a live payout.
-  const view = STATUS_VIEW[readPayoutStatus(payout.status)];
+  const view = PAYOUT_STATUS_VIEW[readPayoutStatus(payout.status)];
 
   return (
     <div className="rounded-lg border p-3 md:p-4 flex items-start justify-between gap-3 flex-wrap">

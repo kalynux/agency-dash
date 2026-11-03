@@ -35,6 +35,8 @@ export interface AgencyRegisterInput {
      * `terms_accepted`, so there is nothing else worth sending.
      */
     terms_accepted: true;
+    /** From `?ref=` or typed. A bad one is ignored by the server, never refused. */
+    referral_code?: string;
 }
 
 /**
@@ -111,6 +113,9 @@ export const authService = {
                 email: input.email || undefined,
                 role: 'agency',
                 terms_accepted: input.terms_accepted,
+                // Dropped when empty. Registration-only: adding a role never
+                // takes one, and nothing in the response reports on it.
+                referral_code: input.referral_code || undefined,
             })
             .then(captureSession);
     },

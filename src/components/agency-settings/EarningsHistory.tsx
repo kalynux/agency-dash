@@ -50,7 +50,7 @@ const KIND_LABEL = {
 const isKnownKind = (kind: string): kind is EarningsAdjustmentKind => kind in KIND_VIEW;
 
 /** Title, the description on desktop, and the same description behind an ⓘ on a phone. */
-function ListHeader({ title, description, short, aboutLabel }: {
+export function ListHeader({ title, description, short, aboutLabel }: {
   title: string;
   description: string;
   short: string;
@@ -69,7 +69,7 @@ function ListHeader({ title, description, short, aboutLabel }: {
 }
 
 /** Loading / error / empty, or the rows and the pager. */
-function ListBody({ isLoading, loadError, isEmpty, loadingText, emptyText, onRetry, meta, onPage, children }: {
+export function ListBody({ isLoading, loadError, isEmpty, loadingText, emptyText, onRetry, meta, onPage, children }: {
   isLoading: boolean;
   loadError: string | null;
   isEmpty: boolean;

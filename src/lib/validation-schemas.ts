@@ -195,6 +195,9 @@ export const AGENCY_NAME_MAX = 100;
  *
  * `email` is optional for agencies (vendors are the ones who must supply one).
  */
+/** `RegisterSchema.referral_code` on the server. Longer is a 400 on the whole sign-up. */
+export const REFERRAL_CODE_MAX = 40;
+
 export function buildRegisterSchema(t: T, options: { country?: CountryCode | null } = {}) {
   return z
     .object({
@@ -224,6 +227,10 @@ export function buildRegisterSchema(t: T, options: { country?: CountryCode | nul
       terms_accepted: z.boolean().refine((value) => value, {
         message: v(t, 'terms.required'),
       }),
+      // No rule of its own, on purpose: a bad code must never stop a sign-up and
+      // nothing may be said about it. The input's `maxLength` keeps it inside
+      // REFERRAL_CODE_MAX, the one limit that could make the server refuse.
+      referral_code: z.string().trim().optional(),
     })
     .refine((value) => value.password === value.confirmPassword, {
       message: v(t, 'password.mismatch'),

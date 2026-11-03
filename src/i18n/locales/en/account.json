@@ -27,6 +27,10 @@
     "payout": {
       "description": "Your delivery-fee balance, and where those earnings are sent",
       "short": "Earnings and payout methods"
+    },
+    "referrals": {
+      "description": "Refer new accounts and earn a share of Wi-Mall's commission on them",
+      "short": "Your link and referral balance"
     }
   },
   "profile": {
@@ -639,6 +643,181 @@
       "title": "An administrator asked to close this agency account",
       "body": "Nothing changes unless you confirm. Review the request before {{date}}.",
       "cta": "Review request"
+    }
+  },
+  "referrals": {
+    "loading": "Loading the referral program…",
+    "loadFailed": "The referral program could not be loaded.",
+    "reason": "Reason:",
+    "intro": {
+      "title": "The referral program",
+      "lead": "Share your link with people who could use Wi-Mall. When they register through it, you earn a percentage of the commission Wi-Mall earns on their orders.",
+      "ratesAfterApproval": "Your exact rates and earning periods appear here once you are approved."
+    },
+    "closed": {
+      "title": "The referral program is not open",
+      "body": "Applications are closed for now. Check back here later."
+    },
+    "paused": {
+      "title": "The referral program is paused",
+      "active": "For now your link brings in no new referrals and no new rewards are being earned. What you have already earned stays yours.",
+      "pending": "Your application stays on file."
+    },
+    "pending": {
+      "title": "We're reviewing your application",
+      "body": "You applied on {{date}}. We will tell you the outcome by WhatsApp or email, and it will also appear here."
+    },
+    "rejected": {
+      "title": "Your application was not approved"
+    },
+    "suspended": {
+      "title": "Your partnership is suspended",
+      "body": "Your link earns nothing for now: people who use it register normally, and you earn nothing from them."
+    },
+    "terminated": {
+      "title": "Your partnership has ended",
+      "body": "Your link no longer earns: people who use it register normally, and you earn nothing from them. The rewards you earned stay on record below."
+    },
+    "balanceFrozen": "Your balance is frozen until an administrator has reviewed it.",
+    "balanceReleased": "An administrator has released your balance, so you can still withdraw it.",
+    "reapply": {
+      "allowed": "An administrator has allowed you to apply again.",
+      "notAllowed": "You cannot apply again unless an administrator allows it."
+    },
+    "how": {
+      "source": "Rewards come out of Wi-Mall's commission, never the order value.",
+      "who": "Vendors, customers and agencies earn you rewards. A delivery agent can register through your link, but an agent's own deliveries earn nothing.",
+      "limited": "A referral earns for a limited time, counted from the day the person registered.",
+      "earned": "A reward is earned when Wi-Mall receives its commission, some time after delivery, and for a cash order once the cash has reached Wi-Mall. So an order placed before the end date can still earn nothing.",
+      "wait_one": "A reward can be withdrawn after a wait of {{count}} day. It goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
+      "wait_other": "A reward can be withdrawn after a wait of {{count}} days. It goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
+      "noWait": "A reward goes down if the order is refunded, and later refunds can leave you owing money, which later rewards pay first.",
+      "withdraw": "The minimum withdrawal is {{amount}}, and a withdrawal takes your whole available balance."
+    },
+    "apply": {
+      "title": "Apply to become a partner",
+      "description": "An administrator reviews every application.",
+      "motivation": "Anything you would like us to know? (optional)",
+      "motivationPlaceholder": "For example, who you plan to share your link with",
+      "acceptTerms": "I accept the <terms>Partner Terms</terms>.",
+      "submit": "Send my application",
+      "sending": "Sending…",
+      "sent": "Your application has been sent."
+    },
+    "share": {
+      "title": "Your link",
+      "description": "Share it with people who have not registered yet. Only a brand-new account can be referred.",
+      "inactive": "People who use this code or link register normally and earn you nothing.",
+      "paused": "While the program is paused, people who use this code or link register normally and earn you nothing.",
+      "code": "Your code",
+      "registerLink": "Registration link",
+      "registerHint": "For vendors, agencies, agents, and customers on the website.",
+      "onWhatsapp": "Share on WhatsApp",
+      "onTelegram": "Share on Telegram",
+      "more": "More",
+      "message": "Join Wi-Mall with my link:",
+      "chatLead": "For people who will shop through the chat, send one of these. It opens a chat with Wi-Mall with your code filled in, and the code only counts if they send that first message unchanged.",
+      "whatsappLink": "WhatsApp link",
+      "telegramLink": "Telegram link",
+      "copyFailed": "Could not copy. Select it and copy it by hand."
+    },
+    "balance": {
+      "title": "Referral balance",
+      "description": "Separate money: not your delivery earnings, and not part of your COD figures. It has its own withdrawal and its own minimum.",
+      "short": "Separate from your delivery earnings",
+      "aboutLabel": "About your referral balance",
+      "available": "Available",
+      "availableHint": "Can be withdrawn from {{amount}}",
+      "pending": "Pending",
+      "pendingHint_one": "Rewards still in their {{count}}-day wait",
+      "pendingHint_other": "Rewards still in their {{count}}-day wait",
+      "pendingHintNoWait": "Rewards not yet released",
+      "requested": "Requested",
+      "requestedHint": "Held for a withdrawal still open",
+      "reserve": "Reserve",
+      "reserveHint": "Set aside by Wi-Mall",
+      "owes": "You owe {{amount}}",
+      "owesNote": "A refund took back rewards you had already been credited. Your next rewards pay this first, and nothing can be withdrawn until it is cleared."
+    },
+    "destination": {
+      "title": "Paid to",
+      "none": "No payout destination yet",
+      "noneHint": "Add a payout method on your Payout page before you can withdraw.",
+      "fromAgency": "The same method as your delivery earnings. Changing it on your Payout page changes it here straight away.",
+      "fromReferral": "Saved with your partnership. A payout method added on your Payout page takes its place.",
+      "fromVendor": "This comes from your vendor account. Change it in Wi-Vendor.",
+      "fromAgent": "This comes from your delivery agent account. Change it in the agent app.",
+      "manage": "Manage on Payout",
+      "add": "Add on Payout"
+    },
+    "withdraw": {
+      "button": "Withdraw {{amount}}",
+      "requesting": "Requesting…",
+      "requested": "Withdrawal of {{amount}} requested.",
+      "whole": "A withdrawal takes your whole available balance. Minimum {{amount}}.",
+      "blocked": {
+        "frozen": "Your balance is frozen, so it cannot be withdrawn for now.",
+        "open": "You already have a withdrawal in progress. You can request another once it is settled.",
+        "noDestination": "Add a payout method before you can withdraw.",
+        "owes": "Nothing can be withdrawn until what you owe is cleared.",
+        "noBalance": "No available balance to withdraw yet. Minimum {{amount}}.",
+        "belowMinimum": "The minimum withdrawal is {{amount}}."
+      }
+    },
+    "terms": {
+      "title": "Your terms",
+      "description": "What you earn on each kind of account, as a share of Wi-Mall's commission.",
+      "row_one": "{{rate}}% of Wi-Mall's commission, for {{count}} month",
+      "row_other": "{{rate}}% of Wi-Mall's commission, for {{count}} months"
+    },
+    "category": {
+      "vendor": "Vendor",
+      "customer": "Customer",
+      "agency": "Agency",
+      "agent": "Agent"
+    },
+    "referred": {
+      "title": "Referred accounts",
+      "description": "The accounts that registered with your code, newest first. Names are partly hidden to protect their privacy.",
+      "short": "Who registered with your code",
+      "aboutLabel": "About referred accounts",
+      "loading": "Loading referred accounts…",
+      "empty": "Nobody has registered with your code yet.",
+      "total_one": "{{count}} account referred",
+      "total_other": "{{count}} accounts referred",
+      "earningCount_one": "{{count}} earning now",
+      "earningCount_other": "{{count}} earning now",
+      "earning": "Earning",
+      "registered": "Registered {{date}}",
+      "until": "earning period ends {{date}}",
+      "ended": "earning period ended {{date}}",
+      "neverEarns": "an agent's own deliveries earn nothing"
+    },
+    "rewards": {
+      "title": "Rewards",
+      "description": "What each referred account has earned you, newest first. Each amount is what the reward is worth now, after any refund.",
+      "short": "What your referrals have earned",
+      "aboutLabel": "About rewards",
+      "loading": "Loading rewards…",
+      "empty": "No rewards yet.",
+      "earned": "Earned {{date}}",
+      "availableFrom": "available from {{date}}",
+      "adjusted": "reduced by a refund",
+      "status": {
+        "held": "Waiting",
+        "released": "Released",
+        "reversed": "Refunded",
+        "unknown": "In progress"
+      }
+    },
+    "payouts": {
+      "title": "Withdrawals",
+      "description": "Your withdrawals from the referral balance. Your delivery earnings payouts are on your Payout page.",
+      "short": "From your referral balance",
+      "aboutLabel": "About withdrawals",
+      "loading": "Loading withdrawals…",
+      "empty": "No withdrawals yet.",
+      "unknownNote": "This withdrawal is still in progress."
     }
   }
 }

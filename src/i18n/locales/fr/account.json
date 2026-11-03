@@ -27,6 +27,10 @@
     "payout": {
       "description": "Votre solde de frais de livraison, et où ces revenus sont envoyés",
       "short": "Revenus et moyens de versement"
+    },
+    "referrals": {
+      "description": "Recommandez de nouveaux comptes et touchez une part de la commission de Wi-Mall",
+      "short": "Votre lien et votre solde de parrainage"
     }
   },
   "profile": {
@@ -639,6 +643,181 @@
       "title": "Un administrateur a demandé la fermeture de ce compte agence",
       "body": "Rien ne change sans votre confirmation. Consultez la demande avant le {{date}}.",
       "cta": "Voir la demande"
+    }
+  },
+  "referrals": {
+    "loading": "Chargement du programme de parrainage…",
+    "loadFailed": "Le programme de parrainage n'a pas pu être chargé.",
+    "reason": "Motif :",
+    "intro": {
+      "title": "Le programme de parrainage",
+      "lead": "Partagez votre lien avec les personnes à qui Wi-Mall peut servir. Quand elles s'inscrivent par ce lien, vous touchez un pourcentage de la commission que Wi-Mall perçoit sur leurs commandes.",
+      "ratesAfterApproval": "Vos taux et vos périodes de gain exacts apparaissent ici une fois votre candidature approuvée."
+    },
+    "closed": {
+      "title": "Le programme de parrainage n'est pas ouvert",
+      "body": "Les candidatures sont fermées pour le moment. Revenez consulter cette page plus tard."
+    },
+    "paused": {
+      "title": "Le programme de parrainage est en pause",
+      "active": "Pour le moment, votre lien n'apporte aucun nouveau filleul et aucune nouvelle récompense n'est générée. Ce que vous avez déjà gagné reste à vous.",
+      "pending": "Votre candidature reste enregistrée."
+    },
+    "pending": {
+      "title": "Nous examinons votre candidature",
+      "body": "Vous avez candidaté le {{date}}. Nous vous communiquerons la décision par WhatsApp ou par e-mail, et elle apparaîtra aussi ici."
+    },
+    "rejected": {
+      "title": "Votre candidature n'a pas été approuvée"
+    },
+    "suspended": {
+      "title": "Votre partenariat est suspendu",
+      "body": "Votre lien ne rapporte rien pour le moment : les personnes qui l'utilisent s'inscrivent normalement, et vous ne touchez rien sur elles."
+    },
+    "terminated": {
+      "title": "Votre partenariat a pris fin",
+      "body": "Votre lien ne rapporte plus : les personnes qui l'utilisent s'inscrivent normalement, et vous ne touchez rien sur elles. Les récompenses gagnées restent enregistrées ci-dessous."
+    },
+    "balanceFrozen": "Votre solde est gelé jusqu'à ce qu'un administrateur l'ait examiné.",
+    "balanceReleased": "Un administrateur a libéré votre solde : vous pouvez encore le retirer.",
+    "reapply": {
+      "allowed": "Un administrateur vous a autorisé à candidater à nouveau.",
+      "notAllowed": "Vous ne pouvez pas candidater à nouveau sans l'accord d'un administrateur."
+    },
+    "how": {
+      "source": "Les récompenses sont prélevées sur la commission de Wi-Mall, jamais sur la valeur de la commande.",
+      "who": "Les vendeurs, les clients et les agences vous rapportent des récompenses. Un livreur peut s'inscrire par votre lien, mais ses propres livraisons ne rapportent rien.",
+      "limited": "Un parrainage rapporte pendant une durée limitée, comptée à partir du jour d'inscription de la personne.",
+      "earned": "Une récompense est acquise quand Wi-Mall perçoit sa commission, quelque temps après la livraison, et pour une commande en espèces une fois l'argent parvenu à Wi-Mall. Une commande passée avant la date de fin peut donc ne rien rapporter.",
+      "wait_one": "Une récompense peut être retirée après un délai de {{count}} jour. Elle diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
+      "wait_other": "Une récompense peut être retirée après un délai de {{count}} jours. Elle diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
+      "noWait": "Une récompense diminue si la commande est remboursée, et des remboursements ultérieurs peuvent vous laisser redevable, ce que les récompenses suivantes règlent en priorité.",
+      "withdraw": "Le retrait minimum est de {{amount}}, et un retrait porte sur la totalité de votre solde disponible."
+    },
+    "apply": {
+      "title": "Devenir partenaire",
+      "description": "Un administrateur examine chaque candidature.",
+      "motivation": "Souhaitez-vous nous dire quelque chose ? (facultatif)",
+      "motivationPlaceholder": "Par exemple, avec qui vous comptez partager votre lien",
+      "acceptTerms": "J'accepte les <terms>Conditions du partenaire</terms>.",
+      "submit": "Envoyer ma candidature",
+      "sending": "Envoi…",
+      "sent": "Votre candidature a été envoyée."
+    },
+    "share": {
+      "title": "Votre lien",
+      "description": "Partagez-le avec des personnes qui ne sont pas encore inscrites. Seul un tout nouveau compte peut être parrainé.",
+      "inactive": "Les personnes qui utilisent ce code ou ce lien s'inscrivent normalement et ne vous rapportent rien.",
+      "paused": "Tant que le programme est en pause, les personnes qui utilisent ce code ou ce lien s'inscrivent normalement et ne vous rapportent rien.",
+      "code": "Votre code",
+      "registerLink": "Lien d'inscription",
+      "registerHint": "Pour les vendeurs, les agences, les livreurs, et les clients sur le site.",
+      "onWhatsapp": "Partager sur WhatsApp",
+      "onTelegram": "Partager sur Telegram",
+      "more": "Plus",
+      "message": "Rejoignez Wi-Mall avec mon lien :",
+      "chatLead": "Pour les personnes qui achèteront via le chat, envoyez l'un de ces liens. Il ouvre une discussion avec Wi-Mall avec votre code déjà saisi, et le code ne compte que si ce premier message est envoyé tel quel.",
+      "whatsappLink": "Lien WhatsApp",
+      "telegramLink": "Lien Telegram",
+      "copyFailed": "Copie impossible. Sélectionnez-le et copiez-le à la main."
+    },
+    "balance": {
+      "title": "Solde de parrainage",
+      "description": "Un argent distinct : ce ne sont pas vos revenus de livraison et cela ne fait pas partie de vos chiffres de paiement à la livraison. Il a son propre retrait et son propre minimum.",
+      "short": "Distinct de vos revenus de livraison",
+      "aboutLabel": "À propos de votre solde de parrainage",
+      "available": "Disponible",
+      "availableHint": "Retirable à partir de {{amount}}",
+      "pending": "En attente",
+      "pendingHint_one": "Récompenses encore dans leur délai de {{count}} jour",
+      "pendingHint_other": "Récompenses encore dans leur délai de {{count}} jours",
+      "pendingHintNoWait": "Récompenses pas encore libérées",
+      "requested": "Demandé",
+      "requestedHint": "Réservé pour un retrait encore en cours",
+      "reserve": "Réserve",
+      "reserveHint": "Mis de côté par Wi-Mall",
+      "owes": "Vous devez {{amount}}",
+      "owesNote": "Un remboursement a repris des récompenses déjà créditées. Vos prochaines récompenses règlent d'abord ce montant, et rien ne peut être retiré tant qu'il n'est pas soldé."
+    },
+    "destination": {
+      "title": "Versé sur",
+      "none": "Aucune destination de versement pour le moment",
+      "noneHint": "Ajoutez un moyen de versement sur votre page Versements avant de pouvoir retirer.",
+      "fromAgency": "Le même moyen que pour vos revenus de livraison. Le modifier sur votre page Versements le modifie ici immédiatement.",
+      "fromReferral": "Enregistré avec votre partenariat. Un moyen de versement ajouté sur votre page Versements le remplace.",
+      "fromVendor": "Il provient de votre compte vendeur. Modifiez-le dans Wi-Vendor.",
+      "fromAgent": "Il provient de votre compte livreur. Modifiez-le dans l'application livreur.",
+      "manage": "Gérer dans Versements",
+      "add": "Ajouter dans Versements"
+    },
+    "withdraw": {
+      "button": "Retirer {{amount}}",
+      "requesting": "Demande en cours…",
+      "requested": "Retrait de {{amount}} demandé.",
+      "whole": "Un retrait porte sur la totalité de votre solde disponible. Minimum {{amount}}.",
+      "blocked": {
+        "frozen": "Votre solde est gelé : il ne peut pas être retiré pour le moment.",
+        "open": "Vous avez déjà un retrait en cours. Vous pourrez en demander un autre une fois celui-ci réglé.",
+        "noDestination": "Ajoutez un moyen de versement avant de pouvoir retirer.",
+        "owes": "Rien ne peut être retiré tant que ce que vous devez n'est pas soldé.",
+        "noBalance": "Aucun solde disponible à retirer pour le moment. Minimum {{amount}}.",
+        "belowMinimum": "Le retrait minimum est de {{amount}}."
+      }
+    },
+    "terms": {
+      "title": "Vos conditions",
+      "description": "Ce que vous touchez sur chaque type de compte, en part de la commission de Wi-Mall.",
+      "row_one": "{{rate}} % de la commission de Wi-Mall, pendant {{count}} mois",
+      "row_other": "{{rate}} % de la commission de Wi-Mall, pendant {{count}} mois"
+    },
+    "category": {
+      "vendor": "Vendeur",
+      "customer": "Client",
+      "agency": "Agence",
+      "agent": "Livreur"
+    },
+    "referred": {
+      "title": "Comptes parrainés",
+      "description": "Les comptes inscrits avec votre code, du plus récent au plus ancien. Les noms sont en partie masqués pour protéger leur vie privée.",
+      "short": "Qui s'est inscrit avec votre code",
+      "aboutLabel": "À propos des comptes parrainés",
+      "loading": "Chargement des comptes parrainés…",
+      "empty": "Personne ne s'est encore inscrit avec votre code.",
+      "total_one": "{{count}} compte parrainé",
+      "total_other": "{{count}} comptes parrainés",
+      "earningCount_one": "{{count}} rapporte en ce moment",
+      "earningCount_other": "{{count}} rapportent en ce moment",
+      "earning": "Rapporte",
+      "registered": "Inscrit le {{date}}",
+      "until": "période de gain jusqu'au {{date}}",
+      "ended": "période de gain terminée le {{date}}",
+      "neverEarns": "les livraisons d'un livreur ne rapportent rien"
+    },
+    "rewards": {
+      "title": "Récompenses",
+      "description": "Ce que chaque compte parrainé vous a rapporté, du plus récent au plus ancien. Chaque montant est la valeur actuelle de la récompense, après tout remboursement.",
+      "short": "Ce que vos filleuls ont rapporté",
+      "aboutLabel": "À propos des récompenses",
+      "loading": "Chargement des récompenses…",
+      "empty": "Aucune récompense pour le moment.",
+      "earned": "Acquise le {{date}}",
+      "availableFrom": "disponible à partir du {{date}}",
+      "adjusted": "réduite par un remboursement",
+      "status": {
+        "held": "En attente",
+        "released": "Libérée",
+        "reversed": "Remboursée",
+        "unknown": "En cours"
+      }
+    },
+    "payouts": {
+      "title": "Retraits",
+      "description": "Vos retraits depuis le solde de parrainage. Les versements de vos revenus de livraison sont sur votre page Versements.",
+      "short": "Depuis votre solde de parrainage",
+      "aboutLabel": "À propos des retraits",
+      "loading": "Chargement des retraits…",
+      "empty": "Aucun retrait pour le moment.",
+      "unknownNote": "Ce retrait est toujours en cours."
     }
   }
 }

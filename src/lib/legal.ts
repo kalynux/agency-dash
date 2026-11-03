@@ -10,7 +10,7 @@
  * other language — including the pending `pt` / `es` / `ar` — gets English.
  */
 
-export type LegalDocument = 'terms' | 'privacy';
+export type LegalDocument = 'terms' | 'privacy' | 'referralTerms';
 
 type LegalLanguage = 'en' | 'fr';
 
@@ -22,6 +22,10 @@ export const LEGAL_URLS = {
   privacy: {
     en: 'https://cdn.wi-mall.com/legal/privacy-policy-en.html',
     fr: 'https://cdn.wi-mall.com/legal/privacy-policy-fr.html',
+  },
+  referralTerms: {
+    en: 'https://cdn.wi-mall.com/legal/referral-partner-terms-en.html',
+    fr: 'https://cdn.wi-mall.com/legal/referral-partner-terms-fr.html',
   },
 } as const satisfies Record<LegalDocument, Record<LegalLanguage, string>>;
 
