@@ -620,6 +620,7 @@
     "PAYMENT_PROVIDER_PHONE_MISMATCH": "Ce numéro appartient à un autre réseau que celui choisi. Choisissez le bon réseau, ou saisissez un autre numéro.",
     "PAYMENT_PROVIDER_UNAVAILABLE": "Ce moyen de paiement vient d'être désactivé. Choisissez-en un autre.",
     "PAYMENT_PROVIDER_REQUIRED": "Choisissez un moyen de paiement, puis réessayez.",
+    "PAYMENT_AMOUNT_OUT_OF_RANGE": "Ce montant ne peut pas être payé avec ce moyen de paiement pour le moment. Rien n'a été débité.",
     "PAYMENT_GATEWAY_NOT_CONFIGURED": "Le paiement en ligne n'est pas configuré de notre côté pour le moment. Réessayez plus tard, ou contactez le support.",
     "PAYMENT_PAYER_NUMBER_REQUIRED": "Saisissez le numéro mobile money à débiter.",
     "PAYMENT_SETTINGS_INVALID": "Ces réglages de paiement enfreignent une règle : ils n'ont pas été enregistrés.",
@@ -748,6 +749,9 @@
     "PAYMENT_PROVIDER_PHONE_MISMATCH": {
       "MTN": "Ce numéro est sur MTN. Choisissez MTN Mobile Money, ou saisissez un numéro du réseau choisi.",
       "ORANGE": "Ce numéro est sur Orange. Choisissez Orange Money, ou saisissez un numéro du réseau choisi."
+    },
+    "PAYMENT_AMOUNT_OUT_OF_RANGE": {
+      "range": "Ce moyen de paiement n'accepte que les montants de {{min}} à {{max}}. Rien n'a été débité."
     },
     "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
       "max": "Cette expédition a déjà eu ses {{max}} modifications de frais — aucune autre ne peut être proposée."

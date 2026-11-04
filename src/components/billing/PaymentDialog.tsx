@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   MessageSquareLock,
   ExternalLink,
+  Phone,
   WifiOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,10 +38,12 @@ import { useDefaultPhoneCountry } from '@/hooks/useDefaultPhoneCountry';
 import { usePaymentOptions } from '@/hooks/usePaymentOptions';
 import { phoneIssue, toSubmittablePhone } from '@/lib/phone';
 import { phoneErrorMessage } from '@/lib/validation-schemas';
+import { ussdTelHref } from '@/lib/ussd';
 import type {
   PaymentAuthorizeResult,
   PaymentChannel,
   PaymentInitResult,
+  PaymentInstructions,
   PaymentProvider,
   PaymentStatus,
   PhoneOperator,
@@ -58,6 +61,7 @@ import { ManageOnWebNotice } from './ManageOnWebNotice';
 import {
   CHARGE_CURRENCY,
   PAYMENT_POLL_INTERVAL_MS,
+  PAYMENT_POLL_PAYEE_TIMEOUT_MS,
   PAYMENT_POLL_TIMEOUT_MS,
   billingErrorMessage,
   formatMoney,
@@ -191,6 +195,8 @@ export function PaymentDialog({
   const [cardError, setCardError] = useState<string | null>(null);
   const [instructionMsg, setInstructionMsg] = useState<string | null>(null);
   const [ussd, setUssd] = useState<string | null>(null);
+  /** Who the payer must confirm on their phone, when the charge named someone. */
+  const [payeeName, setPayeeName] = useState<string | null>(null);
   const [stripeInit, setStripeInit] = useState<StripeInit | null>(null);
   const [cardReady, setCardReady] = useState(false);
   // The one-time-code step (`instructions.requiresOtp`). `otpPaymentId` is the id
@@ -245,6 +251,11 @@ export function PaymentDialog({
   const isCard = channel === 'card';
   const provider: PaymentProvider | null = isCard ? 'CARD' : operator;
   const selectedOption = paymentOptions.providers.find((o) => o.provider === provider);
+
+  // The route's limits are in XAF, so they say nothing about a price in anything
+  // else. The server still has the last word, with `PAYMENT_AMOUNT_OUT_OF_RANGE`.
+  const limits = currency === CHARGE_CURRENCY.MOBILE_MONEY ? selectedOption?.limits : undefined;
+  const amountOutOfRange = !!limits && (amount < limits.min || amount > limits.max);
 
   const channelOptions = useMemo<PaymentOption[]>(() => {
     const options: PaymentOption[] = [];
@@ -310,6 +321,7 @@ export function PaymentDialog({
       setCardError(null);
       setInstructionMsg(null);
       setUssd(null);
+      setPayeeName(null);
       setStripeInit(null);
       setCardReady(false);
       setSelectedSavedId(null);
@@ -348,15 +360,10 @@ export function PaymentDialog({
     }
   }
 
-  function startPolling(id: string) {
-    pollDeadline.current = Date.now() + PAYMENT_POLL_TIMEOUT_MS;
+  function startPolling(id: string, timeoutMs: number = PAYMENT_POLL_TIMEOUT_MS) {
+    pollDeadline.current = Date.now() + timeoutMs;
     stopPolling();
     pollTimer.current = setInterval(async () => {
-      if (Date.now() > pollDeadline.current) {
-        stopPolling();
-        setPhase('timeout');
-        return;
-      }
       try {
         const { status } = await verify(id);
         if (status === 'paid') {
@@ -364,15 +371,56 @@ export function PaymentDialog({
           setPhase('success');
           onPaid();
           toast.success(successText);
-        } else if (status === 'failed' || status === 'reversed') {
+          return;
+        }
+        if (status === 'failed' || status === 'reversed') {
           stopPolling();
           setPhase('failed');
+          return;
         }
         // still pending → keep polling
       } catch {
         // transient verify error (e.g. not yet registered at gateway) — keep polling
       }
+      // Checked after asking, never before. The app sits in the background while
+      // the payer is in the dialer, so the first tick back can already be past the
+      // deadline, and that tick is the one likely to find the payment settled.
+      // `pollTimer` is empty if this tick's answer outlived the wait: the dialog
+      // closed, or an earlier tick already ended it.
+      if (pollTimer.current && Date.now() > pollDeadline.current) {
+        stopPolling();
+        setPhase('timeout');
+      }
     }, PAYMENT_POLL_INTERVAL_MS);
+  }
+
+  /**
+   * Move to the waiting screen, showing what the charge answered.
+   *
+   * With a `payeeName` the server's own `message` is shown as sent, rather than a
+   * sentence of ours, because the right instruction differs per operator and per
+   * aggregator (one raises a prompt, another raises none until the payer dials),
+   * and no choice of aggregator is ever made or inferred on this side.
+   */
+  function startWaiting(id: string, instructions: PaymentInstructions | null) {
+    const payee = instructions?.payeeName?.trim() || null;
+    const redirect = instructions?.redirectUrl ?? null;
+    setPayeeName(payee);
+    setRedirectUrl(redirect);
+    if (payee) {
+      setUssd(instructions?.ussdCode?.trim() || null);
+      setInstructionMsg(instructions?.message?.trim() || null);
+    } else if (redirect) {
+      setUssd(null);
+      setInstructionMsg(t('checkout.redirectPrompt'));
+    } else {
+      setUssd(instructions?.ussdCode ?? null);
+      // The provider's own instruction text arrives already localised for the
+      // agency's country; ours is the fallback when it sends none.
+      setInstructionMsg(instructions?.message ?? t('checkout.phonePrompt'));
+    }
+    setPhase('processing');
+    startPolling(id, payee ? PAYMENT_POLL_PAYEE_TIMEOUT_MS : PAYMENT_POLL_TIMEOUT_MS);
   }
 
   /** Quick-select a saved wallet: pick its network. Only ever called with a {@link payableSaved} entry. */
@@ -481,25 +529,11 @@ export function PaymentDialog({
         return;
       }
 
-      // A page to finish on. Offered as a link rather than opened for them: a
-      // window opened after an `await` is what popup blockers stop. Polling
-      // starts now, so coming back to this tab picks the result straight up.
-      if (result.instructions?.redirectUrl) {
-        setRedirectUrl(result.instructions.redirectUrl);
-        setUssd(null);
-        setInstructionMsg(t('checkout.redirectPrompt'));
-        setPhase('processing');
-        startPolling(result.id);
-        return;
-      }
-
-      // A prompt on the handset (or already confirmed): show instructions + poll.
-      setUssd(result.instructions?.ussdCode ?? null);
-      // The provider's own instruction text arrives already localised for the
-      // agency's country; ours is the fallback when it sends none.
-      setInstructionMsg(result.instructions?.message ?? t('checkout.phonePrompt'));
-      setPhase('processing');
-      startPolling(result.id);
+      // A page to finish on, a prompt on the handset, or a code to dial: show what
+      // the charge said and poll. A `redirectUrl` is offered as a link rather than
+      // opened for them: a window opened after an `await` is what popup blockers
+      // stop. Polling starts now, so coming back to this tab picks the result up.
+      startWaiting(result.id, result.instructions);
     } catch (err) {
       // Both refusals below are raised before anything is written, so the form
       // stays exactly as typed and a corrected retry is safe.
@@ -555,10 +589,7 @@ export function PaymentDialog({
         return;
       }
 
-      setUssd(instructions?.ussdCode ?? null);
-      setInstructionMsg(instructions?.message ?? t('checkout.phonePrompt'));
-      setPhase('processing');
-      startPolling(otpPaymentId);
+      startWaiting(otpPaymentId, instructions);
     } catch (err) {
       switch (getErrorCode(err)) {
         case 'PAYMENT_OTP_ATTEMPTS_EXCEEDED':
@@ -576,6 +607,7 @@ export function PaymentDialog({
           // which, so stop asking and go find out.
           setInstructionMsg(billingErrorMessage(err));
           setUssd(null);
+          setPayeeName(null);
           setPhase('processing');
           startPolling(otpPaymentId);
           break;
@@ -649,6 +681,7 @@ export function PaymentDialog({
     setOtpError(null);
     setFailedReason(null);
     setUssd(null);
+    setPayeeName(null);
     setInstructionMsg(null);
     setPhase('form');
   }
@@ -847,6 +880,15 @@ export function PaymentDialog({
                   works here, so this is a footnote and not the headline. */}
               {cardsLiveOnWeb && <ManageOnWebNotice kind="payCard" />}
 
+              {optionsReady && canPay && limits && amountOutOfRange && (
+                <p role="alert" className="text-sm text-destructive">
+                  {t('checkout.amountOutOfRange', {
+                    min: formatMoney(limits.min, currency),
+                    max: formatMoney(limits.max, currency),
+                  })}
+                </p>
+              )}
+
               {formError && (
                 <p role="alert" className="text-sm text-destructive">
                   {formError}
@@ -866,7 +908,7 @@ export function PaymentDialog({
               {/* No pay button while nothing can be paid with — loading, failed
                   to load, or switched off. */}
               {optionsReady && canPay && (
-                <Button onClick={handleInitiate} disabled={submitting || !provider}>
+                <Button onClick={handleInitiate} disabled={submitting || !provider || amountOutOfRange}>
                   {submitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                   {isCard
                     ? t('checkout.continueToCard')
@@ -1009,7 +1051,65 @@ export function PaymentDialog({
           </>
         )}
 
-        {phase === 'processing' && (
+        {/*
+          The charge named who the payer must confirm, so the instruction leads and
+          the spinner drops to a status line. Scrolls like the other phases: the
+          two-language message plus the code can outgrow a small phone.
+        */}
+        {phase === 'processing' && payeeName && (
+          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 text-center sm:px-6">
+            <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <p className="text-base font-semibold [overflow-wrap:anywhere]">
+                {t('checkout.payee.title', { payee: payeeName })}
+              </p>
+              <p className="text-sm [overflow-wrap:anywhere]">
+                {instructionMsg ??
+                  (ussd
+                    ? t('checkout.payee.stepWithCode', { code: ussd, payee: payeeName })
+                    : t('checkout.payee.step', { payee: payeeName }))}
+              </p>
+              {ussd && (
+                <div className="space-y-2">
+                  {/* Always as text too: `tel:` opens nothing on most desktops. */}
+                  <p dir="ltr" className="select-all font-mono text-2xl font-bold tracking-wide">
+                    {ussd}
+                  </p>
+                  {/* No `target`: a WebView has no second window, and it is the
+                      navigation itself that Capacitor hands to the dialer. */}
+                  <Button asChild className="w-full">
+                    <a href={ussdTelHref(ussd)}>
+                      <Phone className="me-1.5 h-4 w-4" aria-hidden="true" />
+                      {t('checkout.payee.dial')}
+                    </a>
+                  </Button>
+                </div>
+              )}
+              {redirectUrl && (
+                <Button asChild variant="outline" className="w-full">
+                  <a href={redirectUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="me-1.5 h-4 w-4" aria-hidden="true" />
+                    {t('checkout.openPaymentPage')}
+                  </a>
+                </Button>
+              )}
+            </div>
+            <p
+              role="status"
+              className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
+            >
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+              {t('checkout.waiting')}
+            </p>
+            <p className="text-xs text-muted-foreground">{t('checkout.payee.keepOpen')}</p>
+            {/* Not "we'll keep processing": until the payer dials, there may be
+                nothing in progress to keep going. */}
+            <Button variant="ghost" size="sm" onClick={() => handleClose(false)}>
+              {t('common:actions.close')}
+            </Button>
+          </div>
+        )}
+
+        {phase === 'processing' && !payeeName && (
           <div className="space-y-4 px-5 py-6 text-center sm:px-6">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
             <div className="space-y-1">

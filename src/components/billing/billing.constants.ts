@@ -20,6 +20,12 @@ export const NOTIFY_DAYS_MAX = 90;
 export const PAYMENT_POLL_INTERVAL_MS = 4000;
 /** Give up polling after this long (mobile money can take a couple of minutes). */
 export const PAYMENT_POLL_TIMEOUT_MS = 3 * 60 * 1000;
+/**
+ * The same, when the charge named who the payer must confirm (`payeeName`). A
+ * payment on such a route can sit pending for minutes, because it waits for the
+ * payer to dial and enter their PIN, so "no answer yet" must not end the wait.
+ */
+export const PAYMENT_POLL_PAYEE_TIMEOUT_MS = 30 * 60 * 1000;
 
 // ─── Providers, not aggregators ──────────────────────────────────────────────────
 // The agency picks what it pays *with* (MTN, Orange, a card); the server picks

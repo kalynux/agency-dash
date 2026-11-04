@@ -620,6 +620,7 @@
     "PAYMENT_PROVIDER_PHONE_MISMATCH": "That number is on a different network from the one you chose. Pick the matching network, or enter another number.",
     "PAYMENT_PROVIDER_UNAVAILABLE": "That payment option was just switched off. Choose another one.",
     "PAYMENT_PROVIDER_REQUIRED": "Choose how you want to pay, then try again.",
+    "PAYMENT_AMOUNT_OUT_OF_RANGE": "This amount can't be paid with this option right now. Nothing was charged.",
     "PAYMENT_GATEWAY_NOT_CONFIGURED": "Online payment isn't set up on our side right now. Try again later, or contact support.",
     "PAYMENT_PAYER_NUMBER_REQUIRED": "Enter the mobile money number to charge.",
     "PAYMENT_SETTINGS_INVALID": "Those payment settings break a rule, so they were not saved.",
@@ -748,6 +749,9 @@
     "PAYMENT_PROVIDER_PHONE_MISMATCH": {
       "MTN": "This number is on MTN. Choose MTN Mobile Money, or enter a number on the network you picked.",
       "ORANGE": "This number is on Orange. Choose Orange Money, or enter a number on the network you picked."
+    },
+    "PAYMENT_AMOUNT_OUT_OF_RANGE": {
+      "range": "This option only accepts payments from {{min}} to {{max}}. Nothing was charged."
     },
     "DELIVERY_FEE_PROPOSAL_LIMIT_REACHED": {
       "max": "This shipment has had its {{max}} fee changes — no more can be proposed."

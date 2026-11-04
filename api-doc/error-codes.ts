@@ -255,6 +255,8 @@ export const ERROR_CODES = Object.freeze({
     PAYMENT_PROVIDER_PHONE_MISMATCH: 'PAYMENT_PROVIDER_PHONE_MISMATCH',
     /** 400. No `provider`, and none could be derived from a legacy body. */
     PAYMENT_PROVIDER_REQUIRED: 'PAYMENT_PROVIDER_REQUIRED',
+    /** 422. The amount is outside the route's `limits`. `{ provider, amount, min, max, spent: false }`. */
+    PAYMENT_AMOUNT_OUT_OF_RANGE: 'PAYMENT_AMOUNT_OUT_OF_RANGE',
     /** 422. A payment-settings write broke a hard rule. `details.errors[]` names each one. */
     PAYMENT_SETTINGS_INVALID: 'PAYMENT_SETTINGS_INVALID',
     /** 409. `expectedVersion` is not the stored `version`: reload and retry. */

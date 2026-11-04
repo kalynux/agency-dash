@@ -260,7 +260,15 @@
     "providerSwitchedOff": "Ce moyen de paiement vient d'être désactivé. La liste a été mise à jour — choisissez-en un autre.",
     "redirectPrompt": "Terminez le paiement sur la page de paiement, puis revenez ici.",
     "openPaymentPage": "Ouvrir la page de paiement",
-    "savedNumberHint": "Saisissez le numéro se terminant par {{last4}}."
+    "savedNumberHint": "Saisissez le numéro se terminant par {{last4}}.",
+    "amountOutOfRange": "Ce moyen de paiement n'accepte que les montants de {{min}} à {{max}}.",
+    "payee": {
+      "title": "La demande de paiement viendra de {{payee}}",
+      "stepWithCode": "Composez {{code}}, vérifiez que la demande vient de {{payee}}, puis entrez votre code secret.",
+      "step": "Vérifiez que la demande vient de {{payee}}, puis entrez votre code secret.",
+      "dial": "Composer ce code",
+      "keepOpen": "Cela peut prendre plusieurs minutes. Vous pouvez quitter cet écran pour composer le code, puis revenir : gardez cette fenêtre ouverte."
+    }
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",

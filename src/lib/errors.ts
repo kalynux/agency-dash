@@ -90,6 +90,15 @@ const DETAILED: Record<string, (details: Record<string, unknown>) => DetailedMes
     d.detected === 'MTN' || d.detected === 'ORANGE'
       ? { key: `PAYMENT_PROVIDER_PHONE_MISMATCH.${d.detected}` }
       : undefined,
+  // The route's limits move with the aggregator, so the sentence quotes the ones
+  // that refused. See api-doc/payments/routing.md § Error codes.
+  PAYMENT_AMOUNT_OUT_OF_RANGE: (d) =>
+    typeof d.min === 'number' && typeof d.max === 'number'
+      ? {
+          key: 'PAYMENT_AMOUNT_OUT_OF_RANGE.range',
+          context: { min: formatCurrency(d.min), max: formatCurrency(d.max) },
+        }
+      : undefined,
   // `max` is how many non-withdrawn fee changes a shipment may have (two today).
   // See api-doc/agency/shipments.md § Delivery-fee proposals.
   DELIVERY_FEE_PROPOSAL_LIMIT_REACHED: (d) =>

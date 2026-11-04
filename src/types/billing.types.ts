@@ -192,8 +192,19 @@ export interface PaymentProviderOption {
   fields: string[];
   /** `true` exactly when `flow` is `OTP`: warn that an SMS code may follow. */
   mayRequireOtp: boolean;
+  /**
+   * The amounts this route accepts, in XAF; absent means no known limit. Outside
+   * them the charge is refused `422 PAYMENT_AMOUNT_OUT_OF_RANGE` before anything
+   * is written. Depends on the active aggregator, so it is never hard-coded here.
+   */
+  limits?: PaymentOptionLimits;
   /** Only on a `CARD` entry: the Stripe publishable key to load Stripe.js with. */
   publishableKey?: string;
+}
+
+export interface PaymentOptionLimits {
+  min: number;
+  max: number;
 }
 
 /** Standard envelope — unlike the flat order-payment routes. */
@@ -222,8 +233,20 @@ export interface PaymentChannel {
  * answered. See api-doc/FRONTEND-CHANGELOG-payment-providers.md § 3.
  */
 export interface PaymentInstructions {
-  /** Approve on the handset; dial this if the prompt does not appear. */
+  /**
+   * What to dial. Usually the fallback for a prompt that did not appear, but when
+   * {@link payeeName} is present it can be the only way to start: some routes
+   * raise no prompt at all, and nothing happens until the payer dials.
+   */
   ussdCode?: string;
+  /**
+   * The merchant name the payer will see on their phone, when it is not Wi-Mall.
+   * Present means the instruction becomes the main thing on the waiting screen,
+   * because a payer who was not warned may refuse a name they do not know. Always
+   * read from here: another aggregator sends a different name, or none. See
+   * api-doc/FRONTEND-CHANGELOG-novasend-moon-sarl.md.
+   */
+  payeeName?: string;
   /**
    * The operator texted a one-time code and nothing moves until it is relayed.
    * There is no `ussdCode` on this branch — showing "dial the code" here prompts

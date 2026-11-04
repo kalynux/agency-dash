@@ -260,7 +260,15 @@
     "providerSwitchedOff": "That payment option was just switched off. The list has been updated — choose another.",
     "redirectPrompt": "Finish paying on the payment page, then come back here.",
     "openPaymentPage": "Open payment page",
-    "savedNumberHint": "Enter the number ending {{last4}}."
+    "savedNumberHint": "Enter the number ending {{last4}}.",
+    "amountOutOfRange": "This option only accepts payments from {{min}} to {{max}}.",
+    "payee": {
+      "title": "The payment request will come from {{payee}}",
+      "stepWithCode": "Dial {{code}}, check the request is from {{payee}}, then enter your PIN.",
+      "step": "Check the request is from {{payee}}, then enter your PIN.",
+      "dial": "Dial this code",
+      "keepOpen": "This can take several minutes. You can leave this screen to dial, then come back: keep this window open."
+    }
   },
   "gateways": {
     "NOTCHPAY": "NotchPay",
