@@ -83,6 +83,7 @@ import {
   CheckCircle2,
   Clock3,
   Loader2,
+  MessageCircle,
   Pencil,
   Phone,
   RotateCw,
@@ -541,7 +542,11 @@ export function ContactChangeCard() {
               disabled={!canConfirmCode}
               className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
             >
-              {busy === 'code' && <Loader2 className="h-4 w-4 animate-spin" />}
+              {busy === 'code' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="h-4 w-4" />
+              )}
               {t('contact.phone.verify.submit')}
             </Button>
           </form>
@@ -578,20 +583,27 @@ export function ContactChangeCard() {
             </p>
           )}
         </>
-      ) : (
+      ) : verifyInPanel ? (
+        // Inside a pending change there is no row button to press (the row
+        // shows the outgoing number), so the send lives here. Everywhere else
+        // it is the Verify button on the row itself — see `verifyRowButton`.
         <Button
           onClick={() => void sendCode()}
           disabled={locked || cooldownLeft > 0}
           className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
         >
-          {busy === 'send' && <Loader2 className="h-4 w-4 animate-spin" />}
+          {busy === 'send' ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <MessageCircle className="h-4 w-4" />
+          )}
           {cooldownLeft > 0
             ? t('contact.phone.verify.resendIn', { seconds: cooldownLeft })
             : deliveryFailures > 0
               ? t('common:actions.retry')
               : t('contact.phone.verify.send')}
         </Button>
-      )}
+      ) : null}
 
       {codeError && <p className="text-xs text-destructive">{codeError}</p>}
 
@@ -624,14 +636,8 @@ export function ContactChangeCard() {
   );
 
   /** What the code proves, and — while the account is pending — what it unlocks. */
-  const verifyHeading = (
+  const verifyHint = (
     <div className="space-y-1">
-      <p className="flex items-center gap-1.5 text-sm font-medium">
-        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-        {completesChange
-          ? t('contact.phone.verify.titleChange')
-          : t('contact.phone.verify.titleCurrent')}
-      </p>
       <p className="text-xs text-muted-foreground">
         {completesChange
           ? t('contact.phone.verify.hintChange')
@@ -655,6 +661,55 @@ export function ContactChangeCard() {
       )}
     </div>
   );
+
+  const verifyHeading = (
+    <div className="space-y-1">
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+        {completesChange
+          ? t('contact.phone.verify.titleChange')
+          : t('contact.phone.verify.titleCurrent')}
+      </p>
+      {verifyHint}
+    </div>
+  );
+
+  /**
+   * The Verify button on an identifier row, beside Change — the same control for
+   * both channels. Email: sends the link. Phone: sends the WhatsApp code, after
+   * which the code entry opens under the row.
+   *
+   * Icon-only on a phone, like Change, so the address keeps its width; while a
+   * cooldown runs it shows the seconds left instead of hiding them.
+   */
+  const verifyRowButton = (onClick: () => void, sending: boolean, cooldown: number) => (
+    <Button
+      size="sm"
+      onClick={onClick}
+      disabled={locked || cooldown > 0}
+      aria-label={t('contact.verify')}
+      className={cn(
+        'gap-1.5 sm:h-8 sm:w-auto sm:px-2.5',
+        cooldown > 0 ? 'h-9 px-2.5' : 'size-9 p-0',
+      )}
+    >
+      {sending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ShieldCheck className="h-3.5 w-3.5" />
+      )}
+      {cooldown > 0 ? (
+        <span className="tabular-nums">{cooldown}s</span>
+      ) : (
+        <span className="max-sm:sr-only">{t('contact.verify')}</span>
+      )}
+    </Button>
+  );
+
+  /** Phone: offered on the row until a code is live (then the code entry takes over). */
+  const showPhoneRowVerify = showVerify && !verifyInPanel && !codeLive;
+  /** Email: offered on the row until a link has gone out this session. */
+  const showEmailRowVerify = showEmailVerify && !emailLinkSentTo;
 
   const changeButton = (channel: Channel) => (
     <Button
@@ -733,12 +788,34 @@ export function ContactChangeCard() {
                 // While a change is pending its panel offers "use a different
                 // address" instead — a second "Change" here would read as a
                 // third, unrelated action.
-                action={!state.pendingEmail && editing !== 'email' && changeButton('email')}
+                action={
+                  <>
+                    {showEmailRowVerify &&
+                      verifyRowButton(
+                        () => void sendEmailLink(),
+                        busy === 'emailLink',
+                        emailCooldownLeft,
+                      )}
+                    {!state.pendingEmail && editing !== 'email' && changeButton('email')}
+                  </>
+                }
               />
 
               {/* Proving the address already on the account — no change involved,
-                  so nothing to cancel. */}
-              {showEmailVerify && (
+                  so nothing to cancel. Before the send it is one line of
+                  explanation under the row; the button is on the row. */}
+              {showEmailRowVerify && (
+                <div className={cn('space-y-1', rowIndentClass)}>
+                  <p className="text-xs text-muted-foreground">{t('contact.email.verify.hint')}</p>
+                  {emailLinkError && (
+                    <p role="alert" className="text-xs text-destructive">
+                      {emailLinkError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {showEmailVerify && emailLinkSentTo && (
                 <div className="space-y-3 rounded-xl border bg-muted/30 p-3 sm:p-4">
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-sm font-medium">
@@ -746,41 +823,26 @@ export function ContactChangeCard() {
                       {t('contact.email.verify.title')}
                     </p>
                     <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                      {emailLinkSentTo
-                        ? t('contact.email.verify.sentHint', { email: emailLinkSentTo })
-                        : t('contact.email.verify.hint')}
+                      {t('contact.email.verify.sentHint', { email: emailLinkSentTo })}
                     </p>
                   </div>
 
-                  {emailLinkSentTo ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void sendEmailLink()}
-                      disabled={locked || emailCooldownLeft > 0}
-                      className="-ml-3 gap-1.5"
-                    >
-                      {busy === 'emailLink' ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <RotateCw className="h-3.5 w-3.5" />
-                      )}
-                      {emailCooldownLeft > 0
-                        ? t('contact.email.verify.resendIn', { seconds: emailCooldownLeft })
-                        : t('contact.email.resendLink')}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => void sendEmailLink()}
-                      disabled={locked || emailCooldownLeft > 0}
-                      className="h-11 w-full gap-1.5 sm:h-10 sm:w-auto"
-                    >
-                      {busy === 'emailLink' && <Loader2 className="h-4 w-4 animate-spin" />}
-                      {emailCooldownLeft > 0
-                        ? t('contact.email.verify.resendIn', { seconds: emailCooldownLeft })
-                        : t('contact.email.verify.send')}
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void sendEmailLink()}
+                    disabled={locked || emailCooldownLeft > 0}
+                    className="-ml-3 gap-1.5"
+                  >
+                    {busy === 'emailLink' ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RotateCw className="h-3.5 w-3.5" />
+                    )}
+                    {emailCooldownLeft > 0
+                      ? t('contact.email.verify.resendIn', { seconds: emailCooldownLeft })
+                      : t('contact.email.resendLink')}
+                  </Button>
 
                   {emailLinkError && (
                     <p role="alert" className="text-xs text-destructive">
@@ -881,7 +943,13 @@ export function ContactChangeCard() {
                     </Badge>
                   ) : null
                 }
-                action={!state.pendingPhone && editing !== 'phone' && changeButton('phone')}
+                action={
+                  <>
+                    {showPhoneRowVerify &&
+                      verifyRowButton(() => void sendCode(), busy === 'send', cooldownLeft)}
+                    {!state.pendingPhone && editing !== 'phone' && changeButton('phone')}
+                  </>
+                }
               />
 
               {state.pendingPhone && editing !== 'phone' && (
@@ -920,8 +988,16 @@ export function ContactChangeCard() {
               )}
 
               {/* Proving the number already on the account — no change involved,
-                  so nothing to cancel. */}
-              {showVerify && !verifyInPanel && (
+                  so nothing to cancel. Before a code is live: the explanation
+                  under the row (the button is on the row, and doubles as Retry
+                  after a failed send). Once one is: the code entry, boxed. */}
+              {showPhoneRowVerify && (
+                <div className={cn('space-y-3', rowIndentClass)}>
+                  {verifyHint}
+                  {verifyBody}
+                </div>
+              )}
+              {showVerify && !verifyInPanel && codeLive && (
                 <div className="space-y-3 rounded-xl border bg-muted/30 p-3 sm:p-4">
                   {verifyHeading}
                   {verifyBody}
@@ -972,6 +1048,12 @@ export function ContactChangeCard() {
  */
 const panelActionClass = 'h-10 w-full gap-1.5 sm:h-8 sm:w-auto';
 
+/**
+ * Lines that belong to an identifier row start where its text does: past the
+ * 40px icon tile and the 12px gap of `IdentifierRow`.
+ */
+const rowIndentClass = 'ps-[52px]';
+
 /** One sign-in identifier: what it is, its value, its state, and how to change it. */
 function IdentifierRow({
   icon: Icon,
@@ -1002,7 +1084,7 @@ function IdentifierRow({
           {badge}
         </div>
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
     </div>
   );
 }

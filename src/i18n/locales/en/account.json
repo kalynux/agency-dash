@@ -438,6 +438,7 @@
     "description": "The email address and phone number you use to sign in. Changing either takes effect only once you confirm it.",
     "none": "Not set",
     "change": "Change",
+    "verify": "Verify",
     "cancelChange": "Cancel this change",
     "cancelled": "Change cancelled.",
     "expires": "Expires {{when}}",

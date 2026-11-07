@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
   Globe,
+  ShieldCheck,
   Store as StoreIcon,
   X,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ import { FieldHint, FieldLabel, SectionHeading } from '@/components/common/InfoH
 import { sectionGroupClass, sectionSurfaceClass } from '@/components/layout/PageContainer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 // import { Badge } from '@/components/ui/badge'; // with the commented-out KycBadge below
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -236,6 +238,22 @@ export function ProfileSettings() {
   );
   const emailHint = <>{t('profile.identity.emailLocked')} {securityLink}</>;
   const phoneHint = <>{t('profile.identity.phoneLocked')} {securityLink}</>;
+  /**
+   * "Not verified yet" plus a way to fix it. The proof itself (link / WhatsApp
+   * code) lives on Security beside the sign-in identifiers, so this goes there;
+   * a state to act on, not help — visible at every width.
+   */
+  const unverifiedNotice = (message: string) => (
+    <div className="flex items-center justify-between gap-3 pt-0.5">
+      <p className="text-xs text-warning">{message}</p>
+      <Button asChild variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 px-2.5">
+        <Link to="/dashboard/account/security">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          {t('profile.identity.verifyLink')}
+        </Link>
+      </Button>
+    </div>
+  );
 
   return (
     <div className={sectionGroupClass}>
@@ -332,13 +350,7 @@ export function ProfileSettings() {
                 )}
               </div>
               {emailUnverified ? (
-                // A state to act on, not help — visible at every width.
-                <p className="text-xs text-warning">
-                  {t('profile.identity.emailUnverified')}{' '}
-                  <Link to="/dashboard/account/security" className="underline">
-                    {t('profile.identity.verifyLink')}
-                  </Link>
-                </p>
+                unverifiedNotice(t('profile.identity.emailUnverified'))
               ) : (
                 <FieldHint>{emailHint}</FieldHint>
               )}
@@ -366,13 +378,7 @@ export function ProfileSettings() {
                   the only proof there was. So an unverified number is now worth
                   saying out loud, with the one screen that can fix it. */}
               {phoneUnverified ? (
-                // A state to act on, not help — visible at every width.
-                <p className="text-xs text-warning">
-                  {t('profile.identity.phoneUnverified')}{' '}
-                  <Link to="/dashboard/account/security" className="underline">
-                    {t('profile.identity.verifyLink')}
-                  </Link>
-                </p>
+                unverifiedNotice(t('profile.identity.phoneUnverified'))
               ) : (
                 <FieldHint>{phoneHint}</FieldHint>
               )}

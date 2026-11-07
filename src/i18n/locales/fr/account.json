@@ -438,6 +438,7 @@
     "description": "L'adresse e-mail et le numéro de téléphone que vous utilisez pour vous connecter. Toute modification ne prend effet qu'après confirmation.",
     "none": "Non renseigné",
     "change": "Modifier",
+    "verify": "Vérifier",
     "cancelChange": "Annuler cette modification",
     "cancelled": "Modification annulée.",
     "expires": "Expire {{when}}",
